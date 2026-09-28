@@ -70,13 +70,13 @@ export default function Church() {
     <AppLayout>
       {/* Page Heading */}
       <div className="mb-6">
-        <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-          CHURCH PROFILE • ข้อมูลคริสตจักร
+        <span className="page-eyebrow">
+          Church Profile • ข้อมูลคริสตจักร
         </span>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
+        <h1 className="page-title">
           ข้อมูลคริสตจักร
         </h1>
-        <p className="text-xs text-slate-500">
+        <p className="page-desc">
           ข้อมูลพื้นฐานของคริสตจักรที่แสดงต่อสมาชิกและผู้เยี่ยมชม
         </p>
       </div>
@@ -90,7 +90,7 @@ export default function Church() {
             <h3 className="font-bold text-sm">โหลดข้อมูลไม่สำเร็จ</h3>
             <p className="text-xs text-slate-500 mt-1">{error}</p>
             <button
-              className="mt-4 rounded-xl bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-100"
+              className="action-secondary mt-4"
               onClick={load}
             >
               ลองใหม่
@@ -174,7 +174,7 @@ export default function Church() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs disabled:opacity-50"
+                  className="action-primary disabled:opacity-50"
                 >
                   <Save size={ICON_SIZE.sm} />
                   <span>{saving ? "กำลังบันทึก..." : "บันทึกข้อมูล"}</span>

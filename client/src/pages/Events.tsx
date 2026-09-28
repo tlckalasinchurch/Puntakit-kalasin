@@ -124,19 +124,19 @@ export default function Events() {
       {/* Page Heading */}
       <div className="events-page-hero mb-6 flex flex-col gap-5 rounded-[24px] border border-blue-100 px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-7">
         <div>
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700">
-            <CalendarDays size={13} /> ACTIVITY PULSE
+          <span className="page-eyebrow">
+            <CalendarDays size={13} /> Activity Pulse
           </span>
-          <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-[#173b70] sm:text-3xl">
+          <h1 className="page-title mt-3 sm:text-2xl">
             การนมัสการ / กิจกรรม
           </h1>
-          <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-600 sm:text-sm">
+          <p className="page-desc mt-1 max-w-xl">
             ดูกิจกรรมล่าสุดและวางแผนการมีส่วนร่วมของคริสตจักรในมุมมองเดียว
           </p>
         </div>
         {isAdmin && (
           <button
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs"
+            className="action-primary w-full sm:w-auto"
             onClick={openCreate}
           >
             <Plus size={ICON_SIZE.sm} /> เพิ่มกิจกรรม
@@ -153,7 +153,7 @@ export default function Events() {
             <h3 className="font-bold text-sm">โหลดข้อมูลไม่สำเร็จ</h3>
             <p className="text-xs text-slate-500 mt-1">{error}</p>
             <button
-              className="mt-4 rounded-xl bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-100"
+              className="action-secondary mt-4"
               onClick={reload}
             >
               ลองใหม่

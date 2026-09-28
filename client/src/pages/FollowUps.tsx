@@ -91,9 +91,9 @@ export default function FollowUps() {
   return (
     <AppLayout>
       <div className="mb-6">
-        <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">FOLLOW-UP • การติดตาม</span>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">รายการติดตาม</h1>
-        <p className="text-xs text-slate-500">อะไรต้องทำต่อ กับใคร ภายในเมื่อไร — สร้างจากหน้ากิจกรรมพันธกิจหรือโปรไฟล์สมาชิก</p>
+        <span className="page-eyebrow">Follow-up • การติดตาม</span>
+        <h1 className="page-title">รายการติดตาม</h1>
+        <p className="page-desc">อะไรต้องทำต่อ กับใคร ภายในเมื่อไร — สร้างจากหน้ากิจกรรมพันธกิจหรือโปรไฟล์สมาชิก</p>
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-2">
@@ -122,7 +122,7 @@ export default function FollowUps() {
           <AlertCircle size={ICON_SIZE.xl} className="mx-auto mb-2 text-rose-500" />
           <h3 className="font-bold text-sm">โหลดรายการติดตามไม่สำเร็จ</h3>
           <p className="text-xs text-slate-500 mt-1">{error}</p>
-          <button className="mt-4 rounded-xl bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-100" onClick={load}>
+          <button className="action-secondary mt-4" onClick={load}>
             ลองใหม่
           </button>
         </div>

@@ -232,15 +232,15 @@ export default function Feed() {
     <AppLayout>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-            FEED • กิจกรรมพันธกิจ
+          <span className="page-eyebrow">
+            Feed • กิจกรรมพันธกิจ
           </span>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">ฟีดกิจกรรมพันธกิจ</h1>
-          <p className="text-xs text-slate-500">อะไรเกิดขึ้น ที่ไหน กับใคร — บันทึกและติดตามกิจกรรมพันธกิจทั้งหมด</p>
+          <h1 className="page-title">ฟีดกิจกรรมพันธกิจ</h1>
+          <p className="page-desc">อะไรเกิดขึ้น ที่ไหน กับใคร — บันทึกและติดตามกิจกรรมพันธกิจทั้งหมด</p>
         </div>
         {canCreate && (
           <button
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs"
+            className="action-primary w-full sm:w-auto"
             onClick={openCreate}
           >
             <Camera size={ICON_SIZE.sm} /> บันทึกกิจกรรม
@@ -282,7 +282,7 @@ export default function Feed() {
           <AlertCircle size={ICON_SIZE.xl} className="mx-auto mb-2 text-rose-500" />
           <h3 className="font-bold text-sm">โหลดฟีดไม่สำเร็จ</h3>
           <p className="text-xs text-slate-500 mt-1">{error}</p>
-          <button className="mt-4 rounded-xl bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-100" onClick={load}>
+          <button className="action-secondary mt-4" onClick={load}>
             ลองใหม่
           </button>
         </div>
@@ -401,10 +401,10 @@ export default function Feed() {
             <SheetTitle>บันทึกกิจกรรมพันธกิจ</SheetTitle>
           </SheetHeader>
           <form className="flex flex-col gap-4 px-4 pb-24" onSubmit={handleSubmit}>
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
+            <label className="field-label">
               ประเภทกิจกรรม
               <select
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="field-input"
                 value={form.type}
                 onChange={(e) => setForm({ ...form, type: e.target.value as MissionActivityType })}
               >
@@ -416,43 +416,43 @@ export default function Feed() {
               </select>
             </label>
 
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
+            <label className="field-label">
               หัวข้อ
               <input
                 required
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="field-input"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 placeholder="เช่น เยี่ยมบ้านครอบครัวคุณสมชาย"
               />
             </label>
 
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
+            <label className="field-label">
               เรื่องราว
               <textarea
                 rows={4}
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="field-input"
                 value={form.story}
                 onChange={(e) => setForm({ ...form, story: e.target.value })}
                 placeholder="เกิดอะไรขึ้นบ้าง..."
               />
             </label>
 
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
+            <label className="field-label">
               วันเวลาที่เกิดขึ้น
               <input
                 type="datetime-local"
                 required
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="field-input"
                 value={form.occurredAt}
                 onChange={(e) => setForm({ ...form, occurredAt: e.target.value })}
               />
             </label>
 
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
+            <label className="field-label">
               กลุ่ม (ถ้ามี)
               <select
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="field-input"
                 value={form.groupId}
                 onChange={(e) => setForm({ ...form, groupId: e.target.value })}
               >
@@ -465,19 +465,19 @@ export default function Feed() {
               </select>
             </label>
 
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
+            <label className="field-label">
               สถานที่ (ถ้ามี)
               <input
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="field-input"
                 value={form.placeLabel}
                 onChange={(e) => setForm({ ...form, placeLabel: e.target.value })}
                 placeholder="เช่น บ้านเลขที่ 12 หมู่ 3"
               />
             </label>
 
-            <div className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
-              ผู้เกี่ยวข้อง ({form.participantMemberIds.length} คน)
-              <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200 p-2 space-y-1">
+            <div className="field-label">
+              ผู้เกี่ยวข้อง (<span className="num">{form.participantMemberIds.length}</span> คน)
+              <div className="max-h-40 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-hairline)] p-2 space-y-1">
                 {members.length === 0 && <p className="text-slate-400 text-xs p-2">ไม่มีข้อมูลสมาชิก</p>}
                 {members.map((m) => (
                   <label key={m.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 text-xs font-normal text-slate-700">
@@ -492,12 +492,12 @@ export default function Feed() {
               </div>
             </div>
 
-            <div className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
+            <div className="field-label">
               รูปภาพ (ลิงก์ URL)
               {form.media.map((m, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <input
-                    className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal"
+                    className="field-input flex-1"
                     value={m.url}
                     onChange={(e) => {
                       const media = [...form.media];
@@ -508,16 +508,17 @@ export default function Feed() {
                   />
                   <button
                     type="button"
-                    className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+                    aria-label="ลบลิงก์รูปภาพ"
+                    className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] text-slate-400 hover:bg-slate-100"
                     onClick={() => setForm({ ...form, media: form.media.filter((_, idx) => idx !== i) })}
                   >
-                    <X size={14} />
+                    <X size={16} />
                   </button>
                 </div>
               ))}
               <button
                 type="button"
-                className="inline-flex items-center gap-1 self-start rounded-xl border border-dashed border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50"
+                className="action-secondary self-start"
                 onClick={() => setForm({ ...form, media: [...form.media, { url: "" }] })}
               >
                 <Plus size={12} /> เพิ่มรูปภาพ
@@ -525,7 +526,7 @@ export default function Feed() {
             </div>
 
             <SheetFooter className="px-0">
-              <button type="submit" className="primary-action" disabled={submitting}>
+              <button type="submit" className="action-primary w-full" disabled={submitting}>
                 {submitting ? "กำลังบันทึก..." : "บันทึกเป็นฉบับร่าง"}
               </button>
             </SheetFooter>
