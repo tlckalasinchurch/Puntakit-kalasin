@@ -1397,6 +1397,190 @@
     font-size: 21px;
   }
 }
+/* ---------------------------------------------------------------------------
+   Interaction layer (V2 tokens, fintech-inspired principles — borrowed from
+   Mercury/Monzo/Revolut design reviews, rebuilt on the existing brand system):
+   - Monzo: tabular, weighted numerals so figures scan like money columns.
+   - Mercury: functional colour only; one primary button colour everywhere.
+   - Revolut: 44px touch targets + sticky bottom action bar on mobile.
+   --------------------------------------------------------------------------- */
+
+/* Weighted numerals: integers carry the weight, decimals stay quiet.
+   Apply to any stat/figure rendered as plain text. */
+.num,
+.summary-card strong,
+.metric-content strong,
+.status-tile strong {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  letter-spacing: -0.01em;
+}
+.num-strong {
+  font-weight: 700;
+}
+.num-unit {
+  font-weight: 500;
+  font-size: 0.55em;
+  opacity: 0.55;
+  margin-left: 0.12em;
+  letter-spacing: 0;
+}
+
+/* Page header: eyebrow + title + description, consistent across pages. */
+.page-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  line-height: 1.25;
+}
+.page-desc {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-body-muted);
+}
+
+/* Primary action: one semantic colour (Mercury principle) — the V2 primary
+   green replaces per-page ad-hoc blue-600 buttons. Keeps the legacy
+   .primary-action rule for existing class users. */
+.action-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.action-primary:hover {
+  background: var(--color-primary-focus);
+}
+.action-primary:active {
+  transform: scale(0.98);
+}
+.action-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Quiet secondary action for rows and toolbars. */
+.action-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+.action-secondary:hover {
+  background: var(--color-canvas-soft);
+}
+
+/* Status chips: semantic colours only, tone carries the meaning. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.chip-success { background: color-mix(in srgb, var(--color-success) 12%, transparent); color: var(--color-success); }
+.chip-warning { background: color-mix(in srgb, var(--color-warning) 14%, transparent); color: var(--color-warning); }
+.chip-error   { background: color-mix(in srgb, var(--color-error) 10%, transparent); color: var(--color-error); }
+.chip-info    { background: color-mix(in srgb, var(--color-info) 12%, transparent); color: var(--color-info); }
+.chip-neutral { background: var(--color-canvas-soft); color: var(--color-body-muted); }
+
+/* Form fields shared by every form (in-page and sheets). */
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.field-input {
+  width: 100%;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  background: var(--color-canvas);
+  padding: 10px 12px;
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--color-ink);
+  transition: border-color 0.15s ease;
+}
+.field-input::placeholder {
+  color: var(--color-body-muted);
+  opacity: 0.8;
+}
+.field-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+/* Mobile bottom action bar (Revolut pattern): primary page action becomes a
+   thumb-reachable sticky bar on small screens; hidden on desktop. */
+.mobile-action-bar {
+  display: none;
+}
+@media (max-width: 640px) {
+  .mobile-action-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
+    display: flex;
+    gap: 10px;
+    margin: 16px calc(var(--page-gutter, 16px) * -1) 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--color-canvas) 92%, transparent);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--color-divider);
+  }
+  .mobile-action-bar > .action-primary,
+  .mobile-action-bar > .action-secondary {
+    flex: 1;
+  }
+}
+
+/* Sections and content blocks use the page gutter consistently on mobile. */
+.page-gutter {
+  --page-gutter: 24px;
+}
+@media (max-width: 640px) {
+  .page-gutter {
+    --page-gutter: 16px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *:before,

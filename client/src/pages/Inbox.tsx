@@ -29,11 +29,11 @@ const STATUS_LABELS: Record<MissionSubmissionStatus, string> = {
 };
 
 const STATUS_BADGE_CLASS: Record<MissionSubmissionStatus, string> = {
-  new: "bg-blue-50 text-blue-700",
-  reviewing: "bg-amber-50 text-amber-700",
-  needs_info: "bg-orange-50 text-orange-700",
-  approved: "bg-emerald-50 text-emerald-700",
-  rejected: "bg-slate-100 text-slate-400",
+  new: "chip chip-info",
+  reviewing: "chip chip-warning",
+  needs_info: "chip chip-warning",
+  approved: "chip chip-success",
+  rejected: "chip chip-neutral",
 };
 
 const TYPE_LABELS: Record<MissionActivityType, string> = {
@@ -167,12 +167,12 @@ export default function Inbox() {
     <AppLayout>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">INBOX • ข้อมูลนำเข้า</span>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">กล่องข้อมูลนำเข้า</h1>
-          <p className="text-xs text-slate-500">สิ่งที่ยังไม่ได้เป็นข้อมูลทางการ — พิมพ์สิ่งที่ได้รับ (เช่นจาก LINE) แล้วตรวจสอบก่อนเผยแพร่</p>
+          <span className="page-eyebrow">Inbox • ข้อมูลนำเข้า</span>
+          <h1 className="page-title">กล่องข้อมูลนำเข้า</h1>
+          <p className="page-desc">สิ่งที่ยังไม่ได้เป็นข้อมูลทางการ — พิมพ์สิ่งที่ได้รับ (เช่นจาก LINE) แล้วตรวจสอบก่อนเผยแพร่</p>
         </div>
         <button
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs"
+          className="action-primary w-full sm:w-auto"
           onClick={() => setCaptureOpen(true)}
         >
           <Sparkles size={ICON_SIZE.sm} /> บันทึกข้อมูลนำเข้า
@@ -181,7 +181,7 @@ export default function Inbox() {
 
       <div className="mb-5 flex flex-wrap gap-2">
         <select
-          className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600"
+          className="field-input h-11 w-full rounded-[var(--radius-md)] py-0 sm:w-52"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -212,10 +212,10 @@ export default function Inbox() {
           {items.map((row) => (
             <div key={row.id} className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
               <div className="flex items-center justify-between gap-2 mb-1.5">
-                <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE_CLASS[row.status]}`}>
+                <span className={STATUS_BADGE_CLASS[row.status]}>
                   {STATUS_LABELS[row.status]}
                 </span>
-                <span className="text-[11px] text-slate-400">{formatDateTime(row.createdAt)}</span>
+                <time className="num text-[11px] text-slate-400">{formatDateTime(row.createdAt)}</time>
               </div>
               <p className="text-sm text-slate-700 whitespace-pre-line">{row.rawText || "(ไม่มีข้อความ)"}</p>
               {row.submittedByLabel && <p className="text-[11px] text-slate-400 mt-1">จาก: {row.submittedByLabel}</p>}
@@ -224,37 +224,37 @@ export default function Inbox() {
                 <div className="flex flex-wrap items-center gap-2 pt-3 mt-3 border-t border-slate-100">
                   {row.status === "new" && (
                     <button
-                      className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                      className="inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-md)] border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                       onClick={() => transition(row, "reviewing")}
                     >
-                      <Send size={12} /> เริ่มตรวจสอบ
+                      <Send size={14} /> เริ่มตรวจสอบ
                     </button>
                   )}
                   {row.status === "reviewing" && (
                     <>
                       <button
-                        className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100"
+                        className="inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-md)] bg-[var(--color-success)] px-3 py-2 text-xs font-semibold text-white hover:opacity-90"
                         onClick={() => transition(row, "approved")}
                       >
-                        <CheckCircle2 size={12} /> อนุมัติ
+                        <CheckCircle2 size={14} /> อนุมัติ
                       </button>
                       <button
-                        className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+                        className="inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-md)] border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
                         onClick={() => transition(row, "needs_info")}
                       >
                         ต้องการข้อมูลเพิ่ม
                       </button>
                       <button
-                        className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-semibold text-rose-600 hover:bg-rose-100"
+                        className="inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-md)] border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-100"
                         onClick={() => transition(row, "rejected")}
                       >
-                        <X size={12} /> ปฏิเสธ
+                        <X size={14} /> ปฏิเสธ
                       </button>
                     </>
                   )}
                   {row.status === "needs_info" && (
                     <button
-                      className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                      className="inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-md)] border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                       onClick={() => transition(row, "reviewing")}
                     >
                       กลับไปตรวจสอบ
@@ -262,10 +262,10 @@ export default function Inbox() {
                   )}
                   {row.status === "approved" && !row.publishedActivityId && (
                     <button
-                      className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-blue-700"
+                      className="inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-md)] bg-[var(--color-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--color-primary-focus)]"
                       onClick={() => openPublish(row)}
                     >
-                      <Sparkles size={12} /> เผยแพร่เป็นกิจกรรม
+                      <Sparkles size={14} /> เผยแพร่เป็นกิจกรรม
                     </button>
                   )}
                   {row.publishedActivityId && (
@@ -284,31 +284,31 @@ export default function Inbox() {
             <SheetTitle>บันทึกข้อมูลนำเข้า</SheetTitle>
           </SheetHeader>
           <form className="flex flex-col gap-4 px-4 pb-24" onSubmit={submitCapture}>
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
+            <label className="field-label">
               ข้อความที่ได้รับ
               <textarea
                 rows={6}
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal"
+                className="field-input"
                 value={rawText}
                 onChange={(e) => setRawText(e.target.value)}
                 placeholder="พิมพ์สิ่งที่ได้รับมา เช่น จากข้อความ LINE ของทีมภาคสนาม..."
               />
             </label>
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
+            <label className="field-label">
               ผู้ส่งข้อมูล (ถ้ามี)
               <input
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal"
+                className="field-input"
                 value={submittedByLabel}
                 onChange={(e) => setSubmittedByLabel(e.target.value)}
                 placeholder="เช่น LINE: ทีมภาคสนามเขต 1"
               />
             </label>
-            <div className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
+            <div className="field-label">
               รูปภาพ (ลิงก์ URL)
               {rawMediaUrls.map((url, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <input
-                    className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal"
+                    className="field-input flex-1"
                     value={url}
                     onChange={(e) => {
                       const next = [...rawMediaUrls];
@@ -317,21 +317,21 @@ export default function Inbox() {
                     }}
                     placeholder="https://..."
                   />
-                  <button type="button" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" onClick={() => setRawMediaUrls(rawMediaUrls.filter((_, idx) => idx !== i))}>
-                    <X size={14} />
+                  <button type="button" aria-label="ลบลิงก์รูปภาพ" className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] text-slate-400 hover:bg-slate-100" onClick={() => setRawMediaUrls(rawMediaUrls.filter((_, idx) => idx !== i))}>
+                    <X size={16} />
                   </button>
                 </div>
               ))}
               <button
                 type="button"
-                className="inline-flex items-center gap-1 self-start rounded-xl border border-dashed border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50"
+                className="action-secondary self-start"
                 onClick={() => setRawMediaUrls([...rawMediaUrls, ""])}
               >
                 + เพิ่มรูปภาพ
               </button>
             </div>
             <SheetFooter className="px-0">
-              <button type="submit" className="primary-action" disabled={submitting}>
+              <button type="submit" className="action-primary w-full" disabled={submitting}>
                 {submitting ? "กำลังบันทึก..." : "บันทึก"}
               </button>
             </SheetFooter>
@@ -345,10 +345,10 @@ export default function Inbox() {
             <SheetTitle>เผยแพร่เป็นกิจกรรมพันธกิจ</SheetTitle>
           </SheetHeader>
           <form className="flex flex-col gap-4 px-4 pb-24" onSubmit={submitPublish}>
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
+            <label className="field-label">
               ประเภทกิจกรรม
               <select
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="field-input"
                 value={publishForm.type}
                 onChange={(e) => setPublishForm({ ...publishForm, type: e.target.value as MissionActivityType })}
               >
@@ -359,27 +359,27 @@ export default function Inbox() {
                 ))}
               </select>
             </label>
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
+            <label className="field-label">
               หัวข้อ
               <input
                 required
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="field-input"
                 value={publishForm.title}
                 onChange={(e) => setPublishForm({ ...publishForm, title: e.target.value })}
               />
             </label>
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
+            <label className="field-label">
               วันเวลาที่เกิดขึ้น
               <input
                 type="datetime-local"
                 required
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="field-input"
                 value={publishForm.occurredAt}
                 onChange={(e) => setPublishForm({ ...publishForm, occurredAt: e.target.value })}
               />
             </label>
             <SheetFooter className="px-0">
-              <button type="submit" className="primary-action" disabled={publishing}>
+              <button type="submit" className="action-primary w-full" disabled={publishing}>
                 {publishing ? "กำลังเผยแพร่..." : "สร้างกิจกรรม (ฉบับร่าง)"}
               </button>
             </SheetFooter>

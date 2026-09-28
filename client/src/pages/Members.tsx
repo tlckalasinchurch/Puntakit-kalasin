@@ -287,19 +287,19 @@ export default function Members() {
       {/* Page Heading */}
       <div className="member-page-hero mb-6 flex flex-col gap-5 rounded-[24px] border border-blue-100 px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-7">
         <div>
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700">
-            <Users size={13} /> CHURCH MEMBERS
+          <span className="page-eyebrow">
+            <Users size={13} /> Church Members
           </span>
-          <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-[#173b70] sm:text-3xl">
+          <h1 className="page-title mt-3 sm:text-2xl">
             จัดการสมาชิก
           </h1>
-          <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-600 sm:text-sm">
+          <p className="page-desc mt-1 max-w-xl">
             ค้นหา ดูแล และเชื่อมโยงสมาชิกกับกลุ่มย่อยได้จากพื้นที่เดียว
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
+            className="action-secondary"
             type="button"
             onClick={handleExportCsv}
           >
@@ -307,7 +307,7 @@ export default function Members() {
           </button>
           {canManage && (
             <button
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs"
+              className="action-primary"
               type="button"
               onClick={openCreate}
             >
@@ -329,8 +329,8 @@ export default function Members() {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-800">
-              {meta.total}
+            <span className="num num-strong text-2xl text-slate-800 sm:text-3xl">
+              {meta.total.toLocaleString("th-TH")}
             </span>
             <span className="text-xs text-slate-500 font-medium">คน</span>
           </div>
@@ -346,8 +346,8 @@ export default function Members() {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-800">
-              {followedUpCount}
+            <span className="num num-strong text-2xl text-slate-800 sm:text-3xl">
+              {followedUpCount.toLocaleString("th-TH")}
             </span>
             <span className="text-xs text-slate-500 font-medium">คนในหน้านี้</span>
           </div>
@@ -363,8 +363,8 @@ export default function Members() {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-800">
-              {needFollowUpCount}
+            <span className="num num-strong text-2xl text-slate-800 sm:text-3xl">
+              {needFollowUpCount.toLocaleString("th-TH")}
             </span>
             <span className="text-xs text-slate-500 font-medium">คนในหน้านี้</span>
           </div>
@@ -380,10 +380,10 @@ export default function Members() {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-800">
+            <span className="num num-strong text-2xl text-slate-800 sm:text-3xl">
               {meta.page}
             </span>
-            <span className="text-xs text-slate-500 font-medium">จาก {meta.totalPages} หน้า</span>
+            <span className="text-xs text-slate-500 font-medium">จาก <span className="num">{meta.totalPages}</span> หน้า</span>
           </div>
         </div>
       </div>
@@ -462,7 +462,7 @@ export default function Members() {
             <h3 className="font-bold text-sm">เกิดข้อผิดพลาด</h3>
             <p className="text-xs text-slate-500 mt-1">{error}</p>
             <button
-              className="mt-4 rounded-xl bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-100"
+              className="action-secondary mt-4"
               onClick={() => loadMembers(meta.page)}
             >
               ลองใหม่อีกครั้ง

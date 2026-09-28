@@ -131,3 +131,4 @@ agent/
 .env
 .env.*
 !.env.example
+scripts-dev/

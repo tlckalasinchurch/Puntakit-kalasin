@@ -88,19 +88,19 @@ export default function Announcements() {
       {/* Page Heading */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-            ANNOUNCEMENTS • ข่าวสารและการประกาศ
+          <span className="page-eyebrow">
+            Announcements • ข่าวสารและการประกาศ
           </span>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
+          <h1 className="page-title">
             การประกาศ
           </h1>
-          <p className="text-xs text-slate-500">
+          <p className="page-desc">
             จัดการประกาศข่าวสารและข้อมูลประชาสัมพันธ์สำหรับคริสตจักร
           </p>
         </div>
         {isAdmin && (
           <button
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs"
+            className="action-primary w-full sm:w-auto"
             onClick={openCreate}
           >
             <Plus size={ICON_SIZE.sm} /> เพิ่มประกาศ
@@ -117,7 +117,7 @@ export default function Announcements() {
             <h3 className="font-bold text-sm">โหลดข้อมูลไม่สำเร็จ</h3>
             <p className="text-xs text-slate-500 mt-1">{error}</p>
             <button
-              className="mt-4 rounded-xl bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-100"
+              className="action-secondary mt-4"
               onClick={reload}
             >
               ลองใหม่

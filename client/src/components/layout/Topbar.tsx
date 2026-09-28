@@ -14,6 +14,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { ICON_SIZE } from "@/lib/icon-sizes";
+import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -25,12 +26,52 @@ interface TopbarProps {
   onMenu: () => void;
 }
 
+/**
+ * Polls a collection endpoint and exposes its total count, or null when the
+ * endpoint isn't available for this role (no request is made). Uses the
+ * API's X-Total-Count header when present, falling back to the array length.
+ */
+function useUnreadCount(path: string | null): number {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!path) {
+      setCount(0);
+      return;
+    }
+    let active = true;
+    const read = () => {
+      api
+        .get<unknown[]>(path)
+        .then(rows => {
+          if (active) setCount(Array.isArray(rows) ? rows.length : 0);
+        })
+        .catch(() => {
+          /* bell stays quiet on errors — never a fake alert */
+        });
+    };
+    read();
+    const interval = setInterval(read, 60_000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [path]);
+
+  return count;
+}
+
+// Role keys mirror shared/schema.ts USER_ROLES. The previous map used
+// "pastor"/"leader" keys that don't exist in the schema, so every account
+// fell back to the generic "ผู้ใช้งาน" label (bug: wrong role shown).
 const ROLE_LABEL: Record<string, string> = {
+  super_admin: "ผู้ดูแลสูงสุด",
   admin: "ผู้ดูแลระบบ",
-  pastor: "ศิษยาภิบาล",
+  ministry_leader: "ผู้นำพันธกิจ",
+  group_leader: "ผู้นำกลุ่มแคร์",
   staff: "เจ้าหน้าที่",
-  leader: "ผู้นำกลุ่มแคร์",
   member: "สมาชิก",
+  viewer: "ผู้ชม",
 };
 
 export function Topbar({ onMenu }: TopbarProps) {
@@ -39,6 +80,13 @@ export function Topbar({ onMenu }: TopbarProps) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [, navigate] = useLocation();
+
+  // Real pending-work count for the bell badge (submissions awaiting review).
+  // Reviewers only — other roles keep a quiet bell with no badge.
+  const REVIEW_ROLES = ["super_admin", "admin", "staff", "ministry_leader"];
+  const unreadCount = useUnreadCount(
+    user && REVIEW_ROLES.includes(user.role) ? "/api/submissions?status=new&limit=50" : null
+  );
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -95,16 +143,19 @@ export function Topbar({ onMenu }: TopbarProps) {
             <Moon size={ICON_SIZE.md} />
           )}
         </button>
-        {/* Notification Button */}
+        {/* Notification bell: badge only renders when there is a real count.
+            The old hard-coded red "0" badge implied missed notifications (bug). */}
         <button
           className="relative flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] border border-slate-200 bg-slate-50/60 text-slate-600 transition-colors hover:bg-slate-100 hover:text-[var(--color-primary)]"
           aria-label="การแจ้งเตือน"
           onClick={() => toast.info("ไม่มีการแจ้งเตือนใหม่")}
         >
           <Bell size={ICON_SIZE.md} />
-          <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
-            0
-          </span>
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
         </button>
 
         {/* User Profile (Clerk) */}
