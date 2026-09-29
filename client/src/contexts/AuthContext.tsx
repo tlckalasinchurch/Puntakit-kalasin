@@ -68,7 +68,36 @@ function useClerkAuthValue(): AuthContextValue {
   };
 }
 
+function useDemoAuthValue(): AuthContextValue {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get<AuthUser>("/api/auth/me")
+      .then(data => {
+        if (!cancelled) setUser(data);
+      })
+      .catch(() => {
+        if (!cancelled) setUser(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { user, isLoading, logout: async () => setUser(null) };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const isDemoMode = import.meta.env.VITE_PUNTAKIT_DEMO_MODE === "1";
+  if (isDemoMode) {
+    return <AuthContext.Provider value={useDemoAuthValue()}>{children}</AuthContext.Provider>;
+  }
   return (
     <AuthContext.Provider value={useClerkAuthValue()}>
       {children}
