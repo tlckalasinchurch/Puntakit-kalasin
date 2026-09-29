@@ -12,7 +12,7 @@ export default function NotFound() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#f4f8fc",
+        background: "var(--color-canvas-soft)",
         padding: "20px",
       }}
     >
@@ -34,7 +34,7 @@ export default function NotFound() {
             width: "68px",
             height: "68px",
             borderRadius: "var(--radius-panel)",
-            background: "linear-gradient(135deg,#2f6fcc,#173b70)",
+            background: "linear-gradient(135deg,#3f7337,#315c2b)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -51,7 +51,7 @@ export default function NotFound() {
           style={{
             fontSize: "72px",
             fontWeight: 800,
-            color: "#173b70",
+            color: "#272729",
             lineHeight: 1,
             margin: "0 0 8px",
             letterSpacing: "-3px",
@@ -90,7 +90,7 @@ export default function NotFound() {
             display: "inline-flex",
             alignItems: "center",
             gap: "8px",
-            background: "#2f6fcc",
+            background: "#315c2b",
             color: "#fff",
             borderRadius: "12px",
             padding: "11px 20px",
@@ -106,7 +106,7 @@ export default function NotFound() {
             ((e.currentTarget as HTMLButtonElement).style.background = "#235cb0")
           }
           onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.background = "#2f6fcc")
+            ((e.currentTarget as HTMLButtonElement).style.background = "#315c2b")
           }
         >
           <Home size={ICON_SIZE.sm} />

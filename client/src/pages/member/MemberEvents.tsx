@@ -216,7 +216,7 @@ export default function MemberEvents() {
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "11px", color: "#546b82", marginBottom: "14px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <Clock size={13} style={{ color: "#2f6fcc" }} />
+                    <Clock size={13} style={{ color: "#315c2b" }} />
                     <span>{new Date(evt.eventDate).toLocaleString("th-TH", { dateStyle: "long", timeStyle: "short" })}</span>
                   </div>
                   {evt.location && (
@@ -234,7 +234,7 @@ export default function MemberEvents() {
                     height: "38px",
                     borderRadius: "12px",
                     border: evt.isRegistered ? "1px solid #d4e8dd" : 0,
-                    background: evt.isRegistered ? "#f4fcf7" : "#2f6fcc",
+                    background: evt.isRegistered ? "#f4fcf7" : "#315c2b",
                     color: evt.isRegistered ? "#c23b4d" : "#fff",
                     fontWeight: 700,
                     fontSize: "12px",

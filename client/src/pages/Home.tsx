@@ -124,6 +124,14 @@ const OPERATIONS_ROLES = ["super_admin", "admin", "staff", "ministry_leader"];
 const MINISTRY_PREVIEW_LIMIT = 6;
 const IDENTITY_IMAGE = "/manus-storage/puntakit-hero_d9170436.png";
 
+/** Whole days past `dueAt`, or null if the date is missing/unparseable. */
+function daysOverdue(dueAt: string | null): number | null {
+  if (!dueAt) return null;
+  const due = new Date(dueAt).getTime();
+  if (Number.isNaN(due)) return null;
+  return Math.max(0, Math.floor((Date.now() - due) / 86_400_000));
+}
+
 // ---------------------------------------------------------------------------
 // Data loading: each section owns loading / error / success separately, so a
 // failed request is shown as an error and never disguised as zero or empty.
@@ -367,6 +375,103 @@ function RowsSkeleton({ rows }: { rows: number }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * The contact gap, drawn from real data only.
+ *
+ * There is no "last contacted" timestamp anywhere in the schema, so this does
+ * NOT claim to show one. What it shows is what the database can actually
+ * answer: how the member list splits between `ติดตามแล้ว` and `ต้องติดตาม`
+ * (both are real columns on `members.status`), and — for the follow-up queue —
+ * how far past `dueAt` each open item has gone, which is a real timestamp.
+ *
+ * The bar length is the datum; no invented trend, no fabricated "days since".
+ */
+function ContactGap({
+  followedUp,
+  needFollowUp,
+  overdue,
+}: {
+  followedUp: number;
+  needFollowUp: number;
+  overdue: OperationsFollowUp[];
+}) {
+  const total = followedUp + needFollowUp;
+  const needPct = total > 0 ? (needFollowUp / total) * 100 : 0;
+  const maxDays = overdue.reduce((max, item) => {
+    const days = daysOverdue(item.dueAt);
+    return days === null ? max : Math.max(max, days);
+  }, 0);
+
+  return (
+    <div className="px-6 py-5">
+      <p className="type-caption text-[var(--color-body-muted)]">
+        สมาชิกที่ยังต้องติดตามดูแล
+        <span className="type-body-strong ml-2 text-[var(--color-ink)]">
+          {needFollowUp.toLocaleString("th-TH")}
+        </span>
+        <span className="text-[var(--color-body-muted)]">
+          {" "}
+          จาก {total.toLocaleString("th-TH")} คน
+        </span>
+      </p>
+
+      {/* One bar, two real segments. The needs-follow-up portion carries the
+          ink weight because it is the part that still needs a person; it also
+          inverts correctly in dark mode, unlike a fixed graphite. */}
+      <div
+        className="mt-3 flex h-2 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--color-canvas-soft)]"
+        role="img"
+        aria-label={`ติดตามแล้ว ${followedUp.toLocaleString(
+          "th-TH"
+        )} คน ต้องติดตาม ${needFollowUp.toLocaleString("th-TH")} คน`}
+      >
+        <div
+          className="bg-[var(--color-hairline)] transition-[width] duration-500 motion-reduce:transition-none"
+          style={{ width: `${100 - needPct}%` }}
+        />
+        <div
+          className="bg-[var(--color-ink)] transition-[width] duration-500 motion-reduce:transition-none"
+          style={{ width: `${needPct}%` }}
+        />
+      </div>
+
+      {maxDays > 0 && (
+        <>
+          <p className="type-caption-strong mt-6 text-[var(--color-ink)]">
+            เลยกำหนดนานที่สุด
+          </p>
+          <ul className="mt-3 space-y-3">
+            {overdue.slice(0, 3).map(followUp => {
+              const days = daysOverdue(followUp.dueAt);
+              if (days === null) return null;
+              return (
+                <li key={followUp.id}>
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="type-caption truncate text-[var(--color-ink)]">
+                      {followUp.title}
+                    </span>
+                    <span className="type-fine shrink-0 font-semibold text-[var(--color-error)]">
+                      {days} วัน
+                    </span>
+                  </div>
+                  {/* Bar length is proportional to how overdue, against the
+                      worst item in the queue, so the longest is always full. */}
+                  <div className="mt-1.5 h-1 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--color-canvas-soft)]">
+                    <div
+                      className="h-full rounded-[var(--radius-pill)] bg-[var(--color-ink)]"
+                      style={{ width: `${(days / maxDays) * 100}%` }}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
     </div>
   );
 }
@@ -943,14 +1048,19 @@ export default function Home() {
                 skeleton={<RowsSkeleton rows={1} />}
               >
                 {data => (
-                  <ul>
-                    <AttentionRow
-                      href="/members"
-                      icon={UserCheck}
-                      label="สมาชิกที่ต้องติดตามดูแล"
-                      count={data.needFollowUp}
-                    />
-                  </ul>
+                  <ContactGap
+                    followedUp={data.followedUp}
+                    needFollowUp={data.needFollowUp}
+                    /* The operations endpoint is role-gated, and the query is
+                       not even issued for other roles, so its state stays
+                       "loading" forever. The member split is still real, so
+                       render the bar and just skip the overdue list. */
+                    overdue={
+                      canSeeOperations && operations.status === "success"
+                        ? operations.data.overdueFollowUps
+                        : []
+                    }
+                  />
                 )}
               </QueryView>
             </Card>

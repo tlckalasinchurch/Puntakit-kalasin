@@ -1,59 +1,77 @@
 # Puntakit Design System
 
-เอกสารกำหนดการออกแบบ (source of truth) ของแอป Puntakit — ทุกหน้าและทุก component ต้องใช้ token เดียวกันนี้
-อ้างอิงจาก `brand-spec.md` และ CSS custom properties ใน `client/src/index.css`
+กฎการออกแบบของแอป Puntakit — ทุกหน้าและทุก component ต้องใช้ token ชุดเดียวกันนี้
+
+> **Source of truth:** `client/src/index.css` (`:root`) — ถ้าเอกสารนี้กับ CSS ไม่ตรงกัน
+> ให้ยึด CSS เป็นหลัก แล้วแก้เอกสารนี้ทันที
+
+ค่าสีทุกตัวด้านล่างอ้างอิงจาก `brand-spec.md` และ CSS custom properties ใน `index.css`
 
 ## 1. สีหลัก (Brand Colors)
 
 | Token | ค่า | การใช้งาน |
 |---|---|---|
-| `--navy` | `#173B70` | สีหลักเข้ม — sidebar, ปุ่มสำคัญ, หัวข้อ banner |
-| `--blue` | `#2F6FCC` | สีหลัก — ปุ่ม primary, ลิงก์, จุดเน้น (focus) |
-| `--ink` | `#17324D` | สีตัวอักษรหลัก |
-| `--muted` | `#6B7C93` | สีตัวอักษรองค์ประกอบรอง |
-| `--line` | `#E4ECF4` | เส้นขอบการ์ดและแผง |
-| `--surface` | `#FFFFFF` | พื้นผิวการ์ด |
-| Canvas | `#F4F8FC` | พื้นหลังแอป |
+| `--color-primary` | `#315c2b` | สีเดียวที่ interactive — ลิงก์ ปุ่มหลัก ไอคอน focus |
+| `--color-primary-focus` | `#3f7337` | hover / pressed / focus ring |
+| `--color-primary-on-dark` | `#7faf72` | ข้อความเน้นบนพื้น graphite |
+| `--color-ink` | `#1d1d1f` | สีตัวอักษรหลัก |
+| `--color-body-muted` | `#6f6f73` | สีตัวอักษรรอง |
+| `--color-canvas` | `#ffffff` | พื้นผิวการ์ด |
+| `--color-canvas-soft` | `#f5f5f7` | พื้นหล่ม สลับแถวตาราง |
+| `--color-hairline` | `#e0e0e0` | เส้นขอบการ์ดและ input |
+| `--color-dark-surface` | `#272729` | sidebar, tooltip, พื้นมืด |
+
+โทน graphite (`#272729` / `#2a2a2c` / `#252527`) ใช้กับ chrome สีเข้มทั้งหมด
 
 ## 2. สี Semantic (สถานะ)
 
 | Token | ค่า | ความหมาย |
 |---|---|---|
-| `--success` | `#27AE72` | สำเร็จ / ใช้งานอยู่ / ยืนยันแล้ว (=`--growth-green`) |
-| `--warning` | `#F3A23A` | คำเตือน / รอดำเนินการ (=`--activity-orange`) |
-| `--error` | `#C23B4D` | ข้อผิดพลาด / ลบ / ยืนยันแล้ว |
-| `--info` | `#2F6FCC` | ข้อมูลทั่วไป (=`--blue`) |
+| `--color-success` | `#1e8e5a` | สำเร็จ / ใช้งานอยู่ / ยืนยันแล้ว |
+| `--color-warning` | `#c77819` | คำเตือน / รอดำเนินการ |
+| `--color-error` | `#c23b4d` | ข้อผิดพลาด / ลบ / อันตราย |
+| `--color-info` | `#2f6fcc` | ข้อมูลทั่วไปเท่านั้น |
+| `--color-info-strong` | `#2f72bf` | ตัวอักษร/ไอคอน info บนพื้นขาว |
 
-สี accent ทำกิจกรรมเฉพาะ (ใช้ได้ แต่ต้องมีความหมาย): `--care-purple: #7950D8`, `--relationship-pink: #E85D78`
+สี accent ทำกิจกรรมเฉพาะ (ใช้ได้ แต่ต้องมีความหมาย): `--care-purple: #7950d8`,
+`--relationship-pink: #e85d78`, `--activity-orange: #f3a23a`
 
-**กติกาสี:** ห้ามไล่สี (gradient) ที่ไม่มีความหมาย, ห้ามใช้สีรุ้งพร่ามัวในหน้าเดียวเกิน 3 โทน,
-สีตามสถานะ (success/warning/error/info) ห้ามเปลี่ยนความหมาย, ทุก stat/ badge ต้องอิง semantic สีนี้
+**กติกาสี:**
+- ห้ามไล่สี (gradient) ที่ไม่มีความหมาย
+- ห้ามใช้สีรุ้งพร่ามัวในหน้าเดียวเกิน 3 โทน
+- สีตามสถานะห้ามเปลี่ยนความหมาย — ทุก stat / badge ต้องอิง semantic สีนี้
+- ห้าม hardcode hex ใน component ใหม่ — ใช้ `var(--token)` เสมอ
 
 ## 3. Typography
 
 - ฟอนต์: **Prompt** (thai-first) → `system-ui, sans-serif`
-- น้ำหนัก: 400 (ปกติ), 500 (medium), 600 (semibold), 700 (bold), 800 (display)
-- สเกล: `10px` (คำอธิบายเล็ก), `11px`, `12px` (body เล็ก/label), `13px`, `14px` (body), `16px`, `20px` (h3), `22px` (h2), `30px` (h1), `32px`+ (hero)
-- หัวข้อหน้า: ตัวหนา 800 + `tracking-tight`, eyebrow: ตัวหนา 600 uppercase `tracking-wider` สี `--blue`
+- ใช้ฟอนต์เดียว ห้ามเพิ่มฟอนต์ที่สอง
+- ใช้คลาส `.type-*` ที่ `index.css` เตรียมไว้ ห้ามกำหนดขนาดฟอนต์ inline
+  (`.type-hero` `.type-display-lg` `.type-display-md` `.type-lead` `.type-body`
+  `.type-body-strong` `.type-caption` `.type-caption-strong` `.type-fine`)
+- ความยาวบรรทัด body ไม่เกิน ~70 ตัวอักษร
+- หัวข้อใช้ letter-spacing ติดลบ, body ใช้ปกติ
+- eyebrow ใช้สี `--color-primary` ไม่ใช่ uppercase ซ้ำทุกจุด
 
 ## 4. Radius Scale
 
 | Token | ค่า | ใช้กับ |
 |---|---|---|
-| `--radius-card` | `21px` | การ์ดขนาดใหญ่ (hero, panel) |
-| `--radius-tile` | `18px` | การ์ดย่อย / tile |
-| `--radius-panel` | `16px` | แผงใน, modal |
-| Tailwind | `rounded-xl (12px)` | ปุ่ม, input, รายการ |
+| `--radius-lg` | `18px` | การ์ดหลัก |
+| `--radius-md` | `11px` | การ์ดย่อย / แผงใน |
+| `--radius-sm` | `8px` | chip / รายการเล็ก |
+| `--radius-xs` | `5px` | องค์เล็ก |
+| `--radius-pill` | `9999px` | ปุ่ม pill |
 
 ## 5. Shadow Scale
 
 | ชื่อ | ค่า | ใช้กับ |
 |---|---|---|
-| `shadow-xs` | แทบไม่มี | hover lift เล็ก, chip |
-| `shadow-sm` | เบา | การ์ดมาตรฐาน |
-| `--shadow` | `0 10px 28px rgba(36,92,146,.08)` | การ์ดเด่น (hero) |
-| `shadow-lg` | หนัก (ใช้เฉพาะ overlay: sidebar mobile, dropdown) | เมนูทับ |
-| ~~shadow-xl/2xl~~ | ห้ามใช้โดยไม่จำเป็น | — |
+| ไม่มี | — | chrome, การ์ดปกติ (chrome ต้องแบน) |
+| `--shadow` | `0 10px 28px rgba(29,29,31,.08)` | การ์ดที่ยกลอยจริง |
+| overlay | เงาดำเข้มกว่า | sidebar mobile, dropdown, modal |
+
+**เฉดเงาต้องเป็นสีดำกลางเท่านั้น ห้ามมีโทนสี** — เงาสีน้ำเงินจะขัดกับ chrome graphite
 
 ## 6. Z-index Scale
 
@@ -67,18 +85,23 @@
 ## 7. Spacing Scale (4px base)
 
 `4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48` px
-- ระยะห่างในการ์ด: 16–24px, ระหว่างการ์ด: 16px, ระยะหน้า: py-6 (24px)
+- ระยะในการ์ด: 16–24px, ระหว่างการ์ด: 16px, ระยะหน้า: 24px
+- touch target ขั้นต่ำ 44 × 44px
 
 ## 8. Component Rules
 
-- **การ์ด**: พื้น `--surface` + เส้นขอบ `1px var(--line)` + radius-card + `shadow-sm` หรือ `--shadow` — ห้ามซ้อนเงาหลายชั้น
-- **ปุ่มหลัก**: พื้น `--blue` หรือ `--navy`, ตัวอักษรขาว, rounded-xl, มี icon 1 ตัวเสมอ
-- **ปุ่มอันตราย (ลบ)**: ใช้ `.danger-button` (`--error`)
-- **สถานะ (badge/chip)**: ต้องอิงสี semantic ข้อ 2 เท่านั้น
+- **การ์ด**: พื้น `--color-canvas` + เส้นขอบ `1px var(--color-hairline)` +
+  radius-lg — ห้ามซ้อนเงาหลายชั้น
+- **ปุ่มหลัก**: พื้น `--color-primary` ตัวอักษรขาว มี icon 1 ตัวเสมอ
+- **ปุ่มอันตราย**: ใช้ `--color-error`
+- **สถานะ (badge/chip)**: ใช้ semantic สีเท่านั้น
 - **Loading (กติกาบังคับ)**:
-  - **Skeleton** = เนื้อหาหน้า (ตาราง, การ์ด, แบบฟอร์ม) → ใช้ `client/src/components/LoadingStates.tsx`
+  - **Skeleton** = เนื้อหาหน้า (ตาราง, การ์ด, แบบฟอร์ม) → `client/src/components/LoadingStates.tsx`
   - **Spinner** = ปุ่มหรือ action สั้น ๆ เท่านั้น (submit, refresh)
-  - ห้ามใช้ข้อความ `"..."` หรือจุดไข่ปลาแทน loading
+  - ห้ามใช้ `"..."` หรือจุดไข่ปลาแทน loading
   - **Empty state / Error state ต้องแยกจาก loading** และห้ามแสดงพร้อมกัน
-- **ข้อมูลจริง**: ตัวเลขสถิติ/ชื่อ/อีเมล ต้องมาจาก API เท่านั้น — ถ้าไม่มี API ให้แสดง empty state ห้าม hardcode
+- **ข้อมูลจริง**: ตัวเลขสถิติ/ชื่อ/อีเมล ต้องมาจาก API เท่านั้น — ถ้าไม่มี API
+  ให้แสดง empty state ห้าม hardcode
+- **Motion**: ใช้เฉพาะเพื่อตอบสนองการกระทำของผู้ใช้ (เปิด ขยาย ยืนยัน)
+  ห้ามมี animation เข้าเลยที่ไม่ได้เกิดจากผู้ใช้ และต้องเคารพ `prefers-reduced-motion`
 - **Legal**: ทุกหน้า login และ profile ต้องมีลิงก์ `/privacy` และ `/terms`

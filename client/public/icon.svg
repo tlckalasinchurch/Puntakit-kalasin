@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#173b70" />
-      <stop offset="60%" stop-color="#224e88" />
-      <stop offset="100%" stop-color="#122d54" />
+      <stop offset="0%" stop-color="#2a2a2c" />
+      <stop offset="60%" stop-color="#272729" />
+      <stop offset="100%" stop-color="#252527" />
     </linearGradient>
     <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#ffe66d" />
@@ -15,7 +15,7 @@
   <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
   
   <!-- Subtle Glow -->
-  <circle cx="256" cy="220" r="160" fill="#2d68b2" opacity="0.3" />
+  <circle cx="256" cy="220" r="160" fill="#7faf72" opacity="0.18" />
   
   <!-- The Cross -->
   <path d="M 232 90 L 280 90 A 8 8 0 0 1 288 98 L 288 180 L 370 180 A 8 8 0 0 1 378 188 L 378 236 A 8 8 0 0 1 370 244 L 288 244 L 288 414 A 8 8 0 0 1 280 422 L 232 422 A 8 8 0 0 1 224 414 L 224 244 L 142 244 A 8 8 0 0 1 134 236 L 134 188 A 8 8 0 0 1 142 180 L 224 180 L 224 98 A 8 8 0 0 1 232 90 Z" fill="#ffffff" />

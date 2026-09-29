@@ -145,7 +145,7 @@ export default function MemberAttendance() {
     <MemberAppLayout title="ประวัติการเข้าร่วม">
       <div className="space-y-4">
         {/* Attendance Banner & Stats */}
-        <div className="bg-gradient-to-r from-[#173b70] to-[#1e4d92] rounded-2xl p-5 text-white shadow-sm">
+        <div className="bg-gradient-to-r from-[var(--color-dark-surface-2)] to-[var(--color-dark-surface)] rounded-2xl p-5 text-white shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-xs">
@@ -195,7 +195,7 @@ export default function MemberAttendance() {
             onClick={() => setFilterType("all")}
             className={`px-3 py-2 rounded-xl font-medium transition-colors shrink-0 ${
               filterType === "all"
-                ? "bg-[#173b70] text-white"
+                ? "bg-[var(--color-dark-surface)] text-white"
                 : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
             }`}
           >
@@ -205,7 +205,7 @@ export default function MemberAttendance() {
             onClick={() => setFilterType("sunday")}
             className={`px-3 py-2 rounded-xl font-medium transition-colors shrink-0 ${
               filterType === "sunday"
-                ? "bg-[#173b70] text-white"
+                ? "bg-[var(--color-dark-surface)] text-white"
                 : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
             }`}
           >
@@ -215,7 +215,7 @@ export default function MemberAttendance() {
             onClick={() => setFilterType("care")}
             className={`px-3 py-2 rounded-xl font-medium transition-colors shrink-0 ${
               filterType === "care"
-                ? "bg-[#173b70] text-white"
+                ? "bg-[var(--color-dark-surface)] text-white"
                 : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
             }`}
           >
@@ -229,7 +229,7 @@ export default function MemberAttendance() {
         {/* Empty state */}
         {!loading && filteredRecords.length === 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center border border-gray-100 dark:border-gray-700 shadow-xs space-y-3">
-            <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center mx-auto text-[#173b70] dark:text-blue-400">
+            <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center mx-auto text-[var(--color-primary)] dark:text-blue-400">
               <CalendarDays size={ICON_SIZE.lg} />
             </div>
             <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">

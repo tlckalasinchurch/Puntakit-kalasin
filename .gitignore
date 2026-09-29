@@ -131,3 +131,21 @@ agent/
 .env
 .env.*
 !.env.example
+
+# A nested full clone of this repo (its own .git + node_modules + .env.local).
+# Left unignored it would be swept into any `git add -A` and could commit a
+# duplicate tree plus a real .env.local. Delete it, don't commit it.
+/Puntakit-kalasin/
+
+# One-off admin-credential helper (its own header says TEMP). It writes merged
+# JWT_SECRET / ADMIN_PASSWORD values to a temp file, so it must never be tracked.
+_merge-env.mjs
+
+# Local agent/tooling scaffolding (claude-flow, swarm harnesses, generated skill
+# packs). Runtime state and machine-local config — not app code.
+.agents/
+.claude-flow/
+.swarm/
+.freebuff/
+.mcp.json
+skills-lock.json
