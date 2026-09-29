@@ -1,5 +1,4 @@
-import express, { type ErrorRequestHandler } from "express";
-import cookieParser from "cookie-parser";
+import express, { type ErrorRequestHandler, type Request } from "express";
 import { sql } from "drizzle-orm";
 import { clerkMiddleware } from "@clerk/express";
 import { authRouter } from "./routes/auth.js";
@@ -26,13 +25,25 @@ export function createApp() {
 
   app.use(requestIdMiddleware);
   app.use(express.json({ limit: "1mb" }));
-  app.use(cookieParser());
+  app.use((req, _res, next) => {
+    const cookies: Record<string, string> = {};
+    for (const pair of (req.headers.cookie ?? "").split(";")) {
+      const separator = pair.indexOf("=");
+      if (separator > 0) {
+        cookies[pair.slice(0, separator).trim()] = decodeURIComponent(pair.slice(separator + 1).trim());
+      }
+    }
+    (req as Request & { cookies?: Record<string, string> }).cookies = cookies;
+    next();
+  });
 
-  // Clerk session verification. Runs on every request so protected routes can
-  // read `getAuth(req)`; it only attaches auth state and never rejects by
-  // itself. Disabled entirely when CLERK_SECRET_KEY is absent (local tests,
-  // legacy deployments) so the legacy JWT path keeps working unchanged.
-  if (isClerkConfigured()) {
+  // Clerk is the only authentication provider. The middleware attaches the
+  // verified Clerk session to every request; protected routes enforce it.
+  const isTestRuntime = process.env.PUNTAKIT_TEST_AUTH === "1";
+  if (!isTestRuntime) {
+    if (!isClerkConfigured()) {
+      throw new Error("CLERK_SECRET_KEY is required in non-test environments.");
+    }
     app.use(clerkMiddleware());
   }
 

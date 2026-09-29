@@ -8,16 +8,9 @@ import { ForbiddenError, UnauthorizedError } from "./errors.js";
 /**
  * Clerk authentication helpers.
  *
- * The server speaks "Clerk-first with a legacy fallback":
- *
- * 1. Clerk path — when `CLERK_SECRET_KEY` is configured, requests carrying a
- *    valid Clerk session (cookie or Bearer token set by the Clerk client) are
- *    authenticated through `clerkMiddleware()` + `getAuth(req)`. The Clerk user
- *    is mapped onto the local `users` table via `users.clerk_id` (auto-provision
- *    on first login, matched by `clerk_id`, then by email).
- * 2. Legacy path — signed-in sessions from the previous JWT/bcrypt system keep
- *    working through the `puntakit_session` cookie during the migration window.
- *    (See middleware/auth.ts.)
+ * Valid Clerk sessions are mapped onto the local `users` table via
+ * `users.clerk_id` (auto-provision on first login, matched by `clerk_id`, then
+ * by email). Clerk is the only authentication provider.
  */
 
 /** True when Clerk credentials are configured in the environment. */

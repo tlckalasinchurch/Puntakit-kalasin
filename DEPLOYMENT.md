@@ -35,8 +35,8 @@ Fail-fast rules:
 | `POSTGRES_IDLE_TIMEOUT_SECONDS` | optional | default `20` |
 | `POSTGRES_CONNECT_TIMEOUT_SECONDS` | optional | default `10` |
 | `POSTGRES_SSL` | optional | `require` \| `allow` \| `prefer` \| `verify-full` \| `no-verify` \| `disable` |
-| `JWT_SECRET` | yes | long random secret used to sign sessions |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | seed | consumed once by `pnpm db:seed-admin` |
+| `VITE_CLERK_PUBLISHABLE_KEY` | yes | Clerk publishable key used by the browser |
+| `CLERK_SECRET_KEY` | yes | Clerk secret used by the API to verify sessions |
 
 Real values must stay in the hosting provider's secret store and must never be committed.
 `.env.example` is a placeholder only. PGlite (embedded) is always migrated on startup;
@@ -62,7 +62,8 @@ pnpm dev            # Vite client + Express API; server migrates automatically
 NODE_ENV=production
 DATABASE_DRIVER=neon
 DATABASE_URL=postgresql://<user>:<password>@<endpoint>.neon.tech/<db>?sslmode=require
-JWT_SECRET=<long-random-secret>
+VITE_CLERK_PUBLISHABLE_KEY=pk_live_<your-key>
+CLERK_SECRET_KEY=sk_live_<your-key>
 
 pnpm install --frozen-lockfile
 pnpm check
@@ -84,4 +85,3 @@ pnpm check
 pnpm test
 pnpm build
 ```
-

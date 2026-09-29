@@ -1,16 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
 import { getAuth } from "@clerk/express";
-import { and, eq, isNull } from "drizzle-orm";
-import { getDb } from "../db/client.js";
-import { users, userSessions, type UserRole } from "../../shared/schema.js";
-import {
-  AUTH_COOKIE_NAME,
-  verifyAuthToken,
-  type AuthenticatedUser,
-  type JwtPayload,
-} from "../lib/auth.js";
 import { isClerkConfigured, loadClerkUser } from "../lib/clerkAuth.js";
+import type { AuthenticatedUser } from "../lib/auth.js";
 import { ForbiddenError, UnauthorizedError } from "../lib/errors.js";
+import type { UserRole } from "../../shared/schema.js";
 
 declare global {
   namespace Express {
@@ -20,156 +13,84 @@ declare global {
   }
 }
 
-/** True when the value looks like a local users.id (legacy JWT subject). */
-function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-    value
-  );
-}
-
-/** Returns the Clerk userId when the request carries a Clerk session, else null. */
-function getClerkUserId(req: Request): string | null {
-  try {
-    return getAuth(req).userId ?? null;
-  } catch {
-    // clerkMiddleware not applied or no Clerk session on this request.
-    return null;
-  }
-}
-
-/** Verify the legacy JWT and load the matching local user + session state. */
-async function loadLegacyUser(token: string): Promise<AuthenticatedUser> {
-  let payload: JwtPayload;
-  try {
-    payload = verifyAuthToken(token);
-  } catch {
-    throw new UnauthorizedError("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง");
-  }
-
-  const db = getDb();
-  const [dbUser] = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      name: users.name,
-      role: users.role,
-      status: users.status,
-    })
-    .from(users)
-    .where(eq(users.id, payload.sub))
-    .limit(1);
-
-  if (!dbUser) {
-    throw new UnauthorizedError("ไม่พบบัญชีผู้ใช้งานในระบบ");
-  }
-
-  if (dbUser.status === "suspended") {
-    throw new ForbiddenError("บัญชีผู้ใช้งานของคุณถูกระงับการใช้งานชั่วคราว");
-  }
-
-  // If session tracking is used, verify session hasn't been revoked
-  if (payload.sessionId) {
-    const [session] = await db
-      .select()
-      .from(userSessions)
-      .where(
-        and(
-          eq(userSessions.id, payload.sessionId),
-          isNull(userSessions.revokedAt)
-        )
-      )
-      .limit(1);
-
-    if (!session || new Date() > session.expiresAt) {
-      throw new UnauthorizedError(
-        "เซสชันนี้ถูกยกเลิกแล้ว กรุณาเข้าสู่ระบบใหม่"
-      );
-    }
-  }
-
-  return {
-    id: dbUser.id,
-    email: dbUser.email,
-    name: dbUser.name,
-    role: dbUser.role as AuthenticatedUser["role"],
-    sessionId: payload.sessionId,
-  };
+function readTestCookie(req: Request, name: string): string | undefined {
+  const raw = req.headers.cookie ?? "";
+  const pair = raw
+    .split(";")
+    .map(value => value.trim())
+    .find(value => value.startsWith(`${name}=`));
+  return pair ? decodeURIComponent(pair.slice(name.length + 1)) : undefined;
 }
 
 /**
- * Authenticate the request via Clerk (when configured), falling back to the
- * legacy `puntakit_session` JWT cookie/bearer for sessions issued before the
- * Clerk migration. Attach the local user to `req.user` on success.
- *
- * Resolution order:
- * 1. Clerk session (cookie/Bearer handled by `clerkMiddleware()`) → mapped to
- *    the local `users` row via `users.clerk_id` (auto-provision/link on first
- *    login). Only tried while `CLERK_SECRET_KEY` is set.
- * 2. Legacy JWT whose subject is a local users.id (UUID).
- * 3. Otherwise → 401 UNAUTHORIZED.
+ * Authenticate requests with Clerk. The legacy cookie/JWT flow is intentionally
+ * unavailable in production. The test-only branch lets existing route tests
+ * create local identities without requiring a live Clerk session.
  */
 export async function requireAuth(
   req: Request,
   _res: Response,
   next: NextFunction
 ): Promise<void> {
-  const legacyToken =
-    req.cookies?.[AUTH_COOKIE_NAME] ||
-    (req.headers.authorization?.startsWith("Bearer ")
-      ? req.headers.authorization.slice(7)
-      : null);
-
   if (isClerkConfigured()) {
     try {
-      if (getClerkUserId(req)) {
-        req.user = await loadClerkUser({ auth: () => getAuth(req) });
-        return next();
+      if (!getAuth(req).userId) {
+        return next(new UnauthorizedError("กรุณาเข้าสู่ระบบก่อนดำเนินการ"));
       }
+      req.user = await loadClerkUser({ auth: () => getAuth(req) });
+      return next();
     } catch (err) {
-      // A real Clerk session that fails mapping/provisioning is a genuine error.
-      if (getClerkUserId(req)) {
-        return next(err);
-      }
-      // clerkMiddleware itself failed (e.g. upstream Clerk error) — fall through
-      // to the legacy path so pre-migration sessions keep working.
+      return next(err);
     }
   }
 
-  if (legacyToken) {
+  if (process.env.PUNTAKIT_TEST_AUTH === "1") {
     try {
-      const payload: JwtPayload = verifyAuthToken(legacyToken);
-      if (payload.sub && isUuid(payload.sub)) {
-        req.user = await loadLegacyUser(legacyToken);
-        return next();
+      const { AUTH_COOKIE_NAME, verifyAuthToken } = await import("../lib/auth.js");
+      const { getDb } = await import("../db/client.js");
+      const { and, eq, isNull } = await import("drizzle-orm");
+      const { users, userSessions } = await import("../../shared/schema.js");
+      const token =
+        req.cookies?.[AUTH_COOKIE_NAME] ||
+        readTestCookie(req, AUTH_COOKIE_NAME) ||
+        (req.headers.authorization?.startsWith("Bearer ")
+          ? req.headers.authorization.slice(7)
+          : null);
+      if (!token) return next(new UnauthorizedError("กรุณาเข้าสู่ระบบก่อนดำเนินการ"));
+      const payload = verifyAuthToken(token);
+      const db = getDb();
+      const [dbUser] = await db
+        .select({ id: users.id, email: users.email, name: users.name, role: users.role, status: users.status })
+        .from(users)
+        .where(eq(users.id, payload.sub))
+        .limit(1);
+      if (!dbUser) return next(new UnauthorizedError("ไม่พบบัญชีผู้ใช้งานในระบบ"));
+      if (dbUser.status === "suspended") return next(new ForbiddenError("บัญชีผู้ใช้งานของคุณถูกระงับการใช้งานชั่วคราว"));
+      if (payload.sessionId) {
+        const [session] = await db
+          .select()
+          .from(userSessions)
+          .where(and(eq(userSessions.id, payload.sessionId), isNull(userSessions.revokedAt)))
+          .limit(1);
+        if (!session || new Date() > session.expiresAt) {
+          return next(new UnauthorizedError("เซสชันนี้ถูกยกเลิกแล้ว กรุณาเข้าสู่ระบบใหม่"));
+        }
       }
-      // Not a legacy token shape — fall through to the generic 401 below.
-    } catch (err) {
-      if (err instanceof ForbiddenError) {
-        // Suspended accounts surface their specific message.
-        return next(err);
-      }
-      // Invalid/tampered/expired legacy credentials → generic 401 below.
+      req.user = { id: dbUser.id, email: dbUser.email, name: dbUser.name, role: dbUser.role as AuthenticatedUser["role"], sessionId: payload.sessionId };
+      return next();
+    } catch {
+      return next(new UnauthorizedError("กรุณาเข้าสู่ระบบก่อนดำเนินการ"));
     }
   }
 
-  return next(new UnauthorizedError("กรุณาเข้าสู่ระบบก่อนดำเนินการ"));
+  return next(new UnauthorizedError("ระบบ authentication ยังไม่ได้ตั้งค่า Clerk"));
 }
 
 export function requireRole(...allowedRoles: UserRole[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    if (!req.user) {
-      return next(new UnauthorizedError("กรุณาเข้าสู่ระบบ"));
-    }
-    // super_admin always has access to all role-gated routes
-    if (
-      req.user.role === "super_admin" ||
-      allowedRoles.includes(req.user.role)
-    ) {
-      return next();
-    }
-    return next(
-      new ForbiddenError("คุณไม่มีสิทธิ์ในการเข้าถึงหรือดำเนินการในส่วนนี้")
-    );
+    if (!req.user) return next(new UnauthorizedError("กรุณาเข้าสู่ระบบ"));
+    if (req.user.role === "super_admin" || allowedRoles.includes(req.user.role)) return next();
+    return next(new ForbiddenError("คุณไม่มีสิทธิ์ในการเข้าถึงหรือดำเนินการในส่วนนี้"));
   };
 }
 

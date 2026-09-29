@@ -20,18 +20,14 @@ import Events from "./pages/Events";
 import Church from "./pages/Church";
 import Ministries from "./pages/Ministries";
 import Reports from "./pages/Reports";
-import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import ComingSoon from "./pages/ComingSoon";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 
-// Clerk mode is active when a publishable key is configured at build time.
-// Without it the app keeps the legacy cookie/JWT flow (see AuthContext).
+// Clerk is required for every build and owns all sign-in/sign-out flows.
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as
-  | string
-  | undefined;
-const clerkEnabled = Boolean(CLERK_PUBLISHABLE_KEY);
+  | string;
 
 // Member PWA Pages
 import MemberHome from "./pages/member/MemberHome";
@@ -43,7 +39,7 @@ import MemberProfile from "./pages/member/MemberProfile";
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={clerkEnabled ? ClerkSignInPage : Login} />
+      <Route path="/login" component={ClerkSignInPage} />
 
       {/* Public legal routes (accessible without login) */}
       <Route path="/privacy" component={Privacy} />
