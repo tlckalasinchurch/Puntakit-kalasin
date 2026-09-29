@@ -318,8 +318,13 @@ surface and its query need building.
 
 ## Phase 9+ — Reports, Notifications, Search, Administration
 
-- Reports: real exports over Phase 1–7 data, replacing the `ComingSoon`
-  stub.
+- Reports: **done.** `GET /api/reports/summary` (member/group/attendance/event
+  aggregates, optionally scoped by `startDate`/`endDate`) plus CSV exports at
+  `/api/reports/export/{members,attendance,groups,events}.csv`, gated to the
+  same roles as Operations (`super_admin`/`admin`/`staff`/`ministry_leader`).
+  Replaces the `/reports` `ComingSoon` stub with `client/src/pages/Reports.tsx`.
+  Shared CSV building (RFC 4180 quoting, UTF-8 BOM, formula-injection guard)
+  lives in `server/lib/csv.ts`.
 - Notifications: event-driven (follow-up due, submission needs review),
   built on the existing `pushSubscriptions` table.
 - Search: cross-domain, start with server-side `ILIKE`/trigram search

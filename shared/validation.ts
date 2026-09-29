@@ -363,6 +363,12 @@ export const missionSubmissionPublishSchema = z.object({
 });
 export type MissionSubmissionPublishInput = z.infer<typeof missionSubmissionPublishSchema>;
 
+export const reportsDateRangeQuerySchema = z.object({
+  startDate: z.string().trim().optional(),
+  endDate: z.string().trim().optional(),
+});
+export type ReportsDateRangeQuery = z.infer<typeof reportsDateRangeQuerySchema>;
+
 export const pushSubscriptionSchema = z.object({
   endpoint: z.string().url("Endpoint ไม่ถูกต้อง"),
   p256dh: z.string().min(1, "Missing p256dh key"),

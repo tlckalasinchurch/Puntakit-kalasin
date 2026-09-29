@@ -19,6 +19,7 @@ import Announcements from "./pages/Announcements";
 import Events from "./pages/Events";
 import Church from "./pages/Church";
 import Ministries from "./pages/Ministries";
+import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import ComingSoon from "./pages/ComingSoon";
@@ -147,7 +148,7 @@ function Router() {
       </Route>
       <Route path="/reports">
         <ProtectedRoute>
-          <ComingSoon />
+          <Reports />
         </ProtectedRoute>
       </Route>
       <Route path="/media">

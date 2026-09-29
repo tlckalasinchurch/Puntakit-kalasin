@@ -12,6 +12,7 @@ import { eventsRouter } from "./routes/events.js";
 import { ministriesRouter } from "./routes/ministries.js";
 import { churchProfileRouter } from "./routes/churchProfile.js";
 import { dashboardRouter } from "./routes/dashboard.js";
+import { reportsRouter } from "./routes/reports.js";
 import { groupsRouter } from "./routes/groups.js";
 import { attendanceRouter } from "./routes/attendance.js";
 import { portalRouter } from "./routes/portal.js";
@@ -38,6 +39,7 @@ export function createApp() {
   // API Routes
   app.use("/api/auth", authRouter);
   app.use("/api/dashboard", dashboardRouter);
+  app.use("/api/reports", reportsRouter);
   app.use("/api/members", membersRouter);
   app.use("/api/groups", groupsRouter);
   app.use("/api/activities", activitiesRouter);

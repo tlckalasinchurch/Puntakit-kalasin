@@ -1,4 +1,4 @@
-import { ArrowLeft, Bell, BookOpen, Building2, Church, FileBarChart, Megaphone, Settings, Sparkles } from "lucide-react";
+import { ArrowLeft, Bell, BookOpen, Building2, Church, Megaphone, Settings, Sparkles } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ICON_SIZE } from "@/lib/icon-sizes";
@@ -8,7 +8,6 @@ const pages: Record<string, { title: string; description: string; icon: typeof B
   "/worship": { title: "การนมัสการ", description: "วางแผนและติดตามการนมัสการร่วมกัน", icon: Church },
   "/church": { title: "คริสตจักร", description: "ดูข้อมูลภาพรวมและรายละเอียดของคริสตจักร", icon: Building2 },
   "/ministries": { title: "พันธกิจ", description: "ติดตามงานพันธกิจและการสร้างสาวก", icon: Sparkles },
-  "/reports": { title: "รายงาน", description: "ดูรายงานและข้อมูลเชิงลึกของชุมชน", icon: FileBarChart },
   "/media": { title: "สื่อ/เอกสาร", description: "จัดเก็บและค้นหาสื่อสำหรับการทำพันธกิจ", icon: BookOpen },
   "/settings": { title: "ตั้งค่า", description: "จัดการการตั้งค่าของระบบและบัญชีผู้ใช้", icon: Settings },
 };
