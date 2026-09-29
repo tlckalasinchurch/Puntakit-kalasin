@@ -44,6 +44,15 @@ export function createApp() {
     next();
   });
 
+  // Liveness must remain available even when Clerk or the database is
+  // misconfigured; readiness below is the dependency-aware health check.
+  app.get("/api/health", (_req, res) => {
+    res.json({
+      success: true,
+      data: { status: "ok", timestamp: new Date().toISOString() },
+    });
+  });
+
   // Clerk is the only authentication provider. The middleware attaches the
   // verified Clerk session to every request; protected routes enforce it.
   const isTestRuntime = process.env.PUNTAKIT_TEST_AUTH === "1";
@@ -69,14 +78,6 @@ export function createApp() {
   app.use("/api/events", eventsRouter);
   app.use("/api/ministries", ministriesRouter);
   app.use("/api/church-profile", churchProfileRouter);
-
-  // Liveness Check
-  app.get("/api/health", (_req, res) => {
-    res.json({
-      success: true,
-      data: { status: "ok", timestamp: new Date().toISOString() },
-    });
-  });
 
   // Readiness Check (verifies DB connectivity)
   app.get("/api/ready", async (_req, res) => {
