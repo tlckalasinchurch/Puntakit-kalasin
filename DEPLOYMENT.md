@@ -37,10 +37,27 @@ Fail-fast rules:
 | `POSTGRES_SSL` | optional | `require` \| `allow` \| `prefer` \| `verify-full` \| `no-verify` \| `disable` |
 | `VITE_CLERK_PUBLISHABLE_KEY` | yes | Clerk publishable key used by the browser |
 | `CLERK_SECRET_KEY` | yes | Clerk secret used by the API to verify sessions |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | no | Next.js name; not read by this Vite app |
 
 Real values must stay in the hosting provider's secret store and must never be committed.
 `.env.example` is a placeholder only. PGlite (embedded) is always migrated on startup;
 remote drivers only migrate when `DB_AUTO_MIGRATE=true` or when `pnpm db:migrate` runs.
+
+## Vercel environment setup
+
+For this React/Vite project, add the following variables in the Vercel project
+settings for **Production** (and Preview/Development if those environments are used):
+
+```text
+VITE_CLERK_PUBLISHABLE_KEY=pk_live_...
+CLERK_SECRET_KEY=sk_live_...
+```
+
+After changing environment variables, redeploy. `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+is a Next.js convention and is intentionally ignored by this frontend.
+
+No other Clerk variable is required by the current code. Add
+`CLERK_WEBHOOK_SIGNING_SECRET` only when webhook synchronization is implemented.
 
 ## Local development with PGlite
 

@@ -26,8 +26,13 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 
 // Clerk is required for every build and owns all sign-in/sign-out flows.
-const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as
-  | string;
+// Vite only exposes client variables prefixed with VITE_.
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+if (!CLERK_PUBLISHABLE_KEY) {
+  throw new Error(
+    "Missing VITE_CLERK_PUBLISHABLE_KEY. Add the Clerk publishable key to the Vite build environment."
+  );
+}
 
 // Member PWA Pages
 import MemberHome from "./pages/member/MemberHome";
