@@ -46,7 +46,16 @@ export async function provisionClerkUser(
     .where(eq(users.clerkId, clerkUser.id))
     .limit(1);
   if (byClerkId) {
-    return { user: byClerkId, created: false, linkedByEmail: false };
+    const [synced] = await db
+      .update(users)
+      .set({
+        email: clerkUser.email?.trim().toLowerCase() || byClerkId.email,
+        name: clerkUser.name?.trim() || byClerkId.name,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, byClerkId.id))
+      .returning();
+    return { user: synced ?? byClerkId, created: false, linkedByEmail: false };
   }
 
   const email = clerkUser.email?.trim().toLowerCase() || null;
@@ -66,7 +75,12 @@ export async function provisionClerkUser(
       // One-time link: stamp the Clerk id on the legacy account.
       const [linked] = await db
         .update(users)
-        .set({ clerkId: clerkUser.id, updatedAt: new Date() })
+        .set({
+          clerkId: clerkUser.id,
+          email: email ?? byEmail.email,
+          name: clerkUser.name?.trim() || byEmail.name,
+          updatedAt: new Date(),
+        })
         .where(and(eq(users.id, byEmail.id), isNull(users.clerkId)))
         .returning();
       if (!linked) {
@@ -146,4 +160,15 @@ export async function loadClerkUser(req: {
     name: user.name,
     role: user.role as AuthenticatedUser["role"],
   };
+}
+
+/** Mark a locally linked account inactive when Clerk permanently deletes it. */
+export async function suspendClerkUser(clerkUserId: string): Promise<boolean> {
+  const db = getDb();
+  const updated = await db
+    .update(users)
+    .set({ status: "suspended", updatedAt: new Date() })
+    .where(eq(users.clerkId, clerkUserId))
+    .returning({ id: users.id });
+  return updated.length > 0;
 }

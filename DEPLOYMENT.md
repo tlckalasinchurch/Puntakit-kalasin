@@ -37,11 +37,33 @@ Fail-fast rules:
 | `POSTGRES_SSL` | optional | `require` \| `allow` \| `prefer` \| `verify-full` \| `no-verify` \| `disable` |
 | `VITE_CLERK_PUBLISHABLE_KEY` | yes | Clerk publishable key used by the browser |
 | `CLERK_SECRET_KEY` | yes | Clerk secret used by the API to verify sessions |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | yes for webhooks | Svix signing secret for the Clerk webhook endpoint |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | no | Next.js name; not read by this Vite app |
 
 Real values must stay in the hosting provider's secret store and must never be committed.
 `.env.example` is a placeholder only. PGlite (embedded) is always migrated on startup;
 remote drivers only migrate when `DB_AUTO_MIGRATE=true` or when `pnpm db:migrate` runs.
+
+## Clerk user synchronization webhook
+
+The API exposes a signed webhook endpoint:
+
+```text
+POST https://<production-domain>/api/webhooks/clerk
+```
+
+In the Clerk Dashboard:
+
+1. Open **Webhooks** and create an endpoint with the URL above.
+2. Subscribe to `user.created`, `user.updated`, and `user.deleted`.
+3. Copy the endpoint's signing secret into `CLERK_WEBHOOK_SIGNING_SECRET`.
+4. Redeploy the application after adding the variable.
+
+The handler verifies Svix headers before changing the database. Created and
+updated users are linked by `clerk_id` (or matched to an existing email) and
+deleted users are marked `suspended` rather than physically removed, preserving
+relationships and audit history. Repeated deliveries are safe because the sync
+operation is idempotent.
 
 ## Vercel environment setup
 
@@ -51,13 +73,12 @@ settings for **Production** (and Preview/Development if those environments are u
 ```text
 VITE_CLERK_PUBLISHABLE_KEY=pk_live_...
 CLERK_SECRET_KEY=sk_live_...
+CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
 ```
 
 After changing environment variables, redeploy. `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 is a Next.js convention and is intentionally ignored by this frontend.
 
-No other Clerk variable is required by the current code. Add
-`CLERK_WEBHOOK_SIGNING_SECRET` only when webhook synchronization is implemented.
 
 ## Local development with PGlite
 

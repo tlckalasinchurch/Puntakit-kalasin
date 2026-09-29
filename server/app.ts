@@ -2,6 +2,7 @@ import express, { type ErrorRequestHandler, type Request } from "express";
 import { sql } from "drizzle-orm";
 import { clerkMiddleware } from "@clerk/express";
 import { authRouter } from "./routes/auth.js";
+import { clerkWebhookRouter } from "./routes/clerkWebhook.js";
 import { activitiesRouter } from "./routes/activities.js";
 import { followUpsRouter } from "./routes/followUps.js";
 import { submissionsRouter } from "./routes/submissions.js";
@@ -24,6 +25,12 @@ export function createApp() {
   const app = express();
 
   app.use(requestIdMiddleware);
+  // Must run before express.json(): Svix verifies the exact raw request body.
+  app.use(
+    "/api/webhooks",
+    express.raw({ type: "application/json", limit: "1mb" }),
+    clerkWebhookRouter
+  );
   app.use(express.json({ limit: "1mb" }));
   app.use((req, _res, next) => {
     const cookies: Record<string, string> = {};
