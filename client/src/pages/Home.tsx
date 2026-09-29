@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle,
+  Activity,
   ArrowRight,
   CalendarDays,
   Camera,
   ChevronRight,
   Clock,
   Compass,
+  Database,
   HeartHandshake,
   Inbox as InboxIcon,
   ListTodo,
   Megaphone,
   RotateCw,
+  ShieldCheck,
   UserCheck,
   UserPlus,
   UserRound,
@@ -118,6 +121,12 @@ interface OperationsData {
   overdueFollowUps: OperationsFollowUp[];
   inactiveGroups: OperationsInactiveGroup[];
   recentActivity: OperationsActivity[];
+}
+
+interface HealthStatus {
+  status: string;
+  database?: string;
+  timestamp?: string;
 }
 
 const OPERATIONS_ROLES = ["super_admin", "admin", "staff", "ministry_leader"];
@@ -612,6 +621,54 @@ const DISCIPLESHIP_PATHWAY = [
   { title: "สร้างสาวก", detail: "เติบโตและพร้อมส่งต่อพระพร" },
 ];
 
+function OperationalPulse({
+  health,
+  ready,
+  retry,
+}: {
+  health: QueryState<HealthStatus>;
+  ready: QueryState<HealthStatus>;
+  retry: () => void;
+}) {
+  const online = health.status === "success" && health.data.status === "ok";
+  const databaseReady = ready.status === "success" && ready.data.status === "ready";
+  const checkedAt = health.status === "success" && health.data.timestamp
+    ? new Date(health.data.timestamp).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
+    : "กำลังตรวจสอบ";
+
+  return (
+    <section aria-labelledby="system-pulse-title" className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 shadow-[var(--shadow)] sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-soft)] text-[var(--color-primary)]">
+            <Activity size={ICON_SIZE.lg} aria-hidden="true" />
+          </span>
+          <div>
+            <p className="type-caption-strong text-[var(--color-primary)]">SYSTEM PULSE</p>
+            <h2 id="system-pulse-title" className="type-body-strong text-[var(--color-ink)]">ภาพรวมระบบพร้อมทำงาน</h2>
+            <p className="type-caption text-[var(--color-body-muted)]">ตรวจล่าสุด {checkedAt} · ข้อมูลจาก API จริง</p>
+          </div>
+        </div>
+        <button type="button" onClick={retry} className="inline-flex h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]">
+          <RotateCw size={ICON_SIZE.sm} aria-hidden="true" /> ตรวจอีกครั้ง
+        </button>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="flex items-center gap-3 rounded-[var(--radius-md)] bg-[var(--color-canvas-soft)] p-3">
+          <ShieldCheck size={ICON_SIZE.md} className={online ? "text-[var(--color-success)]" : "text-[var(--color-error)]"} aria-hidden="true" />
+          <div className="min-w-0"><p className="type-caption text-[var(--color-body-muted)]">API service</p><p className="type-body-strong text-[var(--color-ink)]">{online ? "ทำงานปกติ" : "ต้องตรวจสอบ"}</p></div>
+          <span className={`ml-auto h-2.5 w-2.5 rounded-full ${online ? "bg-[var(--color-success)]" : "bg-[var(--color-error)]"}`} aria-label={online ? "API ปกติ" : "API มีปัญหา"} />
+        </div>
+        <div className="flex items-center gap-3 rounded-[var(--radius-md)] bg-[var(--color-canvas-soft)] p-3">
+          <Database size={ICON_SIZE.md} className={databaseReady ? "text-[var(--color-success)]" : "text-[var(--color-warning)]"} aria-hidden="true" />
+          <div className="min-w-0"><p className="type-caption text-[var(--color-body-muted)]">ฐานข้อมูล</p><p className="type-body-strong text-[var(--color-ink)]">{databaseReady ? "เชื่อมต่อแล้ว" : ready.status === "error" ? "ยังไม่พร้อม" : "กำลังตรวจสอบ"}</p></div>
+          <span className={`ml-auto h-2.5 w-2.5 rounded-full ${databaseReady ? "bg-[var(--color-success)]" : "bg-[var(--color-warning)]"}`} aria-label={databaseReady ? "ฐานข้อมูลพร้อม" : "ฐานข้อมูลยังไม่พร้อม"} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -640,6 +697,12 @@ export default function Home() {
   const [operations, retryOperations] = useHomeQuery<OperationsData>(
     canSeeOperations ? "/api/dashboard/operations" : null
   );
+  const [health, retryHealth] = useHomeQuery<HealthStatus>("/api/health");
+  const [ready, retryReady] = useHomeQuery<HealthStatus>("/api/ready");
+  const retrySystemStatus = useCallback(() => {
+    retryHealth();
+    retryReady();
+  }, [retryHealth, retryReady]);
 
   return (
     <AppLayout>
@@ -680,6 +743,8 @@ export default function Home() {
             />
           )}
         </section>
+
+        <OperationalPulse health={health} ready={ready} retry={retrySystemStatus} />
 
         {/* Context / discovery */}
         <nav aria-label="ทางลัดสำรวจพันธกิจ">
