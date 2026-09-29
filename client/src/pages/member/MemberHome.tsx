@@ -86,7 +86,7 @@ export default function MemberHome() {
         QRCode.toDataURL(res.member.qrToken, {
           width: 180,
           margin: 1,
-          color: { dark: "#173b70", light: "#ffffff" },
+          color: { dark: "#272729", light: "#ffffff" },
         }).then(setQrDataUrl);
       }
     } catch (err) {
@@ -168,7 +168,7 @@ export default function MemberHome() {
             border: "1px solid #dbe6f0",
             display: "grid",
             placeItems: "center",
-            color: "#2f6fcc",
+            color: "#315c2b",
             boxShadow: "0 2px 8px rgba(35, 78, 120, 0.05)",
             cursor: "pointer",
           }}
@@ -180,7 +180,7 @@ export default function MemberHome() {
       {/* Personal Member QR Code Card (Digital ID) */}
       <div
         style={{
-          background: "linear-gradient(145deg, #173b70 0%, #224d86 100%)",
+          background: "linear-gradient(145deg, #2a2a2c 0%, #272729 100%)",
           borderRadius: "20px",
           padding: "20px",
           color: "white",
@@ -227,7 +227,7 @@ export default function MemberHome() {
               <img src={qrDataUrl} alt="Member QR Code" style={{ width: "100px", height: "100px", display: "block" }} />
             ) : (
               <div style={{ width: "100px", height: "100px", display: "grid", placeItems: "center" }}>
-                <QrCode size={40} style={{ color: "#173b70" }} />
+                <QrCode size={40} style={{ color: "#272729" }} />
               </div>
             )}
           </div>
@@ -334,7 +334,7 @@ export default function MemberHome() {
           }}
         >
           <div>
-            <div style={{ fontSize: "10px", fontWeight: 700, color: "#2f6fcc" }}>กลุ่มแคร์ประจำตัว</div>
+            <div style={{ fontSize: "10px", fontWeight: 700, color: "#315c2b" }}>กลุ่มแคร์ประจำตัว</div>
             <strong style={{ fontSize: "14px", color: "var(--ink)" }}>{data.careGroup.name}</strong>
             <div style={{ fontSize: "11px", color: "#61778e", marginTop: "2px" }}>
               {data.careGroup.meetingDay} {data.careGroup.meetingTime || ""}
@@ -354,7 +354,7 @@ export default function MemberHome() {
             </div>
             <button
               onClick={() => navigate("/app/events")}
-              style={{ background: "none", border: 0, color: "#2f6fcc", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+              style={{ background: "none", border: 0, color: "#315c2b", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
             >
               ดูทั้งหมด
             </button>
@@ -388,12 +388,12 @@ export default function MemberHome() {
         <div style={{ background: "#fff", borderRadius: "18px", padding: "16px", border: "1px solid #e1ebf5" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Calendar size={16} style={{ color: "#2f6fcc" }} />
+              <Calendar size={16} style={{ color: "#315c2b" }} />
               <strong style={{ fontSize: "14px", color: "var(--ink)" }}>กิจกรรมที่กำลังจะมาถึง</strong>
             </div>
             <button
               onClick={() => navigate("/app/events")}
-              style={{ background: "none", border: 0, color: "#2f6fcc", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+              style={{ background: "none", border: 0, color: "#315c2b", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
             >
               ดูทั้งหมด
             </button>
@@ -427,7 +427,7 @@ export default function MemberHome() {
                 <button
                   onClick={() => handleRegisterEvent(evt.id, evt.isRegistered)}
                   style={{
-                    background: evt.isRegistered ? "#e3f8ee" : "#2f6fcc",
+                    background: evt.isRegistered ? "#e3f8ee" : "#315c2b",
                     color: evt.isRegistered ? "#16865d" : "#fff",
                     border: 0,
                     borderRadius: "10px",

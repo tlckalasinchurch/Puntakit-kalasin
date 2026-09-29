@@ -72,7 +72,7 @@ export default function MemberGroup() {
     <MemberAppLayout title="กลุ่มแคร์ของฉัน">
       <div className="space-y-4">
         {/* Header banner */}
-        <div className="bg-gradient-to-r from-[#173b70] to-[#1e4d92] rounded-2xl p-5 text-white shadow-sm">
+        <div className="bg-gradient-to-r from-[var(--color-dark-surface-2)] to-[var(--color-dark-surface)] rounded-2xl p-5 text-white shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-xs">
@@ -107,7 +107,7 @@ export default function MemberGroup() {
         {/* Empty state: No group assigned */}
         {!loading && !group && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center border border-gray-100 dark:border-gray-700 shadow-xs space-y-4">
-            <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center mx-auto text-[#173b70] dark:text-blue-400">
+            <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center mx-auto text-[var(--color-primary)] dark:text-blue-400">
               <HeartHandshake size={ICON_SIZE.xl} />
             </div>
             <div>
@@ -121,7 +121,7 @@ export default function MemberGroup() {
             <div className="pt-2">
               <a
                 href="tel:043811800"
-                className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-[#173b70] text-white text-sm font-medium hover:bg-[#122e56] transition-colors"
+                className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-[var(--color-dark-surface)] text-white text-sm font-medium hover:bg-[var(--color-dark-surface-3)] transition-colors"
               >
                 <UsersRound size={ICON_SIZE.sm} />
                 <span>ติดต่อฝ่ายต้อนรับคริสตจักร</span>
@@ -154,7 +154,7 @@ export default function MemberGroup() {
 
               <div className="grid grid-cols-1 gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-700 text-sm">
                 <div className="flex items-center space-x-3 text-gray-700 dark:text-gray-300">
-                  <Calendar size={ICON_SIZE.sm} className="text-[#173b70] dark:text-blue-400 shrink-0" />
+                  <Calendar size={ICON_SIZE.sm} className="text-[var(--color-primary)] dark:text-blue-400 shrink-0" />
                   <span>
                     วันนัดหมาย:{" "}
                     <strong className="font-semibold text-gray-900 dark:text-gray-100">
@@ -164,7 +164,7 @@ export default function MemberGroup() {
                 </div>
 
                 <div className="flex items-center space-x-3 text-gray-700 dark:text-gray-300">
-                  <Clock size={ICON_SIZE.sm} className="text-[#173b70] dark:text-blue-400 shrink-0" />
+                  <Clock size={ICON_SIZE.sm} className="text-[var(--color-primary)] dark:text-blue-400 shrink-0" />
                   <span>
                     เวลา:{" "}
                     <strong className="font-semibold text-gray-900 dark:text-gray-100">
@@ -174,7 +174,7 @@ export default function MemberGroup() {
                 </div>
 
                 <div className="flex items-center space-x-3 text-gray-700 dark:text-gray-300">
-                  <MapPin size={ICON_SIZE.sm} className="text-[#173b70] dark:text-blue-400 shrink-0" />
+                  <MapPin size={ICON_SIZE.sm} className="text-[var(--color-primary)] dark:text-blue-400 shrink-0" />
                   <span>
                     สถานที่:{" "}
                     <strong className="font-semibold text-gray-900 dark:text-gray-100">
@@ -188,7 +188,7 @@ export default function MemberGroup() {
               {group.leaderName && (
                 <div className="mt-3 p-3.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full bg-[#173b70] text-white flex items-center justify-center font-bold text-sm">
+                    <div className="w-10 h-10 rounded-full bg-[var(--color-dark-surface)] text-white flex items-center justify-center font-bold text-sm">
                       {getInitials(group.leaderName)}
                     </div>
                     <div>
@@ -216,7 +216,7 @@ export default function MemberGroup() {
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <UserCheck size={ICON_SIZE.sm} className="text-[#173b70] dark:text-blue-400" />
+                  <UserCheck size={ICON_SIZE.sm} className="text-[var(--color-primary)] dark:text-blue-400" />
                   <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
                     สมาชิกในกลุ่ม
                   </h3>
@@ -237,7 +237,7 @@ export default function MemberGroup() {
                           className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 text-[#173b70] dark:text-blue-300 flex items-center justify-center font-bold text-xs">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 text-[var(--color-primary)] dark:text-blue-300 flex items-center justify-center font-bold text-xs">
                           {getInitials(m.memberName)}
                         </div>
                       )}

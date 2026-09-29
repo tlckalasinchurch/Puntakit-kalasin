@@ -128,7 +128,7 @@ export default function Members() {
 
   useEffect(() => {
     if (selectedMember) {
-      QRCode.toDataURL(`PK-MEM-${selectedMember.id}`, { width: 140, margin: 1, color: { dark: "#173b70", light: "#ffffff" } })
+      QRCode.toDataURL(`PK-MEM-${selectedMember.id}`, { width: 140, margin: 1, color: { dark: "#272729", light: "#ffffff" } })
         .then(setQrCodeDataUrl)
         .catch(() => setQrCodeDataUrl(""));
     } else {
@@ -290,7 +290,7 @@ export default function Members() {
           <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700">
             <Users size={13} /> CHURCH MEMBERS
           </span>
-          <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-[#173b70] sm:text-3xl">
+          <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-[var(--color-primary)] sm:text-3xl">
             จัดการสมาชิก
           </h1>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-600 sm:text-sm">
@@ -846,7 +846,7 @@ export default function Members() {
                 alignItems: "center",
                 gap: 16,
                 padding: "16px",
-                background: "#f4f8fc",
+                background: "var(--color-canvas-soft)",
                 borderRadius: 14,
                 marginBottom: 16,
               }}

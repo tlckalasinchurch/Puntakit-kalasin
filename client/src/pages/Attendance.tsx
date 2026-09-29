@@ -150,7 +150,7 @@ export default function Attendance() {
       groupId: selectedGroupId || null,
     });
 
-    QRCode.toDataURL(sessionPayload, { width: 280, margin: 2, color: { dark: "#173b70", light: "#ffffff" } })
+    QRCode.toDataURL(sessionPayload, { width: 280, margin: 2, color: { dark: "#272729", light: "#ffffff" } })
       .then(setSessionQrDataUrl)
       .catch(() => {});
   }, [selectedService, selectedDate, selectedGroupId]);
@@ -395,7 +395,7 @@ export default function Attendance() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <CalendarDays size={ICON_SIZE.md} style={{ color: "#2f6fcc" }} />
+          <CalendarDays size={ICON_SIZE.md} style={{ color: "#315c2b" }} />
           <div>
             <label style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "#6e8297" }}>
               วันที่รอบการนมัสการ
@@ -675,7 +675,7 @@ export default function Attendance() {
                     height: "44px",
                     padding: "0 14px",
                     borderRadius: "12px",
-                    border: "2px solid #2f6fcc",
+                    border: "2px solid #315c2b",
                     fontSize: "14px",
                     outline: "none",
                   }}
@@ -847,7 +847,7 @@ export default function Attendance() {
                         {m.phone ? (
                           <a
                             href={`tel:${m.phone}`}
-                            style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#2f6fcc" }}
+                            style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#315c2b" }}
                           >
                             <Phone size={12} />
                             <span>{m.phone}</span>
@@ -936,7 +936,7 @@ export default function Attendance() {
                 <div>
                   <button
                     onClick={handleExportCsv}
-                    style={{ background: "none", border: 0, color: "#2f6fcc", fontWeight: 700, fontSize: "13px", cursor: "pointer" }}
+                    style={{ background: "none", border: 0, color: "#315c2b", fontWeight: 700, fontSize: "13px", cursor: "pointer" }}
                   >
                     ดาวน์โหลด CSV
                   </button>
@@ -974,7 +974,7 @@ export default function Attendance() {
                         วันที่ {new Date(tr.date).toLocaleDateString("th-TH")}
                       </div>
                     </div>
-                    <div style={{ fontSize: "16px", fontWeight: 700, color: "#2f6fcc" }}>
+                    <div style={{ fontSize: "16px", fontWeight: 700, color: "#315c2b" }}>
                       {tr.count} คน
                     </div>
                   </div>

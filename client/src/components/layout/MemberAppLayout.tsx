@@ -60,7 +60,7 @@ export function MemberAppLayout({ children, title }: MemberAppLayoutProps) {
     <div
       style={{
         minHeight: "100vh",
-        background: "#f4f8fc",
+        background: "var(--color-canvas-soft)",
         display: "flex",
         flexDirection: "column",
         maxWidth: "600px",
@@ -185,7 +185,7 @@ export function MemberAppLayout({ children, title }: MemberAppLayoutProps) {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "3px",
-                color: isActive ? "#2f6fcc" : "#71859c",
+                color: isActive ? "#315c2b" : "#71859c",
                 cursor: "pointer",
                 padding: "6px 0",
                 transition: "all 0.15s ease",

@@ -127,7 +127,7 @@ export default function Events() {
           <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700">
             <CalendarDays size={13} /> ACTIVITY PULSE
           </span>
-          <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-[#173b70] sm:text-3xl">
+          <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-[var(--color-primary)] sm:text-3xl">
             การนมัสการ / กิจกรรม
           </h1>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-600 sm:text-sm">

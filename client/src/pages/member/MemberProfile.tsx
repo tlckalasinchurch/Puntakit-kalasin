@@ -187,10 +187,10 @@ export default function MemberProfile() {
               <img
                 src={profile.avatarUrl}
                 alt={profile.name}
-                className="w-16 h-16 rounded-full object-cover border-2 border-[#173b70]"
+                className="w-16 h-16 rounded-full object-cover border-2 border-[var(--color-primary)]"
               />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-[#173b70] text-white flex items-center justify-center font-bold text-xl shadow-xs">
+              <div className="w-16 h-16 rounded-full bg-[var(--color-dark-surface)] text-white flex items-center justify-center font-bold text-xl shadow-xs">
                 {getInitials(user?.name || "PK")}
               </div>
             )}
@@ -236,7 +236,7 @@ export default function MemberProfile() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
             <div className="flex items-center space-x-2">
-              <User size={ICON_SIZE.sm} className="text-[#173b70] dark:text-blue-400" />
+              <User size={ICON_SIZE.sm} className="text-[var(--color-primary)] dark:text-blue-400" />
               <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
                 แก้ไขข้อมูลติดต่อ
               </h3>
@@ -254,7 +254,7 @@ export default function MemberProfile() {
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 placeholder="เช่น บอย, แนน, อาร์ต"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#173b70] focus:outline-hidden"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-hidden"
               />
             </div>
 
@@ -269,7 +269,7 @@ export default function MemberProfile() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="08X-XXX-XXXX"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#173b70] focus:outline-hidden"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-hidden"
                   />
                   <Phone size={14} className="absolute left-3 top-3.5 text-gray-400" />
                 </div>
@@ -285,7 +285,7 @@ export default function MemberProfile() {
                     value={lineId}
                     onChange={(e) => setLineId(e.target.value)}
                     placeholder="Line ID"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#173b70] focus:outline-hidden"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-hidden"
                   />
                   <MessageSquare size={14} className="absolute left-3 top-3.5 text-gray-400" />
                 </div>
@@ -302,7 +302,7 @@ export default function MemberProfile() {
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="บ้านเลขที่ ตำบล อำเภอ จังหวัด..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#173b70] focus:outline-hidden resize-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-hidden resize-none"
                 />
               </div>
             </div>
@@ -321,7 +321,7 @@ export default function MemberProfile() {
                     value={emergencyContactName}
                     onChange={(e) => setEmergencyContactName(e.target.value)}
                     placeholder="ชื่อ-นามสกุล บุคคลติดต่อฉุกเฉิน"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#173b70] focus:outline-hidden"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-hidden"
                   />
                 </div>
 
@@ -331,14 +331,14 @@ export default function MemberProfile() {
                     value={emergencyContactPhone}
                     onChange={(e) => setEmergencyContactPhone(e.target.value)}
                     placeholder="เบอร์โทรฉุกเฉิน"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#173b70] focus:outline-hidden"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-hidden"
                   />
                   <input
                     type="text"
                     value={emergencyContactRelation}
                     onChange={(e) => setEmergencyContactRelation(e.target.value)}
                     placeholder="ความสัมพันธ์ (เช่น บิดา, คู่สมรส)"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#173b70] focus:outline-hidden"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-hidden"
                   />
                 </div>
               </div>
@@ -351,7 +351,7 @@ export default function MemberProfile() {
                   type="checkbox"
                   checked={consentGiven}
                   onChange={(e) => setConsentGiven(e.target.checked)}
-                  className="w-4 h-4 rounded mt-0.5 text-[#173b70] focus:ring-[#173b70]"
+                  className="w-4 h-4 rounded mt-0.5 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                 />
                 <span className="text-xs text-gray-600 dark:text-gray-400">
                   ยินยอมให้คริสตจักรพันธกิจกาฬสินธุ์ จัดเก็บและใช้ข้อมูลส่วนบุคคลนี้เพื่อการอภิบาล การติดต่อประสานงาน และการดำเนินพันธกิจตามนโยบาย PDPA
@@ -362,7 +362,7 @@ export default function MemberProfile() {
             <button
               type="submit"
               disabled={saving}
-              className="w-full mt-2 py-3 rounded-xl bg-[#173b70] text-white font-medium text-sm flex items-center justify-center space-x-2 hover:bg-[#122e56] active:scale-98 transition-all shadow-xs disabled:opacity-50"
+              className="w-full mt-2 py-3 rounded-xl bg-[var(--color-dark-surface)] text-white font-medium text-sm flex items-center justify-center space-x-2 hover:bg-[var(--color-dark-surface-3)] active:scale-98 transition-all shadow-xs disabled:opacity-50"
             >
               {saving ? (
                 <>
@@ -382,7 +382,7 @@ export default function MemberProfile() {
         {/* Push Notification Card */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-xs space-y-3">
           <div className="flex items-center space-x-2">
-            <Bell size={ICON_SIZE.sm} className="text-[#173b70] dark:text-blue-400" />
+            <Bell size={ICON_SIZE.sm} className="text-[var(--color-primary)] dark:text-blue-400" />
             <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
               การแจ้งเตือน Push Notification
             </h3>
@@ -396,7 +396,7 @@ export default function MemberProfile() {
               type="button"
               onClick={handleSubscribePush}
               disabled={subscribingPush}
-              className="flex-1 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-[#173b70] dark:text-blue-300 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors disabled:opacity-50"
+              className="flex-1 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-[var(--color-primary)] dark:text-blue-300 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors disabled:opacity-50"
             >
               <Bell size={14} />
               <span>{subscribingPush ? "กำลังตั้งค่า..." : "เปิดรับแจ้งเตือนบนเครื่องนี้"}</span>
@@ -417,7 +417,7 @@ export default function MemberProfile() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <KeyRound size={ICON_SIZE.sm} className="text-[#173b70] dark:text-blue-400" />
+              <KeyRound size={ICON_SIZE.sm} className="text-[var(--color-primary)] dark:text-blue-400" />
               <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
                 ความปลอดภัยและรหัสผ่าน
               </h3>
@@ -425,7 +425,7 @@ export default function MemberProfile() {
             <button
               type="button"
               onClick={() => setShowPasswordSection(!showPasswordSection)}
-              className="text-xs text-[#173b70] dark:text-blue-400 font-medium"
+              className="text-xs text-[var(--color-primary)] dark:text-blue-400 font-medium"
             >
               {showPasswordSection ? "ยกเลิก" : "เปลี่ยนรหัสผ่าน"}
             </button>
@@ -443,7 +443,7 @@ export default function MemberProfile() {
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   required
                   placeholder="รหัสผ่านเดิมของคุณ"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#173b70] focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-hidden"
                 />
               </div>
 
@@ -457,7 +457,7 @@ export default function MemberProfile() {
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
                   placeholder="รหัสผ่านใหม่"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#173b70] focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-hidden"
                 />
               </div>
 
@@ -471,7 +471,7 @@ export default function MemberProfile() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   placeholder="พิมพ์รหัสผ่านใหม่อีกครั้ง"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#173b70] focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-hidden"
                 />
               </div>
 
