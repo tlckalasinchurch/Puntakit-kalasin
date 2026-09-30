@@ -33,7 +33,11 @@ async function startServer() {
     res.sendFile(path.join(staticPath, "index.html"));
   });
 
-  const port = process.env.PORT || process.env.API_PORT || 3000;
+  // In dev, Vite owns :3000 and proxies /api to :3001 (see vite.config.ts).
+  const port =
+    process.env.PORT ||
+    process.env.API_PORT ||
+    (process.env.NODE_ENV === "production" ? 3000 : 3001);
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);

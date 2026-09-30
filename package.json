@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently -k -n client,server \"npm:dev:client\" \"npm:dev:server\"",
     "dev:client": "vite --host",
-    "dev:server": "dotenv -e .env.local -- tsx watch server/index.ts",
+    "dev:server": "dotenv -e .env.local -e .env.development.local -- tsx watch server/index.ts",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "preview": "vite preview --host",

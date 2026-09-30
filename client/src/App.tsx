@@ -7,6 +7,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ClerkSignInPage from "./pages/ClerkSignInPage";
+import AuthConfigError from "./pages/AuthConfigError";
 import Home from "./pages/Home";
 import Feed from "./pages/Feed";
 import FollowUps from "./pages/FollowUps";
@@ -29,8 +30,9 @@ import Terms from "./pages/Terms";
 // requires VITE_PUNTAKIT_DEMO_MODE=1, and is never enabled by default.
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const IS_DEMO_MODE = import.meta.env.VITE_PUNTAKIT_DEMO_MODE === "1";
-if (!CLERK_PUBLISHABLE_KEY && !IS_DEMO_MODE) {
-  throw new Error(
+const IS_AUTH_MISCONFIGURED = !CLERK_PUBLISHABLE_KEY && !IS_DEMO_MODE;
+if (IS_AUTH_MISCONFIGURED) {
+  console.error(
     "Missing VITE_CLERK_PUBLISHABLE_KEY. Add the Clerk publishable key or explicitly enable VITE_PUNTAKIT_DEMO_MODE=1 for local development."
   );
 }
@@ -170,6 +172,8 @@ function Router() {
 }
 
 function App() {
+  if (IS_AUTH_MISCONFIGURED) return <AuthConfigError />;
+
   const content = (
     <ThemeProvider defaultTheme="light" switchable>
       <AuthProvider>
