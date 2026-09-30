@@ -149,3 +149,10 @@ _merge-env.mjs
 .freebuff/
 .mcp.json
 skills-lock.json
+
+# Added by the Vercel CLI when linking this folder to a project.
+.vercel
+.env*
+# Re-asserted after the broader `.env*` above so the documented template stays
+# visible in the repo.
+!.env.example

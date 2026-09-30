@@ -1,0 +1,21 @@
+# Never upload local-only artifacts to a Vercel deployment.
+# The embedded PGlite database is local development state, not source code, and
+# was 39 MB at the time this file was added — it must not be uploaded with every
+# deploy. `dist/` is rebuilt by the deployment itself (buildCommand: vite build,
+# outputDirectory: dist/public).
+.db_data/
+dist/
+.manus-logs/
+.vercel/
+.agents/
+.ai/
+.claude/
+.claude-flow/
+.swarm/
+.freebuff/
+node_modules/
+*.log
+.env
+.env.local
+.env.*.local
+_merge-env.mjs
