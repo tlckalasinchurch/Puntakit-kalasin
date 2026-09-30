@@ -1,29 +1,47 @@
-import NotFound from "@/pages/NotFound";
+import { lazy, Suspense } from "react";
 import { Route, Switch } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
 import { ClerkProvider } from "@clerk/react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { Skeleton } from "@/components/ui/skeleton";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import ClerkSignInPage from "./pages/ClerkSignInPage";
-import Home from "./pages/Home";
-import Feed from "./pages/Feed";
-import FollowUps from "./pages/FollowUps";
-import Inbox from "./pages/Inbox";
-import Members from "./pages/Members";
-import Groups from "./pages/Groups";
-import MapPage from "./pages/Map";
-import Attendance from "./pages/Attendance";
-import Announcements from "./pages/Announcements";
-import Events from "./pages/Events";
-import Church from "./pages/Church";
-import Ministries from "./pages/Ministries";
-import Reports from "./pages/Reports";
-import Profile from "./pages/Profile";
-import ComingSoon from "./pages/ComingSoon";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
+import NotFound from "@/pages/NotFound";
+
+// Every page is code-split. Before this, all 24 pages sat in one entry chunk, so
+// any heavy dependency used by any single page was downloaded by everyone on
+// first paint — leaflet + leaflet.markercluster (~456 kB unminified) used only
+// by /map, qrcode (~58 kB) used by three pages, and so on. Router paths, shells
+// and access rules are unchanged; this only changes when a page's code arrives.
+//
+// NotFound stays a static import on purpose: it is the route fallback, so it
+// must render without ever suspending.
+const ClerkSignInPage = lazy(() => import("./pages/ClerkSignInPage"));
+const Home = lazy(() => import("./pages/Home"));
+const Feed = lazy(() => import("./pages/Feed"));
+const FollowUps = lazy(() => import("./pages/FollowUps"));
+const Inbox = lazy(() => import("./pages/Inbox"));
+const Members = lazy(() => import("./pages/Members"));
+const Groups = lazy(() => import("./pages/Groups"));
+const MapPage = lazy(() => import("./pages/Map"));
+const Attendance = lazy(() => import("./pages/Attendance"));
+const Announcements = lazy(() => import("./pages/Announcements"));
+const Events = lazy(() => import("./pages/Events"));
+const Church = lazy(() => import("./pages/Church"));
+const Ministries = lazy(() => import("./pages/Ministries"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Profile = lazy(() => import("./pages/Profile"));
+const ComingSoon = lazy(() => import("./pages/ComingSoon"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+
+// Member PWA Pages
+const MemberHome = lazy(() => import("./pages/member/MemberHome"));
+const MemberEvents = lazy(() => import("./pages/member/MemberEvents"));
+const MemberGroup = lazy(() => import("./pages/member/MemberGroup"));
+const MemberAttendance = lazy(() => import("./pages/member/MemberAttendance"));
+const MemberProfile = lazy(() => import("./pages/member/MemberProfile"));
 
 // Clerk owns production sign-in/sign-out flows. Local demo mode is explicit,
 // requires VITE_PUNTAKIT_DEMO_MODE=1, and is never enabled by default.
@@ -35,12 +53,23 @@ if (!CLERK_PUBLISHABLE_KEY && !IS_DEMO_MODE) {
   );
 }
 
-// Member PWA Pages
-import MemberHome from "./pages/member/MemberHome";
-import MemberEvents from "./pages/member/MemberEvents";
-import MemberGroup from "./pages/member/MemberGroup";
-import MemberAttendance from "./pages/member/MemberAttendance";
-import MemberProfile from "./pages/member/MemberProfile";
+/** Page-content loading → skeleton (design.md §8); never "..." text. */
+function RouteSkeleton() {
+  return (
+    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8" data-testid="route-skeleton">
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-8 w-72" />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-32 rounded-2xl" />
+        ))}
+      </div>
+      <Skeleton className="h-72 rounded-2xl" />
+    </div>
+  );
+}
 
 function Router() {
   return (
@@ -173,7 +202,9 @@ function App() {
   const content = (
     <ThemeProvider defaultTheme="light" switchable>
       <AuthProvider>
-        <Router />
+        <Suspense fallback={<RouteSkeleton />}>
+          <Router />
+        </Suspense>
         <Toaster />
       </AuthProvider>
     </ThemeProvider>
