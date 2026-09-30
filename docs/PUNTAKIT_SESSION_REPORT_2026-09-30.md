@@ -1,8 +1,10 @@
 # Puntakit — Maintenance & Performance Report
 
 วันที่: 2026-09-30
-ช่วง: งานรอบเดียว 7 commits (`8988a4f` → `e9c5e6a`)
+ช่วง: งานรอบเดียว 10 commits (`8988a4f` → `1211fbe`)
 สถานะเริ่มต้น: โฟลเดอร์นี้ไม่มี `.git`, ไม่ได้ติดตั้ง dependencies, ไม่มี `.env.local`, รัน `pnpm dev` ไม่ได้
+
+> ⚠️ **อ่านข้อ 9 ก่อน** — ระหว่างงานนี้พบว่า **production ล่มอยู่ก่อนแล้ว** (API ตอบ 503/500 ทุก route) และได้วินิจฉัยจนพบสาเหตุทั้งสองและแก้ให้กลับมาใช้งานได้แล้ว
 
 ---
 
@@ -23,7 +25,7 @@
 
 ---
 
-## 2. งานที่ทำ (7 commits)
+## 2. งานที่ทำ (10 commits)
 
 | commit | ประเภท | สาระ |
 |---|---|---|
@@ -34,6 +36,9 @@
 | `e95aa90` | perf | ถอด Manus runtime ออกจากทุกหน้า (−367 kB/หน้า) |
 | `adedd94` | perf | code splitting ทุก route ด้วย `React.lazy` + `Suspense` |
 | `e9c5e6a` | deps | ลบ 8 dependency ที่ไม่มีไฟล์ไหน import |
+| `0ffe2e8` | docs | รายงานสรุปงานรอบนี้ |
+| `19f3a7b` | deploy | `.vercelignore` — ห้ามอัปโหลด `.db_data` (39 MB) ขึ้น Vercel ทุกครั้งที่ deploy |
+| `1211fbe` | **fix** | **กู้ production: `clerkMiddleware()` ไม่เคยได้รับ publishable key (รายละเอียดข้อ 9)** |
 
 ---
 
@@ -183,8 +188,67 @@ headless Chromium (Playwright cache) ทดสอบกับ dev server + PGlit
 
 ## 8. ขั้นตอนถัดไปที่แนะนำ
 
-1. **Redeploy บน Vercel** (`vercel --prod`) เพื่อให้ผู้ใช้ได้ประโยชน์จากงานประสิทธิภาพจริง — ต้องใช้ credential ของเจ้าของโปรเจกต์
+1. ~~Redeploy บน Vercel~~ **เสร็จแล้ว** — deploy production หลายรอบระหว่างงานนี้ (ดูข้อ 9) และยืนยันแล้วว่า `/api/ready` คืน `database: connected`
 2. ตัดสินใจเรื่อง **primitive ที่ตาย 46 ไฟล์** (จะลด lockfile และเวลาติดตั้งได้อีกมาก)
 3. อัปเกรด **react เป็น 19.2.3+** และพิจารณาปลั๊กอิน `jsx-loc` ที่ไม่รองรับ Vite 7
-4. เพิ่ม **UI smoke test ใน CI** เพื่อกัน regression ของ sidebar/lazy route
-5. ทำงานฟีเจอร์ที่เหลือ: Notifications, Search, Admin RBAC UI (ต่อ `/settings`)
+4. เพิ่ม **smoke test ปลายทาง** — อย่างน้อยยิง `/api/ready` (ต้องได้ 200 + `database: connected`) และ `/api/auth/me` (ต้องได้ 401 ไม่ใช่ 5xx) หลัง deploy ทุกครั้ง จะจับ downtime แบบข้อ 9 ได้ภายในไม่กี่นาที
+5. เพิ่ม **UI smoke test ใน CI** เพื่อกัน regression ของ sidebar/lazy route
+6. ทำงานฟีเจอร์ที่เหลือ: Notifications, Search, Admin RBAC UI (ต่อ `/settings`)
+
+---
+
+## 9. เหตุการณ์สำคัญ: production ล่ม และการกู้คืน
+
+### อาการ
+
+`https://puntakit-kalasin.vercel.app` โหลดหน้าได้ แต่ API ทุก route ที่แตะฐานข้อมูลหรือ auth ตอบ error — ผู้ใช้จริง login ไม่ได้
+
+| route | ก่อนแก้ | หลังแก้ |
+|---|---|---|
+| `/api/health` (liveness) | 200 | 200 |
+| `/api/ready` (ฐานข้อมูล) | **503** แล้วกลายเป็น **500** | **200 `{"status":"ready","database":"connected"}`** |
+| `/api/auth/me` | **503** แล้วกลายเป็น **500** | **401** (ค่าที่ถูกต้องเมื่อยังไม่ login) |
+
+### หลักฐานว่าไม่ใช่ผลจาก deploy ของรอบนี้
+
+ทดสอบ deployment เก่า 20 ชั่วโมงก่อน (ก่อนงานทั้งหมด) → ได้ 503 `DATABASE_UNAVAILABLE` เหมือนกันเป๊ะ และ preview deployment ก็ 503 เหมือนกัน → ปัญหาอยู่ที่ค่า env var ไม่ใช่ที่ตัว deployment
+
+### สาเหตุที่ 1 — `DATABASE_URL` ใช้งานไม่ได้ (503)
+
+runtime log:
+```
+DatabaseConfigurationError: DATABASE_URL is required when NODE_ENV=production.
+Refusing to fall back to the embedded PGlite database.
+```
+
+`vercel env ls production` แสดงว่ามี `DATABASE_URL` (scope Production+Preview สร้างไว้ 4 วันก่อน) แต่ function ไม่ได้รับค่าที่ใช้ได้ — และเพราะเป็น Secret จึงอ่านค่าจริงไม่ได้ (`vercel env pull` คืน `[SENSITIVE]`) → **เจ้าของโปรเจกต์ตั้งค่าใหม่ใน Vercel dashboard** แล้วอาการ 503 หายไป
+
+### สาเหตุที่ 2 — `clerkMiddleware()` ไม่มี publishable key (500) — บั๊กในโค้ด แก้ที่ `1211fbe`
+
+พอ 503 หาย กลายเป็น 500 ทันที และ log บอกชัดเจน:
+```
+Unhandled Exception: Error: Publishable key is missing.
+    at parsePublishableKey
+```
+
+`server/app.ts` เรียก `clerkMiddleware()` โดยไม่ส่ง options → ตัว middleware ไปหา `CLERK_PUBLISHABLE_KEY` ใน environment ซึ่ง **โปรเจกต์นี้ไม่เคยตั้งที่ไหนเลย** เพราะเอกสารและ Vercel ใช้ `VITE_CLERK_PUBLISHABLE_KEY` เท่านั้น → ทุก request ที่ผ่าน middleware จึงได้ 500
+
+การแก้: เพิ่ม `resolveClerkPublishableKey()` ใน `server/lib/clerkAuth.ts` ให้รับได้ทั้ง `CLERK_PUBLISHABLE_KEY` และ `VITE_CLERK_PUBLISHABLE_KEY` แล้วส่งเข้า `clerkMiddleware({ publishableKey })` ตรง ๆ และ `isClerkConfigured()` บังคับให้มีทั้งสองส่วน เพื่อให้ deployment ที่ตั้งค่าไม่ครบ **ล้มตอน start ด้วยข้อความที่บอกชื่อตัวแปรครบ** แทนที่จะ 500 ทีละ request
+
+### การยืนยันหลัง deploy (ทำจริงบน production)
+
+```
+/api/health  → 200 {"status":"ok"}
+/api/ready   → 200 {"status":"ready","database":"connected"}
+/api/auth/me → 401
+HTML         → 1,797 ไบต์ (จาก 368,128) และไม่มี manus-runtime
+entry bundle → โหลดได้ มี Clerk publishable key และอ้าง lazy chunk
+lazy chunk   → Home-*.js = 200
+log ใหม่     → ไม่มี exception
+```
+
+### บทเรียนสำคัญ
+
+- **`pnpm check` + เทสต์ 175 รายการผ่าน ไม่ได้แปลว่า production ทำงาน** — บั๊กทั้งสองอยู่ในชั้นที่ไม่มีเทสต์ครอบ เพราะเทสต์รันด้วย `PUNTAKIT_TEST_AUTH=1` ซึ่งข้าม Clerk middleware ทั้งหมด และใช้ PGlite แทน Neon จริง
+- ควรมี **smoke check ปลายทางหลัง deploy** (ข้อ 8.4) เพราะ downtime นี้กินเวลาหลายวันโดยไม่มีใครรู้
+- `docs/DEPLOYMENT.md` และ `DEPLOYMENT_CHECKLIST_TH.md` มีขั้นตอนตรวจ 503 อยู่แล้ว แต่ยังไม่มีกลไกที่รันมันอัตโนมัติ
