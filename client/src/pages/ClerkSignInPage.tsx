@@ -14,11 +14,12 @@ export default function ClerkSignInPage() {
   }, [user, navigate]);
 
   return (
-    <div className="login-shell">
-      <div className="login-card" data-testid="clerk-sign-in">
-        <div className="login-logo">
-          <Logo />
-        </div>
+    <main className="login-shell">
+      <div
+        className="flex w-full max-w-[400px] flex-col items-center gap-6"
+        data-testid="clerk-sign-in"
+      >
+        <Logo onLight />
         <SignIn
           routing="hash"
           signUpUrl="/login"
@@ -29,9 +30,13 @@ export default function ClerkSignInPage() {
               colorBackground: "#ffffff",
               borderRadius: "1rem",
             },
+            elements: {
+              rootBox: { width: "100%" },
+              cardBox: { width: "100%", maxWidth: "100%" },
+            },
           }}
         />
       </div>
-    </div>
+    </main>
   );
 }
