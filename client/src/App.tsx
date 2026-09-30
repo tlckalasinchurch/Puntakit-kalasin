@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { Route, Switch } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
 import { ClerkProvider } from "@clerk/react";
-import { thTH } from "@clerk/localizations";
+import { clerkThTH } from "./lib/clerkLocalization";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Skeleton } from "@/components/ui/skeleton";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -58,7 +58,10 @@ if (!CLERK_PUBLISHABLE_KEY && !IS_DEMO_MODE) {
 /** Page-content loading → skeleton (design.md §8); never "..." text. */
 function RouteSkeleton() {
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8" data-testid="route-skeleton">
+    <div
+      className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8"
+      data-testid="route-skeleton"
+    >
       <div className="space-y-3">
         <Skeleton className="h-4 w-40" />
         <Skeleton className="h-8 w-72" />
@@ -220,7 +223,7 @@ function App() {
       ) : (
         // Thai localization belongs on the provider: Clerk v6 removed the
         // per-component `localization` prop from <SignIn/>/<SignUp/>.
-        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} localization={thTH}>
+        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} localization={clerkThTH}>
           {content}
         </ClerkProvider>
       )}
