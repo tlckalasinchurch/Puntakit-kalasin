@@ -222,8 +222,18 @@ export default function Groups() {
   // Load available members for adding
   const fetchAvailableMembers = async () => {
     try {
-      const res = await api.get<{ items: SimpleMember[] }>("/api/members?limit=200");
-      setAvailableMembers(res.items || []);
+      const allMembers: SimpleMember[] = [];
+      let page = 1;
+      let totalPages = 1;
+
+      while (page <= totalPages) {
+        const res = await api.getWithMeta<SimpleMember[]>(`/api/members?page=${page}&limit=100`);
+        allMembers.push(...(res.data ?? []));
+        totalPages = res.meta?.totalPages ?? page;
+        page += 1;
+      }
+
+      setAvailableMembers(allMembers);
     } catch {
       // ignore
     }

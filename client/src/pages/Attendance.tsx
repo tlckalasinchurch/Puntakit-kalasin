@@ -160,15 +160,26 @@ export default function Attendance() {
     setLoadingLive(true);
     try {
       // 1. Fetch registered members
-      const memRes = await api.get<{ items: MemberItem[] }>("/api/members?limit=300");
-      setAllMembers(memRes.items || []);
+      const allMembers: MemberItem[] = [];
+      let memberPage = 1;
+      let memberTotalPages = 1;
+
+      while (memberPage <= memberTotalPages) {
+        const memRes = await api.getWithMeta<MemberItem[]>(
+          `/api/members?page=${memberPage}&limit=100`,
+        );
+        allMembers.push(...(memRes.data ?? []));
+        memberTotalPages = memRes.meta?.totalPages ?? memberPage;
+        memberPage += 1;
+      }
+      setAllMembers(allMembers);
 
       // 2. Fetch existing attendance records for this date & service
       const attParams = new URLSearchParams({
         startDate: selectedDate,
         endDate: selectedDate,
         serviceType: selectedService,
-        limit: "300",
+        limit: "200",
       });
       if (selectedGroupId) attParams.set("groupId", selectedGroupId);
 
