@@ -1,4 +1,4 @@
-const CACHE_NAME = "puntakit-pwa-v1";
+const CACHE_NAME = "puntakit-pwa-v2";
 const STATIC_ASSETS = [
   "/",
   "/app",
@@ -33,7 +33,16 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Fetch Event - Network first for API, cache fallback for assets
+// Vite emits content-hashed asset URLs (/assets/*.<hash>.js): a new deploy
+// produces new URLs, so a cached copy can never go stale — cache-first is safe
+// and keeps loads fast.
+//
+// Everything else (notably the SPA shell HTML at /, /login, /signup, /app) must
+// be NETWORK-FIRST. The previous strategy served every route stale-while-
+// revalidate, so after each deploy users got the previous release's shell for
+// one visit (observed live: /signup kept rendering the pre-deploy bundle), and
+// if the old hashed chunk had been evicted from the cache the shell referenced
+// a file that no longer existed and the page broke.
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
@@ -64,10 +73,30 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static Assets / HTML: Stale While Revalidate
+  // Hashed build assets: cache-first (immutable by construction)
+  if (url.pathname.startsWith("/assets/")) {
+    event.respondWith(
+      caches.match(event.request).then(
+        (cachedResponse) =>
+          cachedResponse ||
+          fetch(event.request).then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              const responseToCache = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseToCache);
+              });
+            }
+            return networkResponse;
+          })
+      )
+    );
+    return;
+  }
+
+  // HTML and everything else: network-first, cache answers only offline.
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
+    fetch(event.request)
+      .then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -75,10 +104,10 @@ self.addEventListener("fetch", (event) => {
           });
         }
         return networkResponse;
-      }).catch(() => cachedResponse);
-
-      return cachedResponse || fetchPromise;
-    })
+      })
+      .catch(() =>
+        caches.match(event.request).then((cachedResponse) => cachedResponse || caches.match("/"))
+      )
   );
 });
 
