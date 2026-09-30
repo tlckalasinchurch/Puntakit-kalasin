@@ -18,7 +18,7 @@ This repository is the Puntakit church management dashboard. Use this file as th
 - The app is a client-side routed SPA (`wouter`), not a Next.js app. Do not introduce Next.js conventions or `app/`/`pages/` routing patterns here.
 - The server is a real API backend, not a static host. Keep `server/index.ts` limited to startup, static hosting and graceful shutdown; put business logic in `server/routes/` as a route module plus a matching `.test.ts`, with shared types and Zod schemas in `shared/`.
 - Authentication is Clerk-only in production (`@clerk/express` middleware). The cookie/JWT path exists solely for route tests (`PUNTAKIT_TEST_AUTH=1`). Authorization reuses the `USER_ROLES` enum through `requireRole`/`requireAdmin`, with the canonical role sets defined once in `shared/roles.ts` for both server and client — do not invent a second permission system or write a role list inline.
-- Vendor / platform plumbing from Manus (`vite-plugin-manus-runtime`, storage proxy/debug plugins, `client/public/__manus__`) is not core app logic. Leave it alone unless the task explicitly involves that integration.
+- Vendor / platform plumbing from Manus (the storage-proxy/debug-collector plugins in `vite.config.ts`, `client/public/__manus__`) is not core app logic. Leave it alone unless the task explicitly involves that integration. The `vite-plugin-manus-runtime` plugin is deliberately **not** enabled — see the comment in `vite.config.ts` for why (it inlined a second copy of React, ~367 kB of render-blocking script, into every production `index.html`) and for how to re-enable it.
 - Use the existing design system tokens in `client/src/index.css` and the brand guidance in `brand-spec.md` before creating new UI colors, layout rules, or spacing patterns.
 
 ## Commands

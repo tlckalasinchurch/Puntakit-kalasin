@@ -4,7 +4,6 @@ import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
-import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -203,7 +202,18 @@ function vitePluginStorageProxy(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy()];
+// `vitePluginManusRuntime` (package `vite-plugin-manus-runtime`) is deliberately
+// NOT enabled. The plugin has no `apply: 'serve'` guard, so in both dev and
+// `vite build` it inlined its whole runtime as a <script id="manus-runtime"> in
+// client/index.html: a second copy of React plus the Manus editor bridge
+// (@medv/finder element finder + modern-screenshot), measured at 366,846
+// characters — 99% of the 368 kB built index.html — as a render-blocking inline
+// script on every page load. Nothing in client/src, server/ or api/ reads
+// `window.__MANUS_HOST_DEV__` or anything else it defines, and this app deploys
+// to Vercel rather than the Manus host. To run inside the Manus builder again,
+// restore the import and put `vitePluginManusRuntime()` back in this array (the
+// dependency is still declared in package.json).
+const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusDebugCollector(), vitePluginStorageProxy()];
 
 export default defineConfig({
   plugins,
