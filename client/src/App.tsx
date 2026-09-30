@@ -7,6 +7,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ClerkSignInPage from "./pages/ClerkSignInPage";
+import ClerkSignUpPage from "./pages/ClerkSignUpPage";
 import AuthConfigError from "./pages/AuthConfigError";
 import Home from "./pages/Home";
 import Feed from "./pages/Feed";
@@ -43,6 +44,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={ClerkSignInPage} />
+      <Route path="/sign-up" component={ClerkSignUpPage} />
 
       {/* Public legal routes (accessible without login) */}
       <Route path="/privacy" component={Privacy} />

@@ -1,16 +1,16 @@
-import { SignIn } from "@clerk/react";
+import { SignUp } from "@clerk/react";
 import {
   ClerkAuthShell,
   clerkAppearance,
 } from "@/components/auth/ClerkAuthShell";
 
-/** Clerk-hosted sign-in rendered on the /login route. */
-export default function ClerkSignInPage() {
+/** Clerk-hosted sign-up rendered on the /sign-up route. */
+export default function ClerkSignUpPage() {
   return (
-    <ClerkAuthShell testId="clerk-sign-in">
-      <SignIn
+    <ClerkAuthShell testId="clerk-sign-up">
+      <SignUp
         routing="hash"
-        signUpUrl="/sign-up"
+        signInUrl="/login"
         fallbackRedirectUrl="/"
         appearance={clerkAppearance}
       />

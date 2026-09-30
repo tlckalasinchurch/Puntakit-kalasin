@@ -60,7 +60,16 @@ export function createApp() {
     if (!isClerkConfigured()) {
       throw new Error("CLERK_SECRET_KEY is required in non-test environments.");
     }
-    app.use(clerkMiddleware());
+    // The publishable key is public; reuse the Vite-prefixed one so a single
+  // variable configures both the SPA and the API.
+  const publishableKey =
+    process.env.CLERK_PUBLISHABLE_KEY || process.env.VITE_CLERK_PUBLISHABLE_KEY;
+  if (!publishableKey) {
+    throw new Error(
+      "CLERK_PUBLISHABLE_KEY (or VITE_CLERK_PUBLISHABLE_KEY) is required in non-test environments."
+    );
+  }
+  app.use(clerkMiddleware({ publishableKey }));
   }
 
   // API Routes
