@@ -1,20 +1,19 @@
-import { ArrowLeft, Bell, BookOpen, Building2, Church, Megaphone, Settings, Sparkles } from "lucide-react";
+import { ArrowLeft, Bell, BookOpen, Settings, Sparkles } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 
+// Only routes that are still genuinely unbuilt live here. /announcements,
+// /worship, /church and /ministries used to be listed but now render real
+// pages — see the route table in client/src/App.tsx.
 const pages: Record<string, { title: string; description: string; icon: typeof Bell }> = {
-  "/announcements": { title: "การประกาศ", description: "จัดการข่าวสารและประกาศสำคัญของคริสตจักร", icon: Megaphone },
-  "/worship": { title: "การนมัสการ", description: "วางแผนและติดตามการนมัสการร่วมกัน", icon: Church },
-  "/church": { title: "คริสตจักร", description: "ดูข้อมูลภาพรวมและรายละเอียดของคริสตจักร", icon: Building2 },
-  "/ministries": { title: "พันธกิจ", description: "ติดตามงานพันธกิจและการสร้างสาวก", icon: Sparkles },
   "/media": { title: "สื่อ/เอกสาร", description: "จัดเก็บและค้นหาสื่อสำหรับการทำพันธกิจ", icon: BookOpen },
   "/settings": { title: "ตั้งค่า", description: "จัดการการตั้งค่าของระบบและบัญชีผู้ใช้", icon: Settings },
 };
 
 export default function ComingSoon() {
   const [location] = useLocation();
-  const page = pages[location] ?? pages["/announcements"];
+  const page = pages[location] ?? pages["/settings"];
   const Icon = page.icon;
   return (
     <AppLayout>

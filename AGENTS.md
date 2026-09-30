@@ -4,7 +4,7 @@ This repository is the Puntakit church management dashboard. Use this file as th
 
 ## Project snapshot
 
-- App type: React SPA front end with a minimal Express static host
+- App type: React SPA (Vite) front end plus a real Express + Drizzle ORM + PostgreSQL API
 - Main package manager: pnpm
 - Frontend source: `client/src`
 - Shared types/constants: `shared`
@@ -16,7 +16,8 @@ This repository is the Puntakit church management dashboard. Use this file as th
 - Keep the project on pnpm. The repo uses a patched `wouter` package via `pnpm.patchedDependencies`; do not switch package managers.
 - Treat `vite.config.ts` and `tsconfig.json` as synchronized configuration. Changes to path aliases or build graph must stay consistent.
 - The app is a client-side routed SPA (`wouter`), not a Next.js app. Do not introduce Next.js conventions or `app/`/`pages/` routing patterns here.
-- The server is a thin production host, not a business-logic backend. Avoid adding app logic to `server/index.ts` or creating API patterns unless the task clearly requires it.
+- The server is a real API backend, not a static host. Keep `server/index.ts` limited to startup, static hosting and graceful shutdown; put business logic in `server/routes/` as a route module plus a matching `.test.ts`, with shared types and Zod schemas in `shared/`.
+- Authentication is Clerk-only in production (`@clerk/express` middleware). The cookie/JWT path exists solely for route tests (`PUNTAKIT_TEST_AUTH=1`). Authorization reuses the `USER_ROLES` enum through `requireRole`/`requireAdmin` — do not invent a second permission system.
 - Vendor / platform plumbing from Manus (`vite-plugin-manus-runtime`, storage proxy/debug plugins, `client/public/__manus__`) is not core app logic. Leave it alone unless the task explicitly involves that integration.
 - Use the existing design system tokens in `client/src/index.css` and the brand guidance in `brand-spec.md` before creating new UI colors, layout rules, or spacing patterns.
 
@@ -38,7 +39,8 @@ pnpm format
 Notes:
 
 - There is no dedicated lint script; `pnpm check` is the project’s main static verification step.
-- `pnpm test` runs Vitest with no tests by default; if new tests are added, keep the script and test files in the repo conventions.
+- `pnpm test` runs the Vitest suite from `vitest.config.ts` (with `PUNTAKIT_TEST_AUTH=1` and an embedded PostgreSQL/PGlite database) over `server/**/*.test.ts`, `shared/**/*.test.ts`, and `client/**/*.test.ts`. Add or update tests alongside any behaviour change.
+- `.github/workflows/ci.yml` runs `pnpm install --frozen-lockfile`, then `pnpm check` and `pnpm test` on every push and pull request — treat a green CI run as the verification gate.
 - Database scripts exist under the server tooling (`db:*`) and should be used for schema migrations or admin seeding when relevant.
 
 ## Architecture
@@ -54,7 +56,7 @@ Notes:
 ### Shared data and server boundaries
 
 - Shared constants/types belong in `shared` and should be used across client/server boundaries.
-- The server is not a DB-backed API by default; if new real data access is needed, add a server route and cross-boundary pattern rather than burying logic in the client.
+- The server is DB-backed: Drizzle ORM over PostgreSQL, with `shared/schema.ts` as the single schema source of truth and migrations in `server/db/migrations`. Never bury real data access in the client — add a server route instead.
 
 ## Working expectations
 

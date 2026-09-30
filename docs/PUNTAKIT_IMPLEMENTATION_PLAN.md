@@ -2,6 +2,14 @@
 
 Date: 2026-09-24
 
+> **Status note (added after re-verifying this document against the code):**
+> Phases 1–6 and the Reports part of Phase 9 are implemented in the working
+> tree. Three statements below were written as "deferred" or "blocked" and
+> have since been overtaken by the code: the Phase 2 palette swap, the
+> Phase 2 shadcn-token gap, and the Phase 7 Map. Each affected section is
+> annotated inline. Where this document and the code disagree, **the code is
+> the source of truth.**
+
 Each phase is a coherent, shippable slice. No phase deletes existing
 working functionality. Schema changes are additive (new tables, nullable
 FKs) until a later, explicitly-approved deprecation step.
@@ -51,7 +59,7 @@ directly against real data with no interim mock layer.
 `visibility` enum (not needed while status already gates draft/
 pending_review visibility), LINE/AI integration (not started).
 
-## Phase 2 — Feed — DONE (palette rollout deferred, see below)
+## Phase 2 — Feed — DONE (palette deferred here, landed later — see below)
 
 Shipped on branch `claude/eloquent-archimedes-04s1kg`, not yet in a PR.
 
@@ -78,34 +86,48 @@ Shipped on branch `claude/eloquent-archimedes-04s1kg`, not yet in a PR.
   media row by `sortOrder`) so Feed cards are photo-first without a
   second round trip per card.
 
-**Deliberately deviated from the original plan on one point: did not
-apply the warm palette.** The plan's original text called for swapping
-`:root` tokens as part of this phase. On inspection, that's not a
-Feed-scoped change — this app's CSS custom properties (`--navy`, `--blue`,
-etc.) are global and already used by every existing page, so redefining
-them would instantly restyle the entire app, not just Feed. Doing that
-without a human able to look at it live (the person who owns this repo
-was asleep for this phase) is the kind of visually risky, hard-to-verify-
-blind change this plan's own quality bar ("run the actual application...
-fix problems introduced by your work") argues against. Feed instead uses
-the existing navy/blue design system as-is. The palette swap stays
-scheduled for Phase 8, when it can be reviewed live in one pass together
-with the navigation restructuring.
+**Palette: deliberately not applied in this phase — and since superseded.**
+The plan's original text called for swapping `:root` tokens as part of this
+phase. On inspection, that's not a Feed-scoped change — this app's CSS
+custom properties (`--navy`, `--blue`, etc.) are global and already used by
+every existing page, so redefining them would instantly restyle the entire
+app, not just Feed. Doing that without a human able to look at it live (the
+person who owns this repo was asleep for this phase) is the kind of
+visually risky, hard-to-verify blind change this plan's own quality bar
+("run the actual application... fix problems introduced by your work")
+argues against. Feed therefore shipped on the then-current navy/blue
+tokens and the swap was left for one coherent later pass.
+
+**Superseded — that pass has now happened, and it is not the "warm" palette
+described above.** `client/src/index.css` carries Design System **V2**:
+olive `--color-primary: #315c2b` as the single chromatic interactive colour,
+graphite chrome, plus `--color-ink` / `--color-canvas-soft` / `--radius-*` /
+`--shadow`. The navy/blue identity is retired (`--navy` survives only as a
+legacy alias pointing at the graphite surface token), and
+`client/src/design-tokens.test.ts` locks the contract so it cannot silently
+regress. Phase 8 therefore no longer needs to carry a palette rollout.
 
 **Real bug found and fixed while visually verifying this phase:** the
 installed shadcn/ui `Sheet` (and by the same mechanism, `Dialog`)
 component renders with a fully transparent background in this app,
-because `client/src/index.css` never defines the standard shadcn tokens
+because `client/src/index.css` never defined the standard shadcn tokens
 (`--background`, `--foreground`, `--popover`, `--border`, etc.) that
-`bg-background` and friends resolve to — this codebase uses its own
+`bg-background` and friends resolve to — this codebase used its own
 `--navy`/`--blue`/`--surface` token set instead. That's very likely why
-every existing page (see `Announcements.tsx`) rolls its own
+every existing page (see `Announcements.tsx`) rolled its own
 `.modal-backdrop`/`.modal-card` CSS instead of using the installed
 `Dialog`/`Sheet` primitives — they'd have looked broken. Fixed locally in
-`Feed.tsx` with an explicit `bg-white` on `SheetContent`. The systemic gap
-(shadcn tokens undefined app-wide) is real and worth fixing centrally, but
-is a design-token change outside this phase's scope — flagged as a
-follow-up, not fixed globally here.
+`Feed.tsx` with an explicit `bg-white` on `SheetContent`.
+
+**Superseded — the systemic gap is now fixed centrally.** The Design System
+V2 pass defines the shadcn semantic tokens in `client/src/index.css` and
+maps them onto the brand tokens (`--background: var(--color-canvas)`,
+`--foreground: var(--color-ink)`, `--card`, `--popover`, `--border`,
+`--input`, `--ring`, ...), with an explicit comment saying this exists so
+`Button`/`Card`/`Input`/`Skeleton` primitives render correctly, plus a
+`.dark` override block. The generated primitives are therefore usable
+app-wide now, and the local `bg-white` on `SheetContent` in `Feed.tsx` is a
+harmless leftover rather than a required workaround.
 
 **Verification actually performed:** `pnpm check`, `pnpm test` (125/125,
 unchanged — no new automated tests added for this UI phase, see note
@@ -282,27 +304,31 @@ Manually verified live: seeded the same four kinds of rows through the
 real API, loaded `/`, and confirmed all three stat chips and both list
 panels show the real seeded data, not placeholders.
 
-## Phase 7 — Map — BLOCKED on a production credential
+## Phase 7 — Map — DONE (shipped on Leaflet, not Google Maps)
 
-Confirmed on inspection: `client/src/components/Map.tsx` is a Google
-Maps JavaScript API wrapper (`MapView`, marker/places/geocoding/routes
-helpers) and is currently unused anywhere in `client/src` (`grep` for its
-import returns nothing). Wiring it to `missionActivities`/`groups`
-location data requires a Google Maps API key
-(`VITE_GOOGLE_MAPS_API_KEY` or similar) — grepped `.env.example`,
-`client/src/const.ts`, and `vite.config.ts`: none is configured
-anywhere in this repo.
+**Superseded:** this section originally recorded the phase as blocked on a
+production `VITE_GOOGLE_MAPS_API_KEY`, on the assumption that
+`client/src/components/Map.tsx` was a Google Maps JavaScript API wrapper and
+was unused. That assumption no longer matches the code on two counts: the
+component is a **Leaflet** wrapper, and the map surface exists and is routed.
 
-Per the plan's own escalation rule ("stop only for ... production
-credential requirement"), this phase stops here rather than faking a map
-integration that can't actually be verified without a real key. Nothing
-was built for this phase. To unblock: provide a Google Maps API key
-(scoped to the Maps JavaScript API, with the domain(s) this app runs on
-allow-listed) as `VITE_GOOGLE_MAPS_API_KEY`, and this phase can proceed
-the same way Phases 1–6 did — real schema/API work already in place
-(`mission_activities.latitude`/`longitude`/`placeLabel`,
-`groups.latitude`/`longitude`) needs no changes; only the client map
-surface and its query need building.
+What actually shipped:
+
+- `client/src/pages/Map.tsx`, routed at `/map` and reachable from the
+  sidebar as "แผนที่กลุ่มแคร์".
+- Leaflet plus `leaflet.markercluster`, with the marker-cluster styles and
+  design-system-aware zoom-control sizing handled in `client/src/index.css`.
+- Data comes from the existing groups API — `GET /api/groups?limit=100` —
+  not from a new endpoint. Care groups that carry coordinates are plotted,
+  and the page also offers a map/list toggle, per-category filtering and a
+  text search over name/area/meeting location.
+- No API key is required anywhere, and no Google Maps dependency exists in
+  `package.json`.
+
+**Still open (smaller, and genuinely additive):** the map plots **groups**
+only. `mission_activities.latitude` / `longitude` / `placeLabel` are stored
+but not yet plotted, so activities remain absent from the map. Adding them
+is an additive change to the same page and needs no schema work.
 
 ## Phase 8 — Navigation restructuring
 
@@ -312,9 +338,10 @@ surface and its query need building.
   user-visible "major architecture replacement" — confirm the final IA
   with the product owner before shipping, per the brief's own escalation
   rule.
-- Roll the warm palette out from Feed (Phase 2) to the rest of the app in
-  the same pass, so the visual language changes once, coherently, not
-  page-by-page.
+- **Palette rollout: already done outside this phase.** The V2 palette
+  (olive `--color-primary`, graphite chrome) is live app-wide in
+  `client/src/index.css` and locked by `client/src/design-tokens.test.ts`,
+  so Phase 8 is **navigation-only** — do not re-do the palette here.
 
 ## Phase 9+ — Reports, Notifications, Search, Administration
 
