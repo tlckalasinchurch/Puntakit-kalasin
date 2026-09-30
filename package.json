@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@clerk/express": "^2.1.72",
+    "@clerk/localizations": "^4.21.0",
     "@clerk/react": "^6.17.2",
     "@electric-sql/pglite": "^0.5.8",
     "@hookform/resolvers": "^5.2.2",

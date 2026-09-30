@@ -1234,7 +1234,10 @@
   gap: 10px;
   margin-bottom: 22px;
 }
-.login-card h1 {
+/* Scoped away from Clerk's own heading: the hosted <SignIn/> renders an
+   <h1 class="cl-headerTitle"> inside .login-card, and this rule was leaking
+   the dashboard heading's 20px/--ink treatment into Clerk's card. */
+.login-card h1:not(.cl-headerTitle) {
   font-size: 20px;
   color: var(--ink);
   margin: 0 0 4px;

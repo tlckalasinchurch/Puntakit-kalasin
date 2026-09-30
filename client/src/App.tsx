@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Route, Switch } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
 import { ClerkProvider } from "@clerk/react";
+import { thTH } from "@clerk/localizations";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Skeleton } from "@/components/ui/skeleton";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -18,6 +19,7 @@ import NotFound from "@/pages/NotFound";
 // NotFound stays a static import on purpose: it is the route fallback, so it
 // must render without ever suspending.
 const ClerkSignInPage = lazy(() => import("./pages/ClerkSignInPage"));
+const ClerkSignUpPage = lazy(() => import("./pages/ClerkSignUpPage"));
 const Home = lazy(() => import("./pages/Home"));
 const Feed = lazy(() => import("./pages/Feed"));
 const FollowUps = lazy(() => import("./pages/FollowUps"));
@@ -75,6 +77,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={ClerkSignInPage} />
+      <Route path="/signup" component={ClerkSignUpPage} />
 
       {/* Public legal routes (accessible without login) */}
       <Route path="/privacy" component={Privacy} />
@@ -212,7 +215,15 @@ function App() {
 
   return (
     <ErrorBoundary>
-      {IS_DEMO_MODE ? content : <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>{content}</ClerkProvider>}
+      {IS_DEMO_MODE ? (
+        content
+      ) : (
+        // Thai localization belongs on the provider: Clerk v6 removed the
+        // per-component `localization` prop from <SignIn/>/<SignUp/>.
+        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} localization={thTH}>
+          {content}
+        </ClerkProvider>
+      )}
     </ErrorBoundary>
   );
 }
