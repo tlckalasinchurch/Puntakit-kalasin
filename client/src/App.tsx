@@ -26,15 +26,10 @@ import ComingSoon from "./pages/ComingSoon";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 
-// Clerk owns production sign-in/sign-out flows. Local demo mode is explicit,
-// requires VITE_PUNTAKIT_DEMO_MODE=1, and is never enabled by default.
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-const IS_DEMO_MODE = import.meta.env.VITE_PUNTAKIT_DEMO_MODE === "1";
-const IS_AUTH_MISCONFIGURED = !CLERK_PUBLISHABLE_KEY && !IS_DEMO_MODE;
+const IS_AUTH_MISCONFIGURED = !CLERK_PUBLISHABLE_KEY;
 if (IS_AUTH_MISCONFIGURED) {
-  console.error(
-    "Missing VITE_CLERK_PUBLISHABLE_KEY. Add the Clerk publishable key or explicitly enable VITE_PUNTAKIT_DEMO_MODE=1 for local development."
-  );
+  console.error("Missing VITE_CLERK_PUBLISHABLE_KEY. Add the Clerk publishable key to enable sign-in.");
 }
 
 // Member PWA Pages
@@ -174,18 +169,16 @@ function Router() {
 function App() {
   if (IS_AUTH_MISCONFIGURED) return <AuthConfigError />;
 
-  const content = (
-    <ThemeProvider defaultTheme="light" switchable>
-      <AuthProvider>
-        <Router />
-        <Toaster />
-      </AuthProvider>
-    </ThemeProvider>
-  );
-
   return (
     <ErrorBoundary>
-      {IS_DEMO_MODE ? content : <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>{content}</ClerkProvider>}
+      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+        <ThemeProvider defaultTheme="light" switchable>
+          <AuthProvider>
+            <Router />
+            <Toaster />
+          </AuthProvider>
+        </ThemeProvider>
+      </ClerkProvider>
     </ErrorBoundary>
   );
 }

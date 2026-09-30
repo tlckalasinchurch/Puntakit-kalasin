@@ -12,8 +12,6 @@ interface TopbarProps {
 
 export function Topbar({ onMenu }: TopbarProps) {
   const { theme, toggleTheme } = useTheme();
-  const { user } = useAuth();
-  const isDemoMode = import.meta.env.VITE_PUNTAKIT_DEMO_MODE === "1";
 
   return (
     <header className="sticky top-0 z-30 flex h-18 w-full items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
@@ -48,17 +46,7 @@ export function Topbar({ onMenu }: TopbarProps) {
             0
           </span>
         </button>
-        {isDemoMode ? (
-          <div
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--color-primary)] text-sm font-semibold text-white"
-            title={user?.name ?? "ผู้ดูแลระบบตัวอย่าง"}
-            aria-label={user?.name ?? "ผู้ดูแลระบบตัวอย่าง"}
-          >
-            {(user?.name ?? "ผด").slice(0, 2)}
-          </div>
-        ) : (
-          <UserButton />
-        )}
+        <UserButton />
       </div>
     </header>
   );

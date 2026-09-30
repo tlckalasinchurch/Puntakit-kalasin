@@ -32,40 +32,6 @@ export async function requireAuth(
   _res: Response,
   next: NextFunction
 ): Promise<void> {
-  if (process.env.PUNTAKIT_DEMO_MODE === "1" && process.env.NODE_ENV !== "production") {
-    try {
-      const { eq } = await import("drizzle-orm");
-      const { getDb } = await import("../db/client.js");
-      const { users } = await import("../../shared/schema.js");
-      const db = getDb();
-      const demoEmail = "demo@puntakit.local";
-      let [demoUser] = await db.select().from(users).where(eq(users.email, demoEmail)).limit(1);
-      if (!demoUser) {
-        [demoUser] = await db
-          .insert(users)
-          .values({
-            email: demoEmail,
-            name: "ผู้ดูแลระบบตัวอย่าง",
-            role: "admin",
-            status: "active",
-          })
-          .returning();
-      }
-      if (demoUser.status === "suspended") {
-        return next(new ForbiddenError("บัญชีผู้ใช้งานตัวอย่างถูกระงับการใช้งาน"));
-      }
-      req.user = {
-        id: demoUser.id,
-        email: demoUser.email,
-        name: demoUser.name,
-        role: demoUser.role as AuthenticatedUser["role"],
-      };
-      return next();
-    } catch (err) {
-      return next(err);
-    }
-  }
-
   if (isClerkConfigured()) {
     try {
       if (!getAuth(req).userId) {

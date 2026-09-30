@@ -56,9 +56,7 @@ export function createApp() {
   // Clerk is the only authentication provider. The middleware attaches the
   // verified Clerk session to every request; protected routes enforce it.
   const isTestRuntime = process.env.PUNTAKIT_TEST_AUTH === "1";
-  const isLocalDemoRuntime =
-    process.env.PUNTAKIT_DEMO_MODE === "1" && process.env.NODE_ENV !== "production";
-  if (!isTestRuntime && !isLocalDemoRuntime) {
+  if (!isTestRuntime) {
     if (!isClerkConfigured()) {
       throw new Error("CLERK_SECRET_KEY is required in non-test environments.");
     }
