@@ -17,7 +17,7 @@ import { groupsRouter } from "./routes/groups.js";
 import { attendanceRouter } from "./routes/attendance.js";
 import { portalRouter } from "./routes/portal.js";
 import { requestIdMiddleware } from "./middleware/requestId.js";
-import { isClerkConfigured } from "./lib/clerkAuth.js";
+import { isClerkConfigured, resolveClerkPublishableKey } from "./lib/clerkAuth.js";
 import { AppError } from "./lib/errors.js";
 import { getDb } from "./db/client.js";
 
@@ -60,9 +60,16 @@ export function createApp() {
     process.env.PUNTAKIT_DEMO_MODE === "1" && process.env.NODE_ENV !== "production";
   if (!isTestRuntime && !isLocalDemoRuntime) {
     if (!isClerkConfigured()) {
-      throw new Error("CLERK_SECRET_KEY is required in non-test environments.");
+      throw new Error(
+        "Clerk is not configured: CLERK_SECRET_KEY and a publishable key (CLERK_PUBLISHABLE_KEY or VITE_CLERK_PUBLISHABLE_KEY) are required in non-test environments."
+      );
     }
-    app.use(clerkMiddleware());
+    // Pass the key explicitly. Left to itself, `clerkMiddleware()` only looks
+    // for CLERK_PUBLISHABLE_KEY in the environment — a name this project never
+    // sets, because the browser build uses VITE_CLERK_PUBLISHABLE_KEY — and
+    // every request behind the middleware then fails with a 500
+    // "Publishable key is missing".
+    app.use(clerkMiddleware({ publishableKey: resolveClerkPublishableKey() }));
   }
 
   // API Routes

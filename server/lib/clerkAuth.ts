@@ -13,9 +13,29 @@ import { ForbiddenError, UnauthorizedError } from "./errors.js";
  * by email). Clerk is the only authentication provider.
  */
 
-/** True when Clerk credentials are configured in the environment. */
+/**
+ * The Clerk publishable key, under whichever name this project sets it.
+ *
+ * The browser build reads `VITE_CLERK_PUBLISHABLE_KEY`, and deployments hold
+ * the value under that name only — but `clerkMiddleware()` looks up
+ * `CLERK_PUBLISHABLE_KEY` in the environment and throws
+ * "Publishable key is missing" when it cannot find it, which fails every
+ * request behind it with a 500. Accepting either name keeps the single
+ * documented variable sufficient (MASTER_PROMPT.md requires
+ * `VITE_CLERK_PUBLISHABLE_KEY` and explicitly rules out the Next.js name);
+ * the server-side name wins when both are present.
+ */
+export function resolveClerkPublishableKey(): string | undefined {
+  return process.env.CLERK_PUBLISHABLE_KEY ?? process.env.VITE_CLERK_PUBLISHABLE_KEY;
+}
+
+/**
+ * True when Clerk credentials are configured in the environment. Both halves
+ * are required: the secret key authenticates backend calls, and the publishable
+ * key is what `clerkMiddleware()` needs in order to authenticate a request.
+ */
 export function isClerkConfigured(): boolean {
-  return Boolean(process.env.CLERK_SECRET_KEY);
+  return Boolean(process.env.CLERK_SECRET_KEY && resolveClerkPublishableKey());
 }
 
 export interface ClerkProvisionResult {
