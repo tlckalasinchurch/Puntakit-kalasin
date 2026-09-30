@@ -19,20 +19,17 @@ import {
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
+import { CREATE_ROLES, DELETE_ROLES, PRIVILEGED_ROLES } from "../../shared/roles.js";
 
 export const activitiesRouter = Router();
 
 activitiesRouter.use(requireAuth);
 
 /**
- * Roles that can see every activity (any status) and manage any activity,
- * regardless of who created it or which group it belongs to. Reuses the
- * existing USER_ROLES enum — no separate permission system.
+ * Role sets live in `shared/roles.ts` so this server gate and the client-side
+ * gates cannot drift apart. PRIVILEGED_ROLES doubles as the publish gate: a
+ * `group_leader` may move a draft to pending_review but may not self-publish.
  */
-const PRIVILEGED_ROLES: UserRole[] = ["super_admin", "admin", "staff", "ministry_leader"];
-const CREATE_ROLES: UserRole[] = ["super_admin", "admin", "staff", "ministry_leader", "group_leader"];
-const PUBLISH_ROLES: UserRole[] = ["super_admin", "admin", "staff", "ministry_leader"];
-const DELETE_ROLES: UserRole[] = ["super_admin", "admin", "ministry_leader"];
 
 /**
  * Explicit lifecycle transitions. No status value may move to a state not
@@ -102,7 +99,7 @@ async function canPublish(
   activity: { groupId: string | null }
 ): Promise<boolean> {
   const user = req.user!;
-  if (PUBLISH_ROLES.includes(user.role)) return true;
+  if (PRIVILEGED_ROLES.includes(user.role)) return true;
   if (user.role === "group_leader" && activity.groupId) {
     const ledGroupIds = await getLedGroupIds(user.id);
     return ledGroupIds.includes(activity.groupId);

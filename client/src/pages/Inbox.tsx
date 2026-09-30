@@ -8,6 +8,7 @@ import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import type { MissionActivityType, MissionSubmissionStatus } from "@shared/schema";
+import { PRIVILEGED_ROLES as REVIEW_ROLES } from "@shared/roles";
 
 interface SubmissionRow {
   id: string;
@@ -54,8 +55,6 @@ const TYPE_LABELS: Record<MissionActivityType, string> = {
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("th-TH", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
-
-const REVIEW_ROLES = ["super_admin", "admin", "staff", "ministry_leader"];
 
 export default function Inbox() {
   const { user } = useAuth();

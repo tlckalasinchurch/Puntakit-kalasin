@@ -11,6 +11,7 @@ import {
 } from "../../shared/schema.js";
 import { reportsDateRangeQuerySchema, type ReportsDateRangeQuery } from "../../shared/validation.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { PRIVILEGED_ROLES as REPORT_ROLES } from "../../shared/roles.js";
 import { logAudit } from "../lib/audit.js";
 import { buildCsv, sendCsv } from "../lib/csv.js";
 import { ValidationError } from "../lib/errors.js";
@@ -19,7 +20,7 @@ export const reportsRouter = Router();
 
 reportsRouter.use(requireAuth);
 
-const REPORT_ROLES = ["super_admin", "admin", "staff", "ministry_leader"] as const;
+// REPORT_ROLES is the shared PRIVILEGED_ROLES set (shared/roles.ts).
 reportsRouter.use(requireRole(...REPORT_ROLES));
 
 interface ParsedDateRange {

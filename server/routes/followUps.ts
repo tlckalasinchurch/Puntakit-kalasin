@@ -17,6 +17,7 @@ import {
   followUpUpdateSchema,
 } from "../../shared/validation.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { CREATE_ROLES, PRIVILEGED_ROLES } from "../../shared/roles.js";
 import { logAudit } from "../lib/audit.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 
@@ -30,8 +31,7 @@ followUpsRouter.use(requireAuth);
  * is: privileged roles, the owner, the creator, or (for group_leader) a
  * group they actually lead. Reuses the same USER_ROLES RBAC as activities.
  */
-const PRIVILEGED_ROLES: UserRole[] = ["super_admin", "admin", "staff", "ministry_leader"];
-const CREATE_ROLES: UserRole[] = ["super_admin", "admin", "staff", "ministry_leader", "group_leader"];
+// PRIVILEGED_ROLES / CREATE_ROLES are defined once in shared/roles.ts.
 
 const STATUS_TRANSITIONS: Record<FollowUpStatus, FollowUpStatus[]> = {
   open: ["in_progress", "completed", "cancelled"],

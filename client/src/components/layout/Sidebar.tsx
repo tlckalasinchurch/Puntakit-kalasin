@@ -19,7 +19,10 @@ import {
   X,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
+import { CREATE_ROLES, PRIVILEGED_ROLES, hasRole } from "@shared/roles";
+import type { UserRole } from "@shared/schema";
 import { Logo } from "./Logo";
 
 export interface NavGroup {
@@ -29,9 +32,29 @@ export interface NavGroup {
     path: string;
     icon: React.ComponentType<{ size?: number; className?: string }>;
     badge?: string;
+    /**
+     * Roles allowed to use this destination. Omitted means "every signed-in
+     * role". These sets mirror the server gates in `server/routes/` via
+     * `shared/roles.ts` — they are a UX affordance only, never the
+     * authorization itself (the server still returns 401/403 on its own).
+     */
+    roles?: readonly UserRole[];
   }[];
 }
 
+/**
+ * Navigation is only gated where the server itself would deny the role:
+ *
+ * - `/inbox` needs CREATE_ROLES — `POST /api/submissions` blocks everyone else,
+ *   so a `member`/`viewer` would only ever see an empty list.
+ * - `/reports` needs PRIVILEGED_ROLES — `server/routes/reports.ts` puts a hard
+ *   `requireRole` on the whole router.
+ *
+ * Deliberately NOT gated: `/follow-up`, because `server/routes/followUps.ts`
+ * grants access to the owner and the creator of a follow-up regardless of
+ * role — hiding the entry could strand someone who was assigned a task.
+ * `/settings` and `/media` are unbuilt stubs with no server gate to mirror yet.
+ */
 export const navGroups: NavGroup[] = [
   {
     name: "เมนูหลัก",
@@ -44,7 +67,7 @@ export const navGroups: NavGroup[] = [
       { label: "แผนที่กลุ่มแคร์", path: "/map", icon: MapPin },
       { label: "เช็คชื่อ/เข้าร่วม", path: "/attendance", icon: UserCheck },
       { label: "การติดตาม", path: "/follow-up", icon: ListTodo },
-      { label: "กล่องข้อมูลนำเข้า", path: "/inbox", icon: InboxIcon },
+      { label: "กล่องข้อมูลนำเข้า", path: "/inbox", icon: InboxIcon, roles: CREATE_ROLES },
       { label: "การนมัสการ", path: "/events", icon: CalendarDays },
       { label: "การประกาศ", path: "/announcements", icon: Megaphone },
     ],
@@ -54,7 +77,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "คริสตจักร", path: "/church", icon: Building2 },
       { label: "พันธกิจ", path: "/ministries", icon: HeartHandshake },
-      { label: "รายงาน", path: "/reports", icon: BarChart3 },
+      { label: "รายงาน", path: "/reports", icon: BarChart3, roles: PRIVILEGED_ROLES },
       { label: "สื่อ/เอกสาร", path: "/media", icon: BookOpen },
     ],
   },
@@ -74,6 +97,16 @@ interface SidebarProps {
 
 export function Sidebar({ open, onClose }: SidebarProps) {
   const [location, navigate] = useLocation();
+  const { user } = useAuth();
+
+  // Roles arrive with the session; until then `hasRole` denies the gated
+  // entries, so a `member` never sees a privileged menu item flash by.
+  const visibleGroups = navGroups
+    .map(group => ({
+      ...group,
+      items: group.items.filter(item => item.roles === undefined || hasRole(user?.role, item.roles)),
+    }))
+    .filter(group => group.items.length > 0);
 
   return (
     <>
@@ -106,7 +139,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
         {/* Navigation Groups */}
         <div className="flex flex-col flex-1 px-4 py-4 space-y-6">
-          {navGroups.map(group => (
+          {visibleGroups.map(group => (
             <div key={group.name}>
               <h3 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
                 {group.name}

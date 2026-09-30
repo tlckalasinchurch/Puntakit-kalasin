@@ -29,6 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { PRIVILEGED_ROLES as OPERATIONS_ROLES } from "@shared/roles";
 
 // ---------------------------------------------------------------------------
 // Types (shapes of existing API responses)
@@ -129,7 +130,6 @@ interface HealthStatus {
   timestamp?: string;
 }
 
-const OPERATIONS_ROLES = ["super_admin", "admin", "staff", "ministry_leader"];
 const MINISTRY_PREVIEW_LIMIT = 6;
 const IDENTITY_IMAGE = "/manus-storage/puntakit-hero_d9170436.png";
 

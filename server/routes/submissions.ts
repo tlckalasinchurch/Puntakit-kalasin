@@ -14,6 +14,7 @@ import {
   missionSubmissionStatusUpdateSchema,
 } from "../../shared/validation.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { CREATE_ROLES, PRIVILEGED_ROLES as REVIEW_ROLES } from "../../shared/roles.js";
 import { insertMissionActivity, insertMissionActivityMedia } from "../lib/missionActivity.js";
 import { logAudit } from "../lib/audit.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
@@ -29,8 +30,8 @@ submissionsRouter.use(requireAuth);
  * privileged roles review, approve, and publish — the same "draft -> human
  * review -> publish" gate activities.ts enforces on the manual path.
  */
-const CREATE_ROLES: UserRole[] = ["super_admin", "admin", "staff", "ministry_leader", "group_leader"];
-const REVIEW_ROLES: UserRole[] = ["super_admin", "admin", "staff", "ministry_leader"];
+// CREATE_ROLES / REVIEW_ROLES are defined once in shared/roles.ts
+// (REVIEW_ROLES is the shared PRIVILEGED_ROLES set).
 
 const STATUS_TRANSITIONS: Record<MissionSubmissionStatus, MissionSubmissionStatus[]> = {
   new: ["reviewing", "rejected"],

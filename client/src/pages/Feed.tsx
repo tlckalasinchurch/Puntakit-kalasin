@@ -27,6 +27,7 @@ import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import type { MissionActivityStatus, MissionActivityType } from "@shared/schema";
+import { CREATE_ROLES } from "@shared/roles";
 
 interface FeedActivity {
   id: string;
@@ -123,7 +124,7 @@ export default function Feed() {
   const [submitting, setSubmitting] = useState(false);
   const [transitioningId, setTransitioningId] = useState<string | null>(null);
 
-  const canCreate = user && ["super_admin", "admin", "staff", "ministry_leader", "group_leader"].includes(user.role);
+  const canCreate = user && CREATE_ROLES.includes(user.role);
 
   const load = async () => {
     setIsLoading(true);
@@ -296,7 +297,7 @@ export default function Feed() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {items.map((activity) => {
             const isMine = user?.id === activity.createdById;
-            const canAdvance = isMine || (user && ["super_admin", "admin", "staff", "ministry_leader", "group_leader"].includes(user.role));
+            const canAdvance = isMine || (user && CREATE_ROLES.includes(user.role));
             return (
               <article
                 key={activity.id}

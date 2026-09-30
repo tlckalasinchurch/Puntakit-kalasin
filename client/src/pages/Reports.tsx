@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { PRIVILEGED_ROLES as REPORT_ROLES } from "@shared/roles";
 
 interface StatusCount {
   status: string;
@@ -17,8 +18,6 @@ interface ReportsSummary {
   attendance: { total: number; byStatus: StatusCount[]; attendanceRate: number };
   events: { total: number; byStatus: StatusCount[] };
 }
-
-const REPORT_ROLES = ["super_admin", "admin", "staff", "ministry_leader"];
 
 const EXPORTS: { key: string; label: string }[] = [
   { key: "members", label: "สมาชิก" },

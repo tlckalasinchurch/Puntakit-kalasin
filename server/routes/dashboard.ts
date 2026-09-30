@@ -12,12 +12,13 @@ import {
   users,
 } from "../../shared/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { PRIVILEGED_ROLES as OPERATIONS_ROLES } from "../../shared/roles.js";
 
 export const dashboardRouter = Router();
 
 dashboardRouter.use(requireAuth);
 
-const OPERATIONS_ROLES = ["super_admin", "admin", "staff", "ministry_leader"] as const;
+// OPERATIONS_ROLES is the shared PRIVILEGED_ROLES set (shared/roles.ts).
 const INACTIVE_GROUP_DAYS = 14;
 
 dashboardRouter.get("/summary", async (_req, res, next) => {
