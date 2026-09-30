@@ -1,0 +1,23 @@
+ M CLAUDE.md
+ M client/src/components/layout/AppLayout.tsx
+ M client/src/components/layout/Logo.tsx
+ M client/src/components/layout/Sidebar.tsx
+ M client/src/components/layout/Topbar.tsx
+ M client/src/index.css
+ M client/src/pages/Announcements.tsx
+ M client/src/pages/Church.tsx
+ M client/src/pages/Events.tsx
+ M client/src/pages/Groups.tsx
+ M client/src/pages/Home.tsx
+ M client/src/pages/Members.tsx
+ M server/db/migrations/meta/_journal.json
+ M server/routes/groups.test.ts
+ M server/routes/groups.ts
+ M shared/schema.ts
+ M shared/validation.ts
+?? .ai/
+?? server/db/migrations/0003_acoustic_eddie_brock.sql
+?? server/db/migrations/meta/0003_snapshot.json
+29d81ab7ed3101600041bb2d709cb85ab419ea988fc5405c6a5eb5784b687cc4 *.ai/WORKFLOW.md
+26e47fb347b2617b17578cca8821d78c77842529c5ba8a0e5b276cd078c251ff *.ai/workflow/candidates/round-2-install/candidate.md
+3446723f656814b6e486e113c2740dc0f113e40562e7c5aa50fe479efc900a58 *CLAUDE.md

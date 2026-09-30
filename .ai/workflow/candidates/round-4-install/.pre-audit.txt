@@ -1,0 +1,40 @@
+ M CLAUDE.md
+ M client/src/components/layout/AppLayout.tsx
+ M client/src/components/layout/Logo.tsx
+ M client/src/components/layout/Sidebar.tsx
+ M client/src/components/layout/Topbar.tsx
+ M client/src/index.css
+ M client/src/pages/Announcements.tsx
+ M client/src/pages/Church.tsx
+ M client/src/pages/Events.tsx
+ M client/src/pages/Groups.tsx
+ M client/src/pages/Home.tsx
+ M client/src/pages/Members.tsx
+ M server/db/migrations/meta/_journal.json
+ M server/routes/groups.test.ts
+ M server/routes/groups.ts
+ M shared/schema.ts
+ M shared/validation.ts
+?? .ai/WORKFLOW.md
+?? .ai/gemini_38_flash_high_runbook.md
+?? .ai/opus_4_6_public_blueprint.md
+?? .ai/workflow/candidates/round-1-install/audit-round-1.md
+?? .ai/workflow/candidates/round-1-install/candidate.md
+?? .ai/workflow/candidates/round-2-install/audit-round-2.md
+?? .ai/workflow/candidates/round-2-install/candidate.md
+?? .ai/workflow/candidates/round-3-install/audit-round-3.md
+?? .ai/workflow/candidates/round-3-install/candidate.md
+?? .ai/workflow/candidates/round-4-install/candidate.md
+?? server/db/migrations/0003_acoustic_eddie_brock.sql
+?? server/db/migrations/meta/0003_snapshot.json
+393fd8bf3421fbe8f4f48ab8ec3f6db8d3d5d1e46f5a8949eb07f77f0017b31d *.ai/WORKFLOW.md
+18f43e2e35a00f21db1e1d5a0fba6a6fb73390485e1cf12796f9a2f35acc8cf3 *.ai/gemini_38_flash_high_runbook.md
+ea24e3b822e0203413130a350f8a30675b471e95096532e1b12e6fff769cced6 *.ai/opus_4_6_public_blueprint.md
+98aceb9205404f24176084129e7e528cb93c87d0dc455422057eca0abce23908 *.ai/workflow/candidates/round-1-install/audit-round-1.md
+a517c8935600b7408506d5406dcc80bee0f949d2a68a6b254dc0e9505741bafa *.ai/workflow/candidates/round-1-install/candidate.md
+968b75965901bdf43965382c2fb5d86ca9703442665c9079e19c7a90e7f1b14e *.ai/workflow/candidates/round-2-install/audit-round-2.md
+26e47fb347b2617b17578cca8821d78c77842529c5ba8a0e5b276cd078c251ff *.ai/workflow/candidates/round-2-install/candidate.md
+f18c179c0a895854ebc602bfa18299ae21dcf2be0656a8acefeef75aa8fe2bc3 *.ai/workflow/candidates/round-3-install/audit-round-3.md
+cadd926f6781529bb0de7ee0aa37dbef3b2866ba154f58db52496d6346fced49 *.ai/workflow/candidates/round-3-install/candidate.md
+17fdcd819d20eb148b1dc02e63c898cb4b2606094be0706996b426c00d8f3d3d *.ai/workflow/candidates/round-4-install/candidate.md
+caf8dc974315391b0a8a2f2d9a5d97975050b39d629e51f384c6be1356bb1fa3 *CLAUDE.md
