@@ -6,6 +6,7 @@ import { FormSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
+import { ADMIN_ROLES, hasRole } from "@shared/roles";
 
 interface ChurchProfile {
   id: string;
@@ -21,7 +22,9 @@ const EMPTY_FORM = { name: "", address: "", phone: "", email: "", description: "
 
 export default function Church() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  // Mirrors the server's `requireAdmin` on PUT /api/church-profile
+  // (shared/roles.ts ADMIN_ROLES).
+  const isAdmin = hasRole(user?.role, ADMIN_ROLES);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

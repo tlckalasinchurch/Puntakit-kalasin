@@ -30,6 +30,40 @@ export const CREATE_ROLES: readonly UserRole[] = [...PRIVILEGED_ROLES, "group_le
 export const DELETE_ROLES: readonly UserRole[] = ["super_admin", "admin", "ministry_leader"];
 
 /**
+ * Admin-gated resources: events, announcements, ministries, the church
+ * profile, member deletion/restore and group creation/deletion.
+ * `requireAdmin` in `server/middleware/auth.ts` is defined from this exact
+ * set, so the client's `isAdmin` flag and the server gate can never drift.
+ */
+export const ADMIN_ROLES: readonly UserRole[] = ["super_admin", "admin"];
+
+/** Create a member record (`POST /api/members`). */
+export const MEMBER_CREATE_ROLES: readonly UserRole[] = ["super_admin", "admin", "staff"];
+
+/**
+ * Edit member records and export the member CSV
+ * (`PUT /api/members/:id`, `GET /api/members/export/csv`). Staff-level roles
+ * that can care for a record, but not create or delete one.
+ */
+export const MEMBER_UPDATE_ROLES: readonly UserRole[] = [
+  ...MEMBER_CREATE_ROLES,
+  "ministry_leader",
+  "group_leader",
+];
+
+/**
+ * Manage any group and its membership regardless of ownership. A
+ * `group_leader` additionally needs to lead the specific group — the same
+ * ownership rule `verifyGroupManagementAccess` enforces in
+ * `server/routes/groups.ts`.
+ */
+export const GROUP_MANAGE_ANY_ROLES: readonly UserRole[] = [
+  "super_admin",
+  "admin",
+  "ministry_leader",
+];
+
+/**
  * True when `role` is one of `allowed`. An undefined role (still loading, or
  * signed out) is never allowed.
  */

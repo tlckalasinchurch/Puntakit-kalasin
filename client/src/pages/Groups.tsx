@@ -35,6 +35,7 @@ import type {
   GroupPrivacy,
   GroupStatus,
 } from "@shared/schema";
+import { ADMIN_ROLES, GROUP_MANAGE_ANY_ROLES, hasRole } from "@shared/roles";
 
 interface GroupItem {
   id: string;
@@ -160,9 +161,12 @@ export default function Groups() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
 
-  const isSuperAdmin = user?.role === "super_admin";
-  const isAdmin = isSuperAdmin || user?.role === "admin";
-  const isMinistryLeader = user?.role === "ministry_leader";
+  // Create/delete are admin-gated (POST/DELETE /api/groups). Editing a group
+  // or its membership follows the server's `verifyGroupManagementAccess`:
+  // GROUP_MANAGE_ANY_ROLES may edit any group; a group_leader only the
+  // groups they lead (ownership check in canEditGroup below).
+  const isAdmin = hasRole(user?.role, ADMIN_ROLES);
+  const canManageAnyGroup = hasRole(user?.role, GROUP_MANAGE_ANY_ROLES);
 
   const [groupsList, setGroupsList] = useState<GroupItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -219,11 +223,13 @@ export default function Groups() {
     fetchGroups();
   }, [fetchGroups]);
 
-  // Load available members for adding
+  // Load available members for adding. GET /api/members returns the rows as
+  // a bare array in `data` — no `{ items }` wrapper (see
+  // client/src/members-list-contract.test.ts).
   const fetchAvailableMembers = async () => {
     try {
-      const res = await api.get<{ items: SimpleMember[] }>("/api/members?limit=200");
-      setAvailableMembers(res.items || []);
+      const members = await api.get<SimpleMember[]>("/api/members?limit=200");
+      setAvailableMembers(members ?? []);
     } catch {
       // ignore
     }
@@ -256,7 +262,7 @@ export default function Groups() {
   };
 
   const canEditGroup = (grp: GroupItem) => {
-    if (isAdmin || isMinistryLeader) return true;
+    if (canManageAnyGroup) return true;
     if (user?.role === "group_leader" && (grp.leaderId === user?.id || grp.coLeaderId === user?.id)) return true;
     return false;
   };

@@ -8,6 +8,7 @@ import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useResource } from "@/hooks/useResource";
 import { ApiError } from "@/lib/api";
+import { ADMIN_ROLES, hasRole } from "@shared/roles";
 
 interface Event {
   id: string;
@@ -56,7 +57,8 @@ function formatDateTime(iso: string) {
 
 export default function Events() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  // Mirrors the server's `requireAdmin` (shared/roles.ts ADMIN_ROLES).
+  const isAdmin = hasRole(user?.role, ADMIN_ROLES);
   const { items, isLoading, error, reload, create, update, remove } = useResource<Event>("/api/events");
 
   const [formOpen, setFormOpen] = useState(false);

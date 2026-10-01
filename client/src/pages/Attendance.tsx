@@ -159,9 +159,13 @@ export default function Attendance() {
   const loadLiveRoster = useCallback(async () => {
     setLoadingLive(true);
     try {
-      // 1. Fetch registered members
-      const memRes = await api.get<{ items: MemberItem[] }>("/api/members?limit=300");
-      setAllMembers(memRes.items || []);
+      // 1. Fetch registered members. GET /api/members returns the rows as a
+      // bare array in `data` (pagination lives in `meta`) — there is no
+      // `{ items }` wrapper, so the result must be typed as an array.
+      // Pinned by server/routes/members.test.ts (list contract) and
+      // client/src/members-list-contract.test.ts.
+      const members = await api.get<MemberItem[]>("/api/members?limit=300");
+      setAllMembers(members ?? []);
 
       // 2. Fetch existing attendance records for this date & service
       const attParams = new URLSearchParams({

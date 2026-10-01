@@ -4,6 +4,7 @@ import { isClerkConfigured, loadClerkUser } from "../lib/clerkAuth.js";
 import type { AuthenticatedUser } from "../lib/auth.js";
 import { ForbiddenError, UnauthorizedError } from "../lib/errors.js";
 import type { UserRole } from "../../shared/schema.js";
+import { ADMIN_ROLES } from "../../shared/roles.js";
 
 declare global {
   namespace Express {
@@ -23,6 +24,41 @@ function readTestCookie(req: Request, name: string): string | undefined {
 }
 
 /**
+ * Demo mode is a *development* affordance: it auto-provisions a local admin so
+ * the app can be exercised without Clerk credentials.
+ *
+ * It must never be able to win over an explicit test runtime. Before
+ * `PUNTAKIT_TEST_AUTH` was added to this condition, `pnpm test` on any machine
+ * that had the documented `.env.local` (which sets NODE_ENV=development and
+ * PUNTAKIT_DEMO_MODE=1) auto-authenticated **every** request as the demo admin
+ * — so all 46 `expect(401)` / `expect(403)` assertions across nine integration
+ * suites silently stopped testing anything, while CI (no `.env.local`) stayed
+ * green. `.env.local` overrides NODE_ENV, so the test flag is the only reliable
+ * discriminator: vitest.config.ts sets it, and neither `.env.local` nor a
+ * deployment ever does.
+ */
+export function isDemoModeEnabled(): boolean {
+  return (
+    process.env.PUNTAKIT_DEMO_MODE === "1" &&
+    process.env.NODE_ENV !== "production" &&
+    process.env.PUNTAKIT_TEST_AUTH !== "1"
+  );
+}
+
+/**
+ * The legacy cookie/JWT path exists solely so route tests can mint local
+ * identities. It must never be reachable from a deploy: with it active,
+ * `requireAuth` trusts a locally-signed token, and because `requireRole()`
+ * always lets `super_admin` through, a forged `role: "super_admin"` claim would
+ * pass every gate in the application. Gating on NODE_ENV as well as the flag
+ * means no environment variable alone can open it in production, and
+ * `createApp()` additionally refuses to boot with the flag set there.
+ */
+export function isLegacyTestAuthEnabled(): boolean {
+  return process.env.PUNTAKIT_TEST_AUTH === "1" && process.env.NODE_ENV !== "production";
+}
+
+/**
  * Authenticate requests with Clerk. The legacy cookie/JWT flow is intentionally
  * unavailable in production. The test-only branch lets existing route tests
  * create local identities without requiring a live Clerk session.
@@ -32,7 +68,7 @@ export async function requireAuth(
   _res: Response,
   next: NextFunction
 ): Promise<void> {
-  if (process.env.PUNTAKIT_DEMO_MODE === "1" && process.env.NODE_ENV !== "production") {
+  if (isDemoModeEnabled()) {
     try {
       const { eq } = await import("drizzle-orm");
       const { getDb } = await import("../db/client.js");
@@ -78,7 +114,7 @@ export async function requireAuth(
     }
   }
 
-  if (process.env.PUNTAKIT_TEST_AUTH === "1") {
+  if (isLegacyTestAuthEnabled()) {
     try {
       const { AUTH_COOKIE_NAME, verifyAuthToken } = await import("../lib/auth.js");
       const { getDb } = await import("../db/client.js");
@@ -128,11 +164,13 @@ export function requireRole(...allowedRoles: UserRole[]) {
   };
 }
 
-export const requireAdmin = requireRole("super_admin", "admin");
-export const requireStaffOrAdmin = requireRole(
-  "super_admin",
-  "admin",
-  "staff",
-  "ministry_leader",
-  "group_leader"
-);
+/** Admin-gated routes. The set lives in `shared/roles.ts` so the client's
+ * `isAdmin` flag and this gate are always the same list. */
+export const requireAdmin = requireRole(...ADMIN_ROLES);
+
+// `requireStaffOrAdmin` was removed rather than kept: it was never imported,
+// and its inline five-role list was byte-for-byte identical to `CREATE_ROLES`
+// in `shared/roles.ts`. An unused gate that duplicates a canonical set is the
+// exact drift the shared sets exist to prevent — the next caller would have
+// added a second definition of "who may create". Use `requireRole(...CREATE_ROLES)`
+// when that gate is needed again.

@@ -20,6 +20,8 @@ import { ListSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { subscribeToPushNotifications } from "@/lib/pwa";
+import { MEMBERSHIP_STATUS_LABELS } from "@shared/labels";
+import type { MembershipStatus } from "@shared/schema";
 
 interface PortalData {
   user: {
@@ -208,7 +210,10 @@ export default function MemberHome() {
               fontWeight: 600,
             }}
           >
-            {member?.membershipStatus === "active" ? "สมาชิกประจำ" : "ผู้เยี่ยมเยียน"}
+            {member ?
+              MEMBERSHIP_STATUS_LABELS[member.membershipStatus as MembershipStatus] ??
+              member.membershipStatus
+              : "-"}
           </span>
         </div>
 

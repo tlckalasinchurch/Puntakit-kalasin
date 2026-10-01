@@ -5,16 +5,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { ProfileSkeleton } from "@/components/LoadingStates";
 import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
-
-const ROLE_LABEL: Record<string, string> = {
-  super_admin: "ผู้ดูแลระบบสูงสุด",
-  admin: "ผู้ดูแลระบบ",
-  ministry_leader: "ผู้นำพันธกิจ",
-  group_leader: "ผู้นำกลุ่มแคร์",
-  staff: "เจ้าหน้าที่",
-  member: "สมาชิก",
-  viewer: "ผู้ชมข้อมูล",
-};
+import { ROLE_LABELS } from "@shared/labels";
 
 export default function Profile() {
   const { user, isLoading, logout } = useAuth();
@@ -47,7 +38,7 @@ export default function Profile() {
     );
   }
 
-  const roleLabel = ROLE_LABEL[user.role] ?? "สมาชิก";
+  const roleLabel = ROLE_LABELS[user.role] ?? user.role;
   const initial = user.name.trim().slice(0, 1) || "?";
 
   const handleLogout = async () => {

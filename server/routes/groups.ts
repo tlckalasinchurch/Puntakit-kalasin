@@ -16,6 +16,7 @@ import {
   groupMemberUpdateSchema,
   groupQuerySchema,
 } from "../../shared/validation.js";
+import { ADMIN_ROLES, GROUP_MANAGE_ANY_ROLES } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
@@ -24,10 +25,12 @@ export const groupsRouter = Router();
 
 groupsRouter.use(requireAuth);
 
-// Helper to check if user can manage the group (admin, super_admin, ministry_leader, or assigned leader/co-leader)
+// Helper to check if user can manage the group. Role set is shared with the
+// client via `GROUP_MANAGE_ANY_ROLES` (shared/roles.ts); a group_leader gets
+// an extra ownership check below.
 async function verifyGroupManagementAccess(req: Request, groupId: string) {
   const user = req.user!;
-  if (user.role === "super_admin" || user.role === "admin" || user.role === "ministry_leader") {
+  if (GROUP_MANAGE_ANY_ROLES.includes(user.role)) {
     return true;
   }
 
@@ -85,10 +88,10 @@ function maskGroupLocation<T extends { privacy?: string; meetingLocation?: strin
   isLeaderOrActiveMember: boolean = false
 ): T {
   const user = req.user!;
+  // Same set as group-wide management: those roles may see any group's
+  // location. Everyone else only gets it if they lead/co-lead the group.
   const isPrivileged =
-    user.role === "super_admin" ||
-    user.role === "admin" ||
-    user.role === "ministry_leader" ||
+    GROUP_MANAGE_ANY_ROLES.includes(user.role) ||
     isLeaderOrActiveMember;
 
   if (isPrivileged || group.privacy === "public") {
@@ -325,7 +328,7 @@ groupsRouter.get("/:id", async (req, res, next) => {
 // 3. POST / - Create group (admin, super_admin only)
 groupsRouter.post(
   "/",
-  requireRole("super_admin", "admin"),
+  requireRole(...ADMIN_ROLES),
   async (req, res, next) => {
     try {
       const parsed = groupInputSchema.safeParse(req.body);
@@ -426,7 +429,7 @@ groupsRouter.put("/:id", async (req, res, next) => {
 // 5. DELETE /:id - Soft-delete group (admin, super_admin only)
 groupsRouter.delete(
   "/:id",
-  requireRole("super_admin", "admin"),
+  requireRole(...ADMIN_ROLES),
   async (req, res, next) => {
     try {
       const { id } = req.params;

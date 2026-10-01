@@ -17,12 +17,21 @@ import { groupsRouter } from "./routes/groups.js";
 import { attendanceRouter } from "./routes/attendance.js";
 import { portalRouter } from "./routes/portal.js";
 import { requestIdMiddleware } from "./middleware/requestId.js";
+import { isDemoModeEnabled, isLegacyTestAuthEnabled } from "./middleware/auth.js";
 import { isClerkConfigured, resolveClerkPublishableKey } from "./lib/clerkAuth.js";
 import { AppError } from "./lib/errors.js";
 import { getDb } from "./db/client.js";
 
 export function createApp() {
   const app = express();
+
+  // Do not advertise the framework on every response.
+  app.disable("x-powered-by");
+  // TLS terminates one hop in front of the app (Vercel's proxy, or a reverse
+  // proxy when self-hosted). Without this, `req.ip` is the proxy's address for
+  // every request — which would collapse any IP-keyed rate limit into one
+  // shared bucket and write misleading client IPs into the audit log.
+  app.set("trust proxy", 1);
 
   app.use(requestIdMiddleware);
   // Must run before express.json(): Svix verifies the exact raw request body.
@@ -55,10 +64,28 @@ export function createApp() {
 
   // Clerk is the only authentication provider. The middleware attaches the
   // verified Clerk session to every request; protected routes enforce it.
-  const isTestRuntime = process.env.PUNTAKIT_TEST_AUTH === "1";
-  const isLocalDemoRuntime =
-    process.env.PUNTAKIT_DEMO_MODE === "1" && process.env.NODE_ENV !== "production";
-  if (!isTestRuntime && !isLocalDemoRuntime) {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  // Fail fast on auth-mode flags that only make sense outside a deployment.
+  // Silently ignoring them would hide a real misconfiguration instead of
+  // surfacing it at start-up (the same policy `server/db/config.ts` applies to
+  // PGlite): with the legacy test path active, a token signed with the test
+  // secret satisfies `requireAuth` and, because `requireRole()` always lets
+  // `super_admin` through, every gate in the app.
+  if (isProduction && process.env.PUNTAKIT_TEST_AUTH === "1") {
+    throw new Error(
+      "PUNTAKIT_TEST_AUTH=1 is rejected when NODE_ENV=production. It enables the legacy cookie/JWT auth path, which must never be reachable from a deployment. Remove the variable."
+    );
+  }
+  if (isProduction && process.env.PUNTAKIT_DEMO_MODE === "1") {
+    throw new Error(
+      "PUNTAKIT_DEMO_MODE=1 is rejected when NODE_ENV=production. Demo mode auto-provisions an admin account. Remove the variable."
+    );
+  }
+
+  const isLegacyTestRuntime = isLegacyTestAuthEnabled();
+  const isLocalDemoRuntime = isDemoModeEnabled();
+  if (!isLegacyTestRuntime && !isLocalDemoRuntime) {
     if (!isClerkConfigured()) {
       throw new Error(
         "Clerk is not configured: CLERK_SECRET_KEY and a publishable key (CLERK_PUBLISHABLE_KEY or VITE_CLERK_PUBLISHABLE_KEY) are required in non-test environments."

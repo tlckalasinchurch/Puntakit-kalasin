@@ -7,6 +7,11 @@ import {
   memberInputSchema,
   memberQuerySchema,
 } from "../../shared/validation.js";
+import {
+  ADMIN_ROLES,
+  MEMBER_CREATE_ROLES,
+  MEMBER_UPDATE_ROLES,
+} from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
@@ -15,7 +20,14 @@ export const membersRouter = Router();
 
 membersRouter.use(requireAuth);
 
-function maskSensitiveData(member: Member, userRole: UserRole, userId: string): Member {
+/**
+ * Applies the role-based field mask to a member row.
+ *
+ * Exported so `members.test.ts` can assert the real rules instead of a copy of
+ * them: a duplicated mask in the test suite cannot fail when this function
+ * changes, which is how `lineId` stayed visible to every signed-in role.
+ */
+export function maskSensitiveData(member: Member, userRole: UserRole, userId: string): Member {
   const isPrivileged =
     userRole === "super_admin" ||
     userRole === "admin" ||
@@ -30,6 +42,12 @@ function maskSensitiveData(member: Member, userRole: UserRole, userId: string): 
     ...member,
     phone: member.phone ? member.phone.replace(/(\d{3})\d{3,4}(\d{3})/, "$1-xxx-$2") : null,
     email: member.email ? member.email.replace(/(.{2})(.*)(?=@)/, "$1***") : null,
+    // LINE ID is a personal contact handle: it identifies a real person on a
+    // third-party network and is not needed to care for them, so it is masked
+    // alongside the phone number and email. Leaving it in place meant the
+    // lowest-privileged signed-in role (`viewer`) received a directory of every
+    // member's LINE ID from the list endpoint.
+    lineId: null,
     address: null,
     emergencyContactName: null,
     emergencyContactPhone: null,
@@ -56,8 +74,8 @@ membersRouter.get("/", async (req, res, next) => {
     const db = getDb();
     const conditions = [];
 
-    // Role-based soft-delete visibility
-    const canViewDeleted = req.user!.role === "super_admin" || req.user!.role === "admin";
+    // Role-based soft-delete visibility (same set as the delete/restore gates)
+    const canViewDeleted = ADMIN_ROLES.includes(req.user!.role);
     if (!includeDeleted || !canViewDeleted) {
       conditions.push(isNull(members.deletedAt));
     }
@@ -182,7 +200,7 @@ membersRouter.get("/check-duplicate", async (req, res, next) => {
 // 3. GET /export/csv - Export members to CSV (UTF-8 BOM supported)
 membersRouter.get(
   "/export/csv",
-  requireRole("super_admin", "admin", "staff", "ministry_leader", "group_leader"),
+  requireRole(...MEMBER_UPDATE_ROLES),
   async (req, res, next) => {
     try {
       const db = getDb();
@@ -281,7 +299,7 @@ membersRouter.get("/:id", async (req, res, next) => {
 // 5. POST / - Create member
 membersRouter.post(
   "/",
-  requireRole("super_admin", "admin", "staff"),
+  requireRole(...MEMBER_CREATE_ROLES),
   async (req, res, next) => {
     try {
       const parsed = memberInputSchema.safeParse(req.body);
@@ -355,7 +373,7 @@ membersRouter.post(
 // 6. PUT /:id - Update member
 membersRouter.put(
   "/:id",
-  requireRole("super_admin", "admin", "staff", "ministry_leader", "group_leader"),
+  requireRole(...MEMBER_UPDATE_ROLES),
   async (req, res, next) => {
     try {
       const parsed = memberInputSchema.partial().safeParse(req.body);
@@ -429,7 +447,7 @@ membersRouter.put(
 // 7. DELETE /:id - Soft delete member
 membersRouter.delete(
   "/:id",
-  requireRole("super_admin", "admin"),
+  requireRole(...ADMIN_ROLES),
   async (req, res, next) => {
     try {
       const db = getDb();
@@ -465,7 +483,7 @@ membersRouter.delete(
 // 8. POST /:id/restore - Restore soft-deleted member
 membersRouter.post(
   "/:id/restore",
-  requireRole("super_admin", "admin"),
+  requireRole(...ADMIN_ROLES),
   async (req, res, next) => {
     try {
       const db = getDb();

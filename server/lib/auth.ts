@@ -22,12 +22,30 @@ export interface JwtPayload {
   sessionId?: string;
 }
 
-const TEST_SECRET = "puntakit-test-only-secret";
+/**
+ * Signing secret for the legacy cookie/JWT path.
+ *
+ * This must never fall back to a constant committed to the repository: the
+ * previous `process.env.JWT_SECRET || "puntakit-test-only-secret"` meant that
+ * anyone who could read this file could mint a token accepted by `requireAuth`
+ * — and because `requireRole()` always lets `super_admin` through, that is a
+ * full authorization bypass, not just a session forgery. Failing loudly is the
+ * only safe behaviour when the secret is absent.
+ */
+function requireJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.trim().length === 0) {
+    throw new Error(
+      "JWT_SECRET is not set. The legacy cookie/JWT auth path (PUNTAKIT_TEST_AUTH=1) refuses to run without an explicit secret."
+    );
+  }
+  return secret;
+}
 
 export function signAuthToken(payload: JwtPayload): string {
-  return jwt.sign(payload, process.env.JWT_SECRET || TEST_SECRET, { expiresIn: "7d" });
+  return jwt.sign(payload, requireJwtSecret(), { expiresIn: "7d" });
 }
 
 export function verifyAuthToken(token: string): JwtPayload {
-  return jwt.verify(token, process.env.JWT_SECRET || TEST_SECRET) as JwtPayload;
+  return jwt.verify(token, requireJwtSecret()) as JwtPayload;
 }

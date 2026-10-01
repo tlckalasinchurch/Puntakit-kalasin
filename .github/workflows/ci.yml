@@ -28,3 +28,12 @@ jobs:
 
       - name: Run tests
         run: pnpm test
+
+      # Build, so a change that type-checks but cannot bundle (a broken path
+      # alias, an unsupported Vite plugin, a missing asset) fails here instead
+      # of on the deploy. `pnpm check` alone cannot catch that class of failure,
+      # and the production outage recorded in
+      # docs/PUNTAKIT_SESSION_REPORT_2026-09-30.md §9 is exactly what a gap in
+      # this gate looks like.
+      - name: Build
+        run: pnpm build

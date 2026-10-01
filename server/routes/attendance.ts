@@ -17,6 +17,7 @@ import {
   consecutiveAbsenceQuerySchema,
   qrCheckInSchema,
 } from "../../shared/validation.js";
+import { ADMIN_ROLES } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
@@ -732,7 +733,7 @@ attendanceRouter.get("/export", async (req, res, next) => {
 // 8. DELETE /:id - Cancel attendance record (Admin only)
 attendanceRouter.delete(
   "/:id",
-  requireRole("super_admin", "admin"),
+  requireRole(...ADMIN_ROLES),
   async (req, res, next) => {
     try {
       const { id } = req.params;

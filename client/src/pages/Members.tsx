@@ -26,6 +26,22 @@ import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError, type ApiMeta } from "@/lib/api";
 import type { Gender, MembershipStatus } from "@shared/schema";
+import { MEMBERSHIP_STATUS_LABELS } from "@shared/labels";
+import {
+  ADMIN_ROLES,
+  MEMBER_CREATE_ROLES,
+  MEMBER_UPDATE_ROLES,
+  hasRole,
+} from "@shared/roles";
+// Thai labels live in shared/labels.ts (same map the Member PWA renders),
+// so admin and member surfaces can never show different words for a status.
+const MEMBERSHIP_STATUS_TONES: Record<MembershipStatus, string> = {
+  active: "green",
+  visitor: "blue",
+  candidate: "orange",
+  transferred: "purple",
+  inactive: "pink",
+};
 
 interface Member {
   id: string;
@@ -87,23 +103,17 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" });
 }
 
-const MEMBERSHIP_STATUS_LABELS: Record<MembershipStatus, { label: string; tone: string }> = {
-  active: { label: "สมาชิกประจำ", tone: "green" },
-  visitor: { label: "ผู้สนใจ/เยี่ยมเยียน", tone: "blue" },
-  candidate: { label: "ผู้เตรียมรับเชื่อ", tone: "orange" },
-  transferred: { label: "ย้ายคริสตจักร", tone: "purple" },
-  inactive: { label: "ขาดการติดต่อ", tone: "pink" },
-};
-
 export default function Members() {
   const { user } = useAuth();
-  const canManage =
-    user?.role === "super_admin" ||
-    user?.role === "admin" ||
-    user?.role === "staff" ||
-    user?.role === "ministry_leader" ||
-    user?.role === "group_leader";
-  const canDelete = user?.role === "super_admin" || user?.role === "admin";
+  // Gates mirror the server route gates exactly, from the shared sets in
+  // shared/roles.ts: POST /api/members takes MEMBER_CREATE_ROLES, PUT
+  // /api/members/:id and the CSV export take MEMBER_UPDATE_ROLES, DELETE and
+  // restore take ADMIN_ROLES. (Previously one `canManage` flag covered both
+  // create and edit, so a group_leader saw "เพิ่มสมาชิก" and got a 403 on
+  // submit.)
+  const canCreate = hasRole(user?.role, MEMBER_CREATE_ROLES);
+  const canManage = hasRole(user?.role, MEMBER_UPDATE_ROLES);
+  const canDelete = hasRole(user?.role, ADMIN_ROLES);
 
   const [members, setMembers] = useState<Member[]>([]);
   const [meta, setMeta] = useState<ApiMeta>({ page: 1, limit: 15, total: 0, totalPages: 1 });
@@ -298,14 +308,16 @@ export default function Members() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
-            type="button"
-            onClick={handleExportCsv}
-          >
-            <Download size={ICON_SIZE.sm} /> Export CSV
-          </button>
           {canManage && (
+            <button
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
+              type="button"
+              onClick={handleExportCsv}
+            >
+              <Download size={ICON_SIZE.sm} /> Export CSV
+            </button>
+          )}
+          {canCreate && (
             <button
               className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs"
               type="button"
@@ -491,10 +503,9 @@ export default function Members() {
                 <tbody className="divide-y divide-slate-100">
                   {members.map((m) => {
                     const tone = toneFor(m.name);
-                    const memInfo = MEMBERSHIP_STATUS_LABELS[m.membershipStatus] || {
-                      label: m.membershipStatus,
-                      tone: "blue",
-                    };
+                    const memLabel =
+                      MEMBERSHIP_STATUS_LABELS[m.membershipStatus] ?? m.membershipStatus;
+                    const memTone = MEMBERSHIP_STATUS_TONES[m.membershipStatus] ?? "blue";
                     return (
                       <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3 px-4">
@@ -519,13 +530,13 @@ export default function Members() {
                         <td className="py-3 px-4 font-mono text-slate-700">{m.phone || "-"}</td>
                         <td className="py-3 px-4">
                           <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                            memInfo.tone === "green"
+                            memTone === "green"
                               ? "bg-emerald-50 text-emerald-700"
-                              : memInfo.tone === "orange"
+                              : memTone === "orange"
                               ? "bg-amber-50 text-amber-700"
                               : "bg-blue-50 text-blue-700"
                           }`}>
-                            {memInfo.label}
+                            {memLabel}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-slate-600">
@@ -864,7 +875,7 @@ export default function Members() {
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                   <span className="role-chip blue">{selectedMember.role}</span>
                   <span className="role-chip green">
-                    {MEMBERSHIP_STATUS_LABELS[selectedMember.membershipStatus]?.label || selectedMember.membershipStatus}
+                    {MEMBERSHIP_STATUS_LABELS[selectedMember.membershipStatus] ?? selectedMember.membershipStatus}
                   </span>
                   <span className={`status-chip ${selectedMember.status === "ติดตามแล้ว" ? "good" : "attention"}`}>
                     {selectedMember.status}

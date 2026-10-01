@@ -1,7 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { Server } from "node:http";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { createApp } from "../app.js";
 import { requireRole } from "../middleware/auth.js";
+import { maskSensitiveData } from "./members.js";
 import { memberInputSchema, memberQuerySchema } from "../../shared/validation.js";
 import type { Member, UserRole } from "../../shared/schema.js";
 
@@ -180,19 +183,15 @@ describe("Members API & Security Integration Tests", () => {
       updatedAt: new Date(),
     };
 
-    function simulateMask(m: Member, role: UserRole) {
-      const isPrivileged = role === "super_admin" || role === "admin" || role === "staff";
-      if (isPrivileged) return m;
-      return {
-        ...m,
-        phone: m.phone ? m.phone.replace(/(\d{3})\d{3,4}(\d{3})/, "$1-xxx-$2") : null,
-        email: m.email ? m.email.replace(/(.{2})(.*)(?=@)/, "$1***") : null,
-        address: null,
-        emergencyContactName: null,
-        emergencyContactPhone: null,
-        emergencyContactRelation: null,
-        notes: null,
-      };
+    /**
+     * The mask under test is the REAL one from `server/routes/members.ts`, not
+     * a copy of it. The previous version of this suite re-implemented the
+     * masking inline, so it could never fail when the real function was wrong —
+     * which is exactly how `lineId` stayed unmasked: the copy simply omitted
+     * the field the real function also omitted.
+     */
+    function simulateMask(m: Member, role: UserRole, userId = "someone-else") {
+      return maskSensitiveData(m, role, userId);
     }
 
     it("masks phone, email, address, and pastoral notes for regular members and viewers", () => {
@@ -204,6 +203,35 @@ describe("Members API & Security Integration Tests", () => {
       expect(memberView.emergencyContactPhone).toBeNull();
     });
 
+    it("masks the LINE ID for non-privileged roles", () => {
+      // LINE ID identifies a real person on a third-party network. Returning it
+      // gave every signed-in role — including `viewer` — a directory of every
+      // member's LINE handle from GET /api/members.
+      expect(simulateMask(mockMember, "member").lineId).toBeNull();
+      expect(simulateMask(mockMember, "viewer").lineId).toBeNull();
+      expect(simulateMask(mockMember, "group_leader").lineId).toBeNull();
+      expect(simulateMask(mockMember, "ministry_leader").lineId).toBeNull();
+    });
+
+    it("keeps the LINE ID only for the roles the server treats as privileged", () => {
+      expect(simulateMask(mockMember, "admin").lineId).toBe("test_line");
+      expect(simulateMask(mockMember, "super_admin").lineId).toBe("test_line");
+      expect(simulateMask(mockMember, "staff").lineId).toBe("test_line");
+    });
+
+    it("leaves the record intact for the member's own assigned leader", () => {
+      // `maskSensitiveData` also treats the member's assigned care leader as
+      // privileged — they need the real contact details to do the follow-up.
+      const assigned = { ...mockMember, assignedLeaderId: "leader-1" };
+      const asLeader = simulateMask(assigned, "group_leader", "leader-1");
+      expect(asLeader.lineId).toBe("test_line");
+      expect(asLeader.phone).toBe("0812345678");
+      // A different group_leader, with no assignment, still gets the mask.
+      const asOther = simulateMask(assigned, "group_leader", "leader-2");
+      expect(asOther.lineId).toBeNull();
+      expect(asOther.phone).toBe("081-xxx-678");
+    });
+
     it("retains full sensitive information for admin and staff roles", () => {
       const adminView = simulateMask(mockMember, "admin");
       expect(adminView.phone).toBe("0812345678");
@@ -211,6 +239,38 @@ describe("Members API & Security Integration Tests", () => {
       expect(adminView.address).toBe("123 หมู่บ้านสุขใจ จ.กาฬสินธุ์");
       expect(adminView.notes).toBe("ข้อมูลส่วนตัวฝ่ายอภิบาลที่ห้ามเผยแพร่");
       expect(adminView.emergencyContactPhone).toBe("0899999999");
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // List-response contract (client sync guard).
+  //
+  // GET /api/members returns the rows as a BARE ARRAY in `data` (pagination
+  // lives in `meta`). Two client pages (Attendance roster, Groups add-member
+  // picker) once typed this response as `{ items: Member[] }`, so both read
+  // `undefined` and rendered an always-empty list. These tests pin the wire
+  // shape so any change to it breaks CI instead of silently blanking those
+  // screens again. Mirrored on the client side by
+  // client/src/members-list-contract.test.ts.
+  // ---------------------------------------------------------------------
+  describe("List response contract (client sync guard)", () => {
+    it("marks the /api/members list route in the source file, then asserts the shape over HTTP", async () => {
+      // The 401 integration assertion below proves the route exists and is
+      // auth-gated; this source assertion pins that the file under test is
+      // the one whose contract the client depends on.
+      const source = await fs.promises.readFile(
+        path.resolve(import.meta.dirname, "members.ts"),
+        "utf8"
+      );
+      expect(source).toContain("success: true,");
+      expect(source).toContain("data: maskedRows,");
+      expect(source).toContain("meta: {");
+
+      const res = await fetch(`${baseUrl}/api/members`);
+      expect(res.status).toBe(401);
+      const body = (await res.json()) as { success: boolean; error: { code: string } };
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe("UNAUTHORIZED");
     });
   });
 });

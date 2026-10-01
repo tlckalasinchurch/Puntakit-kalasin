@@ -22,9 +22,11 @@ import { toast } from "sonner";
 import { MemberAppLayout } from "@/components/layout/MemberAppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
+import type { MembershipStatus } from "@shared/schema";
 import { api, ApiError } from "@/lib/api";
 import { FormSkeleton } from "@/components/LoadingStates";
 import { subscribeToPushNotifications } from "@/lib/pwa";
+import { MEMBERSHIP_STATUS_LABELS, ROLE_LABELS } from "@shared/labels";
 
 interface MemberProfileData {
   id: string;
@@ -210,22 +212,13 @@ export default function MemberProfile() {
               </p>
               <div className="flex items-center space-x-2 mt-2">
                 <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                  {profile?.membershipStatus === "regular"
-                    ? "สมาชิกประจำ"
-                    : profile?.membershipStatus === "baptized"
-                    ? "รับบัพติศมาแล้ว"
-                    : "ผู้สนใจ"}
+                  {profile ?
+                    MEMBERSHIP_STATUS_LABELS[profile.membershipStatus as MembershipStatus] ??
+                    profile.membershipStatus
+                    : "-"}
                 </span>
                 <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 capitalize">
-                  {user?.role === "super_admin"
-                    ? "ผู้ดูแลระบบสูงสุด"
-                    : user?.role === "ministry_leader"
-                    ? "ผู้นำพันธกิจ"
-                    : user?.role === "group_leader"
-                    ? "หัวหน้ากลุ่มแคร์"
-                    : user?.role === "staff"
-                    ? "เจ้าหน้าที่"
-                    : "สมาชิก"}
+                  {user ? ROLE_LABELS[user.role] ?? user.role : "-"}
                 </span>
               </div>
             </div>
