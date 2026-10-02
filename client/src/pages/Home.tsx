@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  AlertCircle,
   Activity,
-  ArrowRight,
   CalendarDays,
   Camera,
   ChevronRight,
@@ -26,6 +24,12 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  EmptyState,
+  ErrorState,
+  SectionHeader,
+  StatusChip,
+} from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -148,7 +152,7 @@ function daysOverdue(dueAt: string | null): number | null {
 
 type QueryState<T> =
   | { status: "loading" }
-  | { status: "error"; message: string }
+  | { status: "error"; message: string; technical?: string }
   | { status: "success"; data: T };
 
 function useHomeQuery<T>(path: string | null) {
@@ -167,8 +171,11 @@ function useHomeQuery<T>(path: string | null) {
         if (active) {
           setState({
             status: "error",
-            message:
-              err instanceof ApiError ? err.message : "โหลดข้อมูลไม่สำเร็จ",
+            message: "โหลดข้อมูลส่วนนี้ไม่สำเร็จ",
+            technical:
+              err instanceof ApiError
+                ? (err.serverMessage ?? err.message)
+                : String(err),
           });
         }
       }
@@ -201,7 +208,14 @@ function QueryView<T>({
     );
   }
   if (state.status === "error")
-    return <ErrorState message={state.message} onRetry={retry} />;
+    return (
+      <ErrorState
+        title={state.message}
+        description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+        technical={state.technical}
+        onRetry={retry}
+      />
+    );
   return <>{children(state.data)}</>;
 }
 
@@ -228,126 +242,11 @@ function formatDate(value: string) {
 
 // ---------------------------------------------------------------------------
 // Section building blocks
+//
+// The reusable states (heading, empty, error, chip) live in
+// `@/components/DesignSystem` so every screen shares one implementation. Only
+// Home-specific shapes stay here.
 // ---------------------------------------------------------------------------
-
-function SectionHeader({
-  id,
-  title,
-  description,
-  action,
-}: {
-  id: string;
-  title: string;
-  description?: string;
-  action?: { href: string; label: string };
-}) {
-  return (
-    <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-      <div className="min-w-0">
-        <h2 id={id} className="type-lead font-semibold text-[var(--color-ink)]">
-          {title}
-        </h2>
-        {description && (
-          <p className="type-caption mt-1 text-[var(--color-body-muted)]">
-            {description}
-          </p>
-        )}
-      </div>
-      {action && (
-        <Button
-          asChild
-          variant="link"
-          className="h-11 self-start px-2 sm:self-auto"
-        >
-          <Link href={action.href}>
-            {action.label}
-            <ArrowRight size={ICON_SIZE.sm} aria-hidden="true" />
-          </Link>
-        </Button>
-      )}
-    </div>
-  );
-}
-
-function ErrorState({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry: () => void;
-}) {
-  return (
-    <div
-      role="alert"
-      className="flex flex-col items-start gap-4 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-6 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div className="flex items-start gap-3">
-        <AlertCircle
-          size={ICON_SIZE.lg}
-          aria-hidden="true"
-          className="mt-0.5 shrink-0 text-[var(--color-error)]"
-        />
-        <div>
-          <p className="type-body-strong text-[var(--color-ink)]">
-            โหลดข้อมูลส่วนนี้ไม่สำเร็จ
-          </p>
-          <p className="type-caption text-[var(--color-body-muted)]">
-            {message}
-          </p>
-        </div>
-      </div>
-      <Button variant="outline" onClick={onRetry}>
-        <RotateCw aria-hidden="true" />
-        ลองใหม่
-      </Button>
-    </div>
-  );
-}
-
-function EmptyState({
-  icon: Icon,
-  title,
-  description,
-  action,
-  inset = false,
-}: {
-  icon: React.ComponentType<{
-    size?: number;
-    className?: string;
-    "aria-hidden"?: boolean | "true";
-  }>;
-  title: string;
-  description?: string;
-  action?: { href: string; label: string };
-  inset?: boolean;
-}) {
-  return (
-    <div
-      className={`flex flex-col items-center gap-2 px-6 py-10 text-center ${
-        inset
-          ? "bg-[var(--color-canvas)]"
-          : "rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)]"
-      }`}
-    >
-      <Icon
-        size={ICON_SIZE["2xl"]}
-        aria-hidden="true"
-        className="text-[var(--color-body-muted)]"
-      />
-      <p className="type-body-strong text-[var(--color-ink)]">{title}</p>
-      {description && (
-        <p className="type-caption max-w-sm text-[var(--color-body-muted)]">
-          {description}
-        </p>
-      )}
-      {action && (
-        <Button asChild variant="link" className="h-11 px-2">
-          <Link href={action.href}>{action.label}</Link>
-        </Button>
-      )}
-    </div>
-  );
-}
 
 function TileSkeleton({
   count,
@@ -485,28 +384,6 @@ function ContactGap({
   );
 }
 
-function StatusChip({
-  tone,
-  children,
-}: {
-  tone: "success" | "warning" | "neutral";
-  children: React.ReactNode;
-}) {
-  const toneClass =
-    tone === "success"
-      ? "bg-[var(--color-success)]/10 text-[var(--color-success)]"
-      : tone === "warning"
-        ? "bg-[var(--color-warning)]/10 text-[var(--color-warning)]"
-        : "bg-[var(--color-canvas-soft)] text-[var(--color-body-muted)]";
-  return (
-    <span
-      className={`type-fine shrink-0 rounded-[var(--radius-xs)] px-2 py-1 font-semibold ${toneClass}`}
-    >
-      {children}
-    </span>
-  );
-}
-
 function IconBadge({
   icon: Icon,
   tone = "primary",
@@ -637,33 +514,63 @@ function OperationalPulse({
     : "กำลังตรวจสอบ";
 
   return (
-    <section aria-labelledby="system-pulse-title" className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 shadow-[var(--shadow)] sm:p-5">
+    <section
+      aria-labelledby="system-pulse-title"
+      className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 sm:p-5"
+    >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-soft)] text-[var(--color-primary)]">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-canvas-soft)] text-[var(--color-primary)]">
             <Activity size={ICON_SIZE.lg} aria-hidden="true" />
           </span>
           <div>
-            <p className="type-caption-strong text-[var(--color-primary)]">SYSTEM PULSE</p>
-            <h2 id="system-pulse-title" className="type-body-strong text-[var(--color-ink)]">ภาพรวมระบบพร้อมทำงาน</h2>
-            <p className="type-caption text-[var(--color-body-muted)]">ตรวจล่าสุด {checkedAt} · ข้อมูลจาก API จริง</p>
+            <h2
+              id="system-pulse-title"
+              className="type-body-strong text-[var(--color-ink)]"
+            >
+              สถานะการเชื่อมต่อ
+            </h2>
+            <p className="type-caption text-[var(--color-body-muted)]">
+              ตรวจล่าสุด {checkedAt}
+            </p>
           </div>
         </div>
-        <button type="button" onClick={retry} className="inline-flex h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]">
+        <button
+          type="button"
+          onClick={retry}
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+        >
           <RotateCw size={ICON_SIZE.sm} aria-hidden="true" /> ตรวจอีกครั้ง
         </button>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div className="flex items-center gap-3 rounded-[var(--radius-md)] bg-[var(--color-canvas-soft)] p-3">
-          <ShieldCheck size={ICON_SIZE.md} className={online ? "text-[var(--color-success)]" : "text-[var(--color-error)]"} aria-hidden="true" />
-          <div className="min-w-0"><p className="type-caption text-[var(--color-body-muted)]">API service</p><p className="type-body-strong text-[var(--color-ink)]">{online ? "ทำงานปกติ" : "ต้องตรวจสอบ"}</p></div>
-          <span className={`ml-auto h-2.5 w-2.5 rounded-full ${online ? "bg-[var(--color-success)]" : "bg-[var(--color-error)]"}`} aria-label={online ? "API ปกติ" : "API มีปัญหา"} />
-        </div>
-        <div className="flex items-center gap-3 rounded-[var(--radius-md)] bg-[var(--color-canvas-soft)] p-3">
-          <Database size={ICON_SIZE.md} className={databaseReady ? "text-[var(--color-success)]" : "text-[var(--color-warning)]"} aria-hidden="true" />
-          <div className="min-w-0"><p className="type-caption text-[var(--color-body-muted)]">ฐานข้อมูล</p><p className="type-body-strong text-[var(--color-ink)]">{databaseReady ? "เชื่อมต่อแล้ว" : ready.status === "error" ? "ยังไม่พร้อม" : "กำลังตรวจสอบ"}</p></div>
-          <span className={`ml-auto h-2.5 w-2.5 rounded-full ${databaseReady ? "bg-[var(--color-success)]" : "bg-[var(--color-warning)]"}`} aria-label={databaseReady ? "ฐานข้อมูลพร้อม" : "ฐานข้อมูลยังไม่พร้อม"} />
-        </div>
+        <p className="type-caption flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-canvas-soft)] p-3 text-[var(--color-ink)]">
+          <ShieldCheck
+            size={ICON_SIZE.md}
+            aria-hidden="true"
+            className={
+              online ? "text-[var(--color-success)]" : "text-[var(--color-error)]"
+            }
+          />
+          ระบบบันทึกข้อมูล: {online ? "ใช้งานได้ตามปกติ" : "ขัดข้องชั่วคราว"}
+        </p>
+        <p className="type-caption flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-canvas-soft)] p-3 text-[var(--color-ink)]">
+          <Database
+            size={ICON_SIZE.md}
+            aria-hidden="true"
+            className={
+              databaseReady
+                ? "text-[var(--color-success)]"
+                : "text-[var(--color-warning)]"
+            }
+          />
+          ข้อมูลสมาชิกและกลุ่ม:{" "}
+          {databaseReady
+            ? "พร้อมใช้งาน"
+            : ready.status === "error"
+              ? "ยังใช้งานไม่ได้"
+              : "กำลังตรวจสอบ"}
+        </p>
       </div>
     </section>
   );
@@ -744,39 +651,6 @@ export default function Home() {
           )}
         </section>
 
-        <OperationalPulse health={health} ready={ready} retry={retrySystemStatus} />
-
-        {/* Context / discovery */}
-        <nav aria-label="ทางลัดสำรวจพันธกิจ">
-          <ul className="grid gap-3 sm:grid-cols-3 sm:gap-4">
-            {DISCOVERY_LINKS.map(({ href, icon: Icon, title, detail }) => (
-              <li key={href}>
-                <Link
-                  href={href}
-                  className="flex min-h-11 items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 outline-none transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-                >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-canvas-soft)] text-[var(--color-primary)]">
-                    <Icon size={ICON_SIZE.lg} aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="type-body-strong block text-[var(--color-ink)]">
-                      {title}
-                    </span>
-                    <span className="type-caption block truncate text-[var(--color-body-muted)]">
-                      {detail}
-                    </span>
-                  </span>
-                  <ChevronRight
-                    size={ICON_SIZE.lg}
-                    aria-hidden="true"
-                    className="shrink-0 text-[var(--color-body-muted)]"
-                  />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
         {/* Active ministry: the one canonical upcoming-events presentation */}
         <section aria-labelledby="home-upcoming">
           <SectionHeader
@@ -802,7 +676,7 @@ export default function Home() {
                     icon={CalendarDays}
                     title="ยังไม่มีกิจกรรมในกำหนดการ"
                     description="เมื่อเพิ่มกิจกรรมหรือการนมัสการในกำหนดการ รายการจะแสดงที่นี่"
-                    action={{ href: "/events", label: "ไปที่หน้ากิจกรรม" }}
+                    action={{ label: "ไปที่หน้ากิจกรรม", onClick: () => navigate("/events") }}
                   />
                 );
               }
@@ -875,7 +749,8 @@ export default function Home() {
                         inset
                         icon={Camera}
                         title="ยังไม่มีกิจกรรมพันธกิจที่บันทึกไว้"
-                        description="กิจกรรมที่ทีมบันทึกผ่านฟีดจะแสดงที่นี่"
+                        description="เมื่อทีมบันทึกกิจกรรมผ่านฟีด รายการล่าสุดจะขึ้นที่นี่"
+                        action={{ label: "ไปบันทึกกิจกรรม", onClick: () => navigate("/feed") }}
                       />
                     ) : (
                       <ul className="divide-y divide-[var(--color-divider)]">
@@ -922,7 +797,8 @@ export default function Home() {
                       inset
                       icon={Megaphone}
                       title="ยังไม่มีประกาศในขณะนี้"
-                      description="ประกาศที่เผยแพร่จะแสดงที่นี่"
+                      description="เมื่อมีประกาศที่เผยแพร่แล้ว รายการจะขึ้นที่นี่"
+                      action={{ label: "ไปที่หน้าประกาศ", onClick: () => navigate("/announcements") }}
                     />
                   ) : (
                     <ul className="divide-y divide-[var(--color-divider)]">
@@ -991,7 +867,7 @@ export default function Home() {
                     icon={HeartHandshake}
                     title="ยังไม่มีพันธกิจที่เปิดดำเนินการ"
                     description="พันธกิจที่มีสถานะเปิดใช้งานจะแสดงที่นี่"
-                    action={{ href: "/ministries", label: "ไปที่หน้าพันธกิจ" }}
+                    action={{ label: "ไปที่หน้าพันธกิจ", onClick: () => navigate("/ministries") }}
                   />
                 );
               }
@@ -1033,7 +909,9 @@ export default function Home() {
           </QueryView>
         </section>
 
-        {/* People / groups needing attention: decision-oriented counts only */}
+        {/* People and groups that need a decision come first: a leader opening
+            the app on a phone should reach this without scrolling past the
+            editorial sections. */}
         <section aria-labelledby="home-attention">
           <SectionHeader
             id="home-attention"
@@ -1195,6 +1073,10 @@ export default function Home() {
           </div>
         </section>
 
+        {/* System health belongs at the bottom: a church leader should not meet
+            infrastructure vocabulary before the people who need care. */}
+        <OperationalPulse health={health} ready={ready} retry={retrySystemStatus} />
+
         {/* Discipleship pathway: editorial framework, not analytics */}
         <section aria-labelledby="home-pathway">
           <SectionHeader
@@ -1223,6 +1105,42 @@ export default function Home() {
             ))}
           </ol>
         </section>
+
+        {/* Context / discovery */}
+        <nav aria-label="ทางลัดสำรวจพันธกิจ">
+          <SectionHeader
+            id="home-discovery"
+            title="ทางลัด"
+            description="ไปยังส่วนที่ใช้บ่อย"
+          />
+          <ul className="grid gap-3 sm:grid-cols-3 sm:gap-4">
+            {DISCOVERY_LINKS.map(({ href, icon: Icon, title, detail }) => (
+              <li key={href}>
+                <Link
+                  href={href}
+                  className="flex min-h-11 items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 outline-none transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                >
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-canvas-soft)] text-[var(--color-primary)]">
+                    <Icon size={ICON_SIZE.lg} aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="type-body-strong block text-[var(--color-ink)]">
+                      {title}
+                    </span>
+                    <span className="type-caption block truncate text-[var(--color-body-muted)]">
+                      {detail}
+                    </span>
+                  </span>
+                  <ChevronRight
+                    size={ICON_SIZE.lg}
+                    aria-hidden="true"
+                    className="shrink-0 text-[var(--color-body-muted)]"
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
         {/* Next action */}
         <section

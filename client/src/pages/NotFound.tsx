@@ -1,4 +1,4 @@
-import { Cross, Home } from "lucide-react";
+import { Home } from "lucide-react";
 import { useLocation } from "wouter";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 
@@ -6,110 +6,22 @@ export default function NotFound() {
   const [, setLocation] = useLocation();
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "var(--color-canvas-soft)",
-        padding: "20px",
-      }}
-    >
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: "var(--radius-card)",
-          boxShadow: "0 10px 40px rgba(23,59,112,.1)",
-          border: "1px solid #e4ecf4",
-          padding: "48px 40px",
-          maxWidth: "420px",
-          width: "100%",
-          textAlign: "center",
-        }}
-      >
-        {/* Brand mark */}
-        <div
-          style={{
-            width: "68px",
-            height: "68px",
-            borderRadius: "var(--radius-panel)",
-            background: "linear-gradient(135deg,#3f7337,#315c2b)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 24px",
-            color: "#fff",
-            boxShadow: "0 8px 20px rgba(47,111,204,.3)",
-          }}
-        >
-          <Cross size={29} strokeWidth={3.4} />
-        </div>
+    <div className="flex min-h-screen items-center justify-center bg-[var(--color-canvas-soft)] p-5">
+      <div className="w-full max-w-[420px] rounded-[var(--radius-card)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-10 text-center shadow-[var(--shadow)]">
+        <p className="type-display-lg text-[var(--color-ink)]">404</p>
 
-        {/* 404 */}
-        <p
-          style={{
-            fontSize: "72px",
-            fontWeight: 800,
-            color: "#272729",
-            lineHeight: 1,
-            margin: "0 0 8px",
-            letterSpacing: "-3px",
-          }}
-        >
-          404
-        </p>
+        <h1 className="type-lead mt-2 text-[var(--color-ink)]">ไม่พบหน้าที่ต้องการ</h1>
 
-        <h1
-          style={{
-            fontSize: "20px",
-            color: "#17324d",
-            margin: "0 0 10px",
-            fontWeight: 700,
-          }}
-        >
-          ไม่พบหน้าที่ต้องการ
-        </h1>
-
-        <p
-          style={{
-            fontSize: "13px",
-            color: "#6b7c93",
-            lineHeight: 1.7,
-            margin: "0 0 32px",
-          }}
-        >
-          หน้าที่คุณกำลังมองหาอาจถูกย้ายหรือลบออกแล้ว
-          <br />
-          กรุณากลับสู่หน้าหลัก
+        <p className="type-caption mx-auto mt-2 max-w-[320px] text-[var(--color-body-muted)]">
+          หน้าที่คุณกำลังมองหาอาจถูกย้ายหรือลบออกแล้ว กรุณากลับสู่หน้าหลัก
         </p>
 
         <button
+          type="button"
           onClick={() => setLocation("/")}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            background: "#315c2b",
-            color: "#fff",
-            borderRadius: "12px",
-            padding: "11px 20px",
-            fontSize: "13px",
-            fontWeight: 600,
-            border: 0,
-            cursor: "pointer",
-            boxShadow: "0 7px 18px rgba(47,111,204,.25)",
-            transition: ".2s",
-            fontFamily: "inherit",
-          }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.background = "#235cb0")
-          }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.background = "#315c2b")
-          }
+          className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
         >
-          <Home size={ICON_SIZE.sm} />
+          <Home size={ICON_SIZE.sm} aria-hidden="true" />
           กลับหน้าหลัก
         </button>
       </div>

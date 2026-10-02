@@ -6,13 +6,13 @@ import {
   MapPin,
   UserCheck,
   ShieldCheck,
-  AlertCircle,
   RefreshCw,
   Mail,
   HeartHandshake,
 } from "lucide-react";
 import { toast } from "sonner";
 import { MemberAppLayout } from "@/components/layout/MemberAppLayout";
+import { EmptyState, ErrorState } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { ListSkeleton } from "@/components/LoadingStates";
@@ -42,13 +42,20 @@ export default function MemberGroup() {
   const [group, setGroup] = useState<CareGroupInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchGroup = async () => {
+  const fetchGroup = async (notify = false) => {
+    setError(null);
     try {
       const res = await api.get<CareGroupInfo | null>("/api/me/group");
       setGroup(res);
+      if (notify) {
+        toast.success("อัปเดตข้อมูลกลุ่มแคร์เรียบร้อยแล้ว");
+      }
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "โหลดข้อมูลกลุ่มแคร์ไม่สำเร็จ");
+      setError(
+        err instanceof ApiError ? err.message : "โหลดข้อมูลกลุ่มแคร์ไม่สำเร็จ"
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -61,223 +68,243 @@ export default function MemberGroup() {
 
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchGroup();
+    void fetchGroup(true);
   };
 
   const getInitials = (name: string) => {
     return name.slice(0, 2).toUpperCase();
   };
 
+  const roleLabel = (role: string) =>
+    role === "leader"
+      ? "ผู้นำกลุ่ม"
+      : role === "assistant"
+        ? "ผู้ช่วยผู้นำ"
+        : "สมาชิก";
+
   return (
     <MemberAppLayout title="กลุ่มแคร์ของฉัน">
-      <div className="space-y-4">
-        {/* Header banner */}
-        <div className="bg-gradient-to-r from-[var(--color-dark-surface-2)] to-[var(--color-dark-surface)] rounded-2xl p-5 text-white shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-xs">
-                <UsersRound size={ICON_SIZE.md} className="text-amber-300" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold">กลุ่มชีวิตและการสามัคคีธรรม</h2>
-                <p className="text-xs text-blue-100">ผูกพัน เติบโต และดูแลกันในพระคริสต์</p>
-              </div>
-            </div>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-white"
-              title="รีเฟรชข้อมูล"
-            >
-              <RefreshCw
-                size={ICON_SIZE.sm}
-                className={refreshing ? "animate-spin" : ""}
-              />
-            </button>
+      <header>
+        <h1 className="type-lead font-semibold text-[var(--color-ink)]">
+          กลุ่มแคร์ของฉัน
+        </h1>
+        <p className="type-caption mt-1 text-[var(--color-body-muted)]">
+          กลุ่มชีวิตที่คุณสังกัด วันนัดหมาย ผู้นำ และสมาชิกในกลุ่ม
+        </p>
+      </header>
+
+      {/* Hero banner — graphite chrome, one interactive colour. */}
+      <section className="flex items-center justify-between gap-3 rounded-[var(--radius-lg)] bg-gradient-to-br from-[var(--color-dark-surface-2)] to-[var(--color-dark-surface)] p-4 text-[var(--color-on-dark)]">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-on-dark)]/10">
+            <UsersRound
+              size={ICON_SIZE.lg}
+              aria-hidden="true"
+              className="text-[var(--color-primary-on-dark)]"
+            />
+          </span>
+          <div className="min-w-0">
+            <p className="type-body-strong">กลุ่มชีวิตและการสามัคคีธรรม</p>
+            <p className="type-fine text-[var(--color-on-dark-muted)]">
+              ผูกพัน เติบโต และดูแลกันในพระคริสต์
+            </p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          aria-label="รีเฟรชข้อมูลกลุ่มแคร์"
+          aria-busy={refreshing}
+          title="รีเฟรชข้อมูล"
+          className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-on-dark)]/10 text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-on-dark)]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-on-dark)] disabled:opacity-50 motion-reduce:transition-none"
+        >
+          <RefreshCw
+            size={ICON_SIZE.md}
+            aria-hidden="true"
+            className={refreshing ? "animate-spin motion-reduce:animate-none" : ""}
+          />
+        </button>
+      </section>
 
-        {/* Loading state */}
-        {loading && (
-          <div className="space-y-4">
-            <ListSkeleton count={2} />
-          </div>
-        )}
+      {loading && <ListSkeleton count={2} />}
 
-        {/* Empty state: No group assigned */}
-        {!loading && !group && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center border border-gray-100 dark:border-gray-700 shadow-xs space-y-4">
-            <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center mx-auto text-[var(--color-primary)] dark:text-blue-400">
-              <HeartHandshake size={ICON_SIZE.xl} />
-            </div>
-            <div>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                คุณยังไม่ได้สังกัดกลุ่มแคร์
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-xs mx-auto">
-                การมีกลุ่มแคร์ช่วยให้คุณมีพี่น้องร่วมอธิษฐานและดูแลกัน หากต้องการเข้าร่วมกลุ่มแคร์ กรุณาติดต่อศิษยาภิบาลหรือฝ่ายต้อนรับของคริสตจักร
+      {!loading && error && (
+        <ErrorState
+          title="โหลดข้อมูลกลุ่มแคร์ไม่สำเร็จ"
+          description="ระบบยังเชื่อมต่อข้อมูลกลุ่มของคุณไม่ได้ในขณะนี้ กรุณาลองอีกครั้ง"
+          technical={error}
+          retryLabel="ลองอีกครั้ง"
+          onRetry={() => {
+            setLoading(true);
+            void fetchGroup();
+          }}
+        />
+      )}
+
+      {!loading && !error && !group && (
+        <EmptyState
+          icon={HeartHandshake}
+          title="คุณยังไม่ได้สังกัดกลุ่มแคร์"
+          description="การมีกลุ่มแคร์ช่วยให้คุณมีพี่น้องร่วมอธิษฐานและดูแลกัน หากต้องการเข้าร่วมกลุ่มแคร์ กรุณาติดต่อฝ่ายต้อนรับของคริสตจักร"
+          action={{
+            label: "ติดต่อฝ่ายต้อนรับคริสตจักร",
+            href: "tel:043811800",
+          }}
+        />
+      )}
+
+      {!loading && !error && group && (
+        <>
+          <section className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5">
+            <span className="type-fine inline-flex items-center rounded-[var(--radius-xs)] bg-[var(--color-accent-soft)] px-2 py-1 font-semibold text-[var(--color-primary)]">
+              {group.category || "กลุ่มแคร์"}
+            </span>
+            <h2 className="type-body-strong mt-2 text-[var(--color-ink)]">
+              {group.groupName}
+            </h2>
+
+            {group.description && (
+              <p className="type-caption mt-2 text-[var(--color-body-muted)]">
+                {group.description}
+              </p>
+            )}
+
+            <div className="mt-3 flex flex-col gap-2.5 border-t border-[var(--color-divider)] pt-3">
+              <p className="flex items-center gap-3">
+                <Calendar
+                  size={ICON_SIZE.sm}
+                  aria-hidden="true"
+                  className="shrink-0 text-[var(--color-primary)]"
+                />
+                <span className="type-caption text-[var(--color-body-muted)]">
+                  วันนัดหมาย
+                </span>
+                <strong className="type-caption font-semibold text-[var(--color-ink)]">
+                  {group.meetingDay || "ตามที่นัดหมาย"}
+                </strong>
+              </p>
+              <p className="flex items-center gap-3">
+                <Clock
+                  size={ICON_SIZE.sm}
+                  aria-hidden="true"
+                  className="shrink-0 text-[var(--color-primary)]"
+                />
+                <span className="type-caption text-[var(--color-body-muted)]">
+                  เวลา
+                </span>
+                <strong className="type-caption font-semibold text-[var(--color-ink)]">
+                  {group.meetingTime ? `${group.meetingTime} น.` : "ตามที่นัดหมาย"}
+                </strong>
+              </p>
+              <p className="flex items-center gap-3">
+                <MapPin
+                  size={ICON_SIZE.sm}
+                  aria-hidden="true"
+                  className="shrink-0 text-[var(--color-primary)]"
+                />
+                <span className="type-caption text-[var(--color-body-muted)]">
+                  สถานที่
+                </span>
+                <strong className="type-caption font-semibold text-[var(--color-ink)]">
+                  {group.meetingLocation || "คริสตจักร / ออนไลน์"}
+                </strong>
               </p>
             </div>
-            <div className="pt-2">
-              <a
-                href="tel:043811800"
-                className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-[var(--color-dark-surface)] text-white text-sm font-medium hover:bg-[var(--color-dark-surface-3)] transition-colors"
-              >
-                <UsersRound size={ICON_SIZE.sm} />
-                <span>ติดต่อฝ่ายต้อนรับคริสตจักร</span>
-              </a>
-            </div>
-          </div>
-        )}
 
-        {/* Group Details & Members */}
-        {!loading && group && (
-          <>
-            {/* Group Overview Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-xs space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 mb-1.5">
-                    {group.category || "กลุ่มแคร์"}
-                  </span>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                    {group.groupName}
-                  </h3>
-                </div>
-              </div>
-
-              {group.description && (
-                <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                  {group.description}
-                </p>
-              )}
-
-              <div className="grid grid-cols-1 gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-700 text-sm">
-                <div className="flex items-center space-x-3 text-gray-700 dark:text-gray-300">
-                  <Calendar size={ICON_SIZE.sm} className="text-[var(--color-primary)] dark:text-blue-400 shrink-0" />
-                  <span>
-                    วันนัดหมาย:{" "}
-                    <strong className="font-semibold text-gray-900 dark:text-gray-100">
-                      {group.meetingDay || "ตามที่นัดหมาย"}
-                    </strong>
-                  </span>
-                </div>
-
-                <div className="flex items-center space-x-3 text-gray-700 dark:text-gray-300">
-                  <Clock size={ICON_SIZE.sm} className="text-[var(--color-primary)] dark:text-blue-400 shrink-0" />
-                  <span>
-                    เวลา:{" "}
-                    <strong className="font-semibold text-gray-900 dark:text-gray-100">
-                      {group.meetingTime ? `${group.meetingTime} น.` : "ตามที่นัดหมาย"}
-                    </strong>
-                  </span>
-                </div>
-
-                <div className="flex items-center space-x-3 text-gray-700 dark:text-gray-300">
-                  <MapPin size={ICON_SIZE.sm} className="text-[var(--color-primary)] dark:text-blue-400 shrink-0" />
-                  <span>
-                    สถานที่:{" "}
-                    <strong className="font-semibold text-gray-900 dark:text-gray-100">
-                      {group.meetingLocation || "คริสตจักร / ออนไลน์"}
-                    </strong>
-                  </span>
-                </div>
-              </div>
-
-              {/* Group Leader Subcard */}
-              {group.leaderName && (
-                <div className="mt-3 p-3.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full bg-[var(--color-dark-surface)] text-white flex items-center justify-center font-bold text-sm">
-                      {getInitials(group.leaderName)}
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-1.5">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                          {group.leaderName}
-                        </span>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
-                          หัวหน้ากลุ่ม
-                        </span>
-                      </div>
-                      {group.leaderEmail && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center space-x-1 mt-0.5">
-                          <Mail size={12} />
-                          <span>{group.leaderEmail}</span>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Fellow Members List */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <UserCheck size={ICON_SIZE.sm} className="text-[var(--color-primary)] dark:text-blue-400" />
-                  <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
-                    สมาชิกในกลุ่ม
-                  </h3>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                  {group.members.length} คน
+            {group.leaderName && (
+              <div className="mt-3 flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-divider)] bg-[var(--color-canvas-soft)] p-3.5">
+                <span
+                  aria-hidden="true"
+                  className="type-caption-strong flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-dark-surface)] text-[var(--color-on-dark)]"
+                >
+                  {getInitials(group.leaderName)}
                 </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="type-caption-strong text-[var(--color-ink)]">
+                      {group.leaderName}
+                    </span>
+                    <span className="type-fine rounded-[var(--radius-xs)] bg-[var(--color-accent-soft)] px-1.5 py-0.5 font-semibold text-[var(--color-primary)]">
+                      หัวหน้ากลุ่ม
+                    </span>
+                  </div>
+                  {group.leaderEmail && (
+                    <p className="type-fine mt-0.5 flex items-center gap-1 text-[var(--color-body-muted)]">
+                      <Mail size={ICON_SIZE.xs} aria-hidden="true" />
+                      <span className="truncate">{group.leaderEmail}</span>
+                    </p>
+                  )}
+                </div>
               </div>
+            )}
+          </section>
 
-              <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                {group.members.map((m) => (
-                  <div key={m.id} className="py-3 flex items-center justify-between first:pt-0 last:pb-0">
-                    <div className="flex items-center space-x-3">
-                      {m.avatarUrl ? (
-                        <img
-                          src={m.avatarUrl}
-                          alt={m.memberName}
-                          className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 text-[var(--color-primary)] dark:text-blue-300 flex items-center justify-center font-bold text-xs">
-                          {getInitials(m.memberName)}
-                        </div>
-                      )}
-                      <div>
-                        <div className="flex items-center space-x-1.5">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                            {m.memberName}
-                          </p>
-                          {m.memberNickname && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              ({m.memberNickname})
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[11px] text-gray-400 dark:text-gray-500 capitalize">
-                          {m.role === "leader" ? "ผู้นำกลุ่ม" : m.role === "assistant" ? "ผู้ช่วยผู้นำ" : "สมาชิก"}
-                        </span>
-                      </div>
-                    </div>
+          <section className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="type-body-strong flex items-center gap-2 text-[var(--color-ink)]">
+                <UserCheck
+                  size={ICON_SIZE.sm}
+                  aria-hidden="true"
+                  className="text-[var(--color-primary)]"
+                />
+                สมาชิกในกลุ่ม
+              </h2>
+              <span className="type-fine rounded-[var(--radius-pill)] bg-[var(--color-canvas-soft)] px-2 py-0.5 font-semibold text-[var(--color-text-secondary)]">
+                {group.members.length} คน
+              </span>
+            </div>
 
-                    {m.role === "leader" && (
-                      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                        ผู้นำ
+            <ul className="mt-2 divide-y divide-[var(--color-divider)]">
+              {group.members.map(m => (
+                <li
+                  key={m.id}
+                  className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    {m.avatarUrl ? (
+                      <img
+                        src={m.avatarUrl}
+                        alt={`รูปโปรไฟล์ของ ${m.memberName}`}
+                        className="size-10 shrink-0 rounded-[var(--radius-circle)] border border-[var(--color-hairline)] object-cover"
+                      />
+                    ) : (
+                      <span
+                        aria-hidden="true"
+                        className="type-caption-strong flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-accent-soft)] text-[var(--color-primary)]"
+                      >
+                        {getInitials(m.memberName)}
                       </span>
                     )}
+                    <div className="min-w-0">
+                      <p className="type-caption-strong truncate text-[var(--color-ink)]">
+                        {m.memberName}
+                        {m.memberNickname ? ` (${m.memberNickname})` : ""}
+                      </p>
+                      <p className="type-fine text-[var(--color-body-muted)]">
+                        {roleLabel(m.role)}
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
+                </li>
+              ))}
+            </ul>
 
-              {/* PDPA Privacy Protection Notice */}
-              <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700/60 flex items-start space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                <ShieldCheck size={ICON_SIZE.sm} className="text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
-                <span>
-                  เพื่อความปลอดภัยและปฏิบัติตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA) ระบบจะแสดงเฉพาะชื่อและชื่อเล่นของสมาชิกในกลุ่ม โดยไม่เปิดเผยเบอร์โทรศัพท์หรือที่อยู่แก่ผู้อื่น
-                </span>
-              </div>
+            <div className="mt-3 flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--color-divider)] bg-[var(--color-canvas-soft)] p-3">
+              <ShieldCheck
+                size={ICON_SIZE.sm}
+                aria-hidden="true"
+                className="mt-0.5 shrink-0 text-[var(--color-primary)]"
+              />
+              <p className="type-fine text-[var(--color-body-muted)]">
+                เพื่อความปลอดภัยและปฏิบัติตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล
+                (PDPA) ระบบจะแสดงเฉพาะชื่อและชื่อเล่นของสมาชิกในกลุ่ม
+                โดยไม่เปิดเผยเบอร์โทรศัพท์หรือที่อยู่แก่ผู้อื่น
+              </p>
             </div>
-          </>
-        )}
-      </div>
+          </section>
+        </>
+      )}
     </MemberAppLayout>
   );
 }

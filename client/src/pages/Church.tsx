@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, Building2, Save } from "lucide-react";
+import { Building2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { FormSkeleton } from "@/components/LoadingStates";
+import {
+  ErrorState,
+  Field,
+  PageHeader,
+} from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
@@ -19,6 +24,9 @@ interface ChurchProfile {
 }
 
 const EMPTY_FORM = { name: "", address: "", phone: "", email: "", description: "" };
+
+const CONTROL_CLASS =
+  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:cursor-not-allowed disabled:bg-[var(--color-canvas-soft)] disabled:text-[var(--color-body-muted)]";
 
 export default function Church() {
   const { user } = useAuth();
@@ -71,115 +79,108 @@ export default function Church() {
 
   return (
     <AppLayout>
-      {/* Page Heading */}
-      <div className="mb-6">
-        <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-          CHURCH PROFILE • ข้อมูลคริสตจักร
-        </span>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
-          ข้อมูลคริสตจักร
-        </h1>
-        <p className="text-xs text-slate-500">
-          ข้อมูลพื้นฐานของคริสตจักรที่แสดงต่อสมาชิกและผู้เยี่ยมชม
-        </p>
-      </div>
+      <PageHeader
+        title="ข้อมูลคริสตจักร"
+        description="ข้อมูลพื้นฐานของคริสตจักรที่แสดงต่อสมาชิกและผู้เยี่ยมชม"
+      />
 
-      <section className="tailadmin-card p-6 sm:p-8 max-w-3xl">
+      <section className="card-surface max-w-3xl p-5 sm:p-8">
         {isLoading ? (
           <FormSkeleton fields={5} />
         ) : error ? (
-          <div className="p-10 text-center text-rose-600">
-            <AlertCircle size={ICON_SIZE.xl} className="mx-auto mb-2 text-rose-500" />
-            <h3 className="font-bold text-sm">โหลดข้อมูลไม่สำเร็จ</h3>
-            <p className="text-xs text-slate-500 mt-1">{error}</p>
-            <button
-              className="mt-4 rounded-xl bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-100"
-              onClick={load}
-            >
-              ลองใหม่
-            </button>
-          </div>
+          <ErrorState technical={error} onRetry={load} />
         ) : (
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                ชื่อคริสตจักร *
-              </label>
-              <input
-                required
-                disabled={!isAdmin}
-                className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs sm:text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                  เบอร์โทรศัพท์
-                </label>
+          <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+            <Field label="ชื่อคริสตจักร" required>
+              {(props) => (
                 <input
+                  id={props.id}
+                  aria-describedby={props["aria-describedby"]}
+                  aria-invalid={props["aria-invalid"]}
+                  required
                   disabled={!isAdmin}
-                  className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs sm:text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className={CONTROL_CLASS}
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                  อีเมล
-                </label>
+              )}
+            </Field>
+
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <Field label="เบอร์โทรศัพท์">
+                {(props) => (
+                  <input
+                    id={props.id}
+                    aria-describedby={props["aria-describedby"]}
+                    aria-invalid={props["aria-invalid"]}
+                    type="tel"
+                    disabled={!isAdmin}
+                    className={CONTROL_CLASS}
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
+                )}
+              </Field>
+              <Field label="อีเมล">
+                {(props) => (
+                  <input
+                    id={props.id}
+                    aria-describedby={props["aria-describedby"]}
+                    aria-invalid={props["aria-invalid"]}
+                    type="email"
+                    disabled={!isAdmin}
+                    className={CONTROL_CLASS}
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
+                )}
+              </Field>
+            </div>
+
+            <Field label="ที่อยู่คริสตจักร">
+              {(props) => (
                 <input
-                  type="email"
+                  id={props.id}
+                  aria-describedby={props["aria-describedby"]}
+                  aria-invalid={props["aria-invalid"]}
                   disabled={!isAdmin}
-                  className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs sm:text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className={CONTROL_CLASS}
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
                 />
-              </div>
-            </div>
+              )}
+            </Field>
 
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                ที่อยู่คริสตจักร
-              </label>
-              <input
-                disabled={!isAdmin}
-                className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs sm:text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500"
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                รายละเอียดเกี่ยวกับคริสตจักร
-              </label>
-              <textarea
-                rows={5}
-                disabled={!isAdmin}
-                className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs sm:text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-              />
-            </div>
+            <Field label="รายละเอียดเกี่ยวกับคริสตจักร">
+              {(props) => (
+                <textarea
+                  id={props.id}
+                  aria-describedby={props["aria-describedby"]}
+                  aria-invalid={props["aria-invalid"]}
+                  rows={5}
+                  disabled={!isAdmin}
+                  className={CONTROL_CLASS}
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                />
+              )}
+            </Field>
 
             {updatedAt && (
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-400 pt-2">
-                <Building2 size={ICON_SIZE.xs} />
+              <p className="type-fine flex items-center gap-1.5 pt-1 text-[var(--color-body-muted)]">
+                <Building2 size={ICON_SIZE.xs} aria-hidden="true" />
                 <span>อัปเดตล่าสุด: {new Date(updatedAt).toLocaleString("th-TH")}</span>
-              </div>
+              </p>
             )}
 
             {isAdmin && (
-              <div className="pt-4 border-t border-slate-100 flex justify-end">
+              <div className="flex justify-end border-t border-[var(--color-divider)] pt-4">
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
                 >
-                  <Save size={ICON_SIZE.sm} />
+                  <Save size={ICON_SIZE.sm} aria-hidden="true" />
                   <span>{saving ? "กำลังบันทึก..." : "บันทึกข้อมูล"}</span>
                 </button>
               </div>

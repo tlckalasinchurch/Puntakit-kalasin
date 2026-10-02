@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   CalendarDays,
   Download,
   Home as HomeIcon,
   LayoutDashboard,
-  LogOut,
   User,
   UserCheck,
   UsersRound,
@@ -16,14 +15,35 @@ import { useAuth } from "@/contexts/AuthContext";
 import { isInstallPromptAvailable, promptInstall } from "@/lib/pwa";
 import { toast } from "sonner";
 
+/**
+ * Member PWA shell — Design System V2.
+ *
+ * One interactive colour (`--color-primary`), neutral elevation (`--shadow`),
+ * graphite-free chrome. The phone frame stays centred at a 600px max width
+ * with a sticky 60px header; the bottom nav is real wouter links so
+ * ⌘/middle-click and screen-reader navigation landmarks work.
+ */
+
 interface MemberAppLayoutProps {
   children: React.ReactNode;
+  /**
+   * Accepted for call-site compatibility. Pages render their own `<h1>` so the
+   * layout never competes with the page heading for the single-h1 rule.
+   */
   title?: string;
 }
 
-export function MemberAppLayout({ children, title }: MemberAppLayoutProps) {
-  const [location, navigate] = useLocation();
-  const { user, logout } = useAuth();
+const NAV_ITEMS = [
+  { label: "หน้าแรก", path: "/app", icon: HomeIcon },
+  { label: "กิจกรรม", path: "/app/events", icon: CalendarDays },
+  { label: "กลุ่มแคร์", path: "/app/group", icon: UsersRound },
+  { label: "เข้าโบสถ์", path: "/app/attendance", icon: UserCheck },
+  { label: "โปรไฟล์", path: "/app/profile", icon: User },
+] as const;
+
+export function MemberAppLayout({ children }: MemberAppLayoutProps) {
+  const [location] = useLocation();
+  const { user } = useAuth();
   const [canInstall, setCanInstall] = useState(false);
 
   const isStaffOrAdmin =
@@ -48,166 +68,91 @@ export function MemberAppLayout({ children, title }: MemberAppLayoutProps) {
     }
   };
 
-  const navItems = [
-    { label: "หน้าแรก", path: "/app", icon: HomeIcon },
-    { label: "กิจกรรม", path: "/app/events", icon: CalendarDays },
-    { label: "กลุ่มแคร์", path: "/app/group", icon: UsersRound },
-    { label: "เข้าโบสถ์", path: "/app/attendance", icon: UserCheck },
-    { label: "โปรไฟล์", path: "/app/profile", icon: User },
-  ];
-
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "var(--color-canvas-soft)",
-        display: "flex",
-        flexDirection: "column",
-        maxWidth: "600px",
-        margin: "0 auto",
-        position: "relative",
-        boxShadow: "0 0 35px rgba(23, 59, 112, 0.08)",
-      }}
-    >
-      {/* Mobile App Header */}
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 40,
-          height: "60px",
-          background: "rgba(255, 255, 255, 0.95)",
-          backdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(220, 232, 245, 0.8)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 16px",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }} onClick={() => navigate("/app")}>
-          <Logo />
-        </div>
+    <div className="relative mx-auto flex min-h-screen w-full max-w-[600px] flex-col bg-[var(--color-canvas-soft)] shadow-[var(--shadow)]">
+      {/* Mobile app header — 60px sticky, token surfaces, no blue tint. */}
+      <header className="sticky top-0 z-40 flex h-[60px] items-center justify-between gap-2 border-b border-[var(--color-divider)] bg-[var(--color-canvas)] px-4">
+        <Link
+          href="/app"
+          aria-label="กลับไปหน้าแรกของแอพสมาชิก"
+          className="flex min-h-11 min-w-0 items-center overflow-hidden rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+        >
+          <Logo tone="onLight" />
+        </Link>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div className="flex shrink-0 items-center gap-2">
           {canInstall && (
             <button
+              type="button"
               onClick={handleInstallClick}
-              style={{
-                background: "#eef5fc",
-                color: "#1d60a4",
-                border: "1px solid #c7ddf2",
-                borderRadius: "10px",
-                padding: "6px 10px",
-                fontSize: "11px",
-                fontWeight: 700,
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-                cursor: "pointer",
-              }}
+              className="type-fine inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none"
             >
-              <Download size={13} />
-              <span>ติดตั้งแอป</span>
+              <Download size={ICON_SIZE.sm} aria-hidden="true" />
+              <span>ติดตั้ง</span>
             </button>
           )}
 
           {isStaffOrAdmin && (
-            <button
-              onClick={() => navigate("/")}
+            <Link
+              href="/"
               title="สลับไปยังแดชบอร์ดเจ้าหน้าที่"
-              style={{
-                background: "#f0f4f9",
-                color: "#4f657d",
-                borderRadius: "10px",
-                padding: "6px 9px",
-                fontSize: "11px",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-                cursor: "pointer",
-              }}
+              aria-label="สลับไปยังแดชบอร์ดเจ้าหน้าที่"
+              className="flex size-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none"
             >
-              <LayoutDashboard size={14} />
-              <span style={{ fontSize: "11px" }}>Admin</span>
-            </button>
+              <LayoutDashboard size={ICON_SIZE.md} aria-hidden="true" />
+            </Link>
           )}
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main
-        style={{
-          flex: 1,
-          padding: "16px 14px 84px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "14px",
-        }}
-      >
+      {/* Main content — bottom padding clears the fixed nav + safe area. */}
+      <main className="flex flex-1 flex-col gap-3.5 px-4 pb-[88px] pt-4">
         {children}
       </main>
 
-      {/* Mobile Bottom Navigation Bar */}
+      {/* Bottom navigation — 5 real links, >= 44px tall each. */}
       <nav
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "100%",
-          maxWidth: "600px",
-          height: "64px",
-          background: "rgba(255, 255, 255, 0.98)",
-          backdropFilter: "blur(16px)",
-          borderTop: "1px solid #e1ecf5",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-around",
-          zIndex: 50,
-          paddingBottom: "env(safe-area-inset-bottom, 0px)",
-          boxShadow: "0 -4px 18px rgba(25, 62, 110, 0.06)",
-        }}
+        aria-label="เมนูหลักของแอพสมาชิก"
+        className="fixed bottom-0 left-1/2 z-50 w-full max-w-[600px] -translate-x-1/2 border-t border-[var(--color-divider)] bg-[var(--color-canvas)] pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_18px_rgba(29,29,31,0.06)]"
       >
-        {navItems.map((item) => {
-          const isActive = location === item.path;
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              style={{
-                flex: 1,
-                background: "transparent",
-                border: 0,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "3px",
-                color: isActive ? "#315c2b" : "#71859c",
-                cursor: "pointer",
-                padding: "6px 0",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <div
-                style={{
-                  position: "relative",
-                  padding: "4px 12px",
-                  borderRadius: "14px",
-                  background: isActive ? "#eaf2fb" : "transparent",
-                  transition: "background 0.2s ease",
-                }}
-              >
-                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-              </div>
-              <span style={{ fontSize: "10px", fontWeight: isActive ? 700 : 500 }}>
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
+        <ul className="flex items-stretch justify-around">
+          {NAV_ITEMS.map(item => {
+            const isActive = location === item.path;
+            const Icon = item.icon;
+            return (
+              <li key={item.path} className="flex-1">
+                <Link
+                  href={item.path}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-1 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none ${
+                    isActive
+                      ? "text-[var(--color-primary)]"
+                      : "text-[var(--color-body-muted)]"
+                  }`}
+                >
+                  <span
+                    className={`flex h-8 w-12 items-center justify-center rounded-[var(--radius-md)] ${
+                      isActive ? "bg-[var(--color-accent-soft)]" : ""
+                    }`}
+                  >
+                    <Icon
+                      size={ICON_SIZE.lg}
+                      strokeWidth={isActive ? 2.5 : 2}
+                      aria-hidden="true"
+                    />
+                  </span>
+                  <span
+                    className={`type-fine ${
+                      isActive ? "font-bold" : "font-medium"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </nav>
     </div>
   );

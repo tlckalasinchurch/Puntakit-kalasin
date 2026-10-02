@@ -103,5 +103,38 @@
 - **ข้อมูลจริง**: ตัวเลขสถิติ/ชื่อ/อีเมล ต้องมาจาก API เท่านั้น — ถ้าไม่มี API
   ให้แสดง empty state ห้าม hardcode
 - **Motion**: ใช้เฉพาะเพื่อตอบสนองการกระทำของผู้ใช้ (เปิด ขยาย ยืนยัน)
-  ห้ามมี animation เข้าเลยที่ไม่ได้เกิดจากผู้ใช้ และต้องเคารพ `prefers-reduced-motion`
+  ห้ามมี animation เข้าเลยที่ไม่ได้จากผู้ใช้ และต้องเคารพ `prefers-reduced-motion`
 - **Legal**: ทุกหน้า login และ profile ต้องมีลิงก์ `/privacy` และ `/terms`
+
+### 8.1 คอมโพเนนต์กลางที่ต้องใช้ (ห้ามเขียนซ้ำในหน้า)
+
+สถานะทั้งสี่แบบเคยถูกเขียนใหม่แยกกันใน 6+ หน้า ด้วยสีและถ้อยคำไม่ตรงกัน
+ตั้งแต่ Design System V2 ให้ใช้ของกลางใน `client/src/components/DesignSystem.tsx`
+เท่านั้น — ห้ามประกาศ `PageHeader`/`EmptyState`/`ErrorState`/`StatusChip`/`Modal`
+/`Field` ซ้ำในไฟล์หน้า
+
+| คอมโพเนนต์ | ใช้กับ | กติกา |
+|---|---|---|
+| `PageHeader` | หัวหน้าทุกหน้า | `title` 1 บรรทัด + `description` 1 ประโยค + `primaryAction` **ไม่เกิน 1 ปุ่ม** ที่เหลือใส่ `secondaryActions` |
+| `SectionHeader` | หัวข้อบล็อกในหน้า | `h2` + ลิงก์ "ดูทั้งหมด" ได้ 1 ลิงก์ |
+| `EmptyState` | เมื่อไม่มีข้อมูล | ต้องมี `title` + `description` ที่บอกว่าขาดอะไร + `action` ทางไปต่อ (ยกเว้นไม่มีจริง ๆ) |
+| `ErrorState` | เมื่อโหลด/บันทึกไม่สำเร็จ | `title` เป็นประโยคไทยที่ผู้ใช้เข้าใจ, ข้อความเทคนิคใส่ `technical` ซ่อนหลัง "รายละเอียดทางเทคนิค" — ห้ามแสดง error ดิบเป็นข้อความหลัก |
+| `StatusChip` | ทุกสถานะ | ใช้ `tone` จาก `success`/`warning`/`error`/`info`/`neutral` เท่านั้น และต้องมีข้อความกำกับเสมอ (ห้ามสื่อด้วยสีอย่างเดียว) |
+| `Modal` | ทุก dialog | ให้ role=dialog, Escape, focus trap และ scroll containment มาแล้ว — ห้ามใช้ `.modal-card` ตรง ๆ อีก |
+| `Field` | ทุกช่องกรอก | ผูก `label`/`hint`/`error` ให้อัตโนมัติ — ห้ามใช้ placeholder แทน label |
+
+### 8.2 ธีมมืด
+
+โหมดมืดทำงานด้วยการ **remap token** ที่ `.dark` ใน `client/src/index.css`
+(`--color-canvas`, `--color-ink`, `--color-hairline`, …) ไม่ใช่การ override
+คลาส Tailwind ด้วย `!important` อีกต่อไป เพราะฉะนั้น **ทุกสีต้องมาจาก
+`var(--color-*)` หรือคลาสใน `DesignSystem.tsx`** — ถ้าใส่สี palette ดิบ
+(`slate-*`, `blue-*`, `gray-*`) หน้าที่นั้นจะพังในโหมดมืดทันที
+
+### 8.3 มือถือก่อน (390px)
+
+- ทุกหน้าต้องใช้ได้ที่ 360–414px โดย **ไม่มีการเลื่อนแนวนอน**
+- ตารางที่มีมากกว่า 4 คอลัมน์ ต้องเปลี่ยนเป็นการ์ด/รายการที่ breakpoint `md`
+- ตัวควบคุมที่กดได้ต้องสูงอย่างน้อย 44px (`min-h-11`) และมีระยะห่างพอ
+- ข้อความจริงต้องไม่เล็กกว่า `.type-fine` (12px)
+- ปุ่ม/ลิงก์ต้องมี focus ring จาก `:focus-visible` เสมอ

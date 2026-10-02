@@ -58,7 +58,7 @@ export function GlobalSearch({
             onChange={event => setQuery(event.target.value)}
             placeholder={PLACEHOLDER}
             aria-label={LABEL}
-            aria-describedby={prominent ? hintId : undefined}
+            aria-describedby={hintId}
             title={SCOPE_HINT}
             className={cn(
               "rounded-[var(--radius-pill)] bg-[var(--color-canvas)] pl-11 pr-11 text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)]",
@@ -82,14 +82,16 @@ export function GlobalSearch({
           </Button>
         )}
       </form>
-      {prominent && (
-        <p
-          id={hintId}
-          className="type-caption mt-2 pl-4 text-[var(--color-body-muted)]"
-        >
-          {SCOPE_HINT}
-        </p>
-      )}
+      <p
+        id={hintId}
+        className={
+          prominent
+            ? "type-caption mt-2 pl-4 text-[var(--color-body-muted)]"
+            : "sr-only"
+        }
+      >
+        {SCOPE_HINT}
+      </p>
     </div>
   );
 }

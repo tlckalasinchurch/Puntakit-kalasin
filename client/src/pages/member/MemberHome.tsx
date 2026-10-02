@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { Link } from "wouter";
 import QRCode from "qrcode";
 import {
   Bell,
   Calendar,
+  CalendarDays,
+  CheckCircle2,
   ChevronRight,
   HeartHandshake,
-  MapPin,
   Megaphone,
   QrCode,
-  Sparkles,
   UserCheck,
   UsersRound,
 } from "lucide-react";
@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { MemberAppLayout } from "@/components/layout/MemberAppLayout";
 import { PrayerRequestModal } from "@/components/PrayerRequestModal";
 import { ListSkeleton } from "@/components/LoadingStates";
+import { EmptyState, ErrorState } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { subscribeToPushNotifications } from "@/lib/pwa";
@@ -72,19 +73,21 @@ interface PortalData {
 }
 
 export default function MemberHome() {
-  const [, navigate] = useLocation();
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [prayerModalOpen, setPrayerModalOpen] = useState(false);
   const [subscribingPush, setSubscribingPush] = useState(false);
 
   const fetchPortalData = async () => {
+    setError(null);
     try {
       const res = await api.get<PortalData>("/api/me/portal");
       setData(res);
 
       if (res.member?.qrToken) {
+        // The QR canvas needs a literal colour; this is --color-dark-surface.
         QRCode.toDataURL(res.member.qrToken, {
           width: 180,
           margin: 1,
@@ -92,7 +95,11 @@ export default function MemberHome() {
         }).then(setQrDataUrl);
       }
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "โหลดข้อมูลสมาชิกไม่สำเร็จ");
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "โหลดข้อมูลสมาชิกไม่สำเร็จ"
+      );
     } finally {
       setLoading(false);
     }
@@ -122,12 +129,14 @@ export default function MemberHome() {
     try {
       const ok = await subscribeToPushNotifications();
       if (ok) {
-        toast.success("เปิดรับการแจ้งเตือน Push Notification เรียบร้อยแล้ว!");
+        toast.success("เปิดรับการแจ้งเตือนของคริสตจักรเรียบร้อยแล้ว");
       } else {
-        toast.error("ไม่สามารถเปิดการแจ้งเตือนได้ กรุณาอนุญาตการแจ้งเตือนในเบราว์เซอร์");
+        toast.error(
+          "ไม่สามารถเปิดการแจ้งเตือนได้ กรุณาอนุญาตการแจ้งเตือนในเบราว์เซอร์"
+        );
       }
     } catch {
-      toast.error("เกิดข้อผิดพลาดในการเปิดแจ้งเตือน");
+      toast.error("เกิดข้อผิดพลาดในการเปิดการแจ้งเตือน");
     } finally {
       setSubscribingPush(false);
     }
@@ -136,322 +145,346 @@ export default function MemberHome() {
   if (loading) {
     return (
       <MemberAppLayout>
-        <div className="space-y-4">
-          <ListSkeleton count={3} />
-        </div>
+        <ListSkeleton count={3} />
+      </MemberAppLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <MemberAppLayout>
+        <ErrorState
+          title="โหลดข้อมูลสมาชิกไม่สำเร็จ"
+          description="ระบบยังเชื่อมต่อข้อมูลของคุณไม่ได้ในขณะนี้ กรุณาลองอีกครั้ง"
+          technical={error}
+          retryLabel="ลองอีกครั้ง"
+          onRetry={() => {
+            setLoading(true);
+            void fetchPortalData();
+          }}
+        />
       </MemberAppLayout>
     );
   }
 
   const member = data?.member;
   const user = data?.user;
+  const announcements = data?.recentAnnouncements ?? [];
+  const events = data?.upcomingEvents ?? [];
+  const attendanceCount = data?.attendanceStats?.totalAttended ?? 0;
+  const greetingName = member?.nickname
+    ? `คุณ${member.nickname}`
+    : user?.name || "สมาชิก";
+  const membershipLabel = member
+    ? MEMBERSHIP_STATUS_LABELS[
+        member.membershipStatus as MembershipStatus
+      ] ?? member.membershipStatus
+    : "สมาชิก";
+  const careGroupSchedule = [
+    data?.careGroup?.meetingDay,
+    data?.careGroup?.meetingTime,
+  ]
+    .filter(Boolean)
+    .join(" • ");
 
   return (
     <MemberAppLayout>
-      {/* Greeting Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: "#f1a73b", letterSpacing: "1px" }}>
-            PUNTAKIT MEMBER
-          </span>
-          <h1 style={{ fontSize: "21px", margin: "2px 0 0", color: "var(--ink)", fontWeight: 800 }}>
-            สวัสดี, {member?.nickname ? `คุณ${member.nickname}` : user?.name || "สมาชิก"}
+      {/* Greeting */}
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="type-lead font-semibold text-[var(--color-ink)]">
+            สวัสดี, {greetingName}
           </h1>
+          <p className="type-caption mt-1 text-[var(--color-body-muted)]">
+            ขอบคุณที่ร่วมนมัสการกับคริสตจักรพันธกิจกาฬสินธุ์
+          </p>
         </div>
         <button
+          type="button"
           onClick={handleEnablePush}
           disabled={subscribingPush}
+          aria-label="เปิดรับการแจ้งเตือนบนเครื่องนี้"
           title="เปิดรับการแจ้งเตือน"
-          style={{
-            width: "38px",
-            height: "38px",
-            borderRadius: "12px",
-            background: "#fff",
-            border: "1px solid #dbe6f0",
-            display: "grid",
-            placeItems: "center",
-            color: "#315c2b",
-            boxShadow: "0 2px 8px rgba(35, 78, 120, 0.05)",
-            cursor: "pointer",
-          }}
+          className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-primary)] transition-colors hover:bg-[var(--color-accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50 motion-reduce:transition-none"
         >
-          <Bell size={18} />
+          <Bell size={ICON_SIZE.md} aria-hidden="true" />
         </button>
-      </div>
+      </header>
 
-      {/* Personal Member QR Code Card (Digital ID) */}
-      <div
-        style={{
-          background: "linear-gradient(145deg, #2a2a2c 0%, #272729 100%)",
-          borderRadius: "20px",
-          padding: "20px",
-          color: "white",
-          boxShadow: "0 10px 25px rgba(23, 59, 112, 0.22)",
-          position: "relative",
-          overflow: "hidden",
-        }}
+      {/* Digital member pass */}
+      <section
+        aria-labelledby="member-pass-heading"
+        className="rounded-[var(--radius-lg)] bg-gradient-to-br from-[var(--color-dark-surface-2)] to-[var(--color-dark-surface)] p-4 text-[var(--color-on-dark)] shadow-[var(--shadow)]"
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-          <div>
-            <div style={{ fontSize: "10px", color: "#dbe8fc", letterSpacing: "2px", fontWeight: 700 }}>
-              CHURCH MEMBER PASS
-            </div>
-            <strong style={{ fontSize: "17px", display: "block", marginTop: "2px" }}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p
+              id="member-pass-heading"
+              className="type-fine font-semibold tracking-wide text-[var(--color-primary-on-dark)]"
+            >
+              บัตรสมาชิกคริสตจักร
+            </p>
+            <p className="type-body-strong mt-1 truncate">
               {member?.name || user?.name}
-            </strong>
+            </p>
           </div>
-          <span
-            style={{
-              fontSize: "10px",
-              padding: "4px 8px",
-              borderRadius: "8px",
-              background: "rgba(255, 255, 255, 0.15)",
-              color: "#eef5ff",
-              fontWeight: 600,
-            }}
-          >
-            {member ?
-              MEMBERSHIP_STATUS_LABELS[member.membershipStatus as MembershipStatus] ??
-              member.membershipStatus
-              : "-"}
+          <span className="type-fine shrink-0 rounded-[var(--radius-sm)] bg-[var(--color-on-dark)]/15 px-2 py-1 font-semibold">
+            {membershipLabel}
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <div
-            style={{
-              background: "white",
-              padding: "8px",
-              borderRadius: "14px",
-              display: "grid",
-              placeItems: "center",
-              flexShrink: 0,
-            }}
-          >
+        <div className="mt-4 flex items-center gap-3">
+          <div className="flex size-[108px] shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-canvas)] p-2">
             {qrDataUrl ? (
-              <img src={qrDataUrl} alt="Member QR Code" style={{ width: "100px", height: "100px", display: "block" }} />
+              <img
+                src={qrDataUrl}
+                alt="คิวอาร์โค้ดสำหรับเช็คชื่อของสมาชิก"
+                className="block size-[92px]"
+              />
             ) : (
-              <div style={{ width: "100px", height: "100px", display: "grid", placeItems: "center" }}>
-                <QrCode size={40} style={{ color: "#272729" }} />
-              </div>
+              <QrCode
+                size={ICON_SIZE["2xl"]}
+                aria-hidden="true"
+                className="text-[var(--color-dark-surface)]"
+              />
             )}
           </div>
 
-          <div style={{ fontSize: "11px", color: "#d4e4f7", lineHeight: 1.6 }}>
-            <p style={{ margin: 0 }}>
-              ยื่น QR Code นี้ที่จุดลงทะเบียนหน้าประตูโบสถ์ เพื่อเช็คชื่อเข้าร่วมนมัสการอย่างรวดเร็ว
+          <div className="min-w-0">
+            <p className="type-fine text-[var(--color-on-dark-muted)]">
+              ยื่นคิวอาร์โค้ดนี้ที่จุดลงทะเบียนหน้าประตูโบสถ์
+              เพื่อเช็คชื่อเข้าร่วมนมัสการ
             </p>
-            <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "5px", color: "#ffe66d", fontWeight: 700 }}>
-              <UserCheck size={14} />
-              <span>เข้าโบสถ์แล้ว {data?.attendanceStats?.totalAttended || 0} ครั้ง</span>
-            </div>
+            <p className="type-fine mt-2 flex items-center gap-1.5 font-semibold text-[var(--color-primary-on-dark)]">
+              <UserCheck size={ICON_SIZE.sm} aria-hidden="true" />
+              <span>เข้าโบสถ์แล้ว {attendanceCount} ครั้ง</span>
+            </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Quick Actions Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+      {/* Quick actions */}
+      <div className="grid grid-cols-2 gap-2.5">
         <button
+          type="button"
           onClick={() => setPrayerModalOpen(true)}
-          style={{
-            background: "#fff",
-            border: "1px solid #e1ebf5",
-            borderRadius: "16px",
-            padding: "14px",
-            textAlign: "left",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            boxShadow: "0 4px 12px rgba(35, 78, 120, 0.04)",
-            cursor: "pointer",
-          }}
+          className="flex min-h-[44px] items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-3 text-left transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none"
         >
-          <div
-            style={{
-              width: "38px",
-              height: "38px",
-              borderRadius: "12px",
-              background: "#f1eaff",
-              color: "#7950d8",
-              display: "grid",
-              placeItems: "center",
-              flexShrink: 0,
-            }}
-          >
-            <HeartHandshake size={20} />
-          </div>
-          <div>
-            <strong style={{ display: "block", fontSize: "12px", color: "var(--ink)" }}>ขอคำอธิษฐาน</strong>
-            <small style={{ fontSize: "10px", color: "var(--muted)" }}>ส่งเรื่องให้ทีมศิษยาภิบาล</small>
-          </div>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-accent-soft)] text-[var(--color-primary)]">
+            <HeartHandshake size={ICON_SIZE.lg} aria-hidden="true" />
+          </span>
+          <span className="min-w-0">
+            <span className="type-caption-strong block text-[var(--color-ink)]">
+              ขอคำอธิษฐาน
+            </span>
+            <span className="type-fine block text-[var(--color-body-muted)]">
+              ส่งถึงทีมศิษยาภิบาล
+            </span>
+          </span>
         </button>
 
-        <button
-          onClick={() => navigate("/app/group")}
-          style={{
-            background: "#fff",
-            border: "1px solid #e1ebf5",
-            borderRadius: "16px",
-            padding: "14px",
-            textAlign: "left",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            boxShadow: "0 4px 12px rgba(35, 78, 120, 0.04)",
-            cursor: "pointer",
-          }}
+        <Link
+          href="/app/group"
+          className="flex min-h-[44px] items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-3 transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none"
         >
-          <div
-            style={{
-              width: "38px",
-              height: "38px",
-              borderRadius: "12px",
-              background: "#e5f8ee",
-              color: "#18855b",
-              display: "grid",
-              placeItems: "center",
-              flexShrink: 0,
-            }}
-          >
-            <UsersRound size={20} />
-          </div>
-          <div>
-            <strong style={{ display: "block", fontSize: "12px", color: "var(--ink)" }}>กลุ่มแคร์ของฉัน</strong>
-            <small style={{ fontSize: "10px", color: "var(--muted)" }}>นัดพบ & เพื่อนในกลุ่ม</small>
-          </div>
-        </button>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-accent-soft)] text-[var(--color-primary)]">
+            <UsersRound size={ICON_SIZE.lg} aria-hidden="true" />
+          </span>
+          <span className="min-w-0">
+            <span className="type-caption-strong block text-[var(--color-ink)]">
+              กลุ่มแคร์ของฉัน
+            </span>
+            <span className="type-fine block text-[var(--color-body-muted)]">
+              นัดพบและเพื่อนในกลุ่ม
+            </span>
+          </span>
+        </Link>
       </div>
 
-      {/* My Care Group Banner */}
-      {data?.careGroup && (
-        <div
-          onClick={() => navigate("/app/group")}
-          style={{
-            background: "#fff",
-            border: "1px solid #e1ebf5",
-            borderRadius: "16px",
-            padding: "14px 16px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            boxShadow: "0 4px 12px rgba(35, 78, 120, 0.04)",
-            cursor: "pointer",
-          }}
+      {/* My care group, or an actionable empty state */}
+      {data?.careGroup ? (
+        <Link
+          href="/app/group"
+          className="flex min-h-[44px] items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none"
         >
-          <div>
-            <div style={{ fontSize: "10px", fontWeight: 700, color: "#315c2b" }}>กลุ่มแคร์ประจำตัว</div>
-            <strong style={{ fontSize: "14px", color: "var(--ink)" }}>{data.careGroup.name}</strong>
-            <div style={{ fontSize: "11px", color: "#61778e", marginTop: "2px" }}>
-              {data.careGroup.meetingDay} {data.careGroup.meetingTime || ""}
-            </div>
-          </div>
-          <ChevronRight size={18} style={{ color: "#8a9cb0" }} />
-        </div>
+          <span className="min-w-0">
+            <span className="type-fine block font-semibold text-[var(--color-primary)]">
+              กลุ่มแคร์ประจำตัว
+            </span>
+            <span className="type-body-strong block truncate text-[var(--color-ink)]">
+              {data.careGroup.name}
+            </span>
+            <span className="type-fine block text-[var(--color-body-muted)]">
+              {careGroupSchedule || "ยังไม่ระบุวันนัดหมาย"}
+            </span>
+          </span>
+          <ChevronRight
+            size={ICON_SIZE.md}
+            aria-hidden="true"
+            className="shrink-0 text-[var(--color-body-muted)]"
+          />
+        </Link>
+      ) : (
+        <EmptyState
+          icon={UsersRound}
+          title="คุณยังไม่มีกลุ่มแคร์"
+          description="เมื่อคุณเข้าร่วมกลุ่มแคร์ วันนัดหมายและผู้นำกลุ่มจะแสดงไว้ที่นี่"
+          action={{
+            label: "ติดต่อฝ่ายต้อนรับคริสตจักร",
+            href: "tel:043811800",
+          }}
+        />
       )}
 
-      {/* Recent Announcements */}
-      {data?.recentAnnouncements && data.recentAnnouncements.length > 0 && (
-        <div style={{ background: "#fff", borderRadius: "18px", padding: "16px", border: "1px solid #e1ebf5" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Megaphone size={16} style={{ color: "#e35b78" }} />
-              <strong style={{ fontSize: "14px", color: "var(--ink)" }}>ประกาศจากคริสตจักร</strong>
-            </div>
-            <button
-              onClick={() => navigate("/app/events")}
-              style={{ background: "none", border: 0, color: "#315c2b", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+      {/* Announcements */}
+      <section
+        aria-labelledby="member-announcements-heading"
+        className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <h2
+            id="member-announcements-heading"
+            className="type-body-strong flex min-w-0 items-center gap-2 text-[var(--color-ink)]"
+          >
+            <Megaphone
+              size={ICON_SIZE.sm}
+              aria-hidden="true"
+              className="shrink-0 text-[var(--color-primary)]"
+            />
+            <span className="truncate">ประกาศจากคริสตจักร</span>
+          </h2>
+          {announcements.length > 0 && (
+            <Link
+              href="/app/events"
+              className="type-caption-strong inline-flex min-h-11 shrink-0 items-center rounded-[var(--radius-sm)] px-2 text-[var(--color-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
             >
               ดูทั้งหมด
-            </button>
-          </div>
+            </Link>
+          )}
+        </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {data.recentAnnouncements.map((ann) => (
-              <div
+        {announcements.length > 0 ? (
+          <ul className="mt-3 flex flex-col gap-2">
+            {announcements.map(ann => (
+              <li
                 key={ann.id}
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: "12px",
-                  background: "#f9fbfe",
-                  border: "1px solid #edf3f8",
-                }}
+                className="rounded-[var(--radius-md)] border border-[var(--color-divider)] bg-[var(--color-canvas-soft)] p-3"
               >
-                <strong style={{ display: "block", fontSize: "12px", color: "var(--ink)" }}>
+                <h3 className="type-caption-strong text-[var(--color-ink)]">
                   {ann.title}
-                </strong>
-                <p style={{ margin: "3px 0 0", fontSize: "11px", color: "#6b7d92", lineHeight: 1.4 }}>
-                  {ann.content.slice(0, 85)}...
+                </h3>
+                <p className="type-fine mt-1 line-clamp-2 text-[var(--color-body-muted)]">
+                  {ann.content}
                 </p>
-              </div>
+              </li>
             ))}
+          </ul>
+        ) : (
+          <div className="mt-2">
+            <EmptyState
+              inset
+              icon={Megaphone}
+              title="ยังไม่มีประกาศใหม่"
+              description="เมื่อคริสตจักรมีประกาศข่าวสาร จะแสดงไว้ที่นี่"
+              action={{
+                label: "ดูกิจกรรมและประกาศทั้งหมด",
+                href: "/app/events",
+              }}
+            />
           </div>
-        </div>
-      )}
+        )}
+      </section>
 
-      {/* Upcoming Events */}
-      {data?.upcomingEvents && data.upcomingEvents.length > 0 && (
-        <div style={{ background: "#fff", borderRadius: "18px", padding: "16px", border: "1px solid #e1ebf5" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Calendar size={16} style={{ color: "#315c2b" }} />
-              <strong style={{ fontSize: "14px", color: "var(--ink)" }}>กิจกรรมที่กำลังจะมาถึง</strong>
-            </div>
-            <button
-              onClick={() => navigate("/app/events")}
-              style={{ background: "none", border: 0, color: "#315c2b", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+      {/* Upcoming events */}
+      <section
+        aria-labelledby="member-events-heading"
+        className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <h2
+            id="member-events-heading"
+            className="type-body-strong flex min-w-0 items-center gap-2 text-[var(--color-ink)]"
+          >
+            <Calendar
+              size={ICON_SIZE.sm}
+              aria-hidden="true"
+              className="shrink-0 text-[var(--color-primary)]"
+            />
+            <span className="truncate">กิจกรรมที่กำลังจะมาถึง</span>
+          </h2>
+          {events.length > 0 && (
+            <Link
+              href="/app/events"
+              className="type-caption-strong inline-flex min-h-11 shrink-0 items-center rounded-[var(--radius-sm)] px-2 text-[var(--color-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
             >
               ดูทั้งหมด
-            </button>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {data.upcomingEvents.map((evt) => (
-              <div
-                key={evt.id}
-                style={{
-                  padding: "12px",
-                  borderRadius: "14px",
-                  background: "#f8fafd",
-                  border: "1px solid #e5edf5",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: "10px",
-                }}
-              >
-                <div>
-                  <strong style={{ display: "block", fontSize: "13px", color: "var(--ink)" }}>
-                    {evt.title}
-                  </strong>
-                  <div style={{ fontSize: "11px", color: "#6c8095", marginTop: "2px" }}>
-                    📅 {new Date(evt.eventDate).toLocaleDateString("th-TH")}
-                    {evt.location ? ` • ${evt.location}` : ""}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => handleRegisterEvent(evt.id, evt.isRegistered)}
-                  style={{
-                    background: evt.isRegistered ? "#e3f8ee" : "#315c2b",
-                    color: evt.isRegistered ? "#16865d" : "#fff",
-                    border: 0,
-                    borderRadius: "10px",
-                    padding: "7px 12px",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    flexShrink: 0,
-                  }}
-                >
-                  {evt.isRegistered ? "ลงชื่อแล้ว ✓" : "ลงทะเบียน"}
-                </button>
-              </div>
-            ))}
-          </div>
+            </Link>
+          )}
         </div>
-      )}
 
-      {/* Prayer Modal */}
+        {events.length > 0 ? (
+          <ul className="mt-3 flex flex-col gap-2.5">
+            {events.map(evt => (
+              <li
+                key={evt.id}
+                className="rounded-[var(--radius-md)] border border-[var(--color-divider)] bg-[var(--color-canvas-soft)] p-3"
+              >
+                <h3 className="type-caption-strong text-[var(--color-ink)]">
+                  {evt.title}
+                </h3>
+                <p className="type-fine mt-1 flex items-center gap-1.5 text-[var(--color-body-muted)]">
+                  <CalendarDays
+                    size={ICON_SIZE.xs}
+                    aria-hidden="true"
+                    className="shrink-0"
+                  />
+                  <span>
+                    {new Date(evt.eventDate).toLocaleDateString("th-TH", {
+                      dateStyle: "long",
+                    })}
+                    {evt.location ? ` • ${evt.location}` : ""}
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleRegisterEvent(evt.id, Boolean(evt.isRegistered))
+                  }
+                  className={`type-caption-strong mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none ${
+                    evt.isRegistered
+                      ? "border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-error)] hover:bg-[var(--color-canvas-soft)]"
+                      : "bg-[var(--color-primary)] text-[var(--color-on-dark)] hover:bg-[var(--color-primary-focus)]"
+                  }`}
+                >
+                  {evt.isRegistered && (
+                    <CheckCircle2 size={ICON_SIZE.sm} aria-hidden="true" />
+                  )}
+                  <span>
+                    {evt.isRegistered
+                      ? "ลงทะเบียนแล้ว • ยกเลิก"
+                      : "ลงทะเบียนเข้าร่วม"}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="mt-2">
+            <EmptyState
+              inset
+              icon={CalendarDays}
+              title="ยังไม่มีกิจกรรมที่เปิดรับลงทะเบียน"
+              description="เมื่อคริสตจักรเปิดรับลงทะเบียนกิจกรรม จะแสดงไว้ที่นี่"
+              action={{
+                label: "ดูประกาศและกิจกรรมทั้งหมด",
+                href: "/app/events",
+              }}
+            />
+          </div>
+        )}
+      </section>
+
+      {/* Prayer request modal */}
       <PrayerRequestModal
         open={prayerModalOpen}
         onClose={() => setPrayerModalOpen(false)}

@@ -9,15 +9,26 @@ export function useResource<T extends WithId>(basePath: string) {
   const [items, setItems] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * The underlying server text, when there was one. `error` is the friendly
+   * sentence a screen shows; this is what `ErrorState`'s "รายละเอียดทางเทคนิค"
+   * disclosure reveals, so a support conversation can quote the real cause
+   * without putting it in front of the user first.
+   */
+  const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setErrorTechnical(null);
     try {
       const data = await api.get<T[]>(basePath);
       setItems(data);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "โหลดข้อมูลไม่สำเร็จ");
+      setErrorTechnical(
+        err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err)
+      );
     } finally {
       setIsLoading(false);
     }
@@ -53,5 +64,14 @@ export function useResource<T extends WithId>(basePath: string) {
     [basePath]
   );
 
-  return { items, isLoading, error, reload: load, create, update, remove };
+  return {
+    items,
+    isLoading,
+    error,
+    errorTechnical,
+    reload: load,
+    create,
+    update,
+    remove,
+  };
 }

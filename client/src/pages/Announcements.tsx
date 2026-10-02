@@ -1,8 +1,16 @@
 import { useState } from "react";
-import { AlertCircle, Megaphone, Pencil, Plus, Trash2 } from "lucide-react";
+import { Megaphone, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
+import {
+  EmptyState,
+  ErrorState,
+  Field,
+  Modal,
+  PageHeader,
+  SectionHeader,
+  StatusChip,
+} from "@/components/DesignSystem";
 import { ListSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +31,19 @@ interface Announcement {
 
 const EMPTY_FORM = { title: "", content: "", status: "draft" as Announcement["status"] };
 
+const CONTROL_CLASS =
+  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 py-2 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+const PRIMARY_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const CANCEL_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const DANGER_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-error)]/40 px-4 text-sm font-semibold text-[var(--color-error)] transition-colors hover:bg-[var(--color-error)]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const CARD_ACTION_CLASS =
+  "inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] px-3 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+const CARD_DELETE_CLASS =
+  "inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--color-error)]/40 px-3 text-sm font-semibold text-[var(--color-error)] transition-colors hover:bg-[var(--color-error)]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" });
 }
@@ -31,7 +52,7 @@ export default function Announcements() {
   const { user } = useAuth();
   // Mirrors the server's `requireAdmin` (shared/roles.ts ADMIN_ROLES).
   const isAdmin = hasRole(user?.role, ADMIN_ROLES);
-  const { items, isLoading, error, reload, create, update, remove } = useResource<Announcement>("/api/announcements");
+  const { items, isLoading, error, errorTechnical, reload, create, update, remove } = useResource<Announcement>("/api/announcements");
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Announcement | null>(null);
@@ -85,156 +106,167 @@ export default function Announcements() {
     }
   };
 
+  const countLabel = !isLoading && !error ? `${items.length.toLocaleString("th-TH")} รายการ` : undefined;
+
   return (
     <AppLayout>
-      {/* Page Heading */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-            ANNOUNCEMENTS • ข่าวสารและการประกาศ
-          </span>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
-            การประกาศ
-          </h1>
-          <p className="text-xs text-slate-500">
-            จัดการประกาศข่าวสารและข้อมูลประชาสัมพันธ์สำหรับคริสตจักร
-          </p>
-        </div>
-        {isAdmin && (
-          <button
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs"
-            onClick={openCreate}
-          >
-            <Plus size={ICON_SIZE.sm} /> เพิ่มประกาศ
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="การประกาศ"
+        description="จัดการประกาศข่าวสารและข้อมูลประชาสัมพันธ์สำหรับคริสตจักร"
+        primaryAction={isAdmin ? { label: "เพิ่มประกาศ", icon: Plus, onClick: openCreate } : undefined}
+      />
 
-      <section className="tailadmin-card p-5 sm:p-6">
+      <section aria-labelledby="announcements-heading">
+        <SectionHeader id="announcements-heading" title="ประกาศทั้งหมด" description={countLabel} />
+
         {isLoading ? (
           <ListSkeleton count={5} />
         ) : error ? (
-          <div className="p-10 text-center text-rose-600">
-            <AlertCircle size={ICON_SIZE.xl} className="mx-auto mb-2 text-rose-500" />
-            <h3 className="font-bold text-sm">โหลดข้อมูลไม่สำเร็จ</h3>
-            <p className="text-xs text-slate-500 mt-1">{error}</p>
-            <button
-              className="mt-4 rounded-xl bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-100"
-              onClick={reload}
-            >
-              ลองใหม่
-            </button>
-          </div>
+          <ErrorState
+            title="โหลดประกาศไม่สำเร็จ"
+            description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+            technical={errorTechnical ?? undefined}
+            onRetry={reload}
+          />
         ) : items.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
-            <Megaphone size={40} className="mx-auto text-slate-300 mb-2" />
-            <h3 className="font-semibold text-slate-700 text-sm">ยังไม่มีประกาศ</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              {isAdmin ? "เริ่มเพิ่มประกาศแรกของคุณ" : "รอผู้ดูแลระบบเพิ่มประกาศ"}
-            </p>
-          </div>
+          <EmptyState
+            icon={Megaphone}
+            title="ยังไม่มีประกาศ"
+            description={
+              isAdmin
+                ? "เริ่มเพิ่มประกาศแรกเพื่อส่งข่าวสารให้สมาชิกในคริสตจักร"
+                : "รอผู้ดูแลระบบเพิ่มประกาศ แล้วกลับมาตรวจสอบอีกครั้ง"
+            }
+            action={
+              isAdmin
+                ? { label: "เพิ่มประกาศ", icon: Plus, onClick: openCreate }
+                : { label: "โหลดใหม่", onClick: reload }
+            }
+          />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {items.map((a) => (
-              <div
-                className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {items.map(a => (
+              <article
                 key={a.id}
+                className="flex flex-col justify-between rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5"
               >
                 <div>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-bold text-slate-800 text-base leading-snug">{a.title}</h3>
-                    <span
-                      className={`flex-shrink-0 inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                        a.status === "published"
-                          ? "bg-emerald-50 text-emerald-600"
-                          : "bg-slate-100 text-slate-600"
-                      }`}
-                    >
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <h3 className="type-body-strong leading-snug text-[var(--color-ink)]">{a.title}</h3>
+                    <StatusChip tone={a.status === "published" ? "success" : "neutral"}>
                       {a.status === "published" ? "เผยแพร่แล้ว" : "ฉบับร่าง"}
-                    </span>
+                    </StatusChip>
                   </div>
-                  <p className="text-xs text-slate-600 mb-4 whitespace-pre-line leading-relaxed">
+                  <p className="type-caption mb-4 whitespace-pre-line text-[var(--color-text-secondary)]">
                     {a.content}
                   </p>
                 </div>
 
                 <div>
-                  <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-100">
-                    <span>วันที่เผยแพร่: {formatDate(a.publishDate)}</span>
-                  </div>
+                  <p className="type-fine border-t border-[var(--color-divider)] pt-2 text-[var(--color-body-muted)]">
+                    วันที่เผยแพร่: {formatDate(a.publishDate)}
+                  </p>
                   {isAdmin && (
-                    <div className="flex items-center gap-2 pt-3 mt-1">
-                      <button
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                        onClick={() => openEdit(a)}
-                      >
-                        <Pencil size={ICON_SIZE.xs} /> แก้ไข
+                    <div className="mt-3 flex items-center gap-2">
+                      <button type="button" className={CARD_ACTION_CLASS} onClick={() => openEdit(a)}>
+                        <Pencil size={ICON_SIZE.sm} aria-hidden="true" /> แก้ไข
                       </button>
-                      <button
-                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-100 transition-colors"
-                        onClick={() => setDeleteTarget(a)}
-                      >
-                        <Trash2 size={ICON_SIZE.xs} /> ลบ
+                      <button type="button" className={CARD_DELETE_CLASS} onClick={() => setDeleteTarget(a)}>
+                        <Trash2 size={ICON_SIZE.sm} aria-hidden="true" /> ลบ
                       </button>
                     </div>
                   )}
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}
       </section>
 
-      {formOpen && (
-        <div className="modal-backdrop" onClick={() => setFormOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: "0 0 14px" }}>{editing ? "แก้ไขประกาศ" : "เพิ่มประกาศ"}</h3>
-            <form className="form-grid" onSubmit={handleSubmit}>
-              <label className="full-field">
-                หัวข้อ
-                <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-              </label>
-              <label className="full-field">
-                เนื้อหา
-                <textarea
-                  required
-                  rows={5}
-                  value={form.content}
-                  onChange={(e) => setForm({ ...form, content: e.target.value })}
-                />
-              </label>
-              <label className="full-field">
-                สถานะ
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value as Announcement["status"] })}
-                >
-                  <option value="draft">ฉบับร่าง</option>
-                  <option value="published">เผยแพร่แล้ว</option>
-                </select>
-              </label>
-              <div className="modal-actions full-field">
-                <button type="button" className="cancel-button" onClick={() => setFormOpen(false)}>
-                  ยกเลิก
-                </button>
-                <button type="submit" className="primary-action" disabled={submitting}>
-                  {submitting ? "กำลังบันทึก..." : "บันทึก"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        title={editing ? "แก้ไขประกาศ" : "เพิ่มประกาศ"}
+        footer={
+          <>
+            <button type="button" className={CANCEL_BUTTON_CLASS} onClick={() => setFormOpen(false)}>
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              form="announcement-form"
+              className={PRIMARY_BUTTON_CLASS}
+              disabled={submitting}
+            >
+              {submitting ? "กำลังบันทึก..." : "บันทึก"}
+            </button>
+          </>
+        }
+      >
+        <form id="announcement-form" className="flex flex-col gap-5" onSubmit={handleSubmit}>
+          <Field label="หัวข้อ" required>
+            {props => (
+              <input
+                {...props}
+                className={CONTROL_CLASS}
+                required
+                value={form.title}
+                onChange={e => setForm({ ...form, title: e.target.value })}
+              />
+            )}
+          </Field>
+          <Field label="เนื้อหา" required>
+            {props => (
+              <textarea
+                {...props}
+                className={`${CONTROL_CLASS} resize-y`}
+                required
+                rows={5}
+                value={form.content}
+                onChange={e => setForm({ ...form, content: e.target.value })}
+              />
+            )}
+          </Field>
+          <Field label="สถานะ" required>
+            {props => (
+              <select
+                {...props}
+                className={CONTROL_CLASS}
+                value={form.status}
+                onChange={e => setForm({ ...form, status: e.target.value as Announcement["status"] })}
+              >
+                <option value="draft">ฉบับร่าง</option>
+                <option value="published">เผยแพร่แล้ว</option>
+              </select>
+            )}
+          </Field>
+        </form>
+      </Modal>
 
-      {deleteTarget && (
-        <ConfirmDialog
-          title="ยืนยันการลบประกาศ"
-          description={`ต้องการลบประกาศ "${deleteTarget.title}" ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`}
-          isSubmitting={deleting}
-          onConfirm={handleDelete}
-          onCancel={() => setDeleteTarget(null)}
-        />
-      )}
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title="ยืนยันการลบประกาศ"
+        footer={
+          <>
+            <button
+              type="button"
+              className={CANCEL_BUTTON_CLASS}
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+            >
+              ยกเลิก
+            </button>
+            <button type="button" className={DANGER_BUTTON_CLASS} onClick={handleDelete} disabled={deleting}>
+              {deleting ? "กำลังลบ..." : "ลบประกาศ"}
+            </button>
+          </>
+        }
+      >
+        <p className="type-caption text-[var(--color-body-muted)]">
+          ต้องการลบประกาศ "{deleteTarget?.title}" ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้
+        </p>
+      </Modal>
     </AppLayout>
   );
 }

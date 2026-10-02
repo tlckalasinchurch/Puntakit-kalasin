@@ -1,9 +1,18 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, CheckCircle2, Inbox as InboxIcon, Send, Sparkles, X } from "lucide-react";
+import { CheckCircle2, Inbox as InboxIcon, Plus, Send, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
+import {
+  EmptyState,
+  ErrorState,
+  Field,
+  Modal,
+  PageHeader,
+  SectionHeader,
+  StatusChip,
+  type StatusTone,
+} from "@/components/DesignSystem";
 import { ListSkeleton } from "@/components/LoadingStates";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
@@ -29,12 +38,12 @@ const STATUS_LABELS: Record<MissionSubmissionStatus, string> = {
   rejected: "ปฏิเสธ",
 };
 
-const STATUS_BADGE_CLASS: Record<MissionSubmissionStatus, string> = {
-  new: "bg-blue-50 text-blue-700",
-  reviewing: "bg-amber-50 text-amber-700",
-  needs_info: "bg-orange-50 text-orange-700",
-  approved: "bg-emerald-50 text-emerald-700",
-  rejected: "bg-slate-100 text-slate-400",
+const STATUS_TONE: Record<MissionSubmissionStatus, StatusTone> = {
+  new: "info",
+  reviewing: "warning",
+  needs_info: "warning",
+  approved: "success",
+  rejected: "neutral",
 };
 
 const TYPE_LABELS: Record<MissionActivityType, string> = {
@@ -52,6 +61,21 @@ const TYPE_LABELS: Record<MissionActivityType, string> = {
   other: "อื่นๆ",
 };
 
+const CONTROL_CLASS =
+  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 py-2 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+const PRIMARY_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const CANCEL_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const ROW_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] px-3 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const ROW_PRIMARY_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-3 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const ROW_DANGER_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--color-error)]/40 px-3 text-sm font-semibold text-[var(--color-error)] transition-colors hover:bg-[var(--color-error)]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const DASHED_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center gap-1.5 self-start rounded-[var(--radius-sm)] border border-dashed border-[var(--color-hairline)] px-3 text-sm font-semibold text-[var(--color-body-muted)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("th-TH", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
@@ -63,6 +87,7 @@ export default function Inbox() {
   const [items, setItems] = useState<SubmissionRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
 
   const [captureOpen, setCaptureOpen] = useState(false);
@@ -82,6 +107,7 @@ export default function Inbox() {
   const load = async () => {
     setIsLoading(true);
     setError(null);
+    setErrorTechnical(null);
     try {
       const params = new URLSearchParams();
       if (statusFilter) params.set("status", statusFilter);
@@ -90,6 +116,7 @@ export default function Inbox() {
       setItems(data);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "โหลดกล่องข้อมูลนำเข้าไม่สำเร็จ");
+      setErrorTechnical(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
     } finally {
       setIsLoading(false);
     }
@@ -162,194 +189,228 @@ export default function Inbox() {
     }
   };
 
+  const countLabel = !isLoading && !error ? `${items.length.toLocaleString("th-TH")} รายการ` : undefined;
+
   return (
     <AppLayout>
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">INBOX • ข้อมูลนำเข้า</span>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">กล่องข้อมูลนำเข้า</h1>
-          <p className="text-xs text-slate-500">สิ่งที่ยังไม่ได้เป็นข้อมูลทางการ — พิมพ์สิ่งที่ได้รับ (เช่นจาก LINE) แล้วตรวจสอบก่อนเผยแพร่</p>
-        </div>
-        <button
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs"
-          onClick={() => setCaptureOpen(true)}
-        >
-          <Sparkles size={ICON_SIZE.sm} /> บันทึกข้อมูลนำเข้า
-        </button>
+      <PageHeader
+        title="กล่องข้อมูลนำเข้า"
+        description="สิ่งที่ยังไม่ได้เป็นข้อมูลทางการ — พิมพ์สิ่งที่ได้รับ (เช่นจาก LINE) แล้วตรวจสอบก่อนเผยแพร่"
+        primaryAction={{ label: "บันทึกข้อมูลนำเข้า", icon: Plus, onClick: () => setCaptureOpen(true) }}
+      />
+
+      <div className="mb-5 w-full sm:w-56">
+        <Field label="สถานะ">
+          {props => (
+            <select
+              {...props}
+              className={CONTROL_CLASS}
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+            >
+              <option value="">ทุกสถานะ</option>
+              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-2">
-        <select
-          className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="">ทุกสถานะ</option>
-          {Object.entries(STATUS_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <section aria-labelledby="inbox-heading">
+        <SectionHeader id="inbox-heading" title="ข้อมูลนำเข้าทั้งหมด" description={countLabel} />
 
-      {isLoading ? (
-        <ListSkeleton count={4} />
-      ) : error ? (
-        <div className="tailadmin-card p-10 text-center text-rose-600">
-          <AlertCircle size={ICON_SIZE.xl} className="mx-auto mb-2 text-rose-500" />
-          <h3 className="font-bold text-sm">โหลดไม่สำเร็จ</h3>
-          <p className="text-xs text-slate-500 mt-1">{error}</p>
-        </div>
-      ) : items.length === 0 ? (
-        <div className="tailadmin-card p-12 text-center text-slate-400">
-          <InboxIcon size={40} className="mx-auto text-slate-300 mb-2" />
-          <h3 className="font-semibold text-slate-700 text-sm">ไม่มีข้อมูลนำเข้า</h3>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {items.map((row) => (
-            <div key={row.id} className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
-              <div className="flex items-center justify-between gap-2 mb-1.5">
-                <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE_CLASS[row.status]}`}>
-                  {STATUS_LABELS[row.status]}
-                </span>
-                <span className="text-[11px] text-slate-400">{formatDateTime(row.createdAt)}</span>
-              </div>
-              <p className="text-sm text-slate-700 whitespace-pre-line">{row.rawText || "(ไม่มีข้อความ)"}</p>
-              {row.submittedByLabel && <p className="text-[11px] text-slate-400 mt-1">จาก: {row.submittedByLabel}</p>}
-
-              {isReviewer && (
-                <div className="flex flex-wrap items-center gap-2 pt-3 mt-3 border-t border-slate-100">
-                  {row.status === "new" && (
-                    <button
-                      className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-                      onClick={() => transition(row, "reviewing")}
-                    >
-                      <Send size={12} /> เริ่มตรวจสอบ
-                    </button>
-                  )}
-                  {row.status === "reviewing" && (
-                    <>
-                      <button
-                        className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100"
-                        onClick={() => transition(row, "approved")}
-                      >
-                        <CheckCircle2 size={12} /> อนุมัติ
-                      </button>
-                      <button
-                        className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
-                        onClick={() => transition(row, "needs_info")}
-                      >
-                        ต้องการข้อมูลเพิ่ม
-                      </button>
-                      <button
-                        className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-semibold text-rose-600 hover:bg-rose-100"
-                        onClick={() => transition(row, "rejected")}
-                      >
-                        <X size={12} /> ปฏิเสธ
-                      </button>
-                    </>
-                  )}
-                  {row.status === "needs_info" && (
-                    <button
-                      className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-                      onClick={() => transition(row, "reviewing")}
-                    >
-                      กลับไปตรวจสอบ
-                    </button>
-                  )}
-                  {row.status === "approved" && !row.publishedActivityId && (
-                    <button
-                      className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-blue-700"
-                      onClick={() => openPublish(row)}
-                    >
-                      <Sparkles size={12} /> เผยแพร่เป็นกิจกรรม
-                    </button>
-                  )}
-                  {row.publishedActivityId && (
-                    <span className="text-[11px] text-emerald-600 font-semibold">เผยแพร่เป็นกิจกรรมแล้ว</span>
-                  )}
+        {isLoading ? (
+          <ListSkeleton count={4} />
+        ) : error ? (
+          <ErrorState
+            title="โหลดกล่องข้อมูลนำเข้าไม่สำเร็จ"
+            description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+            technical={errorTechnical ?? undefined}
+            onRetry={load}
+          />
+        ) : items.length === 0 ? (
+          <EmptyState
+            icon={InboxIcon}
+            title="ยังไม่มีข้อมูลนำเข้า"
+            description="พิมพ์ข้อความหรือลิงก์รูปที่ได้รับจากทีมภาคสนาม เพื่อตรวจสอบก่อนเผยแพร่เป็นกิจกรรมพันธกิจ"
+            action={{ label: "บันทึกข้อมูลนำเข้า", icon: Plus, onClick: () => setCaptureOpen(true) }}
+          />
+        ) : (
+          <div className="space-y-3">
+            {items.map(row => (
+              <article
+                key={row.id}
+                className="rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4"
+              >
+                <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                  <StatusChip tone={STATUS_TONE[row.status]}>{STATUS_LABELS[row.status]}</StatusChip>
+                  <span className="type-fine text-[var(--color-body-muted)]">{formatDateTime(row.createdAt)}</span>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+                <p className="type-caption whitespace-pre-line text-[var(--color-text-secondary)]">
+                  {row.rawText || "(ไม่มีข้อความ)"}
+                </p>
+                {row.submittedByLabel && (
+                  <p className="type-fine mt-1 text-[var(--color-body-muted)]">จาก: {row.submittedByLabel}</p>
+                )}
 
-      <Sheet open={captureOpen} onOpenChange={setCaptureOpen}>
-        <SheetContent side="right" className="w-full bg-white sm:max-w-lg overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>บันทึกข้อมูลนำเข้า</SheetTitle>
-          </SheetHeader>
-          <form className="flex flex-col gap-4 px-4 pb-24" onSubmit={submitCapture}>
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
-              ข้อความที่ได้รับ
+                {isReviewer && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--color-divider)] pt-3">
+                    {row.status === "new" && (
+                      <button type="button" className={ROW_BUTTON_CLASS} onClick={() => transition(row, "reviewing")}>
+                        <Send size={ICON_SIZE.sm} aria-hidden="true" /> เริ่มตรวจสอบ
+                      </button>
+                    )}
+                    {row.status === "reviewing" && (
+                      <>
+                        <button
+                          type="button"
+                          className={ROW_PRIMARY_BUTTON_CLASS}
+                          onClick={() => transition(row, "approved")}
+                        >
+                          <CheckCircle2 size={ICON_SIZE.sm} aria-hidden="true" /> อนุมัติ
+                        </button>
+                        <button
+                          type="button"
+                          className={ROW_BUTTON_CLASS}
+                          onClick={() => transition(row, "needs_info")}
+                        >
+                          ต้องการข้อมูลเพิ่ม
+                        </button>
+                        <button
+                          type="button"
+                          className={ROW_DANGER_BUTTON_CLASS}
+                          onClick={() => transition(row, "rejected")}
+                        >
+                          <X size={ICON_SIZE.sm} aria-hidden="true" /> ปฏิเสธ
+                        </button>
+                      </>
+                    )}
+                    {row.status === "needs_info" && (
+                      <button type="button" className={ROW_BUTTON_CLASS} onClick={() => transition(row, "reviewing")}>
+                        กลับไปตรวจสอบ
+                      </button>
+                    )}
+                    {row.status === "approved" && !row.publishedActivityId && (
+                      <button
+                        type="button"
+                        className={ROW_PRIMARY_BUTTON_CLASS}
+                        onClick={() => openPublish(row)}
+                      >
+                        <Sparkles size={ICON_SIZE.sm} aria-hidden="true" /> เผยแพร่เป็นกิจกรรม
+                      </button>
+                    )}
+                    {row.publishedActivityId && (
+                      <StatusChip tone="success">เผยแพร่เป็นกิจกรรมแล้ว</StatusChip>
+                    )}
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <Modal
+        open={captureOpen}
+        onClose={() => setCaptureOpen(false)}
+        title="บันทึกข้อมูลนำเข้า"
+        footer={
+          <>
+            <button type="button" className={CANCEL_BUTTON_CLASS} onClick={() => setCaptureOpen(false)}>
+              ยกเลิก
+            </button>
+            <button type="submit" form="inbox-capture-form" className={PRIMARY_BUTTON_CLASS} disabled={submitting}>
+              {submitting ? "กำลังบันทึก..." : "บันทึก"}
+            </button>
+          </>
+        }
+      >
+        <form id="inbox-capture-form" className="flex flex-col gap-5" onSubmit={submitCapture}>
+          <Field label="ข้อความที่ได้รับ">
+            {props => (
               <textarea
+                {...props}
+                className={`${CONTROL_CLASS} resize-y`}
                 rows={6}
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal"
                 value={rawText}
-                onChange={(e) => setRawText(e.target.value)}
+                onChange={e => setRawText(e.target.value)}
                 placeholder="พิมพ์สิ่งที่ได้รับมา เช่น จากข้อความ LINE ของทีมภาคสนาม..."
               />
-            </label>
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
-              ผู้ส่งข้อมูล (ถ้ามี)
+            )}
+          </Field>
+          <Field label="ผู้ส่งข้อมูล (ถ้ามี)">
+            {props => (
               <input
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal"
+                {...props}
+                className={CONTROL_CLASS}
                 value={submittedByLabel}
-                onChange={(e) => setSubmittedByLabel(e.target.value)}
+                onChange={e => setSubmittedByLabel(e.target.value)}
                 placeholder="เช่น LINE: ทีมภาคสนามเขต 1"
               />
-            </label>
-            <div className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
-              รูปภาพ (ลิงก์ URL)
-              {rawMediaUrls.map((url, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input
-                    className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal"
-                    value={url}
-                    onChange={(e) => {
-                      const next = [...rawMediaUrls];
-                      next[i] = e.target.value;
-                      setRawMediaUrls(next);
-                    }}
-                    placeholder="https://..."
-                  />
-                  <button type="button" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" onClick={() => setRawMediaUrls(rawMediaUrls.filter((_, idx) => idx !== i))}>
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 self-start rounded-xl border border-dashed border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50"
-                onClick={() => setRawMediaUrls([...rawMediaUrls, ""])}
-              >
-                + เพิ่มรูปภาพ
-              </button>
-            </div>
-            <SheetFooter className="px-0">
-              <button type="submit" className="primary-action" disabled={submitting}>
-                {submitting ? "กำลังบันทึก..." : "บันทึก"}
-              </button>
-            </SheetFooter>
-          </form>
-        </SheetContent>
-      </Sheet>
+            )}
+          </Field>
+          <fieldset className="flex min-w-0 flex-col gap-2">
+            <legend className="type-caption-strong text-[var(--color-ink)]">รูปภาพ (ลิงก์ URL)</legend>
+            {rawMediaUrls.map((url, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  aria-label={`ลิงก์รูปภาพที่ ${i + 1}`}
+                  className={`${CONTROL_CLASS} flex-1`}
+                  value={url}
+                  onChange={e => {
+                    const next = [...rawMediaUrls];
+                    next[i] = e.target.value;
+                    setRawMediaUrls(next);
+                  }}
+                  placeholder="https://..."
+                />
+                <button
+                  type="button"
+                  aria-label={`ลบรูปภาพที่ ${i + 1}`}
+                  className="inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-body-muted)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                  onClick={() => setRawMediaUrls(rawMediaUrls.filter((_, idx) => idx !== i))}
+                >
+                  <X size={ICON_SIZE.md} aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              className={DASHED_BUTTON_CLASS}
+              onClick={() => setRawMediaUrls([...rawMediaUrls, ""])}
+            >
+              <Plus size={ICON_SIZE.sm} aria-hidden="true" /> เพิ่มรูปภาพ
+            </button>
+          </fieldset>
+        </form>
+      </Modal>
 
-      <Sheet open={!!publishTarget} onOpenChange={(open) => !open && setPublishTarget(null)}>
-        <SheetContent side="right" className="w-full bg-white sm:max-w-lg overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>เผยแพร่เป็นกิจกรรมพันธกิจ</SheetTitle>
-          </SheetHeader>
-          <form className="flex flex-col gap-4 px-4 pb-24" onSubmit={submitPublish}>
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
-              ประเภทกิจกรรม
+      <Modal
+        open={publishTarget !== null}
+        onClose={() => setPublishTarget(null)}
+        title="เผยแพร่เป็นกิจกรรมพันธกิจ"
+        footer={
+          <>
+            <button type="button" className={CANCEL_BUTTON_CLASS} onClick={() => setPublishTarget(null)}>
+              ยกเลิก
+            </button>
+            <button type="submit" form="inbox-publish-form" className={PRIMARY_BUTTON_CLASS} disabled={publishing}>
+              {publishing ? "กำลังเผยแพร่..." : "สร้างกิจกรรม (ฉบับร่าง)"}
+            </button>
+          </>
+        }
+      >
+        <form id="inbox-publish-form" className="flex flex-col gap-5" onSubmit={submitPublish}>
+          <Field label="ประเภทกิจกรรม" required>
+            {props => (
               <select
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                {...props}
+                className={CONTROL_CLASS}
                 value={publishForm.type}
-                onChange={(e) => setPublishForm({ ...publishForm, type: e.target.value as MissionActivityType })}
+                onChange={e => setPublishForm({ ...publishForm, type: e.target.value as MissionActivityType })}
               >
                 {Object.entries(TYPE_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -357,34 +418,33 @@ export default function Inbox() {
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
-              หัวข้อ
+            )}
+          </Field>
+          <Field label="หัวข้อ" required>
+            {props => (
               <input
+                {...props}
+                className={CONTROL_CLASS}
                 required
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
                 value={publishForm.title}
-                onChange={(e) => setPublishForm({ ...publishForm, title: e.target.value })}
+                onChange={e => setPublishForm({ ...publishForm, title: e.target.value })}
               />
-            </label>
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
-              วันเวลาที่เกิดขึ้น
+            )}
+          </Field>
+          <Field label="วันเวลาที่เกิดขึ้น" required>
+            {props => (
               <input
+                {...props}
                 type="datetime-local"
+                className={CONTROL_CLASS}
                 required
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
                 value={publishForm.occurredAt}
-                onChange={(e) => setPublishForm({ ...publishForm, occurredAt: e.target.value })}
+                onChange={e => setPublishForm({ ...publishForm, occurredAt: e.target.value })}
               />
-            </label>
-            <SheetFooter className="px-0">
-              <button type="submit" className="primary-action" disabled={publishing}>
-                {publishing ? "กำลังเผยแพร่..." : "สร้างกิจกรรม (ฉบับร่าง)"}
-              </button>
-            </SheetFooter>
-          </form>
-        </SheetContent>
-      </Sheet>
+            )}
+          </Field>
+        </form>
+      </Modal>
     </AppLayout>
   );
 }

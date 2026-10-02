@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  AlertCircle,
   Archive,
   Camera,
   CheckCircle2,
@@ -15,14 +14,17 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { CardGridSkeleton } from "@/components/LoadingStates";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from "@/components/ui/sheet";
+  EmptyState,
+  ErrorState,
+  Field,
+  Modal,
+  PageHeader,
+  SectionHeader,
+  StatusChip,
+  type StatusTone,
+} from "@/components/DesignSystem";
+import { CardGridSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
@@ -78,11 +80,11 @@ const STATUS_LABELS: Record<MissionActivityStatus, string> = {
   archived: "เก็บถาวร",
 };
 
-const STATUS_BADGE_CLASS: Record<MissionActivityStatus, string> = {
-  draft: "bg-slate-100 text-slate-600",
-  pending_review: "bg-amber-50 text-amber-700",
-  published: "bg-emerald-50 text-emerald-700",
-  archived: "bg-slate-100 text-slate-400",
+const STATUS_TONE: Record<MissionActivityStatus, StatusTone> = {
+  draft: "neutral",
+  pending_review: "warning",
+  published: "success",
+  archived: "neutral",
 };
 
 const EMPTY_FORM = {
@@ -95,6 +97,19 @@ const EMPTY_FORM = {
   participantMemberIds: [] as string[],
   media: [] as { url: string }[],
 };
+
+const CONTROL_CLASS =
+  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 py-2 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+const PRIMARY_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const CANCEL_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const ROW_BUTTON_CLASS =
+  "inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] px-2 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const ROW_PRIMARY_BUTTON_CLASS =
+  "inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-2 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const DASHED_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-dashed border-[var(--color-hairline)] px-3 text-sm font-semibold text-[var(--color-body-muted)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("th-TH", {
@@ -112,6 +127,7 @@ export default function Feed() {
   const [items, setItems] = useState<FeedActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
 
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -129,6 +145,7 @@ export default function Feed() {
   const load = async () => {
     setIsLoading(true);
     setError(null);
+    setErrorTechnical(null);
     try {
       const params = new URLSearchParams();
       if (typeFilter) params.set("type", typeFilter);
@@ -138,6 +155,7 @@ export default function Feed() {
       setItems(data);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "โหลดฟีดไม่สำเร็จ");
+      setErrorTechnical(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
     } finally {
       setIsLoading(false);
     }
@@ -229,183 +247,194 @@ export default function Feed() {
   const typeOptions = useMemo(() => Object.entries(TYPE_LABELS), []);
   const statusOptions = useMemo(() => Object.entries(STATUS_LABELS), []);
 
+  const countLabel = !isLoading && !error ? `${items.length.toLocaleString("th-TH")} กิจกรรม` : undefined;
+
   return (
     <AppLayout>
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-            FEED • กิจกรรมพันธกิจ
-          </span>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">ฟีดกิจกรรมพันธกิจ</h1>
-          <p className="text-xs text-slate-500">อะไรเกิดขึ้น ที่ไหน กับใคร — บันทึกและติดตามกิจกรรมพันธกิจทั้งหมด</p>
-        </div>
-        {canCreate && (
-          <button
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs"
-            onClick={openCreate}
-          >
-            <Camera size={ICON_SIZE.sm} /> บันทึกกิจกรรม
-          </button>
-        )}
+      <PageHeader
+        title="ฟีดกิจกรรมพันธกิจ"
+        description="อะไรเกิดขึ้น ที่ไหน กับใคร — บันทึกและติดตามกิจกรรมพันธกิจทั้งหมด"
+        primaryAction={canCreate ? { label: "บันทึกกิจกรรม", icon: Camera, onClick: openCreate } : undefined}
+      />
+
+      <div className="mb-5 grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="ประเภทกิจกรรม">
+          {(props) => (
+            <select {...props} className={CONTROL_CLASS} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="">ทุกประเภทกิจกรรม</option>
+              {typeOptions.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <Field label="สถานะ">
+          {(props) => (
+            <select {...props} className={CONTROL_CLASS} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="">ทุกสถานะ</option>
+              {statusOptions.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-2">
-        <select
-          className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600"
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-        >
-          <option value="">ทุกประเภทกิจกรรม</option>
-          {typeOptions.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <select
-          className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="">ทุกสถานะ</option>
-          {statusOptions.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <section aria-labelledby="feed-heading">
+        <SectionHeader id="feed-heading" title="กิจกรรมในฟีด" description={countLabel} />
 
-      {isLoading ? (
-        <CardGridSkeleton count={6} />
-      ) : error ? (
-        <div className="tailadmin-card p-10 text-center text-rose-600">
-          <AlertCircle size={ICON_SIZE.xl} className="mx-auto mb-2 text-rose-500" />
-          <h3 className="font-bold text-sm">โหลดฟีดไม่สำเร็จ</h3>
-          <p className="text-xs text-slate-500 mt-1">{error}</p>
-          <button className="mt-4 rounded-xl bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-100" onClick={load}>
-            ลองใหม่
-          </button>
-        </div>
-      ) : items.length === 0 ? (
-        <div className="tailadmin-card p-12 text-center text-slate-400">
-          <Camera size={40} className="mx-auto text-slate-300 mb-2" />
-          <h3 className="font-semibold text-slate-700 text-sm">ยังไม่มีกิจกรรมในฟีด</h3>
-          <p className="text-xs text-slate-400 mt-1">{canCreate ? "เริ่มบันทึกกิจกรรมพันธกิจแรกของคุณ" : "รอทีมงานบันทึกกิจกรรม"}</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {items.map((activity) => {
-            const isMine = user?.id === activity.createdById;
-            const canAdvance = isMine || (user && CREATE_ROLES.includes(user.role));
-            return (
-              <article
-                key={activity.id}
-                className="rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 flex flex-col"
-              >
-                {activity.thumbnailUrl ? (
-                  <img src={activity.thumbnailUrl} alt="" className="h-40 w-full object-cover" />
-                ) : (
-                  <div className="h-24 w-full bg-slate-50 flex items-center justify-center">
-                    <ImageIcon size={28} className="text-slate-300" />
-                  </div>
-                )}
-                <div className="p-4 flex-1 flex flex-col">
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-                      {TYPE_LABELS[activity.type]}
-                    </span>
-                    <span className={`flex-shrink-0 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE_CLASS[activity.status]}`}>
-                      {STATUS_LABELS[activity.status]}
-                    </span>
-                  </div>
-                  <h3 className="font-bold text-slate-800 text-sm leading-snug mb-1">{activity.title}</h3>
-                  {activity.story && (
-                    <p className="text-xs text-slate-600 mb-3 line-clamp-2 leading-relaxed">{activity.story}</p>
-                  )}
-                  <div className="mt-auto space-y-1 text-[11px] text-slate-400">
-                    <div>{formatDateTime(activity.occurredAt)}</div>
-                    {(activity.groupName || activity.placeLabel) && (
-                      <div className="flex items-center gap-1">
-                        <MapPin size={11} />
-                        {activity.groupName ?? activity.placeLabel}
-                      </div>
-                    )}
-                    {activity.createdByName && (
-                      <div className="flex items-center gap-1">
-                        <Users size={11} />
-                        {activity.createdByName}
-                      </div>
-                    )}
-                  </div>
-
-                  {canAdvance && activity.status !== "archived" && (
-                    <div className="flex items-center gap-2 pt-3 mt-3 border-t border-slate-100">
-                      {activity.status === "draft" && (
-                        <button
-                          className="flex-1 inline-flex items-center justify-center gap-1 rounded-xl border border-slate-200 px-2 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-                          disabled={transitioningId === activity.id}
-                          onClick={() => transition(activity, "pending_review")}
-                        >
-                          <Send size={12} /> ส่งตรวจสอบ
-                        </button>
-                      )}
-                      {(activity.status === "draft" || activity.status === "pending_review") && (
-                        <button
-                          className="flex-1 inline-flex items-center justify-center gap-1 rounded-xl bg-emerald-50 px-2 py-1.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100"
-                          disabled={transitioningId === activity.id}
-                          onClick={() => transition(activity, "published")}
-                        >
-                          <CheckCircle2 size={12} /> เผยแพร่
-                        </button>
-                      )}
-                      {activity.status === "published" && (
-                        <button
-                          className="flex-1 inline-flex items-center justify-center gap-1 rounded-xl border border-slate-200 px-2 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
-                          disabled={transitioningId === activity.id}
-                          onClick={() => transition(activity, "archived")}
-                        >
-                          <Archive size={12} /> เก็บถาวร
-                        </button>
-                      )}
+        {isLoading ? (
+          <CardGridSkeleton count={6} />
+        ) : error ? (
+          <ErrorState
+            title="โหลดฟีดกิจกรรมไม่สำเร็จ"
+            description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+            technical={errorTechnical ?? undefined}
+            onRetry={load}
+          />
+        ) : items.length === 0 ? (
+          <EmptyState
+            icon={Camera}
+            title="ยังไม่มีกิจกรรมในฟีด"
+            description={
+              canCreate
+                ? "เริ่มบันทึกกิจกรรมพันธกิจแรก เพื่อให้ทีมเห็นว่าพระเจ้าทำอะไรอยู่"
+                : "รอทีมงานบันทึกกิจกรรม แล้วกลับมาตรวจสอบอีกครั้ง"
+            }
+            action={
+              canCreate ? { label: "บันทึกกิจกรรม", icon: Camera, onClick: openCreate } : { label: "โหลดใหม่", onClick: load }
+            }
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {items.map((activity) => {
+              const isMine = user?.id === activity.createdById;
+              const canAdvance = isMine || (user && CREATE_ROLES.includes(user.role));
+              return (
+                <article
+                  key={activity.id}
+                  className="flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] transition-shadow hover:shadow-[var(--shadow)] motion-reduce:transition-none"
+                >
+                  {activity.thumbnailUrl ? (
+                    <img src={activity.thumbnailUrl} alt="" className="h-40 w-full object-cover" />
+                  ) : (
+                    <div className="flex h-24 w-full items-center justify-center bg-[var(--color-canvas-soft)]">
+                      <ImageIcon size={ICON_SIZE["2xl"]} aria-hidden="true" className="text-[var(--color-body-muted)]" />
                     </div>
                   )}
-                  {activity.status === "archived" && canAdvance && (
-                    <div className="pt-3 mt-3 border-t border-slate-100">
+                  <div className="flex flex-1 flex-col p-4">
+                    <div className="mb-1.5 flex items-start justify-between gap-2">
+                      <StatusChip tone="neutral">{TYPE_LABELS[activity.type]}</StatusChip>
+                      <StatusChip tone={STATUS_TONE[activity.status]}>{STATUS_LABELS[activity.status]}</StatusChip>
+                    </div>
+                    <h3 className="type-body-strong mb-1 leading-snug text-[var(--color-ink)]">{activity.title}</h3>
+                    {activity.story && (
+                      <p className="type-caption mb-3 line-clamp-2 text-[var(--color-text-secondary)]">{activity.story}</p>
+                    )}
+                    <div className="mt-auto space-y-1">
+                      <p className="type-fine text-[var(--color-body-muted)]">{formatDateTime(activity.occurredAt)}</p>
+                      {(activity.groupName || activity.placeLabel) && (
+                        <p className="type-fine flex items-center gap-1 text-[var(--color-body-muted)]">
+                          <MapPin size={ICON_SIZE.xs} aria-hidden="true" />
+                          {activity.groupName ?? activity.placeLabel}
+                        </p>
+                      )}
+                      {activity.createdByName && (
+                        <p className="type-fine flex items-center gap-1 text-[var(--color-body-muted)]">
+                          <Users size={ICON_SIZE.xs} aria-hidden="true" />
+                          {activity.createdByName}
+                        </p>
+                      )}
+                    </div>
+
+                    {canAdvance && activity.status !== "archived" && (
+                      <div className="mt-3 flex items-center gap-2 border-t border-[var(--color-divider)] pt-3">
+                        {activity.status === "draft" && (
+                          <button
+                            type="button"
+                            className={ROW_BUTTON_CLASS}
+                            disabled={transitioningId === activity.id}
+                            onClick={() => transition(activity, "pending_review")}
+                          >
+                            <Send size={ICON_SIZE.sm} aria-hidden="true" /> ส่งตรวจสอบ
+                          </button>
+                        )}
+                        {(activity.status === "draft" || activity.status === "pending_review") && (
+                          <button
+                            type="button"
+                            className={ROW_PRIMARY_BUTTON_CLASS}
+                            disabled={transitioningId === activity.id}
+                            onClick={() => transition(activity, "published")}
+                          >
+                            <CheckCircle2 size={ICON_SIZE.sm} aria-hidden="true" /> เผยแพร่
+                          </button>
+                        )}
+                        {activity.status === "published" && (
+                          <button
+                            type="button"
+                            className={ROW_BUTTON_CLASS}
+                            disabled={transitioningId === activity.id}
+                            onClick={() => transition(activity, "archived")}
+                          >
+                            <Archive size={ICON_SIZE.sm} aria-hidden="true" /> เก็บถาวร
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {activity.status === "archived" && canAdvance && (
+                      <div className="mt-3 border-t border-[var(--color-divider)] pt-3">
+                        <button
+                          type="button"
+                          className={`${ROW_BUTTON_CLASS} w-full`}
+                          disabled={transitioningId === activity.id}
+                          onClick={() => transition(activity, "draft")}
+                        >
+                          <RotateCcw size={ICON_SIZE.sm} aria-hidden="true" /> กู้คืนเป็นฉบับร่าง
+                        </button>
+                      </div>
+                    )}
+                    {canAdvance && activity.groupId && (
                       <button
-                        className="w-full inline-flex items-center justify-center gap-1 rounded-xl border border-slate-200 px-2 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
-                        disabled={transitioningId === activity.id}
-                        onClick={() => transition(activity, "draft")}
+                        type="button"
+                        className={`${DASHED_BUTTON_CLASS} mt-2 w-full`}
+                        onClick={() => createFollowUp(activity)}
                       >
-                        <RotateCcw size={12} /> กู้คืนเป็นฉบับร่าง
+                        <ListTodo size={ICON_SIZE.sm} aria-hidden="true" /> สร้างรายการติดตามจากกิจกรรมนี้
                       </button>
-                    </div>
-                  )}
-                  {canAdvance && activity.groupId && (
-                    <button
-                      className="w-full mt-2 inline-flex items-center justify-center gap-1 rounded-xl border border-dashed border-slate-300 px-2 py-1.5 text-[11px] font-semibold text-slate-500 hover:bg-slate-50"
-                      onClick={() => createFollowUp(activity)}
-                    >
-                      <ListTodo size={12} /> สร้างรายการติดตามจากกิจกรรมนี้
-                    </button>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
-      <Sheet open={formOpen} onOpenChange={setFormOpen}>
-        <SheetContent side="right" className="w-full bg-white sm:max-w-lg overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>บันทึกกิจกรรมพันธกิจ</SheetTitle>
-          </SheetHeader>
-          <form className="flex flex-col gap-4 px-4 pb-24" onSubmit={handleSubmit}>
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
-              ประเภทกิจกรรม
+      <Modal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        title="บันทึกกิจกรรมพันธกิจ"
+        footer={
+          <>
+            <button type="button" className={CANCEL_BUTTON_CLASS} onClick={() => setFormOpen(false)}>
+              ยกเลิก
+            </button>
+            <button type="submit" form="feed-activity-form" className={PRIMARY_BUTTON_CLASS} disabled={submitting}>
+              {submitting ? "กำลังบันทึก..." : "บันทึกเป็นฉบับร่าง"}
+            </button>
+          </>
+        }
+      >
+        <form id="feed-activity-form" className="flex flex-col gap-5" onSubmit={handleSubmit}>
+          <Field label="ประเภทกิจกรรม" required>
+            {(props) => (
               <select
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                {...props}
+                className={CONTROL_CLASS}
                 value={form.type}
                 onChange={(e) => setForm({ ...form, type: e.target.value as MissionActivityType })}
               >
@@ -415,45 +444,53 @@ export default function Feed() {
                   </option>
                 ))}
               </select>
-            </label>
+            )}
+          </Field>
 
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
-              หัวข้อ
+          <Field label="หัวข้อ" required>
+            {(props) => (
               <input
+                {...props}
+                className={CONTROL_CLASS}
                 required
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 placeholder="เช่น เยี่ยมบ้านครอบครัวคุณสมชาย"
               />
-            </label>
+            )}
+          </Field>
 
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
-              เรื่องราว
+          <Field label="เรื่องราว">
+            {(props) => (
               <textarea
+                {...props}
+                className={`${CONTROL_CLASS} resize-y`}
                 rows={4}
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
                 value={form.story}
                 onChange={(e) => setForm({ ...form, story: e.target.value })}
                 placeholder="เกิดอะไรขึ้นบ้าง..."
               />
-            </label>
+            )}
+          </Field>
 
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
-              วันเวลาที่เกิดขึ้น
+          <Field label="วันเวลาที่เกิดขึ้น" required>
+            {(props) => (
               <input
+                {...props}
                 type="datetime-local"
+                className={CONTROL_CLASS}
                 required
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
                 value={form.occurredAt}
                 onChange={(e) => setForm({ ...form, occurredAt: e.target.value })}
               />
-            </label>
+            )}
+          </Field>
 
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
-              กลุ่ม (ถ้ามี)
+          <Field label="กลุ่ม (ถ้ามี)">
+            {(props) => (
               <select
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                {...props}
+                className={CONTROL_CLASS}
                 value={form.groupId}
                 onChange={(e) => setForm({ ...form, groupId: e.target.value })}
               >
@@ -464,75 +501,81 @@ export default function Feed() {
                   </option>
                 ))}
               </select>
-            </label>
+            )}
+          </Field>
 
-            <label className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
-              สถานที่ (ถ้ามี)
+          <Field label="สถานที่ (ถ้ามี)">
+            {(props) => (
               <input
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                {...props}
+                className={CONTROL_CLASS}
                 value={form.placeLabel}
                 onChange={(e) => setForm({ ...form, placeLabel: e.target.value })}
                 placeholder="เช่น บ้านเลขที่ 12 หมู่ 3"
               />
-            </label>
+            )}
+          </Field>
 
-            <div className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
+          <fieldset className="min-w-0">
+            <legend className="type-caption-strong text-[var(--color-ink)]">
               ผู้เกี่ยวข้อง ({form.participantMemberIds.length} คน)
-              <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200 p-2 space-y-1">
-                {members.length === 0 && <p className="text-slate-400 text-xs p-2">ไม่มีข้อมูลสมาชิก</p>}
-                {members.map((m) => (
-                  <label key={m.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 text-xs font-normal text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={form.participantMemberIds.includes(m.id)}
-                      onChange={() => toggleParticipant(m.id)}
-                    />
-                    {m.nickname ? `${m.name} (${m.nickname})` : m.name}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="text-xs font-semibold text-slate-600 flex flex-col gap-1.5">
-              รูปภาพ (ลิงก์ URL)
-              {form.media.map((m, i) => (
-                <div key={i} className="flex items-center gap-2">
+            </legend>
+            <div className="mt-1.5 max-h-40 space-y-1 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--color-hairline)] p-2">
+              {members.length === 0 && (
+                <p className="type-fine p-2 text-[var(--color-body-muted)]">ไม่มีข้อมูลสมาชิก</p>
+              )}
+              {members.map((m) => (
+                <label
+                  key={m.id}
+                  className="type-caption flex min-h-11 items-center gap-2 rounded-[var(--radius-sm)] px-2 text-[var(--color-ink)] hover:bg-[var(--color-canvas-soft)]"
+                >
                   <input
-                    className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal"
-                    value={m.url}
-                    onChange={(e) => {
-                      const media = [...form.media];
-                      media[i] = { url: e.target.value };
-                      setForm({ ...form, media });
-                    }}
-                    placeholder="https://..."
+                    type="checkbox"
+                    className="size-4"
+                    checked={form.participantMemberIds.includes(m.id)}
+                    onChange={() => toggleParticipant(m.id)}
                   />
-                  <button
-                    type="button"
-                    className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
-                    onClick={() => setForm({ ...form, media: form.media.filter((_, idx) => idx !== i) })}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
+                  {m.nickname ? `${m.name} (${m.nickname})` : m.name}
+                </label>
               ))}
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 self-start rounded-xl border border-dashed border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50"
-                onClick={() => setForm({ ...form, media: [...form.media, { url: "" }] })}
-              >
-                <Plus size={12} /> เพิ่มรูปภาพ
-              </button>
             </div>
+          </fieldset>
 
-            <SheetFooter className="px-0">
-              <button type="submit" className="primary-action" disabled={submitting}>
-                {submitting ? "กำลังบันทึก..." : "บันทึกเป็นฉบับร่าง"}
-              </button>
-            </SheetFooter>
-          </form>
-        </SheetContent>
-      </Sheet>
+          <fieldset className="flex min-w-0 flex-col gap-2">
+            <legend className="type-caption-strong text-[var(--color-ink)]">รูปภาพ (ลิงก์ URL)</legend>
+            {form.media.map((m, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  aria-label={`ลิงก์รูปภาพที่ ${i + 1}`}
+                  className={`${CONTROL_CLASS} flex-1`}
+                  value={m.url}
+                  onChange={(e) => {
+                    const media = [...form.media];
+                    media[i] = { url: e.target.value };
+                    setForm({ ...form, media });
+                  }}
+                  placeholder="https://..."
+                />
+                <button
+                  type="button"
+                  aria-label={`ลบรูปภาพที่ ${i + 1}`}
+                  className="inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-body-muted)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                  onClick={() => setForm({ ...form, media: form.media.filter((_, idx) => idx !== i) })}
+                >
+                  <X size={ICON_SIZE.md} aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              className={`${DASHED_BUTTON_CLASS} self-start`}
+              onClick={() => setForm({ ...form, media: [...form.media, { url: "" }] })}
+            >
+              <Plus size={ICON_SIZE.sm} aria-hidden="true" /> เพิ่มรูปภาพ
+            </button>
+          </fieldset>
+        </form>
+      </Modal>
     </AppLayout>
   );
 }

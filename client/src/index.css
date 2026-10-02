@@ -100,8 +100,14 @@
   --chart-6: #45a8a4;
   --growth-green: var(--color-primary);
   --activity-orange: #f3a23a;
+  --activity-orange-soft: #fdf0dc;
   --care-purple: #7950d8;
+  --care-purple-soft: #efe9fb;
   --relationship-pink: #e85d78;
+  --relationship-pink-soft: #fde8ec;
+  --color-success-soft: rgba(30, 142, 90, 0.12);
+  --color-warning-soft: rgba(199, 120, 25, 0.12);
+  --color-error-soft: rgba(194, 59, 77, 0.1);
 }
 
 @theme inline {
@@ -154,17 +160,38 @@
   * {
     box-sizing: border-box;
   }
+  :root {
+    /* Native controls (date pickers, selects, scrollbars) must match the theme
+       instead of rendering a white control on a graphite surface. */
+    color-scheme: light;
+  }
   body {
     margin: 0;
     min-width: 320px;
     background: var(--color-canvas-soft);
+    /* Thai text is denser than Latin at the same size; a little extra leading
+       is what keeps .type-caption readable rather than cramped. */
+    line-height: 1.5;
   }
   button,
-  input {
+  input,
+  select,
+  textarea {
     font: inherit;
   }
   button {
     border: 0;
+    cursor: pointer;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+  img,
+  svg {
+    max-width: 100%;
   }
 }.sidebar {
   width: 240px;
@@ -283,10 +310,10 @@
   margin: 0 auto;
   padding: 25px 30px 48px;
 }.eyebrow {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
-  color: var(--color-warning);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--color-primary);
 }
 .blue-eyebrow {
   color: var(--color-body-muted);
@@ -296,22 +323,23 @@
   background: var(--color-primary);
   color: var(--color-on-dark);
   border-radius: var(--radius-pill);
+  min-height: 44px;
   padding: 10px 18px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
-  transition: 0.2s;
+  transition: background-color 0.2s ease;
 }
 .primary-action:hover,
 .blue-button:hover {
   background: var(--color-primary-focus);
 }.card-surface {
-  background: var(--surface);
-  border: 1px solid rgba(224, 235, 245, 0.8);
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow);
   overflow: hidden;
 }
 .hero {
@@ -357,7 +385,7 @@
   white-space: nowrap;
 }
 .section-heading small {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   font-weight: 500;
 }
@@ -531,7 +559,7 @@
     height: 40px;
   }
   .searchbox input {
-    font-size: 11px;
+    font-size: 12px;
   }
   .topbar-right {
     gap: 3px;
@@ -726,26 +754,26 @@
   border-radius: var(--radius-tile);
 }
 .summary-card.blue {
-  background: #e4f1ff;
-  color: #2871bf;
+  background: var(--color-info-soft);
+  color: var(--color-info-strong);
 }
 .summary-card.green {
-  background: #e3f8ee;
-  color: #17855c;
+  background: var(--color-success-soft);
+  color: var(--color-success);
 }
 .summary-card.orange {
-  background: #fff2d9;
-  color: #c77819;
+  background: var(--activity-orange-soft);
+  color: var(--color-warning);
 }
 .summary-card.purple {
-  background: #f0e8ff;
-  color: #7151c5;
+  background: var(--care-purple-soft);
+  color: var(--care-purple);
 }
 .summary-icon {
   width: 42px;
   height: 42px;
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.65);
+  border-radius: var(--radius-tile);
+  background: var(--color-canvas);
   display: grid;
   place-items: center;
 }
@@ -756,18 +784,19 @@
 }
 .summary-card small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--color-text-tertiary);
   font-weight: 600;
 }
 .summary-card strong {
   font-size: 27px;
   line-height: 1.1;
-  color: var(--ink);
+  color: var(--color-ink);
   margin-right: 4px;
+  font-variant-numeric: tabular-nums;
 }
 .summary-card div > span {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-tertiary);
 }
 .member-panel {
@@ -873,62 +902,67 @@
   color: var(--color-info-strong);
 }
 .member-avatar.pink {
-  background: #ffe4eb;
-  color: #d34d6b;
+  background: var(--relationship-pink-soft);
+  color: var(--relationship-pink);
 }
 .member-avatar.orange {
-  background: #fff0d3;
-  color: #c77b1c;
+  background: var(--activity-orange-soft);
+  color: var(--activity-orange);
 }
 .member-avatar.purple {
-  background: #eee6ff;
-  color: #7353c2;
+  background: var(--care-purple-soft);
+  color: var(--care-purple);
 }
 .member-avatar.green {
-  background: #def7e9;
-  color: #1b9665;
+  background: var(--color-success-soft);
+  color: var(--color-success);
 }
 .role-chip {
-  padding: 5px 8px;
-  border-radius: 8px;
-  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
   font-weight: 600;
   color: var(--color-text-tertiary);
-  background: #eef2f6;
+  background: var(--color-canvas-soft);
 }
 .role-chip.blue {
   background: var(--color-info-soft);
   color: var(--color-info-strong);
 }
 .role-chip.pink {
-  background: #ffe4eb;
-  color: #d34d6b;
+  background: var(--relationship-pink-soft);
+  color: var(--relationship-pink);
 }
 .role-chip.orange {
-  background: #fff0d3;
-  color: #c77b1c;
+  background: var(--activity-orange-soft);
+  color: var(--color-warning);
 }
 .role-chip.purple {
-  background: #eee6ff;
-  color: #7353c2;
+  background: var(--care-purple-soft);
+  color: var(--care-purple);
 }
 .role-chip.green {
-  background: #def7e9;
-  color: #1b9665;
+  background: var(--color-success-soft);
+  color: var(--color-success);
 }
 .status-chip {
-  padding: 5px 8px;
-  border-radius: 8px;
-  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
   font-weight: 600;
 }
 .status-chip.good {
-  background: #e4f7ed;
-  color: #18855b;
+  background: var(--color-success-soft);
+  color: var(--color-success);
 }
 .status-chip.attention {
-  background: #fff0dc;
-  color: #be781d;
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
 }.chart .bar-col {
   position: relative;
   outline: none;
@@ -1343,8 +1377,8 @@
   font-size: 12px;
 }
 .profile-identity small {
-  color: var(--color-text-quaternary);
-  font-size: 11px;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
 }
 .profile-hero-mark {
   width: 58px;
@@ -1389,13 +1423,13 @@
   display: block;
 }
 .profile-detail small {
-  font-size: 10px;
-  color: var(--color-text-quaternary);
-  margin-bottom: 3px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 2px;
 }
 .profile-detail strong {
-  font-size: 12px;
-  color: var(--ink);
+  font-size: 15px;
+  color: var(--color-ink);
   word-break: break-word;
 }
 .profile-link-button {
@@ -1405,7 +1439,7 @@
   margin-top: 20px;
   color: var(--color-primary);
   background: none;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
 }.profile-stat.blue {
   background: var(--color-info-soft);
@@ -1454,20 +1488,20 @@
   display: block;
 }
 .profile-footer strong {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--ink);
 }
 .profile-footer small {
-  font-size: 10px;
-  color: var(--color-text-quaternary);
+  font-size: 12px;
+  color: var(--color-text-tertiary);
   margin-top: 3px;
 }
 .profile-logout {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #bd5d62;
-  font-size: 11px;
+  color: var(--color-error);
+  font-size: 14px;
   font-weight: 700;
 }
 @media (max-width: 640px) {
@@ -1486,10 +1520,10 @@
     font-size: 17px;
   }
   .profile-identity p {
-    font-size: 10px;
+    font-size: 12px;
   }
   .profile-identity small {
-    font-size: 9px;
+    font-size: 12px;
   }
   .profile-hero-mark {
     display: none;
@@ -1505,7 +1539,7 @@
     gap: 12px 5px;
   }
   .profile-detail strong {
-    font-size: 10px;
+    font-size: 14px;
   }
   .profile-footer {
     align-items: flex-start;
@@ -1595,35 +1629,8 @@
   padding: 1.5rem;
 }
 
-/* Home dark mode: V2 dark surfaces, scoped to Home so other pages keep their current dark styling. */
-.dark .home-editorial {
-  --color-canvas: #2a2a2c;
-  --color-canvas-soft: #252527;
-  --color-ink: #ffffff;
-  --color-body: #ffffff;
-  --color-body-muted: rgba(255, 255, 255, 0.64);
-  --color-hairline: rgba(255, 255, 255, 0.12);
-  --color-divider: rgba(255, 255, 255, 0.08);
-  --color-primary: #7faf72;
-  --color-primary-focus: #7faf72;
-  --card: #2a2a2c;
-  --card-foreground: #ffffff;
-  --border: rgba(255, 255, 255, 0.12);
-  --input: rgba(255, 255, 255, 0.12);
-  --muted: #252527;
-  --muted-foreground: rgba(255, 255, 255, 0.64);
-  --accent: #252527;
-  --accent-foreground: #ffffff;
-  --secondary: #252527;
-  --secondary-foreground: #ffffff;
-  --primary: #7faf72;
-  --primary-foreground: #1d1d1f;
-  --ring: #7faf72;
-  color: #ffffff;
-}
-.dark .app-layout:has(.home-editorial) {
-  background-color: #1d1d1f;
-}
+/* Home-specific dark tweaks. The token remap itself now lives on `.dark`
+   globally, so Home no longer needs its own copy of the palette. */
 .dark .home-editorial input {
   background-color: var(--color-canvas);
   border-color: var(--color-hairline);
@@ -1647,7 +1654,7 @@
   width: 240px;
   height: 240px;
   border-radius: 50%;
-  background: rgba(126, 191, 235, 0.22);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
   pointer-events: none;
 }
 [data-scroll-reveal] {
@@ -1658,42 +1665,65 @@
   [data-scroll-reveal] { opacity: 1; transform: none; transition: none; }
 }
 
-/* Shared dark palette for the refreshed Home, Members and Events surfaces.
+/* Shared dark palette.
    Graphite, not navy: the dark surfaces are steps of the same neutral family
    the light chrome uses, so the accent (--color-primary-on-dark) is the only
-   chromatic element. */
+   chromatic element.
+
+   This is a token remap, not a stack of overrides. Every screen consumes
+   var(--color-*) / var(--background) / var(--border), so redefining those
+   variables once makes dark mode work everywhere. The previous approach
+   targeted Tailwind palette classes with `!important` (.dark .text-slate-800,
+   .dark .bg-white, …), which only covered the exact class names someone
+   remembered to list — any new screen using a palette class silently broke in
+   dark mode. See docs/PUNTAKIT_UX_UI_AUDIT_2026-10.md §2.3. */
+.dark {
+  color-scheme: dark;
+  --color-canvas: #2a2a2c;
+  --color-canvas-soft: #252527;
+  --color-surface: #272729;
+  --color-canvas-sunken: #202022;
+  --color-ink: #ffffff;
+  --color-body: #ffffff;
+  --color-body-muted: rgba(255, 255, 255, 0.64);
+  --color-hairline: rgba(255, 255, 255, 0.14);
+  --color-divider: rgba(255, 255, 255, 0.09);
+  --color-text-secondary: rgba(255, 255, 255, 0.82);
+  --color-text-tertiary: rgba(255, 255, 255, 0.64);
+  --color-text-quaternary: rgba(255, 255, 255, 0.48);
+  --color-primary: #7faf72;
+  --color-primary-focus: #7faf72;
+  --color-accent-soft: rgba(127, 175, 114, 0.16);
+  --color-info-soft: rgba(47, 111, 204, 0.24);
+  --color-info-strong: #8ab6ef;
+  --background: var(--color-canvas);
+  --foreground: var(--color-ink);
+  --card: var(--color-canvas);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-canvas);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-primary);
+  --primary-foreground: #1d1d1f;
+  --secondary: var(--color-canvas-soft);
+  --secondary-foreground: var(--color-ink);
+  --muted: var(--color-canvas-soft);
+  --muted-foreground: var(--color-body-muted);
+  --accent: var(--color-canvas-soft);
+  --accent-foreground: var(--color-ink);
+  --border: var(--color-hairline);
+  --input: var(--color-hairline);
+  --ring: var(--color-primary-focus);
+  --shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+}
+
 .dark body,
 .dark #root { background: var(--color-black); color: var(--color-on-dark); }
-.dark .topbar { background: var(--color-dark-surface-3); border-color: var(--color-on-dark-hairline); }
 .dark .tailadmin-card,
-.dark .event-surface { background-color: var(--color-dark-surface); border-color: var(--color-on-dark-hairline); box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18); }
-.dark .member-page-hero,
-.dark .events-page-hero { background: var(--color-dark-surface-2); border-color: var(--color-on-dark-hairline); }
+.dark .event-surface { box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18); }
 .dark .member-page-hero::after,
 .dark .events-page-hero::after { background: rgba(127, 175, 114, 0.2); }
-.dark .member-page-hero h1,
-.dark .events-page-hero h1,
-.dark .tailadmin-card h2,
-.dark .tailadmin-card h3,
-.dark .event-surface h3,
-.dark .text-slate-800 { color: #f5f5f7 !important; }
-.dark .text-slate-700,
-.dark .text-slate-600 { color: #d1d1d6 !important; }
-.dark .text-slate-500,
-.dark .text-slate-400 { color: #8e8e93 !important; }
-.dark .bg-white,
-.dark .bg-white\/80 { background-color: var(--color-dark-surface) !important; }
-.dark .bg-slate-50,
-.dark .bg-slate-50\/50,
-.dark .bg-slate-50\/70,
-.dark .bg-slate-50\/75 { background-color: var(--color-dark-surface-3) !important; }
-.dark .border-slate-100,
-.dark .border-slate-200,
-.dark .border-slate-200\/80 { border-color: var(--color-on-dark-hairline) !important; }
 .dark input,
 .dark select,
 .dark textarea { background-color: var(--color-dark-surface-3); border-color: var(--color-on-dark-hairline); color: var(--color-on-dark); }
 .dark input::placeholder,
-.dark textarea::placeholder { color: #6e6e73; }
-.dark .member-page-hero .bg-white\/80,
-.dark .events-page-hero .bg-white\/80 { color: var(--color-primary-on-dark); }
+.dark textarea::placeholder { color: rgba(255, 255, 255, 0.45); }

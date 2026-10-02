@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Camera } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
+import { EmptyState, ErrorState, StatusChip } from "@/components/DesignSystem";
 import { ListSkeleton } from "@/components/LoadingStates";
+import { ICON_SIZE } from "@/lib/icon-sizes";
 import type { MissionActivityStatus, MissionActivityType } from "@shared/schema";
 
 interface TimelineActivity {
@@ -59,11 +61,14 @@ export function ActivityTimeline({
   const [items, setItems] = useState<TimelineActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
     setError(null);
+    setErrorTechnical(null);
     const param = subjectType === "member" ? "memberId" : "groupId";
     api
       .get<TimelineActivity[]>(`/api/activities?${param}=${subjectId}&limit=20`)
@@ -71,7 +76,10 @@ export function ActivityTimeline({
         if (!cancelled) setItems(data);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof ApiError ? err.message : "โหลดไทม์ไลน์ไม่สำเร็จ");
+        if (!cancelled) {
+          setError(err instanceof ApiError ? err.message : "โหลดไทม์ไลน์ไม่สำเร็จ");
+          setErrorTechnical(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
+        }
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -79,45 +87,69 @@ export function ActivityTimeline({
     return () => {
       cancelled = true;
     };
-  }, [subjectType, subjectId]);
+  }, [subjectType, subjectId, attempt]);
 
   if (isLoading) return <ListSkeleton count={3} />;
 
   if (error) {
-    return <p className="text-xs text-rose-500 p-3">{error}</p>;
+    return (
+      <ErrorState
+        inset
+        title="โหลดไทม์ไลน์ไม่สำเร็จ"
+        description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+        technical={errorTechnical ?? undefined}
+        onRetry={() => setAttempt((n) => n + 1)}
+      />
+    );
   }
 
   if (items.length === 0) {
     return (
-      <div className="p-6 text-center text-slate-400">
-        <Camera size={28} className="mx-auto text-slate-300 mb-1.5" />
-        <p className="text-xs">ยังไม่มีกิจกรรมพันธกิจที่บันทึกไว้</p>
-      </div>
+      <EmptyState
+        inset
+        icon={Camera}
+        title="ยังไม่มีกิจกรรมพันธกิจ"
+        description="กิจกรรมที่บันทึกไว้กับบุคคลหรือกลุ่มนี้จะแสดงที่นี่"
+        action={{ href: "/feed", label: "ไปที่ฟีดกิจกรรม" }}
+      />
     );
   }
 
   return (
     <ol className="space-y-3">
       {items.map((activity) => (
-        <li key={activity.id} className="flex gap-3 rounded-xl border border-slate-100 bg-white p-3">
+        <li
+          key={activity.id}
+          className="flex gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-3"
+        >
           {activity.thumbnailUrl ? (
-            <img src={activity.thumbnailUrl} alt="" className="h-12 w-12 flex-shrink-0 rounded-lg object-cover" />
+            <img
+              src={activity.thumbnailUrl}
+              alt=""
+              className="size-12 shrink-0 rounded-[var(--radius-sm)] object-cover"
+            />
           ) : (
-            <div className="h-12 w-12 flex-shrink-0 rounded-lg bg-slate-50 flex items-center justify-center">
-              <Camera size={16} className="text-slate-300" />
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-canvas-soft)]">
+              <Camera size={ICON_SIZE.sm} aria-hidden="true" className="text-[var(--color-body-muted)]" />
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-                {TYPE_LABELS[activity.type]}
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusChip tone="neutral">{TYPE_LABELS[activity.type]}</StatusChip>
+              <span className="type-fine text-[var(--color-body-muted)]">
+                {formatDateTime(activity.occurredAt)}
               </span>
-              <span className="text-[11px] text-slate-400">{formatDateTime(activity.occurredAt)}</span>
             </div>
-            <p className="text-sm font-semibold text-slate-800 mt-0.5 truncate">{activity.title}</p>
-            {activity.story && <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{activity.story}</p>}
+            <p className="type-caption-strong mt-1 truncate text-[var(--color-ink)]">{activity.title}</p>
+            {activity.story && (
+              <p className="type-fine mt-0.5 line-clamp-2 text-[var(--color-text-secondary)]">
+                {activity.story}
+              </p>
+            )}
             {(activity.groupName || activity.placeLabel) && (
-              <p className="text-[11px] text-slate-400 mt-0.5">{activity.groupName ?? activity.placeLabel}</p>
+              <p className="type-fine mt-0.5 text-[var(--color-body-muted)]">
+                {activity.groupName ?? activity.placeLabel}
+              </p>
             )}
           </div>
         </li>

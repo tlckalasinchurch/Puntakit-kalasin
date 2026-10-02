@@ -19,7 +19,7 @@ export default function ClerkSignInPage() {
     <div className="login-shell">
       <div className="login-card" data-testid="clerk-sign-in">
         <div className="login-logo">
-          <Logo />
+          <Logo tone="onLight" />
         </div>
         {isDemoMode ? (
           <div className="space-y-4 p-6 text-center">

@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProfileSkeleton } from "@/components/LoadingStates";
+import { EmptyState, PageHeader, StatusChip } from "@/components/DesignSystem";
 import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { ROLE_LABELS } from "@shared/labels";
@@ -24,15 +25,13 @@ export default function Profile() {
   if (!user) {
     return (
       <AppLayout>
-        <div className="profile-page">
-          <section className="profile-panel card-surface state-panel" data-testid="profile-empty">
-            <Users size={ICON_SIZE["2xl"]} />
-            <h3>ไม่พบข้อมูลบัญชีผู้ใช้</h3>
-            <p>เซสชันของคุณหมดอายุหรือยังไม่ได้เข้าสู่ระบบ</p>
-            <button className="primary-action" type="button" onClick={() => navigate("/login")}>
-              <LogOut size={ICON_SIZE.sm} /> กลับไปเข้าสู่ระบบ
-            </button>
-          </section>
+        <div className="profile-page" data-testid="profile-empty">
+          <EmptyState
+            icon={Users}
+            title="ไม่พบข้อมูลบัญชีผู้ใช้"
+            description="เซสชันของคุณหมดอายุหรือยังไม่ได้เข้าสู่ระบบ"
+            action={{ label: "กลับไปเข้าสู่ระบบ", icon: LogOut, onClick: () => navigate("/login") }}
+          />
         </div>
       </AppLayout>
     );
@@ -55,27 +54,24 @@ export default function Profile() {
   return (
     <AppLayout>
       <div className="profile-page">
-        <div className="page-heading">
-          <div>
-            <span className="eyebrow">ACCOUNT CENTER</span>
-            <h1>โปรไฟล์ส่วนตัว</h1>
-            <p>ข้อมูลบัญชีของคุณมาจากเซสชันการเข้าสู่ระบบจริงของระบบ</p>
-          </div>
-        </div>
+        <PageHeader
+          title="โปรไฟล์ส่วนตัว"
+          description="ข้อมูลบัญชีของคุณมาจากเซสชันการเข้าสู่ระบบจริงของระบบ"
+        />
 
         <section className="profile-hero card-surface">
-          <div className="profile-avatar">{initial}</div>
+          <div className="profile-avatar" aria-hidden="true">{initial}</div>
           <div className="profile-identity">
             <div className="profile-name-row">
               <h2>{user.name}</h2>
-              <span className="status-chip good">
-                <CheckCircle2 size={12} /> เข้าสู่ระบบแล้ว
-              </span>
+              <StatusChip tone="success">
+                <CheckCircle2 size={12} aria-hidden="true" /> เข้าสู่ระบบแล้ว
+              </StatusChip>
             </div>
             <p>{roleLabel}</p>
             <small>{user.email}</small>
           </div>
-          <div className="profile-hero-mark">
+          <div className="profile-hero-mark" aria-hidden="true">
             <ShieldCheck size={34} />
           </div>
         </section>
@@ -84,7 +80,7 @@ export default function Profile() {
           <section className="profile-panel card-surface">
             <div className="section-heading">
               <div>
-                <span className="mini-icon">
+                <span className="mini-icon" aria-hidden="true">
                   <Users size={ICON_SIZE.sm} />
                 </span>
                 <h2>ข้อมูลบัญชี</h2>
@@ -93,7 +89,7 @@ export default function Profile() {
             <div className="profile-details">
               {details.map(({ label, value, icon: Icon }) => (
                 <div className="profile-detail" key={label}>
-                  <span className="profile-detail-icon">
+                  <span className="profile-detail-icon" aria-hidden="true">
                     <Icon size={ICON_SIZE.sm} />
                   </span>
                   <div>
@@ -103,23 +99,23 @@ export default function Profile() {
                 </div>
               ))}
             </div>
-            <Link href="/app/profile" className="profile-link-button">
-              แก้ไขข้อมูลส่วนตัวของฉัน <ChevronRight size={ICON_SIZE.sm} />
+            <Link href="/app/profile" className="profile-link-button min-h-11">
+              แก้ไขข้อมูลส่วนตัวของฉัน <ChevronRight size={ICON_SIZE.sm} aria-hidden="true" />
             </Link>
           </section>
 
           <section className="profile-panel card-surface">
             <div className="section-heading">
               <div>
-                <span className="mini-icon green">
+                <span className="mini-icon green" aria-hidden="true">
                   <CalendarDays size={ICON_SIZE.sm} />
                 </span>
                 <h2>ความเป็นส่วนตัว</h2>
               </div>
             </div>
             <div className="profile-details" data-testid="privacy-links">
-              <Link href="/privacy" className="profile-detail">
-                <span className="profile-detail-icon">
+              <Link href="/privacy" className="profile-detail min-h-11">
+                <span className="profile-detail-icon" aria-hidden="true">
                   <Lock size={ICON_SIZE.sm} />
                 </span>
                 <div>
@@ -127,8 +123,8 @@ export default function Profile() {
                   <strong>ความเป็นส่วนตัว</strong>
                 </div>
               </Link>
-              <Link href="/terms" className="profile-detail">
-                <span className="profile-detail-icon">
+              <Link href="/terms" className="profile-detail min-h-11">
+                <span className="profile-detail-icon" aria-hidden="true">
                   <FileText size={ICON_SIZE.sm} />
                 </span>
                 <div>
@@ -142,7 +138,7 @@ export default function Profile() {
 
         <section className="profile-footer card-surface">
           <div>
-            <span className="profile-footer-icon">
+            <span className="profile-footer-icon" aria-hidden="true">
               <ShieldCheck size={ICON_SIZE.md} />
             </span>
             <div>
@@ -150,8 +146,8 @@ export default function Profile() {
               <small>ระบบตรวจสอบสิทธิ์ด้วยเซสชันและตรวจ audit log ทุกครั้งที่เข้าถึงข้อมูล</small>
             </div>
           </div>
-          <button className="profile-logout" type="button" onClick={handleLogout}>
-            <LogOut size={ICON_SIZE.sm} /> ออกจากระบบ
+          <button className="profile-logout min-h-11" type="button" onClick={handleLogout}>
+            <LogOut size={ICON_SIZE.sm} aria-hidden="true" /> ออกจากระบบ
           </button>
         </section>
       </div>

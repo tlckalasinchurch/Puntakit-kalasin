@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, CheckCircle2, Clock, ListTodo, RotateCcw, X } from "lucide-react";
+import { CheckCircle2, Clock, ListTodo, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
+import {
+  EmptyState,
+  ErrorState,
+  Field,
+  PageHeader,
+  SectionHeader,
+  StatusChip,
+  type StatusTone,
+} from "@/components/DesignSystem";
 import { ListSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
@@ -29,12 +38,19 @@ const STATUS_LABELS: Record<FollowUpStatus, string> = {
   cancelled: "ยกเลิก",
 };
 
-const STATUS_BADGE_CLASS: Record<FollowUpStatus, string> = {
-  open: "bg-amber-50 text-amber-700",
-  in_progress: "bg-blue-50 text-blue-700",
-  completed: "bg-emerald-50 text-emerald-700",
-  cancelled: "bg-slate-100 text-slate-400",
+const STATUS_TONE: Record<FollowUpStatus, StatusTone> = {
+  open: "warning",
+  in_progress: "info",
+  completed: "success",
+  cancelled: "neutral",
 };
+
+const CONTROL_CLASS =
+  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 py-2 text-sm text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+const ROW_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] px-3 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const ROW_PRIMARY_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-3 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
 
 function formatDate(iso: string | null) {
   if (!iso) return "ไม่มีกำหนด";
@@ -49,6 +65,7 @@ export default function FollowUps() {
   const [items, setItems] = useState<FollowUpRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [transitioningId, setTransitioningId] = useState<string | null>(null);
@@ -56,6 +73,7 @@ export default function FollowUps() {
   const load = async () => {
     setIsLoading(true);
     setError(null);
+    setErrorTechnical(null);
     try {
       const params = new URLSearchParams();
       if (statusFilter) params.set("status", statusFilter);
@@ -65,6 +83,7 @@ export default function FollowUps() {
       setItems(data);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "โหลดรายการติดตามไม่สำเร็จ");
+      setErrorTechnical(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
     } finally {
       setIsLoading(false);
     }
@@ -88,119 +107,141 @@ export default function FollowUps() {
     }
   };
 
+  const countLabel = !isLoading && !error ? `${items.length.toLocaleString("th-TH")} รายการ` : undefined;
+
   return (
     <AppLayout>
-      <div className="mb-6">
-        <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">FOLLOW-UP • การติดตาม</span>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">รายการติดตาม</h1>
-        <p className="text-xs text-slate-500">อะไรต้องทำต่อ กับใคร ภายในเมื่อไร — สร้างจากหน้ากิจกรรมพันธกิจหรือโปรไฟล์สมาชิก</p>
-      </div>
+      <PageHeader
+        title="รายการติดตาม"
+        description="อะไรต้องทำต่อ กับใคร ภายในเมื่อไร — สร้างจากหน้ากิจกรรมพันธกิจหรือโปรไฟล์สมาชิก"
+        secondaryActions={[{ label: "โหลดใหม่", icon: RotateCcw, onClick: load }]}
+      />
 
-      <div className="mb-5 flex flex-wrap items-center gap-2">
-        <select
-          className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="">ทุกสถานะ</option>
-          {Object.entries(STATUS_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <label className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600">
-          <input type="checkbox" checked={overdueOnly} onChange={(e) => setOverdueOnly(e.target.checked)} />
+      <div className="mb-5 flex flex-wrap items-end gap-3">
+        <div className="w-full sm:w-56">
+          <Field label="สถานะ">
+            {props => (
+              <select
+                {...props}
+                className={CONTROL_CLASS}
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+              >
+                <option value="">ทุกสถานะ</option>
+                {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+        </div>
+        <label className="type-caption inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-[var(--color-ink)]">
+          <input
+            type="checkbox"
+            className="size-4"
+            checked={overdueOnly}
+            onChange={e => setOverdueOnly(e.target.checked)}
+          />
           เลยกำหนดเท่านั้น
         </label>
       </div>
 
-      {isLoading ? (
-        <ListSkeleton count={5} />
-      ) : error ? (
-        <div className="tailadmin-card p-10 text-center text-rose-600">
-          <AlertCircle size={ICON_SIZE.xl} className="mx-auto mb-2 text-rose-500" />
-          <h3 className="font-bold text-sm">โหลดรายการติดตามไม่สำเร็จ</h3>
-          <p className="text-xs text-slate-500 mt-1">{error}</p>
-          <button className="mt-4 rounded-xl bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-100" onClick={load}>
-            ลองใหม่
-          </button>
-        </div>
-      ) : items.length === 0 ? (
-        <div className="tailadmin-card p-12 text-center text-slate-400">
-          <ListTodo size={40} className="mx-auto text-slate-300 mb-2" />
-          <h3 className="font-semibold text-slate-700 text-sm">ไม่มีรายการติดตาม</h3>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {items.map((row) => (
-            <div
-              key={row.id}
-              className={`rounded-2xl border bg-white p-4 shadow-xs flex flex-col sm:flex-row sm:items-center gap-3 ${
-                isOverdue(row) ? "border-rose-200" : "border-slate-200/80"
-              }`}
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE_CLASS[row.status]}`}>
-                    {STATUS_LABELS[row.status]}
-                  </span>
-                  {isOverdue(row) && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
-                      <Clock size={10} /> เลยกำหนด
-                    </span>
+      <section aria-labelledby="follow-ups-heading">
+        <SectionHeader id="follow-ups-heading" title="คิวการติดตาม" description={countLabel} />
+
+        {isLoading ? (
+          <ListSkeleton count={5} />
+        ) : error ? (
+          <ErrorState
+            title="โหลดรายการติดตามไม่สำเร็จ"
+            description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+            technical={errorTechnical ?? undefined}
+            onRetry={load}
+          />
+        ) : items.length === 0 ? (
+          <EmptyState
+            icon={ListTodo}
+            title="ยังไม่มีรายการติดตาม"
+            description="รายการติดตามถูกสร้างจากหน้ากิจกรรมพันธกิจ หรือจากโปรไฟล์สมาชิกที่ต้องดูแลต่อ"
+            action={{ href: "/feed", label: "ไปที่ฟีดกิจกรรม" }}
+          />
+        ) : (
+          <div className="space-y-3">
+            {items.map(row => (
+              <article
+                key={row.id}
+                className={`flex flex-col gap-3 rounded-[var(--radius-md)] border bg-[var(--color-canvas)] p-4 sm:flex-row sm:items-center ${
+                  isOverdue(row) ? "border-[var(--color-error)]/50" : "border-[var(--color-hairline)]"
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <StatusChip tone={STATUS_TONE[row.status]}>{STATUS_LABELS[row.status]}</StatusChip>
+                    {isOverdue(row) && (
+                      <StatusChip tone="error">
+                        <span className="inline-flex items-center gap-1">
+                          <Clock size={ICON_SIZE.xs} aria-hidden="true" /> เลยกำหนด
+                        </span>
+                      </StatusChip>
+                    )}
+                  </div>
+                  <h3 className="type-caption-strong text-[var(--color-ink)]">{row.title}</h3>
+                  <p className="type-caption mt-0.5 text-[var(--color-text-secondary)]">
+                    {[row.subjectMemberName, row.subjectGroupName].filter(Boolean).join(" • ") || "ไม่ระบุเป้าหมาย"}
+                    {row.ownerName ? ` • ผู้รับผิดชอบ: ${row.ownerName}` : ""}
+                  </p>
+                  <p className="type-fine mt-0.5 text-[var(--color-body-muted)]">กำหนด: {formatDate(row.dueAt)}</p>
+                </div>
+
+                <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+                  {row.status === "open" && (
+                    <button
+                      type="button"
+                      className={ROW_BUTTON_CLASS}
+                      disabled={transitioningId === row.id}
+                      onClick={() => transition(row, "in_progress")}
+                    >
+                      กำลังติดตาม
+                    </button>
+                  )}
+                  {(row.status === "open" || row.status === "in_progress") && (
+                    <>
+                      <button
+                        type="button"
+                        className={ROW_PRIMARY_BUTTON_CLASS}
+                        disabled={transitioningId === row.id}
+                        onClick={() => transition(row, "completed")}
+                      >
+                        <CheckCircle2 size={ICON_SIZE.sm} aria-hidden="true" /> เสร็จสิ้น
+                      </button>
+                      <button
+                        type="button"
+                        className={ROW_BUTTON_CLASS}
+                        disabled={transitioningId === row.id}
+                        onClick={() => transition(row, "cancelled")}
+                      >
+                        <X size={ICON_SIZE.sm} aria-hidden="true" /> ยกเลิก
+                      </button>
+                    </>
+                  )}
+                  {(row.status === "completed" || row.status === "cancelled") && (
+                    <button
+                      type="button"
+                      className={ROW_BUTTON_CLASS}
+                      disabled={transitioningId === row.id}
+                      onClick={() => transition(row, "open")}
+                    >
+                      <RotateCcw size={ICON_SIZE.sm} aria-hidden="true" /> เปิดใหม่
+                    </button>
                   )}
                 </div>
-                <p className="text-sm font-semibold text-slate-800">{row.title}</p>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {[row.subjectMemberName, row.subjectGroupName].filter(Boolean).join(" • ") || "ไม่ระบุเป้าหมาย"}
-                  {row.ownerName ? ` • ผู้รับผิดชอบ: ${row.ownerName}` : ""}
-                </p>
-                <p className="text-[11px] text-slate-400 mt-0.5">กำหนด: {formatDate(row.dueAt)}</p>
-              </div>
-
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {row.status === "open" && (
-                  <button
-                    className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-                    disabled={transitioningId === row.id}
-                    onClick={() => transition(row, "in_progress")}
-                  >
-                    กำลังติดตาม
-                  </button>
-                )}
-                {(row.status === "open" || row.status === "in_progress") && (
-                  <>
-                    <button
-                      className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100"
-                      disabled={transitioningId === row.id}
-                      onClick={() => transition(row, "completed")}
-                    >
-                      <CheckCircle2 size={12} /> เสร็จสิ้น
-                    </button>
-                    <button
-                      className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold text-slate-500 hover:bg-slate-50"
-                      disabled={transitioningId === row.id}
-                      onClick={() => transition(row, "cancelled")}
-                    >
-                      <X size={12} /> ยกเลิก
-                    </button>
-                  </>
-                )}
-                {(row.status === "completed" || row.status === "cancelled") && (
-                  <button
-                    className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
-                    disabled={transitioningId === row.id}
-                    onClick={() => transition(row, "open")}
-                  >
-                    <RotateCcw size={12} /> เปิดใหม่
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </AppLayout>
   );
 }

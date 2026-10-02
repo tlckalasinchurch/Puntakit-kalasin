@@ -1,18 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import {
-  AlertCircle,
-  Calendar,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
-  Heart,
   Lock,
   MapPin,
+  MoreVertical,
   Pencil,
   Plus,
-  RefreshCw,
   Search,
-  Shield,
   Trash2,
   UserCheck,
   UserPlus,
@@ -24,6 +22,17 @@ import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CardGridSkeleton, TableSkeleton } from "@/components/LoadingStates";
+import {
+  EmptyState,
+  ErrorState,
+  Field,
+  FormError,
+  InitialsAvatar,
+  Modal,
+  PageHeader,
+  StatusChip,
+  type StatusTone,
+} from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
@@ -105,21 +114,27 @@ const CATEGORY_LABELS: Record<GroupCategory, string> = {
   other: "อื่น ๆ",
 };
 
-const CATEGORY_COLORS: Record<GroupCategory, string> = {
-  cell: "blue",
-  bible_study: "blue",
-  prayer: "purple",
-  youth: "purple",
-  kids: "green",
-  family: "green",
-  men: "blue",
-  women: "orange",
-  volunteer: "orange",
-  online: "blue",
-  ministry: "purple",
-  fellowship: "orange",
-  general: "blue",
-  other: "gray",
+/**
+ * Category colour is a recognition aid, not a meaning: every category also
+ * prints its own Thai name next to the chip, and the palette is limited to the
+ * three activity accents plus neutral so no page drifts into a rainbow
+ * (design.md §2 — max 3 accent tones per page).
+ */
+const CATEGORY_TONES: Record<GroupCategory, StatusTone> = {
+  cell: "info",
+  bible_study: "info",
+  prayer: "neutral",
+  youth: "neutral",
+  kids: "success",
+  family: "success",
+  men: "info",
+  women: "warning",
+  volunteer: "warning",
+  online: "info",
+  ministry: "neutral",
+  fellowship: "warning",
+  general: "info",
+  other: "neutral",
 };
 
 const ROLE_LABELS: Record<GroupMemberRole, string> = {
@@ -129,17 +144,19 @@ const ROLE_LABELS: Record<GroupMemberRole, string> = {
   member: "สมาชิก",
 };
 
-const PRIVACY_LABELS: Record<GroupPrivacy, { label: string; tone: string }> = {
-  public: { label: "สาธารณะ", tone: "good" },
-  private: { label: "กลุ่มปิด (สมาชิก)", tone: "attention" },
-  confidential: { label: "กลุ่มลับเฉพาะ", tone: "urgent" },
+const PRIVACY_LABELS: Record<GroupPrivacy, { label: string; tone: StatusTone }> = {
+  public: { label: "สาธารณะ", tone: "neutral" },
+  private: { label: "กลุ่มปิด (สมาชิก)", tone: "info" },
+  confidential: { label: "กลุ่มลับเฉพาะ", tone: "warning" },
 };
 
-const STATUS_LABELS: Record<GroupStatus, { label: string; tone: string }> = {
-  active: { label: "เปิดดำเนินการ", tone: "good" },
-  paused: { label: "พักชั่วคราว", tone: "attention" },
-  closed: { label: "ปิดกลุ่ม", tone: "muted" },
+const STATUS_LABELS: Record<GroupStatus, { label: string; tone: StatusTone }> = {
+  active: { label: "เปิดดำเนินการ", tone: "success" },
+  paused: { label: "พักชั่วคราว", tone: "warning" },
+  closed: { label: "ปิดกลุ่ม", tone: "neutral" },
 };
+
+const MEMBERS_PER_PAGE = 12;
 
 const EMPTY_FORM = {
   name: "",
@@ -157,6 +174,96 @@ const EMPTY_FORM = {
   isOpen: true,
 };
 
+const INPUT_CLASS =
+  "min-h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-base text-[var(--color-ink)] placeholder:text-[var(--color-text-quaternary)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-focus)]/30";
+const SELECT_CLASS = `${INPUT_CLASS} pr-8`;
+
+const iconButtonClass =
+  "flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+
+/**
+ * Overflow menu for the secondary per-group actions.
+ *
+ * A group card used to end in four same-weight buttons (สมาชิก / เช็คชื่อ /
+ * แก้ไข / ลบ). One primary action plus an overflow menu keeps the card
+ * readable and gives every action a 44px target.
+ */
+function RowMenu({
+  label,
+  children,
+}: {
+  label: string;
+  children: (close: () => void) => React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        aria-label={label}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className={iconButtonClass}
+      >
+        <MoreVertical size={ICON_SIZE.md} aria-hidden="true" />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-20 mt-1 w-52 overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] py-1 shadow-[var(--shadow)]"
+        >
+          {children(() => setOpen(false))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MenuItem({
+  icon: Icon,
+  label,
+  onSelect,
+  tone = "default",
+}: {
+  icon: React.ComponentType<{ size?: number; "aria-hidden"?: boolean }>;
+  label: string;
+  onSelect: () => void;
+  tone?: "default" | "danger";
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onSelect}
+      className={`type-caption flex min-h-11 w-full items-center gap-3 px-3 text-left transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-focus)] ${
+        tone === "danger" ? "text-[var(--color-error)]" : "text-[var(--color-ink)]"
+      }`}
+    >
+      <Icon size={ICON_SIZE.sm} aria-hidden={true} />
+      {label}
+    </button>
+  );
+}
+
 export default function Groups() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -171,6 +278,7 @@ export default function Groups() {
   const [groupsList, setGroupsList] = useState<GroupItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -183,6 +291,8 @@ export default function Groups() {
   const [editingGroup, setEditingGroup] = useState<GroupItem | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Delete dialog
   const [deleteTarget, setDeleteTarget] = useState<GroupItem | null>(null);
@@ -200,9 +310,12 @@ export default function Groups() {
   const [selectedRole, setSelectedRole] = useState<GroupMemberRole>("member");
   const [addingMember, setAddingMember] = useState(false);
 
+  const [searchPage, setSearchPage] = useState(1);
+
   const fetchGroups = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setErrorTechnical(null);
     try {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
@@ -213,7 +326,10 @@ export default function Groups() {
       const res = await api.get<GroupItem[]>(`/api/groups?${params.toString()}`);
       setGroupsList(res);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "โหลดข้อมูลกลุ่มไม่สำเร็จ");
+      setError("โหลดข้อมูลกลุ่มไม่สำเร็จ");
+      setErrorTechnical(
+        err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err)
+      );
     } finally {
       setLoading(false);
     }
@@ -238,6 +354,8 @@ export default function Groups() {
   const openCreateModal = () => {
     setEditingGroup(null);
     setForm(EMPTY_FORM);
+    setNameError(null);
+    setFormError(null);
     setModalOpen(true);
   };
 
@@ -258,6 +376,8 @@ export default function Groups() {
       maxMembers: grp.maxMembers ? String(grp.maxMembers) : "",
       isOpen: grp.isOpen ?? true,
     });
+    setNameError(null);
+    setFormError(null);
     setModalOpen(true);
   };
 
@@ -269,8 +389,10 @@ export default function Groups() {
 
   const handleSaveGroup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setNameError(null);
+    setFormError(null);
     if (!form.name.trim()) {
-      toast.error("กรุณากรอกชื่อกลุ่ม");
+      setNameError("กรุณากรอกชื่อกลุ่ม");
       return;
     }
 
@@ -297,12 +419,15 @@ export default function Groups() {
         toast.success("อัปเดตข้อมูลกลุ่มเรียบร้อยแล้ว");
       } else {
         await api.post("/api/groups", payload);
-        toast.success("สร้างกลุ่มใหม่เรียบร้อยแล้ว");
+        toast.success(`สร้างกลุ่ม "${payload.name}" เรียบร้อยแล้ว`);
       }
       setModalOpen(false);
       fetchGroups();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกข้อมูลไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "บันทึกข้อมูลไม่สำเร็จ";
+      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -329,6 +454,7 @@ export default function Groups() {
     setLoadingMembers(true);
     setSelectedMemberId("");
     setSelectedRole("member");
+    setSearchPage(1);
 
     try {
       fetchAvailableMembers();
@@ -398,11 +524,6 @@ export default function Groups() {
     }
   };
 
-  // Metrics
-  const totalGroups = groupsList.length;
-  const activeGroupsCount = groupsList.filter((g) => g.status === "active").length;
-  const totalMembersInGroups = groupsList.reduce((acc, g) => acc + (g.memberCount || 0), 0);
-
   const formatThaiDate = (dateStr: string | null) => {
     if (!dateStr) return "ยังไม่มีประวัติ";
     const d = new Date(dateStr);
@@ -413,116 +534,148 @@ export default function Groups() {
     });
   };
 
+  const totalGroups = groupsList.length;
+  const activeGroupsCount = groupsList.filter((g) => g.status === "active").length;
+  const totalMembersInGroups = groupsList.reduce((acc, g) => acc + (g.memberCount || 0), 0);
+
+  const hasFilters = Boolean(search || categoryFilter || statusFilter || privacyFilter);
+  const resetFilters = () => {
+    setSearch("");
+    setCategoryFilter("");
+    setStatusFilter("");
+    setPrivacyFilter("");
+  };
+
+  const activeMembers = groupMembersList.filter((m) => m.status === "active");
+  const formerMembers = groupMembersList.filter((m) => m.status !== "active");
+  const searchableMembers = availableMembers.filter(
+    (m) => !activeMembers.some((gm) => gm.memberId === m.id)
+  );
+  const searchTotalPages = Math.max(
+    1,
+    Math.ceil(searchableMembers.length / MEMBERS_PER_PAGE)
+  );
+  const searchPageSafe = Math.min(searchPage, searchTotalPages);
+  const pagedSearchableMembers = searchableMembers.slice(
+    (searchPageSafe - 1) * MEMBERS_PER_PAGE,
+    searchPageSafe * MEMBERS_PER_PAGE
+  );
+
   return (
     <AppLayout>
-      {/* Page Header */}
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">PUNTAKIT CHURCH GROUPS</span>
-          <h1>กลุ่มแคร์และพันธกิจ</h1>
-          <p>ระบบบริหารจัดการกลุ่มย่อย ชุมชนความเชื่อ การนัดพบ และรายชื่อสมาชิกในแต่ละกลุ่ม</p>
-        </div>
-        {isAdmin && (
-          <button className="primary-action" onClick={openCreateModal}>
-            <Plus size={ICON_SIZE.sm} />
-            <span>สร้างกลุ่มใหม่</span>
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="กลุ่มแคร์"
+        description="กลุ่มย่อยของคริสตจักร ผู้รับผิดชอบ และรายชื่อสมาชิกในแต่ละกลุ่ม"
+        primaryAction={
+          isAdmin
+            ? { label: "เพิ่มกลุ่ม", icon: Plus, onClick: openCreateModal }
+            : undefined
+        }
+      />
 
-      {/* Summary Cards */}
-      <div className="member-summary">
-        <div className="summary-card blue">
-          <div className="summary-icon">
-            <UsersRound size={ICON_SIZE.md} />
-          </div>
-          <div>
-            <small>กลุ่มทั้งหมด</small>
-            <div>
-              <strong>{totalGroups}</strong>
-              <span>กลุ่ม</span>
-            </div>
-          </div>
-        </div>
+      {/* One summary sentence replaces three KPI cards. */}
+      {!loading && !error && (
+        <p className="type-caption mb-4 text-[var(--color-body-muted)]" role="status">
+          ทั้งหมด {totalGroups.toLocaleString("th-TH")} กลุ่ม ·
+          เปิดดำเนินการ {activeGroupsCount.toLocaleString("th-TH")} กลุ่ม ·
+          สมาชิกที่สังกัดกลุ่ม {totalMembersInGroups.toLocaleString("th-TH")} คน
+        </p>
+      )}
 
-        <div className="summary-card green">
-          <div className="summary-icon">
-            <CheckCircle2 size={ICON_SIZE.md} />
+      <div className="mb-4 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="min-w-0 flex-1 sm:min-w-60">
+          <label
+            htmlFor="groups-search"
+            className="type-caption-strong block text-[var(--color-ink)]"
+          >
+            ค้นหากลุ่ม
+          </label>
+          <div className="relative mt-1.5">
+            <Search
+              size={ICON_SIZE.sm}
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-quaternary)]"
+            />
+            <input
+              id="groups-search"
+              type="search"
+              inputMode="search"
+              autoComplete="off"
+              spellCheck={false}
+              className={`${INPUT_CLASS} pl-9 pr-9`}
+              placeholder="ชื่อกลุ่ม ย่าน สถานที่…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="ล้างคำค้นหา"
+                className="absolute right-1.5 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+              >
+                <X size={ICON_SIZE.xs} aria-hidden="true" />
+              </button>
+            )}
           </div>
-          <div>
-            <small>กลุ่มที่เปิดดำเนินการ</small>
-            <div>
-              <strong>{activeGroupsCount}</strong>
-              <span>กลุ่ม ({totalGroups ? Math.round((activeGroupsCount / totalGroups) * 100) : 0}%)</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="summary-card orange">
-          <div className="summary-icon">
-            <Users size={ICON_SIZE.md} />
-          </div>
-          <div>
-            <small>สมาชิกที่สังกัดกลุ่ม</small>
-            <div>
-              <strong>{totalMembersInGroups}</strong>
-              <span>คน</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="member-toolbar" style={{ flexWrap: "wrap", gap: "10px" }}>
-        <div className="search-box" style={{ minWidth: "240px", flex: 1 }}>
-          <Search size={ICON_SIZE.sm} />
-          <input
-            type="text"
-            placeholder="ค้นหาชื่อกลุ่ม, ย่าน, สถานที่ หรือคำอธิบาย..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
-            <button className="clear-search" onClick={() => setSearch("")}>
-              <X size={ICON_SIZE.xs} />
-            </button>
-          )}
         </div>
 
-        <div className="toolbar-filters" style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          {/* Category Filter */}
+        <div className="w-full sm:w-auto">
+          <label
+            htmlFor="groups-category"
+            className="type-caption-strong block text-[var(--color-ink)]"
+          >
+            ประเภทกลุ่ม
+          </label>
           <select
+            id="groups-category"
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="filter-select"
+            className={`${SELECT_CLASS} mt-1.5 sm:w-48`}
           >
-            <option value="">หมวดหมู่ทั้งหมด</option>
+            <option value="">ทุกประเภท</option>
             {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
               <option key={k} value={k}>
                 {v}
               </option>
             ))}
           </select>
+        </div>
 
-          {/* Status Filter */}
+        <div className="w-full sm:w-auto">
+          <label
+            htmlFor="groups-status"
+            className="type-caption-strong block text-[var(--color-ink)]"
+          >
+            สถานะกลุ่ม
+          </label>
           <select
+            id="groups-status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="filter-select"
+            className={`${SELECT_CLASS} mt-1.5 sm:w-40`}
           >
-            <option value="">สถานะทั้งหมด</option>
+            <option value="">ทุกสถานะ</option>
             <option value="active">เปิดดำเนินการ</option>
             <option value="paused">พักชั่วคราว</option>
             <option value="closed">ปิดกลุ่ม</option>
           </select>
+        </div>
 
-          {/* Privacy Filter */}
+        <div className="w-full sm:w-auto">
+          <label
+            htmlFor="groups-privacy"
+            className="type-caption-strong block text-[var(--color-ink)]"
+          >
+            การเปิดเผยข้อมูล
+          </label>
           <select
+            id="groups-privacy"
             value={privacyFilter}
             onChange={(e) => setPrivacyFilter(e.target.value)}
-            className="filter-select"
+            className={`${SELECT_CLASS} mt-1.5 sm:w-44`}
           >
-            <option value="">ความเป็นส่วนตัวทั้งหมด</option>
+            <option value="">ทุกระดับ</option>
             <option value="public">สาธารณะ</option>
             <option value="private">กลุ่มปิด (สมาชิก)</option>
             <option value="confidential">กลุ่มลับเฉพาะ</option>
@@ -530,208 +683,243 @@ export default function Groups() {
         </div>
       </div>
 
-      {/* Groups Grid */}
-      {loading ? (
-        <CardGridSkeleton count={6} />
-      ) : error ? (
-        <div className="state-panel error">
-          <AlertCircle size={ICON_SIZE.xl} />
-          <h3>เกิดข้อผิดพลาด</h3>
-          <p>{error}</p>
-          <button className="primary-action" onClick={fetchGroups} style={{ marginTop: 12 }}>
-            <RefreshCw size={ICON_SIZE.sm} />
-            <span>ลองใหม่</span>
-          </button>
+      {error ? (
+        <ErrorState
+          title="โหลดข้อมูลกลุ่มไม่สำเร็จ"
+          description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+          technical={errorTechnical ?? undefined}
+          onRetry={fetchGroups}
+        />
+      ) : loading ? (
+        <div role="status" aria-label="กำลังโหลดข้อมูลกลุ่ม">
+          <CardGridSkeleton count={6} />
         </div>
       ) : groupsList.length === 0 ? (
-        <div className="state-panel">
-          <UsersRound size={ICON_SIZE.xl} />
-          <h3>ไม่พบกลุ่มที่ตรงกับเงื่อนไข</h3>
-          <p>ลองปรับคำค้นหาหรือตัวกรองหมวดหมู่</p>
-        </div>
+        hasFilters ? (
+          <EmptyState
+            icon={Search}
+            title="ไม่พบกลุ่มที่ตรงกับเงื่อนไข"
+            description="ลองเปลี่ยนคำค้นหา หรือล้างตัวกรองเพื่อดูกลุ่มทั้งหมด"
+            action={{ label: "ล้างตัวกรอง", onClick: resetFilters }}
+          />
+        ) : (
+          <EmptyState
+            icon={UsersRound}
+            title="ยังไม่มีกลุ่มแคร์ในระบบ"
+            description="สร้างกลุ่มแรกเพื่อเริ่มดูแลสมาชิกเป็นกลุ่มย่อย"
+            action={
+              isAdmin
+                ? { label: "เพิ่มกลุ่ม", icon: Plus, onClick: openCreateModal }
+                : undefined
+            }
+          />
+        )
       ) : (
-        <div className="groups-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "16px" }}>
+        <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {groupsList.map((grp) => {
-            const catColor = CATEGORY_COLORS[grp.category] || "blue";
+            const statusCfg = STATUS_LABELS[grp.status] ?? STATUS_LABELS.active;
+            const privacyCfg = PRIVACY_LABELS[grp.privacy] ?? PRIVACY_LABELS.public;
             const canEditThis = canEditGroup(grp);
-            const privacyCfg = PRIVACY_LABELS[grp.privacy] || PRIVACY_LABELS.public;
-            const statusCfg = STATUS_LABELS[grp.status] || STATUS_LABELS.active;
+            const schedule = [grp.meetingDay, grp.meetingTime]
+              .filter(Boolean)
+              .join(" · ");
 
             return (
-              <div
+              <li
                 key={grp.id}
-                className="group-card"
-                style={{
-                  background: "#fff",
-                  borderRadius: "16px",
-                  padding: "18px",
-                  border: "1px solid #e5edf5",
-                  boxShadow: "0 2px 8px rgba(15, 34, 58, 0.04)",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                }}
+                className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5"
               >
-                <div>
-                  {/* Top Row: Category & Status Badges */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "6px" }}>
-                    <span className={`role-chip ${catColor}`}>
-                      {CATEGORY_LABELS[grp.category] || grp.category}
-                    </span>
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <span className={`status-chip ${privacyCfg.tone}`}>
-                        {grp.privacy !== "public" && <Lock size={10} style={{ marginRight: 3, display: "inline" }} />}
-                        {privacyCfg.label}
-                      </span>
-                      <span className={`status-chip ${statusCfg.tone}`}>
-                        {statusCfg.label}
-                      </span>
-                    </div>
-                  </div>
+                <div className="flex items-start justify-between gap-2">
+                  <StatusChip tone={CATEGORY_TONES[grp.category] ?? "neutral"}>
+                    {CATEGORY_LABELS[grp.category] ?? grp.category}
+                  </StatusChip>
+                  <StatusChip tone={statusCfg.tone}>{statusCfg.label}</StatusChip>
+                </div>
 
-                  {/* Group Name & Area */}
-                  <h3 style={{ margin: "0 0 4px", fontSize: "17px", color: "var(--ink)", fontWeight: 700 }}>
+                <div className="min-w-0">
+                  <h2 className="type-body-strong text-[var(--color-ink)]">
                     {grp.name}
-                  </h3>
+                  </h2>
                   {grp.area && (
-                    <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "8px", display: "flex", alignItems: "center", gap: "4px" }}>
-                      <MapPin size={12} className="text-blue-500" />
-                      <span>ย่าน/พื้นที่: <strong>{grp.area}</strong></span>
-                    </div>
+                    <p className="type-caption mt-1 flex items-center gap-1.5 text-[var(--color-body-muted)]">
+                      <MapPin size={ICON_SIZE.xs} aria-hidden="true" />
+                      {grp.area}
+                    </p>
                   )}
-
                   {grp.description && (
-                    <p style={{ margin: "0 0 12px", fontSize: "12px", color: "var(--muted)", lineHeight: 1.5 }}>
+                    <p className="type-caption mt-2 line-clamp-3 text-[var(--color-text-secondary)]">
                       {grp.description}
                     </p>
                   )}
-
-                  {/* Meeting Schedule & Location */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "12px", color: "#4f657d", marginBottom: "14px" }}>
-                    {(grp.meetingDay || grp.meetingTime) && (
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Clock size={ICON_SIZE.sm} style={{ color: "#397bc4", flexShrink: 0 }} />
-                        <span>
-                          {grp.meetingDay} {grp.meetingTime ? `(${grp.meetingTime})` : ""}
-                        </span>
-                      </div>
-                    )}
-                    {grp.meetingLocation && (
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <MapPin size={ICON_SIZE.sm} style={{ color: "#e35b78", flexShrink: 0 }} />
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {grp.meetingLocation}
-                        </span>
-                      </div>
-                    )}
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <Users size={ICON_SIZE.sm} style={{ color: "#259a60", flexShrink: 0 }} />
-                      <strong>สมาชิกในกลุ่ม {grp.memberCount} คน</strong>
-                    </div>
-                  </div>
                 </div>
 
-                {/* Card Bottom: Leader info & Actions */}
-                <div style={{ borderTop: "1px solid #eef3f8", paddingTop: "12px", marginTop: "8px" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", fontSize: "11px", color: "#74889e" }}>
-                    <div>
-                      ผู้นำ: <strong style={{ color: "var(--ink)" }}>{grp.leaderName || "ยังไม่กำหนด"}</strong>
+                <dl className="type-caption space-y-1.5 text-[var(--color-text-secondary)]">
+                  {schedule && (
+                    <div className="flex items-start gap-2">
+                      <dt className="sr-only">เวลานัดพบ</dt>
+                      <Clock
+                        size={ICON_SIZE.sm}
+                        aria-hidden="true"
+                        className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
+                      />
+                      <dd>{schedule}</dd>
                     </div>
+                  )}
+                  {grp.meetingLocation && (
+                    <div className="flex items-start gap-2">
+                      <dt className="sr-only">สถานที่นัดพบ</dt>
+                      <MapPin
+                        size={ICON_SIZE.sm}
+                        aria-hidden="true"
+                        className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
+                      />
+                      <dd className="min-w-0 break-words">
+                        {grp.meetingLocation}
+                        {grp.privacy !== "public" && (
+                          <Lock
+                            size={ICON_SIZE.xs}
+                            aria-hidden="true"
+                            className="ml-1.5 inline text-[var(--color-text-quaternary)]"
+                          />
+                        )}
+                      </dd>
+                    </div>
+                  )}
+                  <div className="flex items-start gap-2">
+                    <dt className="sr-only">ผู้รับผิดชอบ</dt>
+                    <Users
+                      size={ICON_SIZE.sm}
+                      aria-hidden="true"
+                      className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
+                    />
+                    <dd>
+                      ผู้นำ: {grp.leaderName || "ยังไม่กำหนด"}
+                    </dd>
                   </div>
-
-                  {/* Action buttons */}
-                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                    <button
-                      className="blue-button"
-                      style={{ flex: 1, justifyContent: "center", padding: "8px" }}
-                      onClick={() => openMembersModal(grp)}
-                    >
-                      <Users size={ICON_SIZE.sm} />
-                      <span>สมาชิก ({grp.memberCount})</span>
-                    </button>
-
-                    <button
-                      className="primary-action"
-                      style={{ flex: 1, justifyContent: "center", padding: "8px", background: "#228b5a" }}
-                      onClick={() => navigate(`/attendance?groupId=${grp.id}`)}
-                    >
-                      <UserCheck size={ICON_SIZE.sm} />
-                      <span>เช็คชื่อ</span>
-                    </button>
-
-                    {canEditThis && (
-                      <button
-                        style={{
-                          background: "#f1f5f9",
-                          color: "#546b82",
-                          borderRadius: "10px",
-                          padding: "8px 10px",
-                          display: "grid",
-                          placeItems: "center",
-                        }}
-                        onClick={() => openEditModal(grp)}
-                        title="แก้ไขข้อมูลกลุ่ม"
-                      >
-                        <Pencil size={ICON_SIZE.sm} />
-                      </button>
-                    )}
-
-                    {isAdmin && (
-                      <button
-                        style={{
-                          background: "#fff0f2",
-                          color: "#d44359",
-                          borderRadius: "10px",
-                          padding: "8px 10px",
-                          display: "grid",
-                          placeItems: "center",
-                        }}
-                        onClick={() => setDeleteTarget(grp)}
-                        title="ลบกลุ่ม"
-                      >
-                        <Trash2 size={ICON_SIZE.sm} />
-                      </button>
-                    )}
+                  <div className="flex items-start gap-2">
+                    <dt className="sr-only">การเปิดเผยข้อมูล</dt>
+                    <CheckCircle2
+                      size={ICON_SIZE.sm}
+                      aria-hidden="true"
+                      className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
+                    />
+                    <dd>{privacyCfg.label}</dd>
                   </div>
+                </dl>
+
+                {/* One primary action, then one overflow menu. */}
+                <div className="mt-auto flex items-center gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => openMembersModal(grp)}
+                    className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                  >
+                    <Users size={ICON_SIZE.sm} aria-hidden="true" />
+                    สมาชิก {grp.memberCount} คน
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/attendance?groupId=${grp.id}`)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                  >
+                    <UserCheck size={ICON_SIZE.sm} aria-hidden="true" />
+                    เช็คชื่อ
+                  </button>
+                  {(canEditThis || isAdmin) && (
+                    <RowMenu label={`ตัวเลือกเพิ่มเติมของกลุ่ม ${grp.name}`}>
+                      {close => (
+                        <>
+                          {canEditThis && (
+                            <MenuItem
+                              icon={Pencil}
+                              label="แก้ไขข้อมูลกลุ่ม"
+                              onSelect={() => {
+                                close();
+                                openEditModal(grp);
+                              }}
+                            />
+                          )}
+                          {isAdmin && (
+                            <MenuItem
+                              icon={Trash2}
+                              label="ลบกลุ่ม"
+                              tone="danger"
+                              onSelect={() => {
+                                close();
+                                setDeleteTarget(grp);
+                              }}
+                            />
+                          )}
+                        </>
+                      )}
+                    </RowMenu>
+                  )}
                 </div>
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
 
-      {/* Create / Edit Modal */}
-      {modalOpen && (
-        <div className="modal-backdrop" onClick={() => setModalOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "560px" }}>
-            <div className="modal-heading">
-              <div>
-                <h2>{editingGroup ? "แก้ไขข้อมูลกลุ่ม" : "สร้างกลุ่มใหม่"}</h2>
-                <p>{editingGroup ? `กำลังแก้ไขกลุ่ม: ${editingGroup.name}` : "กรอกข้อมูลรายละเอียดเพื่อตั้งกลุ่มใหม่ในคริสตจักร"}</p>
-              </div>
-              <button onClick={() => setModalOpen(false)}>
-                <X size={ICON_SIZE.sm} />
-              </button>
-            </div>
+      {/* Create / Edit */}
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingGroup ? `แก้ไขกลุ่ม ${editingGroup.name}` : "เพิ่มกลุ่มใหม่"}
+        description="ตั้งชื่อกลุ่มและรายละเอียดการนัดพบเท่าที่ทราบ"
+        size="wide"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setModalOpen(false)}
+              className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-5 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              form="group-form"
+              disabled={saving}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
+            >
+              {saving
+                ? "กำลังบันทึก…"
+                : editingGroup
+                  ? "บันทึกการแก้ไข"
+                  : "เพิ่มกลุ่ม"}
+            </button>
+          </>
+        }
+      >
+        <form id="group-form" onSubmit={handleSaveGroup} className="space-y-6">
+          {formError && <FormError>{formError}</FormError>}
 
-            <form onSubmit={handleSaveGroup}>
-              <div className="form-grid">
-                <label className="full-field">
-                  <span>ชื่อกลุ่ม *</span>
-                  <input
-                    type="text"
-                    required
-                    placeholder="เช่น แคร์เมืองกาฬสินธุ์ 1, แคร์เยาวชน"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  />
-                </label>
-
-                <label>
-                  <span>ประเภทกลุ่ม</span>
+          <fieldset className="space-y-4">
+            <legend className="type-caption-strong mb-2 text-[var(--color-ink)]">
+              ข้อมูลกลุ่ม
+            </legend>
+            <Field label="ชื่อกลุ่ม" required error={nameError ?? undefined}>
+              {fieldProps => (
+                <input
+                  {...fieldProps}
+                  className={INPUT_CLASS}
+                  placeholder="เช่น แคร์เมืองกาฬสินธุ์ 1"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                />
+              )}
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="ประเภทกลุ่ม">
+                {fieldProps => (
                   <select
+                    {...fieldProps}
+                    className={SELECT_CLASS}
                     value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value as GroupCategory })}
+                    onChange={(e) =>
+                      setForm({ ...form, category: e.target.value as GroupCategory })
+                    }
                   >
                     {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
                       <option key={k} value={k}>
@@ -739,277 +927,343 @@ export default function Groups() {
                       </option>
                     ))}
                   </select>
-                </label>
-
-                <label>
-                  <span>ระดับความเป็นส่วนตัว (PDPA)</span>
+                )}
+              </Field>
+              <Field label="สถานะกลุ่ม">
+                {fieldProps => (
                   <select
-                    value={form.privacy}
-                    onChange={(e) => setForm({ ...form, privacy: e.target.value as GroupPrivacy })}
-                  >
-                    <option value="public">สาธารณะ (แสดงพิกัด)</option>
-                    <option value="private">กลุ่มปิด (แสดงเฉพาะย่าน/เขต)</option>
-                    <option value="confidential">กลุ่มลับ (ซ่อนสถานที่สำหรับสมาชิก)</option>
-                  </select>
-                </label>
-
-                <label>
-                  <span>สถานะกลุ่ม</span>
-                  <select
+                    {...fieldProps}
+                    className={SELECT_CLASS}
                     value={form.status}
-                    onChange={(e) => setForm({ ...form, status: e.target.value as GroupStatus })}
+                    onChange={(e) =>
+                      setForm({ ...form, status: e.target.value as GroupStatus })
+                    }
                   >
-                    <option value="active">เปิดดำเนินการ (Active)</option>
-                    <option value="paused">พักชั่วคราว (Paused)</option>
-                    <option value="closed">ปิดกลุ่ม (Closed)</option>
+                    <option value="active">เปิดดำเนินการ</option>
+                    <option value="paused">พักชั่วคราว</option>
+                    <option value="closed">ปิดกลุ่ม</option>
                   </select>
-                </label>
+                )}
+              </Field>
+            </div>
+            <Field
+              label="การเปิดเผยข้อมูล"
+              hint="กำหนดว่าสมาชิกทั่วไปเห็นสถานที่ของกลุ่มได้แค่ไหน"
+            >
+              {fieldProps => (
+                <select
+                  {...fieldProps}
+                  className={SELECT_CLASS}
+                  value={form.privacy}
+                  onChange={(e) =>
+                    setForm({ ...form, privacy: e.target.value as GroupPrivacy })
+                  }
+                >
+                  <option value="public">สาธารณะ — แสดงพิกัด</option>
+                  <option value="private">กลุ่มปิด — แสดงเฉพาะย่าน/เขต</option>
+                  <option value="confidential">
+                    กลุ่มลับ — ซ่อนสถานที่จากสมาชิก
+                  </option>
+                </select>
+              )}
+            </Field>
+            <Field label="คำอธิบายหรือเป้าหมายของกลุ่ม">
+              {fieldProps => (
+                <textarea
+                  {...fieldProps}
+                  rows={3}
+                  className={`${INPUT_CLASS} py-2`}
+                  placeholder="รายละเอียดเพิ่มเติมของกลุ่ม…"
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
+                />
+              )}
+            </Field>
+          </fieldset>
 
-                <label>
-                  <span>ย่าน / พื้นที่ / อำเภอ</span>
+          <fieldset className="space-y-4">
+            <legend className="type-caption-strong mb-2 text-[var(--color-ink)]">
+              การนัดพบ
+            </legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="ย่าน / พื้นที่">
+                {fieldProps => (
                   <input
-                    type="text"
+                    {...fieldProps}
+                    className={INPUT_CLASS}
                     placeholder="เช่น อ.เมืองกาฬสินธุ์, ยางตลาด"
                     value={form.area}
                     onChange={(e) => setForm({ ...form, area: e.target.value })}
                   />
-                </label>
-
-                <label>
-                  <span>วันนัดพบ</span>
+                )}
+              </Field>
+              <Field label="วันนัดพบ">
+                {fieldProps => (
                   <input
-                    type="text"
-                    placeholder="เช่น ทุกวันศุกร์, วันพุธเว้นพุธ"
+                    {...fieldProps}
+                    className={INPUT_CLASS}
+                    placeholder="เช่น ทุกวันศุกร์"
                     value={form.meetingDay}
-                    onChange={(e) => setForm({ ...form, meetingDay: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, meetingDay: e.target.value })
+                    }
                   />
-                </label>
-
-                <label>
-                  <span>เวลานัดพบ</span>
+                )}
+              </Field>
+              <Field label="เวลานัดพบ">
+                {fieldProps => (
                   <input
-                    type="text"
+                    {...fieldProps}
+                    className={INPUT_CLASS}
                     placeholder="เช่น 19:00 - 20:30 น."
                     value={form.meetingTime}
-                    onChange={(e) => setForm({ ...form, meetingTime: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, meetingTime: e.target.value })
+                    }
                   />
-                </label>
-
-                <label className="full-field">
-                  <span>สถานที่นัดพบ</span>
+                )}
+              </Field>
+              <Field label="จำนวนสมาชิกสูงสุด" hint="เว้นว่างได้ถ้าไม่จำกัด">
+                {fieldProps => (
                   <input
-                    type="text"
-                    placeholder="เช่น บ้านพี่สมชาย, ห้องนมัสการชั้น 2"
-                    value={form.meetingLocation}
-                    onChange={(e) => setForm({ ...form, meetingLocation: e.target.value })}
+                    {...fieldProps}
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    className={INPUT_CLASS}
+                    placeholder="เช่น 20"
+                    value={form.maxMembers}
+                    onChange={(e) =>
+                      setForm({ ...form, maxMembers: e.target.value })
+                    }
                   />
-                </label>
-
-                <label className="full-field">
-                  <span>คำอธิบาย / เป้าหมายกลุ่ม</span>
-                  <textarea
-                    rows={3}
-                    placeholder="รายละเอียดเพิ่มเติมของกลุ่ม..."
-                    value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  />
-                </label>
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" className="cancel-button" onClick={() => setModalOpen(false)}>
-                  ยกเลิก
-                </button>
-                <button type="submit" className="primary-action" disabled={saving}>
-                  {saving ? "กำลังบันทึก..." : editingGroup ? "บันทึกการแก้ไข" : "สร้างกลุ่ม"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Group Members Modal */}
-      {membersModalOpen && activeGroup && (
-        <div className="modal-backdrop" onClick={() => setMembersModalOpen(false)}>
-          <div className="modal-card modal-wide" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "780px" }}>
-            <div className="modal-heading">
-              <div>
-                <h2>สมาชิกในกลุ่ม: {activeGroup.name}</h2>
-                <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--muted)" }}>
-                  {CATEGORY_LABELS[activeGroup.category]} • สมาชิกทั้งหมด {groupMembersList.length} คน (ปกติ {groupMembersList.filter(m => m.status === 'active').length} คน)
-                </p>
-              </div>
-              <button onClick={() => setMembersModalOpen(false)}>
-                <X size={ICON_SIZE.sm} />
-              </button>
+                )}
+              </Field>
             </div>
+            <Field label="สถานที่นัดพบ">
+              {fieldProps => (
+                <input
+                  {...fieldProps}
+                  className={INPUT_CLASS}
+                  placeholder="เช่น บ้านพี่สมชาย, ห้องนมัสการชั้น 2"
+                  value={form.meetingLocation}
+                  onChange={(e) =>
+                    setForm({ ...form, meetingLocation: e.target.value })
+                  }
+                />
+              )}
+            </Field>
+            <label className="flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] p-3">
+              <input
+                type="checkbox"
+                checked={form.isOpen}
+                onChange={(e) => setForm({ ...form, isOpen: e.target.checked })}
+                className="mt-0.5 size-6 shrink-0 rounded-[var(--radius-xs)] accent-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+              />
+              <span className="type-caption text-[var(--color-ink)]">
+                เปิดรับสมาชิกใหม่เข้ากลุ่มนี้
+              </span>
+            </label>
+          </fieldset>
+        </form>
+      </Modal>
 
-            {/* Add member section (Only if user has permission to edit group) */}
+      {/* Group members */}
+      <Modal
+        open={membersModalOpen && activeGroup !== null}
+        onClose={() => setMembersModalOpen(false)}
+        title={activeGroup ? `สมาชิกในกลุ่ม ${activeGroup.name}` : "สมาชิกในกลุ่ม"}
+        description={
+          activeGroup
+            ? `${CATEGORY_LABELS[activeGroup.category]} · ปัจจุบัน ${activeMembers.length} คน`
+            : undefined
+        }
+        size="wide"
+        footer={
+          <button
+            type="button"
+            onClick={() => setMembersModalOpen(false)}
+            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-5 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+          >
+            ปิด
+          </button>
+        }
+      >
+        {activeGroup && (
+          <div className="space-y-5">
             {canEditGroup(activeGroup) && (
-              <div
-                style={{
-                  background: "#f7fafd",
-                  padding: "14px",
-                  borderRadius: "14px",
-                  border: "1px solid #e2edf6",
-                  marginBottom: "18px",
-                }}
+              <form
+                onSubmit={handleAddMemberToGroup}
+                className="space-y-4 rounded-[var(--radius-md)] bg-[var(--color-canvas-soft)] p-4"
               >
-                <form onSubmit={handleAddMemberToGroup} style={{ display: "flex", gap: "10px", alignItems: "end", flexWrap: "wrap" }}>
-                  <div style={{ flex: 1, minWidth: "220px" }}>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "#54687e", marginBottom: "4px" }}>
-                      เลือกสมาชิกจากทะเบียนคริสตจักร
-                    </label>
+                <Field label="เพิ่มสมาชิกเข้ากลุ่ม">
+                  {fieldProps => (
                     <select
+                      {...fieldProps}
+                      className={SELECT_CLASS}
                       value={selectedMemberId}
-                      onChange={(e) => setSelectedMemberId(e.target.value)}
-                      style={{ width: "100%", height: "38px", padding: "0 10px", borderRadius: "10px", border: "1px solid #d7e4f0" }}
+                      onChange={(e) => {
+                        setSelectedMemberId(e.target.value);
+                        setSearchPage(1);
+                      }}
                     >
-                      <option value="">-- เลือกสมาชิกเพื่อเพิ่มเข้ากลุ่ม --</option>
-                      {availableMembers
-                        .filter((m) => !groupMembersList.some((gm) => gm.memberId === m.id && gm.status === "active"))
-                        .map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name} {m.nickname ? `(${m.nickname})` : ""} {m.phone ? `- ${m.phone}` : ""}
-                          </option>
-                        ))}
+                      <option value="">เลือกสมาชิกจากทะเบียนคริสตจักร…</option>
+                      {pagedSearchableMembers.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                          {m.nickname ? ` (${m.nickname})` : ""}
+                          {m.phone ? ` — ${m.phone}` : ""}
+                        </option>
+                      ))}
                     </select>
-                  </div>
+                  )}
+                </Field>
 
-                  <div style={{ width: "140px" }}>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "#54687e", marginBottom: "4px" }}>
-                      บทบาทในกลุ่ม
-                    </label>
+                {searchableMembers.length > MEMBERS_PER_PAGE && (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="type-fine text-[var(--color-body-muted)]">
+                      หน้า {searchPageSafe} จาก {searchTotalPages} ·{" "}
+                      {searchableMembers.length} คนที่ยังไม่อยู่ในกลุ่ม
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSearchPage((p) => Math.max(1, p - 1))}
+                        disabled={searchPageSafe <= 1}
+                        aria-label="รายชื่อก่อนหน้า"
+                        className={`${iconButtonClass} border border-[var(--color-hairline)] disabled:opacity-40`}
+                      >
+                        <ChevronLeft size={ICON_SIZE.sm} aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSearchPage((p) => Math.min(searchTotalPages, p + 1))
+                        }
+                        disabled={searchPageSafe >= searchTotalPages}
+                        aria-label="รายชื่อถัดไป"
+                        className={`${iconButtonClass} border border-[var(--color-hairline)] disabled:opacity-40`}
+                      >
+                        <ChevronRight size={ICON_SIZE.sm} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <Field label="บทบาทในกลุ่ม">
+                  {fieldProps => (
                     <select
+                      {...fieldProps}
+                      className={SELECT_CLASS}
                       value={selectedRole}
-                      onChange={(e) => setSelectedRole(e.target.value as GroupMemberRole)}
-                      style={{ width: "100%", height: "38px", padding: "0 10px", borderRadius: "10px", border: "1px solid #d7e4f0" }}
+                      onChange={(e) =>
+                        setSelectedRole(e.target.value as GroupMemberRole)
+                      }
                     >
                       <option value="member">สมาชิก</option>
                       <option value="leader">หัวหน้ากลุ่ม</option>
                       <option value="assistant_leader">ผู้ช่วยหัวหน้า</option>
                       <option value="host">เจ้าบ้าน</option>
                     </select>
-                  </div>
+                  )}
+                </Field>
 
-                  <button
-                    type="submit"
-                    className="primary-action"
-                    disabled={addingMember || !selectedMemberId}
-                    style={{ height: "38px", padding: "0 16px" }}
-                  >
-                    <UserPlus size={ICON_SIZE.sm} />
-                    <span>{addingMember ? "กำลังเพิ่ม..." : "เพิ่มเข้ากลุ่ม"}</span>
-                  </button>
-                </form>
-              </div>
+                <button
+                  type="submit"
+                  disabled={addingMember || !selectedMemberId}
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50 sm:w-auto"
+                >
+                  <UserPlus size={ICON_SIZE.sm} aria-hidden="true" />
+                  {addingMember ? "กำลังเพิ่ม…" : "เพิ่มเข้ากลุ่ม"}
+                </button>
+              </form>
             )}
 
-            {/* Members List Table */}
             {loadingMembers ? (
-              <TableSkeleton rows={5} />
+              <div role="status" aria-label="กำลังโหลดรายชื่อสมาชิกในกลุ่ม">
+                <TableSkeleton rows={5} />
+              </div>
             ) : groupMembersList.length === 0 ? (
-              <div className="state-panel">
-                <Users size={ICON_SIZE.lg} />
-                <h3>ยังไม่มีสมาชิกในกลุ่มนี้</h3>
-                <p>เลือกเพิ่มสมาชิกเข้ากลุ่มจากฟอร์มด้านบน</p>
-              </div>
+              <EmptyState
+                inset
+                icon={Users}
+                title="ยังไม่มีสมาชิกในกลุ่มนี้"
+                description={
+                  canEditGroup(activeGroup)
+                    ? "เลือกสมาชิกจากทะเบียนด้านบนเพื่อเริ่มต้นกลุ่ม"
+                    : "เมื่อผู้ดูแลเพิ่มสมาชิก รายชื่อจะแสดงที่นี่"
+                }
+              />
             ) : (
-              <div style={{ maxHeight: "380px", overflowY: "auto" }}>
-                <table className="member-table" style={{ width: "100%" }}>
-                  <thead>
-                    <tr>
-                      <th>ชื่อ-นามสกุล</th>
-                      <th>บทบาท</th>
-                      <th>สถานะ</th>
-                      <th>เข้าร่วมล่าสุด</th>
-                      <th>วันที่เข้ากลุ่ม</th>
-                      {canEditGroup(activeGroup) && <th style={{ textAlign: "right" }}>จัดการ</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {groupMembersList.map((gm) => (
-                      <tr key={gm.id} style={{ opacity: gm.status === "inactive" ? 0.6 : 1 }}>
-                        <td>
-                          <div className="member-name">
-                            <div className="member-avatar blue">
-                              {gm.memberName.slice(0, 1)}
-                            </div>
-                            <div>
-                              <strong>{gm.memberName}</strong>
-                              {gm.memberNickname && <small>ชื่อเล่น: {gm.memberNickname}</small>}
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={`role-chip ${gm.role === "leader" ? "purple" : gm.role === "assistant_leader" ? "blue" : gm.role === "host" ? "orange" : ""}`}>
-                            {ROLE_LABELS[gm.role] || gm.role}
+              <ul className="divide-y divide-[var(--color-divider)]">
+                {[...activeMembers, ...formerMembers].map((gm) => (
+                  <li
+                    key={gm.id}
+                    className="flex flex-wrap items-center gap-3 py-3"
+                  >
+                    <InitialsAvatar name={gm.memberName} size={40} />
+                    <div className="min-w-0 flex-1">
+                      <p className="type-caption-strong truncate text-[var(--color-ink)]">
+                        {gm.memberName}
+                        {gm.memberNickname ? (
+                          <span className="type-fine ml-1.5 font-normal text-[var(--color-text-tertiary)]">
+                            ({gm.memberNickname})
                           </span>
-                        </td>
-                        <td>
-                          <span className={`status-chip ${gm.status === "active" ? "good" : "muted"}`}>
-                            {gm.status === "active" ? "ปกติ" : "พ้นสภาพ"}
-                          </span>
-                        </td>
-                        <td style={{ fontSize: "11px", color: "#64748b" }}>
-                          {formatThaiDate(gm.lastAttendedAt)}
-                        </td>
-                        <td style={{ fontSize: "11px" }}>
-                          {new Date(gm.joinedAt).toLocaleDateString("th-TH")}
-                        </td>
-                        {canEditGroup(activeGroup) && (
-                          <td style={{ textAlign: "right" }}>
-                            {gm.status === "active" ? (
-                              <button
-                                className="danger-button"
-                                style={{ padding: "5px 9px", fontSize: "10px" }}
-                                onClick={() => handleRemoveMemberFromGroup(gm.memberId)}
-                                title="นำออกจากกลุ่ม (เปลี่ยนสถานะเป็น inactive)"
-                              >
-                                <span>นำออก</span>
-                              </button>
-                            ) : (
-                              <button
-                                className="blue-button"
-                                style={{ padding: "5px 9px", fontSize: "10px" }}
-                                onClick={() => handleReactivateMember(gm.memberId)}
-                                title="เปิดรับกลับเข้ากลุ่ม"
-                              >
-                                <span>รับกลับเข้ากลุ่ม</span>
-                              </button>
-                            )}
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        ) : null}
+                      </p>
+                      <p className="type-fine text-[var(--color-text-tertiary)]">
+                        เข้ากลุ่ม {formatThaiDate(gm.joinedAt)} · เข้าร่วมล่าสุด{" "}
+                        {formatThaiDate(gm.lastAttendedAt)}
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        <StatusChip
+                          tone={gm.role === "member" ? "neutral" : "info"}
+                        >
+                          {ROLE_LABELS[gm.role] ?? gm.role}
+                        </StatusChip>
+                        <StatusChip
+                          tone={gm.status === "active" ? "success" : "neutral"}
+                        >
+                          {gm.status === "active" ? "ปกติ" : "พ้นสภาพ"}
+                        </StatusChip>
+                      </div>
+                    </div>
+                    {canEditGroup(activeGroup) && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          gm.status === "active"
+                            ? handleRemoveMemberFromGroup(gm.memberId)
+                            : handleReactivateMember(gm.memberId)
+                        }
+                        className="type-caption-strong inline-flex min-h-11 items-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                      >
+                        {gm.status === "active" ? "นำออกจากกลุ่ม" : "รับกลับเข้ากลุ่ม"}
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
             )}
 
-            <div style={{ marginTop: "16px" }}>
-              <strong style={{ display: "block", color: "var(--ink)", marginBottom: 8, fontSize: 12 }}>
+            <section>
+              <h3 className="type-caption-strong mb-2 text-[var(--color-ink)]">
                 กิจกรรมพันธกิจล่าสุดของกลุ่ม
-              </strong>
+              </h3>
               <ActivityTimeline subjectType="group" subjectId={activeGroup.id} />
-            </div>
-
-            <div className="modal-actions" style={{ marginTop: "16px" }}>
-              <button className="cancel-button" onClick={() => setMembersModalOpen(false)}>
-                ปิดหน้าต่าง
-              </button>
-            </div>
+            </section>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Delete Confirmation Dialog */}
       {deleteTarget && (
         <ConfirmDialog
           title="ยืนยันการลบกลุ่ม"
           description={`คุณแน่ใจหรือไม่ว่าต้องการลบกลุ่ม "${deleteTarget.name}"? ระบบจะเปลี่ยนสถานะเป็นปิดกลุ่ม (Closed) โดยข้อมูลสมาชิกและประวัติการเข้าร่วมเดิมจะไม่สูญหาย`}
-          confirmLabel={deleting ? "กำลังลบ..." : "ลบกลุ่ม"}
+          confirmLabel={deleting ? "กำลังลบ…" : "ลบกลุ่ม"}
           isSubmitting={deleting}
           onConfirm={handleDeleteGroup}
           onCancel={() => setDeleteTarget(null)}

@@ -19,6 +19,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import { StatusChip } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 
@@ -118,24 +119,13 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "success"; data: MapGroup[] };
 
-function StatusChip({ status }: { status: string }) {
+/** Group status, presented with the one shared chip. */
+function GroupStatusChip({ status }: { status: string }) {
   const cfg = STATUS_LABELS[status] ?? {
     label: status,
     tone: "neutral" as const,
   };
-  const toneClass =
-    cfg.tone === "success"
-      ? "bg-[var(--color-success)]/10 text-[var(--color-success)]"
-      : cfg.tone === "warning"
-        ? "bg-[var(--color-warning)]/10 text-[var(--color-warning)]"
-        : "bg-[var(--color-canvas-soft)] text-[var(--color-body-muted)]";
-  return (
-    <span
-      className={`type-fine shrink-0 rounded-[var(--radius-xs)] px-2 py-1 font-semibold ${toneClass}`}
-    >
-      {cfg.label}
-    </span>
-  );
+  return <StatusChip tone={cfg.tone}>{cfg.label}</StatusChip>;
 }
 
 function CategoryChip({
@@ -170,7 +160,7 @@ function GroupDetailBody({ group }: { group: MapGroup }) {
   return (
     <div className="space-y-4 px-4 pb-4">
       <div className="flex flex-wrap items-center gap-2">
-        <StatusChip status={group.status} />
+        <GroupStatusChip status={group.status} />
         <span className="type-caption text-[var(--color-body-muted)]">
           {CATEGORY_LABELS[group.category] ?? group.category}
         </span>
@@ -509,7 +499,7 @@ export default function MapPage() {
                           <p className="type-body-strong text-[var(--color-ink)]">
                             {group.name}
                           </p>
-                          <StatusChip status={group.status} />
+                          <GroupStatusChip status={group.status} />
                         </div>
                         <p className="type-caption text-[var(--color-body-muted)]">
                           {CATEGORY_LABELS[group.category] ?? group.category}

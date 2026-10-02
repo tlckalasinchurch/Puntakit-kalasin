@@ -1,9 +1,17 @@
-import { useState } from "react";
-import { AlertCircle, HeartHandshake, Pencil, Plus, Trash2, User } from "lucide-react";
+import { useId, useState } from "react";
+import { HeartHandshake, Pencil, Plus, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CardGridSkeleton } from "@/components/LoadingStates";
+import {
+  EmptyState,
+  ErrorState,
+  Field,
+  Modal,
+  PageHeader,
+  StatusChip,
+} from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useResource } from "@/hooks/useResource";
@@ -22,6 +30,18 @@ interface Ministry {
 
 const EMPTY_FORM = { name: "", description: "", leader: "", status: "active" as Ministry["status"] };
 
+const CONTROL_CLASS =
+  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+
+const PRIMARY_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+
+const SECONDARY_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+
+const DANGER_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-error)] bg-[var(--color-canvas)] px-4 text-sm font-semibold text-[var(--color-error)] transition-colors hover:bg-[var(--color-error)]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-error)] disabled:opacity-50";
+
 export default function Ministries() {
   const { user } = useAuth();
   // Mirrors the server's `requireAdmin` (shared/roles.ts ADMIN_ROLES).
@@ -34,6 +54,8 @@ export default function Ministries() {
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Ministry | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Modal footer buttons submit the form by id.
+  const formId = `ministry-form-${useId().replace(/:/g, "")}`;
 
   const openCreate = () => {
     setEditing(null);
@@ -82,111 +104,144 @@ export default function Ministries() {
 
   return (
     <AppLayout>
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow blue-eyebrow">MINISTRY</span>
-          <h1>พันธกิจ</h1>
-          <p>จัดการทีมพันธกิจและผู้รับผิดชอบ</p>
-        </div>
-        {isAdmin && (
-          <button className="primary-action" onClick={openCreate}>
-            <Plus size={ICON_SIZE.sm} /> เพิ่มพันธกิจ
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="พันธกิจ"
+        description="จัดการทีมพันธกิจและผู้รับผิดชอบ"
+        primaryAction={isAdmin ? { label: "เพิ่มพันธกิจ", icon: Plus, onClick: openCreate } : undefined}
+      />
 
-      <section className="member-panel card-surface">
+      <section className="card-surface p-4 sm:p-5">
         {isLoading ? (
           <CardGridSkeleton count={6} />
         ) : error ? (
-          <div className="state-panel error-panel">
-            <AlertCircle size={ICON_SIZE["2xl"]} />
-            <h3>โหลดข้อมูลไม่สำเร็จ</h3>
-            <p>{error}</p>
-            <button className="retry-button" onClick={reload}>
-              ลองใหม่
-            </button>
-          </div>
+          <ErrorState technical={error} onRetry={reload} />
         ) : items.length === 0 ? (
-          <div className="state-panel">
-            <HeartHandshake size={ICON_SIZE["2xl"]} />
-            <h3>ยังไม่มีพันธกิจ</h3>
-            <p>{isAdmin ? "เริ่มเพิ่มพันธกิจแรกของคุณ" : "รอผู้ดูแลระบบเพิ่มพันธกิจ"}</p>
-          </div>
+          <EmptyState
+            inset
+            icon={HeartHandshake}
+            title="ยังไม่มีพันธกิจ"
+            description={
+              isAdmin
+                ? "เริ่มเพิ่มพันธกิจแรกของคริสตจักร เพื่อให้ทีมเห็นผู้รับผิดชอบและสถานะได้ชัดเจน"
+                : "รอผู้ดูแลระบบเพิ่มพันธกิจ"
+            }
+            action={isAdmin ? { label: "เพิ่มพันธกิจ", icon: Plus, onClick: openCreate } : undefined}
+          />
         ) : (
-          <div className="ministry-grid" style={{ padding: 16 }}>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {items.map((m) => (
-              <div className="entity-card" key={m.id}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
-                  <h3>{m.name}</h3>
-                  <span className={`status-chip ${m.status === "active" ? "good" : "attention"}`}>
+              <article
+                key={m.id}
+                className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="type-body-strong min-w-0 text-[var(--color-ink)]">{m.name}</h2>
+                  <StatusChip tone={m.status === "active" ? "success" : "neutral"}>
                     {m.status === "active" ? "ดำเนินการอยู่" : "หยุดชั่วคราว"}
-                  </span>
+                  </StatusChip>
                 </div>
-                {m.description && <p>{m.description}</p>}
+                {m.description && (
+                  <p className="type-caption text-[var(--color-body-muted)]">{m.description}</p>
+                )}
                 {m.leader && (
-                  <div className="entity-meta">
-                    <span>
-                      <User size={ICON_SIZE.xs} /> ผู้นำ: {m.leader}
-                    </span>
-                  </div>
+                  <p className="type-fine flex items-center gap-1.5 text-[var(--color-body-muted)]">
+                    <User size={ICON_SIZE.xs} aria-hidden="true" /> ผู้นำ: {m.leader}
+                  </p>
                 )}
                 {isAdmin && (
-                  <div className="entity-actions">
-                    <button className="cancel-button" onClick={() => openEdit(m)}>
-                      <Pencil size={ICON_SIZE.sm} /> แก้ไข
+                  <div className="mt-auto flex flex-wrap gap-2 pt-1">
+                    <button type="button" className={SECONDARY_BUTTON_CLASS} onClick={() => openEdit(m)}>
+                      <Pencil size={ICON_SIZE.sm} aria-hidden="true" /> แก้ไข
                     </button>
-                    <button className="danger-button" onClick={() => setDeleteTarget(m)}>
-                      <Trash2 size={ICON_SIZE.sm} /> ลบ
+                    <button type="button" className={DANGER_BUTTON_CLASS} onClick={() => setDeleteTarget(m)}>
+                      <Trash2 size={ICON_SIZE.sm} aria-hidden="true" /> ลบ
                     </button>
                   </div>
                 )}
-              </div>
+              </article>
             ))}
           </div>
         )}
       </section>
 
-      {formOpen && (
-        <div className="modal-backdrop" onClick={() => setFormOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: "0 0 14px" }}>{editing ? "แก้ไขพันธกิจ" : "เพิ่มพันธกิจ"}</h3>
-            <form className="form-grid" onSubmit={handleSubmit}>
-              <label className="full-field">
-                ชื่อพันธกิจ
-                <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              </label>
-              <label>
-                ผู้นำ
-                <input value={form.leader} onChange={(e) => setForm({ ...form, leader: e.target.value })} />
-              </label>
-              <label>
-                สถานะ
-                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as Ministry["status"] })}>
+      <Modal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        title={editing ? "แก้ไขพันธกิจ" : "เพิ่มพันธกิจ"}
+        footer={
+          <>
+            <button
+              type="button"
+              className={SECONDARY_BUTTON_CLASS}
+              onClick={() => setFormOpen(false)}
+              disabled={submitting}
+            >
+              ยกเลิก
+            </button>
+            <button type="submit" form={formId} className={PRIMARY_BUTTON_CLASS} disabled={submitting}>
+              {submitting ? "กำลังบันทึก..." : "บันทึก"}
+            </button>
+          </>
+        }
+      >
+        <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <Field label="ชื่อพันธกิจ" required>
+            {(props) => (
+              <input
+                id={props.id}
+                aria-describedby={props["aria-describedby"]}
+                aria-invalid={props["aria-invalid"]}
+                required
+                className={CONTROL_CLASS}
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            )}
+          </Field>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="ผู้นำ">
+              {(props) => (
+                <input
+                  id={props.id}
+                  aria-describedby={props["aria-describedby"]}
+                  aria-invalid={props["aria-invalid"]}
+                  className={CONTROL_CLASS}
+                  value={form.leader}
+                  onChange={(e) => setForm({ ...form, leader: e.target.value })}
+                />
+              )}
+            </Field>
+            <Field label="สถานะ">
+              {(props) => (
+                <select
+                  id={props.id}
+                  aria-describedby={props["aria-describedby"]}
+                  aria-invalid={props["aria-invalid"]}
+                  className={CONTROL_CLASS}
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value as Ministry["status"] })}
+                >
                   <option value="active">ดำเนินการอยู่</option>
                   <option value="inactive">หยุดชั่วคราว</option>
                 </select>
-              </label>
-              <label className="full-field">
-                รายละเอียด
-                <textarea
-                  rows={4}
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                />
-              </label>
-              <div className="modal-actions full-field">
-                <button type="button" className="cancel-button" onClick={() => setFormOpen(false)}>
-                  ยกเลิก
-                </button>
-                <button type="submit" className="primary-action" disabled={submitting}>
-                  {submitting ? "กำลังบันทึก..." : "บันทึก"}
-                </button>
-              </div>
-            </form>
+              )}
+            </Field>
           </div>
-        </div>
-      )}
+          <Field label="รายละเอียด">
+            {(props) => (
+              <textarea
+                id={props.id}
+                aria-describedby={props["aria-describedby"]}
+                aria-invalid={props["aria-invalid"]}
+                rows={4}
+                className={CONTROL_CLASS}
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
+            )}
+          </Field>
+        </form>
+      </Modal>
 
       {deleteTarget && (
         <ConfirmDialog

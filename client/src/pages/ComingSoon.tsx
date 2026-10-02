@@ -1,5 +1,5 @@
-import { ArrowLeft, Bell, BookOpen, Settings, Sparkles } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import { ArrowLeft, Bell, BookOpen, Settings } from "lucide-react";
+import { useLocation } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 
@@ -12,19 +12,28 @@ const pages: Record<string, { title: string; description: string; icon: typeof B
 };
 
 export default function ComingSoon() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const page = pages[location] ?? pages["/settings"];
   const Icon = page.icon;
   return (
     <AppLayout>
       <div className="coming-soon-page">
         <div className="coming-soon-card card-surface">
-          <span className="coming-soon-icon"><Icon size={32} /></span>
-          <span className="eyebrow">PUNTAKIT WORKSPACE</span>
+          <span className="coming-soon-icon" aria-hidden="true">
+            <Icon size={32} />
+          </span>
           <h1>{page.title}</h1>
           <p>{page.description}</p>
-          <div className="coming-soon-note"><Sparkles size={ICON_SIZE.sm} /> หน้านี้กำลังเตรียมข้อมูลให้พร้อมใช้งาน</div>
-          <Link href="/" className="primary-action"><ArrowLeft size={ICON_SIZE.sm} /> กลับหน้าหลัก</Link>
+          <p className="type-caption text-[var(--color-body-muted)]">
+            หน้านี้กำลังเตรียมข้อมูลให้พร้อมใช้งาน
+          </p>
+          <button
+            type="button"
+            className="primary-action min-h-11"
+            onClick={() => navigate("/")}
+          >
+            <ArrowLeft size={ICON_SIZE.sm} aria-hidden="true" /> กลับหน้าหลัก
+          </button>
         </div>
       </div>
     </AppLayout>

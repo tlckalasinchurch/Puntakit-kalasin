@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import {
-  AlertCircle,
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Download,
-  Eye,
-  Heart,
   Pencil,
-  QrCode,
+  Plus,
   Search,
   ShieldCheck,
   Trash2,
@@ -22,6 +18,17 @@ import QRCode from "qrcode";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TableSkeleton } from "@/components/LoadingStates";
+import {
+  EmptyState,
+  ErrorState,
+  Field,
+  FormError,
+  InitialsAvatar,
+  Modal,
+  PageHeader,
+  StatusChip,
+  type StatusTone,
+} from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError, type ApiMeta } from "@/lib/api";
@@ -33,14 +40,18 @@ import {
   MEMBER_UPDATE_ROLES,
   hasRole,
 } from "@shared/roles";
-// Thai labels live in shared/labels.ts (same map the Member PWA renders),
-// so admin and member surfaces can never show different words for a status.
-const MEMBERSHIP_STATUS_TONES: Record<MembershipStatus, string> = {
-  active: "green",
-  visitor: "blue",
-  candidate: "orange",
-  transferred: "purple",
-  inactive: "pink",
+import { useLocation } from "wouter";
+
+// Thai labels live in shared/labels.ts (same map the Member PWA renders), so
+// admin and member surfaces can never show different words for a status.
+// Tones come from the fixed semantic palette in design.md §2 — a membership
+// status is never expressed as an arbitrary colour choice.
+const MEMBERSHIP_STATUS_TONES: Record<MembershipStatus, StatusTone> = {
+  active: "success",
+  visitor: "info",
+  candidate: "warning",
+  transferred: "neutral",
+  inactive: "error",
 };
 
 interface Member {
@@ -91,20 +102,70 @@ const EMPTY_FORM = {
   notes: "",
 };
 
-const tones = ["blue", "pink", "orange", "purple", "green"] as const;
-function toneFor(name: string) {
-  let sum = 0;
-  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
-  return tones[sum % tones.length];
-}
-
 function formatDate(iso: string | null) {
   if (!iso) return "-";
-  return new Date(iso).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(iso).toLocaleDateString("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+const INPUT_CLASS =
+  "min-h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-base text-[var(--color-ink)] placeholder:text-[var(--color-text-quaternary)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-focus)]/30";
+const SELECT_CLASS = `${INPUT_CLASS} pr-8`;
+
+/** One person, as a card. The mobile-primary presentation of a member row. */
+function MemberCard({
+  member,
+  onOpen,
+}: {
+  member: Member;
+  onOpen: () => void;
+}) {
+  const membershipLabel =
+    MEMBERSHIP_STATUS_LABELS[member.membershipStatus] ?? member.membershipStatus;
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex w-full min-h-11 items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 text-left transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+      >
+        <InitialsAvatar name={member.name} />
+        <span className="min-w-0 flex-1">
+          <span className="type-body-strong block truncate text-[var(--color-ink)]">
+            {member.name}
+            {member.nickname ? ` (${member.nickname})` : ""}
+          </span>
+          <span className="type-caption mt-0.5 block truncate text-[var(--color-body-muted)]">
+            {member.phone || member.email || "ยังไม่มีข้อมูลติดต่อ"}
+          </span>
+          <span className="mt-2 flex flex-wrap items-center gap-1.5">
+            <StatusChip tone={MEMBERSHIP_STATUS_TONES[member.membershipStatus]}>
+              {membershipLabel}
+            </StatusChip>
+            <StatusChip
+              tone={member.status === "ติดตามแล้ว" ? "success" : "warning"}
+            >
+              {member.status}
+            </StatusChip>
+          </span>
+          <span className="type-fine mt-2 block text-[var(--color-text-tertiary)]">
+            {member.area ? `${member.area} · ` : ""}
+            {member.group || "ยังไม่มีกลุ่ม"} · เข้าร่วม{" "}
+            {formatDate(member.joinedAt)}
+          </span>
+        </span>
+      </button>
+    </li>
+  );
 }
 
 export default function Members() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   // Gates mirror the server route gates exactly, from the shared sets in
   // shared/roles.ts: POST /api/members takes MEMBER_CREATE_ROLES, PUT
   // /api/members/:id and the CSV export take MEMBER_UPDATE_ROLES, DELETE and
@@ -119,6 +180,7 @@ export default function Members() {
   const [meta, setMeta] = useState<ApiMeta>({ page: 1, limit: 15, total: 0, totalPages: 1 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
   const [area, setArea] = useState("ทั้งหมด");
@@ -131,6 +193,8 @@ export default function Members() {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
@@ -150,6 +214,7 @@ export default function Members() {
     async (pageToLoad: number = 1) => {
       setIsLoading(true);
       setError(null);
+      setErrorTechnical(null);
       try {
         const params = new URLSearchParams();
         params.set("page", String(pageToLoad));
@@ -163,7 +228,14 @@ export default function Members() {
         setMembers(res.data || []);
         if (res.meta) setMeta(res.meta);
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : "โหลดข้อมูลสมาชิกไม่สำเร็จ");
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "โหลดข้อมูลสมาชิกไม่สำเร็จ"
+        );
+        setErrorTechnical(
+          err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err)
+        );
       } finally {
         setIsLoading(false);
       }
@@ -213,6 +285,8 @@ export default function Members() {
     setEditing(null);
     setForm(EMPTY_FORM);
     setDuplicateWarning(null);
+    setFormError(null);
+    setNameError(null);
     setFormOpen(true);
   };
 
@@ -239,11 +313,22 @@ export default function Members() {
       notes: m.notes ?? "",
     });
     setDuplicateWarning(null);
+    setFormError(null);
+    setNameError(null);
     setFormOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+    setNameError(null);
+
+    // Inline validation, close to the field it belongs to (prompt §11).
+    if (!form.name.trim()) {
+      setNameError("กรุณากรอกชื่อ-นามสกุลของสมาชิก");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
@@ -254,15 +339,18 @@ export default function Members() {
 
       if (editing) {
         await api.put(`/api/members/${editing.id}`, payload);
-        toast.success("บันทึกการแก้ไขสมาชิกแล้ว");
+        toast.success("บันทึกการแก้ไขข้อมูลสมาชิกแล้ว");
       } else {
         await api.post("/api/members", payload);
-        toast.success("เพิ่มสมาชิกใหม่เรียบร้อยแล้ว");
+        toast.success(`เพิ่ม ${form.name} เข้าเป็นสมาชิกเรียบร้อยแล้ว`);
       }
       setFormOpen(false);
       loadMembers(meta.page);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "บันทึกข้อมูลไม่สำเร็จ";
+      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -285,133 +373,88 @@ export default function Members() {
 
   const handleExportCsv = () => {
     window.open("/api/members/export/csv", "_blank");
-    toast.info("กำลังเริ่มดาวน์โหลดไฟล์ CSV...");
+    toast.info("กำลังเริ่มดาวน์โหลดไฟล์ CSV…");
   };
 
-  const followedUpCount = members.filter((m) => m.status === "ติดตามแล้ว").length;
-  const needFollowUpCount = members.filter((m) => m.status === "ต้องติดตาม").length;
-  const areaOptions = Array.from(new Set(members.map((member) => member.area).filter(Boolean))) as string[];
+  const handleCreateFollowUp = async () => {
+    if (!selectedMember) return;
+    try {
+      await api.post("/api/follow-ups", {
+        title: `ติดตาม: ${selectedMember.name}`,
+        subjectMemberId: selectedMember.id,
+      });
+      toast.success("สร้างรายการติดตามแล้ว");
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "สร้างรายการติดตามไม่สำเร็จ"
+      );
+    }
+  };
+
+  const areaOptions = Array.from(
+    new Set(members.map((member) => member.area).filter(Boolean))
+  ) as string[];
+
+  const hasFilters =
+    query.trim() !== "" ||
+    area !== "ทั้งหมด" ||
+    status !== "ทั้งหมด" ||
+    membershipStatus !== "ทั้งหมด";
+
+  const resetFilters = () => {
+    setQuery("");
+    setArea("ทั้งหมด");
+    setStatus("ทั้งหมด");
+    setMembershipStatus("ทั้งหมด");
+  };
 
   return (
     <AppLayout>
-      {/* Page Heading */}
-      <div className="member-page-hero mb-6 flex flex-col gap-5 rounded-[24px] border border-blue-100 px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-        <div>
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700">
-            <Users size={13} /> CHURCH MEMBERS
-          </span>
-          <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-[var(--color-primary)] sm:text-3xl">
-            จัดการสมาชิก
-          </h1>
-          <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-600 sm:text-sm">
-            ค้นหา ดูแล และเชื่อมโยงสมาชิกกับกลุ่มย่อยได้จากพื้นที่เดียว
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {canManage && (
-            <button
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
-              type="button"
-              onClick={handleExportCsv}
-            >
-              <Download size={ICON_SIZE.sm} /> Export CSV
-            </button>
-          )}
-          {canCreate && (
-            <button
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs"
-              type="button"
-              onClick={openCreate}
-            >
-              <UserPlus size={ICON_SIZE.sm} /> เพิ่มสมาชิก
-            </button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="สมาชิก"
+        description="ค้นหา ดูแล และเชื่อมโยงสมาชิกกับกลุ่มแคร์ได้จากที่เดียว"
+        primaryAction={
+          canCreate
+            ? { label: "เพิ่มสมาชิก", icon: UserPlus, onClick: openCreate }
+            : undefined
+        }
+        secondaryActions={
+          canManage
+            ? [
+                {
+                  label: "ดาวน์โหลด CSV",
+                  icon: Download,
+                  onClick: handleExportCsv,
+                },
+              ]
+            : undefined
+        }
+      />
 
-      {/* TailAdmin 4-Card Summary */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <div className="tailadmin-card p-4 sm:p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              สมาชิกในระบบ
-            </span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-              <Users size={ICON_SIZE.md} />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-800">
-              {meta.total}
-            </span>
-            <span className="text-xs text-slate-500 font-medium">คน</span>
-          </div>
-        </div>
-
-        <div className="tailadmin-card p-4 sm:p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              ติดตามแล้ว
-            </span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-              <Heart size={ICON_SIZE.md} />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-800">
-              {followedUpCount}
-            </span>
-            <span className="text-xs text-slate-500 font-medium">คนในหน้านี้</span>
-          </div>
-        </div>
-
-        <div className="tailadmin-card p-4 sm:p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              ต้องติดตาม
-            </span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-              <AlertCircle size={ICON_SIZE.md} />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-800">
-              {needFollowUpCount}
-            </span>
-            <span className="text-xs text-slate-500 font-medium">คนในหน้านี้</span>
-          </div>
-        </div>
-
-        <div className="tailadmin-card p-4 sm:p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              หน้าปัจจุบัน
-            </span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
-              <CalendarDays size={ICON_SIZE.md} />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-800">
-              {meta.page}
-            </span>
-            <span className="text-xs text-slate-500 font-medium">จาก {meta.totalPages} หน้า</span>
-          </div>
-        </div>
-      </div>
-
-      {/* TailAdmin Table Card */}
-      <section className="tailadmin-card overflow-hidden border-blue-100 shadow-[0_12px_32px_rgba(36,92,146,0.07)]">
-        {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-blue-100 bg-[#f7fbff] p-4 sm:p-5">
-          <div className="relative flex-1 min-w-[240px]">
-            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-              <Search size={ICON_SIZE.sm} />
-            </span>
+      {/* Filters. The three selects are real labelled controls rather than
+          text labels sitting next to unlabelled selects (audit §3.1). */}
+      <div className="mb-4 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="min-w-0 flex-1 sm:min-w-60">
+          <label
+            htmlFor="members-search"
+            className="type-caption-strong block text-[var(--color-ink)]"
+          >
+            ค้นหาสมาชิก
+          </label>
+          <div className="relative mt-1.5">
+            <Search
+              size={ICON_SIZE.sm}
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-quaternary)]"
+            />
             <input
-              type="text"
-              className="w-full rounded-2xl border border-blue-100 bg-white py-3 pl-10 pr-9 text-xs text-slate-800 shadow-[0_6px_18px_rgba(36,92,146,0.05)] placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:text-sm"
-              placeholder="ค้นหาชื่อ, ชื่อเล่น, เบอร์โทร หรืออีเมล..."
+              id="members-search"
+              type="search"
+              inputMode="search"
+              autoComplete="off"
+              spellCheck={false}
+              className={`${INPUT_CLASS} pl-9 pr-9`}
+              placeholder="ชื่อ ชื่อเล่น เบอร์โทร หรืออีเมล…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -419,562 +462,802 @@ export default function Members() {
               <button
                 type="button"
                 onClick={() => setQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                aria-label="ล้างคำค้นหา"
+                className="absolute right-1.5 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
               >
-                <X size={ICON_SIZE.xs} />
+                <X size={ICON_SIZE.xs} aria-hidden="true" />
               </button>
             )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-slate-500">พื้นที่:</span>
-            <select
-              value={area}
-              onChange={(e) => setArea(e.target.value)}
-              className="rounded-xl border border-blue-100 bg-white px-3 py-2.5 text-xs text-slate-700 focus:border-blue-500 focus:outline-none"
-            >
-              <option value="ทั้งหมด">ทุกพื้นที่</option>
-              {areaOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-slate-500">สถานะ:</span>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 focus:border-blue-500 focus:outline-none"
-            >
-              <option value="ทั้งหมด">ทั้งหมด</option>
-              <option value="ติดตามแล้ว">ติดตามแล้ว</option>
-              <option value="ต้องติดตาม">ต้องติดตาม</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-slate-500">ประเภทสมาชิก:</span>
-            <select
-              value={membershipStatus}
-              onChange={(e) => setMembershipStatus(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs text-slate-700 focus:border-blue-500 focus:outline-none"
-            >
-              <option value="ทั้งหมด">ทั้งหมด</option>
-              <option value="active">สมาชิกประจำ</option>
-              <option value="visitor">ผู้สนใจ/เยี่ยมเยียน</option>
-              <option value="candidate">ผู้เตรียมรับเชื่อ</option>
-              <option value="transferred">ย้ายคริสตจักร</option>
-              <option value="inactive">ขาดการติดต่อ</option>
-            </select>
           </div>
         </div>
 
-        {error && (
-          <div className="p-10 text-center text-rose-600">
-            <AlertCircle size={ICON_SIZE.xl} className="mx-auto mb-2 text-rose-500" />
-            <h3 className="font-bold text-sm">เกิดข้อผิดพลาด</h3>
-            <p className="text-xs text-slate-500 mt-1">{error}</p>
-            <button
-              className="mt-4 rounded-xl bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-100"
-              onClick={() => loadMembers(meta.page)}
-            >
-              ลองใหม่อีกครั้ง
-            </button>
-          </div>
-        )}
+        <div className="w-full sm:w-auto">
+          <label
+            htmlFor="members-area"
+            className="type-caption-strong block text-[var(--color-ink)]"
+          >
+            พื้นที่
+          </label>
+          <select
+            id="members-area"
+            value={area}
+            onChange={(e) => setArea(e.target.value)}
+            className={`${SELECT_CLASS} mt-1.5 sm:w-40`}
+          >
+            <option value="ทั้งหมด">ทุกพื้นที่</option>
+            {areaOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        {isLoading && !error && <TableSkeleton rows={6} />}
+        <div className="w-full sm:w-auto">
+          <label
+            htmlFor="members-status"
+            className="type-caption-strong block text-[var(--color-ink)]"
+          >
+            การติดตาม
+          </label>
+          <select
+            id="members-status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className={`${SELECT_CLASS} mt-1.5 sm:w-40`}
+          >
+            <option value="ทั้งหมด">ทุกสถานะ</option>
+            <option value="ติดตามแล้ว">ติดตามแล้ว</option>
+            <option value="ต้องติดตาม">ต้องติดตาม</option>
+          </select>
+        </div>
 
-        {!isLoading && !error && (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200/80 bg-slate-50/75 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    <th className="py-3.5 px-4">สมาชิก</th>
-                    <th className="py-3.5 px-4">เพศ / วันเกิด</th>
-                    <th className="py-3.5 px-4">เบอร์โทร</th>
-                    <th className="py-3.5 px-4">สถานะสมาชิก</th>
-                    <th className="py-3.5 px-4">พื้นที่ / กลุ่ม</th>
-                    <th className="py-3.5 px-4">การติดตาม</th>
-                    <th className="py-3.5 px-4">วันที่เริ่ม</th>
-                    <th className="py-3.5 px-4 text-right">จัดการ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {members.map((m) => {
-                    const tone = toneFor(m.name);
-                    const memLabel =
-                      MEMBERSHIP_STATUS_LABELS[m.membershipStatus] ?? m.membershipStatus;
-                    const memTone = MEMBERSHIP_STATUS_TONES[m.membershipStatus] ?? "blue";
-                    return (
-                      <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
-                              {m.name.slice(0, 1)}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-slate-800 truncate">
-                                {m.name} {m.nickname ? `(${m.nickname})` : ""}
-                              </p>
-                              <p className="text-[11px] text-slate-400 truncate">
-                                {m.email || m.role}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-slate-600">
-                          <span>{m.gender === "male" ? "ชาย" : m.gender === "female" ? "หญิง" : "-"}</span>
-                          <small className="block text-slate-400 text-[10px]">{formatDate(m.birthDate)}</small>
-                        </td>
-                        <td className="py-3 px-4 font-mono text-slate-700">{m.phone || "-"}</td>
-                        <td className="py-3 px-4">
-                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                            memTone === "green"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : memTone === "orange"
-                              ? "bg-amber-50 text-amber-700"
-                              : "bg-blue-50 text-blue-700"
-                          }`}>
-                            {memLabel}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-slate-600">
-                          <div className="font-medium text-slate-800">{m.area || "-"}</div>
-                          <small className="text-slate-400 text-[10px]">{m.group || "ยังไม่มีกลุ่ม"}</small>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                              m.status === "ติดตามแล้ว"
-                                ? "bg-emerald-50 text-emerald-700"
-                                : "bg-amber-50 text-amber-700"
-                            }`}
+        <div className="w-full sm:w-auto">
+          <label
+            htmlFor="members-membership"
+            className="type-caption-strong block text-[var(--color-ink)]"
+          >
+            ประเภทสมาชิก
+          </label>
+          <select
+            id="members-membership"
+            value={membershipStatus}
+            onChange={(e) => setMembershipStatus(e.target.value)}
+            className={`${SELECT_CLASS} mt-1.5 sm:w-44`}
+          >
+            <option value="ทั้งหมด">ทุกประเภท</option>
+            <option value="active">สมาชิกประจำ</option>
+            <option value="visitor">ผู้สนใจ/เยี่ยมเยียน</option>
+            <option value="candidate">ผู้เตรียมรับเชื่อ</option>
+            <option value="transferred">ย้ายคริสตจักร</option>
+            <option value="inactive">ขาดการติดต่อ</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Result summary: one useful sentence instead of four KPI cards. */}
+      {!isLoading && !error && (
+        <p className="type-caption mb-3 text-[var(--color-body-muted)]" role="status">
+          พบสมาชิก {meta.total.toLocaleString("th-TH")} คน
+          {meta.totalPages > 1
+            ? ` · หน้า ${meta.page} จาก ${meta.totalPages}`
+            : ""}
+        </p>
+      )}
+
+      {error ? (
+        <ErrorState
+          title="โหลดรายชื่อสมาชิกไม่สำเร็จ"
+          description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+          technical={errorTechnical ?? undefined}
+          onRetry={() => loadMembers(meta.page)}
+        />
+      ) : isLoading ? (
+        <div role="status" aria-label="กำลังโหลดรายชื่อสมาชิก">
+          <TableSkeleton rows={6} />
+        </div>
+      ) : members.length === 0 ? (
+        hasFilters ? (
+          <EmptyState
+            icon={Search}
+            title="ไม่พบสมาชิกที่ตรงกับเงื่อนไข"
+            description="ลองเปลี่ยนคำค้นหา หรือล้างตัวกรองเพื่อดูรายชื่อทั้งหมด"
+            action={{ label: "ล้างตัวกรอง", onClick: resetFilters }}
+          />
+        ) : (
+          <EmptyState
+            icon={Users}
+            title="ยังไม่มีสมาชิกในระบบ"
+            description="เพิ่มสมาชิกคนแรกเพื่อเริ่มบันทึกการดูแลและติดตาม"
+            action={
+              canCreate
+                ? { label: "เพิ่มสมาชิก", icon: UserPlus, onClick: openCreate }
+                : undefined
+            }
+          />
+        )
+      ) : (
+        <>
+          {/* Mobile (< md): one card per person — no horizontal scrolling. */}
+          <ul className="flex flex-col gap-3 md:hidden">
+            {members.map((member) => (
+              <MemberCard
+                key={member.id}
+                member={member}
+                onOpen={() => setSelectedMember(member)}
+              />
+            ))}
+          </ul>
+
+          {/* Desktop (>= md): the full comparison table. */}
+          <div className="hidden overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] md:block">
+            <table className="w-full border-collapse text-left">
+              <caption className="sr-only">
+                รายชื่อสมาชิก พร้อมสถานะสมาชิก การติดตาม พื้นที่และกลุ่ม
+              </caption>
+              <thead>
+                <tr className="border-b border-[var(--color-hairline)] bg-[var(--color-canvas-soft)]">
+                  <th scope="col" className="type-fine px-4 py-3 font-semibold text-[var(--color-text-tertiary)]">
+                    สมาชิก
+                  </th>
+                  <th scope="col" className="type-fine px-4 py-3 font-semibold text-[var(--color-text-tertiary)]">
+                    ติดต่อ
+                  </th>
+                  <th scope="col" className="type-fine px-4 py-3 font-semibold text-[var(--color-text-tertiary)]">
+                    ประเภทสมาชิก
+                  </th>
+                  <th scope="col" className="type-fine px-4 py-3 font-semibold text-[var(--color-text-tertiary)]">
+                    พื้นที่ / กลุ่ม
+                  </th>
+                  <th scope="col" className="type-fine px-4 py-3 font-semibold text-[var(--color-text-tertiary)]">
+                    การติดตาม
+                  </th>
+                  <th scope="col" className="type-fine px-4 py-3 font-semibold text-[var(--color-text-tertiary)]">
+                    เข้าร่วมเมื่อ
+                  </th>
+                  <th scope="col" className="type-fine px-4 py-3 text-right font-semibold text-[var(--color-text-tertiary)]">
+                    จัดการ
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-divider)]">
+                {members.map((m) => (
+                  <tr
+                    key={m.id}
+                    className="transition-colors hover:bg-[var(--color-canvas-soft)]"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <InitialsAvatar name={m.name} size={36} />
+                        <div className="min-w-0">
+                          <p className="type-caption-strong truncate text-[var(--color-ink)]">
+                            {m.name} {m.nickname ? `(${m.nickname})` : ""}
+                          </p>
+                          <p className="type-fine truncate text-[var(--color-text-tertiary)]">
+                            {m.gender === "male"
+                              ? "ชาย"
+                              : m.gender === "female"
+                                ? "หญิง"
+                                : "ไม่ระบุเพศ"}
+                            {m.birthDate ? ` · เกิด ${formatDate(m.birthDate)}` : ""}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="type-caption text-[var(--color-text-secondary)]">
+                        {m.phone || "-"}
+                      </p>
+                      <p className="type-fine truncate text-[var(--color-text-tertiary)]">
+                        {m.email || m.lineId || "ไม่มีช่องทางอื่น"}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusChip
+                        tone={MEMBERSHIP_STATUS_TONES[m.membershipStatus]}
+                      >
+                        {MEMBERSHIP_STATUS_LABELS[m.membershipStatus] ??
+                          m.membershipStatus}
+                      </StatusChip>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="type-caption text-[var(--color-text-secondary)]">
+                        {m.area || "-"}
+                      </p>
+                      <p className="type-fine text-[var(--color-text-tertiary)]">
+                        {m.group || "ยังไม่มีกลุ่ม"}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusChip
+                        tone={m.status === "ติดตามแล้ว" ? "success" : "warning"}
+                      >
+                        {m.status}
+                      </StatusChip>
+                    </td>
+                    <td className="type-caption px-4 py-3 tabular-nums text-[var(--color-text-secondary)]">
+                      {formatDate(m.joinedAt)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          className="flex size-11 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                          onClick={() => setSelectedMember(m)}
+                          aria-label={`ดูข้อมูลของ ${m.name}`}
+                        >
+                          <Search size={ICON_SIZE.sm} aria-hidden="true" />
+                        </button>
+                        {canManage && (
+                          <button
+                            type="button"
+                            className="flex size-11 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                            onClick={() => openEdit(m)}
+                            aria-label={`แก้ไขข้อมูลของ ${m.name}`}
                           >
-                            {m.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-slate-500">{formatDate(m.joinedAt)}</td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition-colors"
-                              onClick={() => setSelectedMember(m)}
-                              title="ดูข้อมูลละเอียด"
-                              aria-label="ดูข้อมูลละเอียด"
-                            >
-                              <Eye size={ICON_SIZE.sm} />
-                            </button>
-                            {canManage && (
-                              <button
-                                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
-                                onClick={() => openEdit(m)}
-                                title="แก้ไขข้อมูล"
-                                aria-label="แก้ไขข้อมูล"
-                              >
-                                <Pencil size={ICON_SIZE.sm} />
-                              </button>
-                            )}
-                            {canDelete && (
-                              <button
-                                className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
-                                onClick={() => setDeleteTarget(m)}
-                                title="ลบสมาชิก"
-                                aria-label="ลบสมาชิก"
-                              >
-                                <Trash2 size={ICON_SIZE.sm} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            <Pencil size={ICON_SIZE.sm} aria-hidden="true" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            type="button"
+                            className="flex size-11 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-error-soft)] hover:text-[var(--color-error)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                            onClick={() => setDeleteTarget(m)}
+                            aria-label={`ลบ ${m.name}`}
+                          >
+                            <Trash2 size={ICON_SIZE.sm} aria-hidden="true" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-              {members.length === 0 && (
-                <div className="p-12 text-center text-slate-400">
-                  <Users size={40} className="mx-auto text-slate-300 mb-2" />
-                  <h3 className="font-semibold text-slate-700 text-sm">ไม่พบสมาชิก</h3>
-                  <p className="text-xs text-slate-400 mt-1">ลองเปลี่ยนคำค้นหาหรือตัวกรองดูอีกครั้ง</p>
-                </div>
-              )}
-            </div>
-
-            {/* Pagination Controls */}
-            {meta.totalPages > 1 && (
-              <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-                <span>
-                  แสดงผล {members.length} รายการ (จากทั้งหมด {meta.total} รายการ)
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 font-medium hover:bg-slate-50 disabled:opacity-50 transition-colors"
-                    disabled={meta.page <= 1}
-                    onClick={() => loadMembers(meta.page - 1)}
-                  >
-                    <ChevronLeft size={ICON_SIZE.xs} /> ก่อนหน้า
-                  </button>
-                  <span className="px-2 font-medium text-slate-700">
-                    หน้า {meta.page} / {meta.totalPages}
-                  </span>
-                  <button
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 font-medium hover:bg-slate-50 disabled:opacity-50 transition-colors"
-                    disabled={meta.page >= meta.totalPages}
-                    onClick={() => loadMembers(meta.page + 1)}
-                  >
-                    ถัดไป <ChevronRight size={ICON_SIZE.xs} />
-                  </button>
-                </div>
+          {meta.totalPages > 1 && (
+            <nav
+              aria-label="การแบ่งหน้า"
+              className="mt-4 flex flex-col items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 sm:flex-row"
+            >
+              <span className="type-caption text-[var(--color-body-muted)]">
+                หน้า {meta.page} จาก {meta.totalPages}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="type-caption-strong inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
+                  disabled={meta.page <= 1}
+                  onClick={() => loadMembers(meta.page - 1)}
+                >
+                  <ChevronLeft size={ICON_SIZE.xs} aria-hidden="true" /> ก่อนหน้า
+                </button>
+                <button
+                  type="button"
+                  className="type-caption-strong inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
+                  disabled={meta.page >= meta.totalPages}
+                  onClick={() => loadMembers(meta.page + 1)}
+                >
+                  ถัดไป <ChevronRight size={ICON_SIZE.xs} aria-hidden="true" />
+                </button>
               </div>
-            )}
+            </nav>
+          )}
+        </>
+      )}
+
+      {/* Create / Edit — a real dialog with Escape, focus handling and a
+          scrollable body, so the 12-field form is usable on a phone. */}
+      <Modal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        title={editing ? `แก้ไขข้อมูล ${editing.name}` : "เพิ่มสมาชิกใหม่"}
+        description={
+          editing
+            ? "ปรับข้อมูลให้เป็นปัจจุบัน แล้วกดบันทึก"
+            : "กรอกเท่าที่ทราบ ไม่มีข้อมูลช่องใดบังคับนอกจากชื่อ"
+        }
+        size="wide"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setFormOpen(false)}
+              className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-5 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              form="member-form"
+              disabled={submitting}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
+            >
+              {submitting
+                ? "กำลังบันทึก…"
+                : editing
+                  ? "บันทึกการแก้ไข"
+                  : "เพิ่มสมาชิก"}
+            </button>
           </>
-        )}
-      </section>
+        }
+      >
+        <form id="member-form" onSubmit={handleSubmit} className="space-y-6">
+          {formError && <FormError>{formError}</FormError>}
 
-      {/* Create / Edit Modal */}
-      {formOpen && (
-        <div className="modal-backdrop" onClick={() => setFormOpen(false)}>
-          <div className="modal-card modal-wide" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-heading">
-              <h2>{editing ? "แก้ไขข้อมูลสมาชิก" : "เพิ่มสมาชิกใหม่"}</h2>
-              <button onClick={() => setFormOpen(false)}>
-                <X size={ICON_SIZE.sm} />
-              </button>
-            </div>
+          {duplicateWarning && (
+            <p
+              role="status"
+              className="type-caption flex items-start gap-2 rounded-[var(--radius-sm)] bg-[var(--color-warning-soft)] p-3 text-[var(--color-warning)]"
+            >
+              <ShieldCheck size={ICON_SIZE.sm} aria-hidden="true" className="mt-0.5" />
+              <span>{duplicateWarning}</span>
+            </p>
+          )}
 
-            {duplicateWarning && (
-              <div
-                style={{
-                  background: "#fff2d9",
-                  color: "#a05b10",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  marginBottom: 14,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <AlertCircle size={16} />
-                <span>{duplicateWarning}</span>
-              </div>
-            )}
-
-            <form className="form-grid" onSubmit={handleSubmit}>
-              {/* Section 1: ข้อมูลพื้นฐาน */}
-              <label>
-                ชื่อ-นามสกุล *
+          <fieldset className="space-y-4">
+            <legend className="type-caption-strong mb-2 text-[var(--color-ink)]">
+              ข้อมูลพื้นฐาน
+            </legend>
+            <Field label="ชื่อ-นามสกุล" required error={nameError ?? undefined}>
+              {fieldProps => (
                 <input
-                  required
+                  {...fieldProps}
+                  className={INPUT_CLASS}
+                  autoComplete="name"
                   placeholder="เช่น สมชาย สุขเกษม"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
-              </label>
-              <label>
-                ชื่อเล่น
-                <input
-                  placeholder="เช่น ต้น"
-                  value={form.nickname}
-                  onChange={(e) => setForm({ ...form, nickname: e.target.value })}
-                />
-              </label>
-              <label>
-                เพศ
-                <select
-                  value={form.gender}
-                  onChange={(e) => setForm({ ...form, gender: e.target.value as Gender })}
-                >
-                  <option value="">-- ไม่ระบุ --</option>
-                  <option value="male">ชาย</option>
-                  <option value="female">หญิง</option>
-                  <option value="other">อื่นๆ</option>
-                </select>
-              </label>
-              <label>
-                วันเกิด
-                <input
-                  type="date"
-                  value={form.birthDate}
-                  onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
-                />
-              </label>
+              )}
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="ชื่อเล่น" hint="ใช้เรียกในกลุ่มแคร์">
+                {fieldProps => (
+                  <input
+                    {...fieldProps}
+                    className={INPUT_CLASS}
+                    autoComplete="nickname"
+                    placeholder="เช่น ต้น"
+                    value={form.nickname}
+                    onChange={(e) => setForm({ ...form, nickname: e.target.value })}
+                  />
+                )}
+              </Field>
+              <Field label="วันเกิด">
+                {fieldProps => (
+                  <input
+                    {...fieldProps}
+                    type="date"
+                    className={INPUT_CLASS}
+                    value={form.birthDate}
+                    onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
+                  />
+                )}
+              </Field>
+              <Field label="เพศ">
+                {fieldProps => (
+                  <select
+                    {...fieldProps}
+                    className={SELECT_CLASS}
+                    value={form.gender}
+                    onChange={(e) =>
+                      setForm({ ...form, gender: e.target.value as Gender })
+                    }
+                  >
+                    <option value="">ไม่ระบุ</option>
+                    <option value="male">ชาย</option>
+                    <option value="female">หญิง</option>
+                    <option value="other">อื่นๆ</option>
+                  </select>
+                )}
+              </Field>
+            </div>
+          </fieldset>
 
-              {/* Section 2: การติดต่อ */}
-              <label>
-                เบอร์โทรศัพท์
+          <fieldset className="space-y-4">
+            <legend className="type-caption-strong mb-2 text-[var(--color-ink)]">
+              ช่องทางติดต่อ
+            </legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="เบอร์โทรศัพท์">
+                {fieldProps => (
+                  <input
+                    {...fieldProps}
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    className={INPUT_CLASS}
+                    placeholder="081-234-5678"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
+                )}
+              </Field>
+              <Field label="อีเมล">
+                {fieldProps => (
+                  <input
+                    {...fieldProps}
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    spellCheck={false}
+                    className={INPUT_CLASS}
+                    placeholder="member@email.com"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
+                )}
+              </Field>
+              <Field label="LINE ID" hint="ถ้ามี ใช้ติดต่อได้เร็วที่สุด">
+                {fieldProps => (
+                  <input
+                    {...fieldProps}
+                    autoComplete="off"
+                    spellCheck={false}
+                    className={INPUT_CLASS}
+                    placeholder="ไอดีไลน์"
+                    value={form.lineId}
+                    onChange={(e) => setForm({ ...form, lineId: e.target.value })}
+                  />
+                )}
+              </Field>
+            </div>
+            <Field label="ที่อยู่ปัจจุบัน">
+              {fieldProps => (
                 <input
-                  placeholder="081-234-5678"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                />
-              </label>
-              <label>
-                อีเมล
-                <input
-                  type="email"
-                  placeholder="member@email.com"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                />
-              </label>
-              <label>
-                LINE ID
-                <input
-                  placeholder="ไอดีไลน์สำหรับติดต่อ"
-                  value={form.lineId}
-                  onChange={(e) => setForm({ ...form, lineId: e.target.value })}
-                />
-              </label>
-              <label>
-                สถานะสมาชิก
-                <select
-                  value={form.membershipStatus}
-                  onChange={(e) =>
-                    setForm({ ...form, membershipStatus: e.target.value as MembershipStatus })
-                  }
-                >
-                  <option value="visitor">ผู้สนใจ/เยี่ยมเยียน</option>
-                  <option value="active">สมาชิกประจำ</option>
-                  <option value="candidate">ผู้เตรียมรับเชื่อ</option>
-                  <option value="transferred">ย้ายคริสตจักร</option>
-                  <option value="inactive">ขาดการติดต่อ</option>
-                </select>
-              </label>
-              <label className="full-field">
-                ที่อยู่ปัจจุบัน
-                <input
+                  {...fieldProps}
+                  autoComplete="street-address"
+                  className={INPUT_CLASS}
                   placeholder="บ้านเลขที่ หมู่บ้าน ตำบล อำเภอ จังหวัด"
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
                 />
-              </label>
+              )}
+            </Field>
+          </fieldset>
 
-              {/* Section 3: พันธกิจ & กลุ่ม */}
-              <label>
-                พื้นที่ (Area)
-                <input
-                  placeholder="เช่น อ.เมืองกาฬสินธุ์"
-                  value={form.area}
-                  onChange={(e) => setForm({ ...form, area: e.target.value })}
-                />
-              </label>
-              <label>
-                กลุ่มย่อย (Cell Group)
-                <input
-                  placeholder="เช่น กลุ่มบ้านสันติสุข"
-                  value={form.group}
-                  onChange={(e) => setForm({ ...form, group: e.target.value })}
-                />
-              </label>
-              <label>
-                สถานะการดูแล
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value as Member["status"] })}
-                >
-                  <option value="ต้องติดตาม">ต้องติดตาม</option>
-                  <option value="ติดตามแล้ว">ติดตามแล้ว</option>
-                </select>
-              </label>
-              <label>
-                บทบาทในคริสตจักร
-                <input
-                  value={form.role}
-                  onChange={(e) => setForm({ ...form, role: e.target.value })}
-                />
-              </label>
+          <fieldset className="space-y-4">
+            <legend className="type-caption-strong mb-2 text-[var(--color-ink)]">
+              การดูแลในคริสตจักร
+            </legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="ประเภทสมาชิก">
+                {fieldProps => (
+                  <select
+                    {...fieldProps}
+                    className={SELECT_CLASS}
+                    value={form.membershipStatus}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        membershipStatus: e.target.value as MembershipStatus,
+                      })
+                    }
+                  >
+                    <option value="visitor">ผู้สนใจ/เยี่ยมเยียน</option>
+                    <option value="active">สมาชิกประจำ</option>
+                    <option value="candidate">ผู้เตรียมรับเชื่อ</option>
+                    <option value="transferred">ย้ายคริสตจักร</option>
+                    <option value="inactive">ขาดการติดต่อ</option>
+                  </select>
+                )}
+              </Field>
+              <Field label="สถานะการติดตาม">
+                {fieldProps => (
+                  <select
+                    {...fieldProps}
+                    className={SELECT_CLASS}
+                    value={form.status}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        status: e.target.value as Member["status"],
+                      })
+                    }
+                  >
+                    <option value="ต้องติดตาม">ต้องติดตาม</option>
+                    <option value="ติดตามแล้ว">ติดตามแล้ว</option>
+                  </select>
+                )}
+              </Field>
+              <Field label="พื้นที่ / ย่าน" hint="ใช้จัดกลุ่มการเยี่ยมเยียน">
+                {fieldProps => (
+                  <input
+                    {...fieldProps}
+                    className={INPUT_CLASS}
+                    placeholder="เช่น อ.เมืองกาฬสินธุ์"
+                    value={form.area}
+                    onChange={(e) => setForm({ ...form, area: e.target.value })}
+                  />
+                )}
+              </Field>
+              <Field label="กลุ่มแคร์">
+                {fieldProps => (
+                  <input
+                    {...fieldProps}
+                    className={INPUT_CLASS}
+                    placeholder="เช่น กลุ่มบ้านสันติสุข"
+                    value={form.group}
+                    onChange={(e) => setForm({ ...form, group: e.target.value })}
+                  />
+                )}
+              </Field>
+              <Field label="บทบาทในคริสตจักร">
+                {fieldProps => (
+                  <input
+                    {...fieldProps}
+                    className={INPUT_CLASS}
+                    value={form.role}
+                    onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  />
+                )}
+              </Field>
+            </div>
+          </fieldset>
 
-              {/* Section 4: ผู้ติดต่อฉุกเฉิน */}
-              <label>
-                ผู้ติดต่อฉุกเฉิน
-                <input
-                  placeholder="ชื่อ-นามสกุล"
-                  value={form.emergencyContactName}
-                  onChange={(e) => setForm({ ...form, emergencyContactName: e.target.value })}
-                />
-              </label>
-              <label>
-                เบอร์โทรฉุกเฉิน
-                <input
-                  placeholder="เบอร์โทรติดต่อฉุกเฉิน"
-                  value={form.emergencyContactPhone}
-                  onChange={(e) => setForm({ ...form, emergencyContactPhone: e.target.value })}
-                />
-              </label>
+          <fieldset className="space-y-4">
+            <legend className="type-caption-strong mb-2 text-[var(--color-ink)]">
+              ผู้ติดต่อฉุกเฉิน
+            </legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="ชื่อผู้ติดต่อ">
+                {fieldProps => (
+                  <input
+                    {...fieldProps}
+                    autoComplete="off"
+                    className={INPUT_CLASS}
+                    placeholder="ชื่อ-นามสกุล"
+                    value={form.emergencyContactName}
+                    onChange={(e) =>
+                      setForm({ ...form, emergencyContactName: e.target.value })
+                    }
+                  />
+                )}
+              </Field>
+              <Field label="เบอร์โทรผู้ติดต่อ">
+                {fieldProps => (
+                  <input
+                    {...fieldProps}
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="off"
+                    className={INPUT_CLASS}
+                    placeholder="เบอร์โทรติดต่อฉุกเฉิน"
+                    value={form.emergencyContactPhone}
+                    onChange={(e) =>
+                      setForm({ ...form, emergencyContactPhone: e.target.value })
+                    }
+                  />
+                )}
+              </Field>
+            </div>
+          </fieldset>
 
-              {/* Section 5: PDPA & หมายเหตุภายใน */}
-              <label className="full-field" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <input
-                  type="checkbox"
-                  style={{ width: "auto" }}
-                  checked={form.consentGiven}
-                  onChange={(e) => setForm({ ...form, consentGiven: e.target.checked })}
-                />
-                <span>ยินยอมให้คริสตจักรเก็บรวบรวมและใช้ข้อมูลส่วนบุคคลตามนโยบายคุ้มครองข้อมูล (PDPA Consent)</span>
-              </label>
-
-              <label className="full-field">
-                บันทึกฝ่ายอภิบาล (Pastoral Notes - เฉพาะเจ้าหน้าที่)
+          <fieldset className="space-y-4">
+            <legend className="type-caption-strong mb-2 text-[var(--color-ink)]">
+              ความยินยอมและบันทึกภายใน
+            </legend>
+            <label className="flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] p-3">
+              <input
+                type="checkbox"
+                checked={form.consentGiven}
+                onChange={(e) =>
+                  setForm({ ...form, consentGiven: e.target.checked })
+                }
+                className="mt-0.5 size-6 shrink-0 rounded-[var(--radius-xs)] accent-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+              />
+              <span className="type-caption text-[var(--color-ink)]">
+                สมาชิกยินยอมให้คริสตจักรเก็บและใช้ข้อมูลส่วนบุคคล
+                ตามนโยบายคุ้มครองข้อมูลส่วนบุคคล (PDPA)
+              </span>
+            </label>
+            <Field
+              label="บันทึกฝ่ายอภิบาล"
+              hint="เห็นเฉพาะเจ้าหน้าที่ เช่น คำอธิษฐานหรือบันทึกการเยี่ยมเยียน"
+            >
+              {fieldProps => (
                 <textarea
+                  {...fieldProps}
                   rows={3}
-                  placeholder="ข้อมูลคำอธิษฐาน ความต้องการฝ่ายวิญญาณ หรือบันทึกการเยี่ยมเยียน..."
+                  className={`${INPUT_CLASS} py-2`}
+                  placeholder="รายละเอียดเพิ่มเติม…"
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 />
-              </label>
+              )}
+            </Field>
+          </fieldset>
+        </form>
+      </Modal>
 
-              <div className="modal-actions full-field">
-                <button type="button" className="cancel-button" onClick={() => setFormOpen(false)}>
-                  ยกเลิก
-                </button>
-                <button type="submit" className="primary-action" disabled={submitting}>
-                  {submitting ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Member Detailed Profile View */}
-      {selectedMember && (
-        <div className="modal-backdrop" onClick={() => setSelectedMember(null)}>
-          <div className="modal-card modal-wide" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-heading">
-              <h2>ข้อมูลสมาชิกโดยละเอียด</h2>
-              <button onClick={() => setSelectedMember(null)}>
-                <X size={ICON_SIZE.sm} />
-              </button>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 16,
-                padding: "16px",
-                background: "var(--color-canvas-soft)",
-                borderRadius: 14,
-                marginBottom: 16,
-              }}
+      {/* Member detail — the same dialog, sized wide for the two-column body */}
+      <Modal
+        open={selectedMember !== null}
+        onClose={() => setSelectedMember(null)}
+        title="ข้อมูลสมาชิก"
+        description={selectedMember?.name}
+        size="wide"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setSelectedMember(null)}
+              className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-5 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
             >
-              <div
-                className={`member-avatar ${toneFor(selectedMember.name)}`}
-                style={{ width: 56, height: 56, fontSize: 24, borderRadius: 16 }}
+              ปิด
+            </button>
+            <button
+              type="button"
+              onClick={handleCreateFollowUp}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+            >
+              <Plus size={ICON_SIZE.sm} aria-hidden="true" />
+              สร้างรายการติดตาม
+            </button>
+            {canManage && (
+              <button
+                type="button"
+                onClick={() => {
+                  const target = selectedMember;
+                  setSelectedMember(null);
+                  if (target) openEdit(target);
+                }}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
               >
-                {selectedMember.name.slice(0, 1)}
-              </div>
-              <div style={{ flex: 1 }}>
-                <h3 style={{ margin: "0 0 4px", fontSize: 18, color: "var(--ink)" }}>
-                  {selectedMember.name} {selectedMember.nickname ? `(${selectedMember.nickname})` : ""}
-                </h3>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                  <span className="role-chip blue">{selectedMember.role}</span>
-                  <span className="role-chip green">
-                    {MEMBERSHIP_STATUS_LABELS[selectedMember.membershipStatus] ?? selectedMember.membershipStatus}
-                  </span>
-                  <span className={`status-chip ${selectedMember.status === "ติดตามแล้ว" ? "good" : "attention"}`}>
+                <Pencil size={ICON_SIZE.sm} aria-hidden="true" />
+                แก้ไขข้อมูล
+              </button>
+            )}
+          </>
+        }
+      >
+        {selectedMember && (
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-4 rounded-[var(--radius-lg)] bg-[var(--color-canvas-soft)] p-4">
+              <InitialsAvatar name={selectedMember.name} size={56} />
+              <div className="min-w-0 flex-1">
+                <p className="type-body-strong text-[var(--color-ink)]">
+                  {selectedMember.name}
+                  {selectedMember.nickname ? ` (${selectedMember.nickname})` : ""}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <StatusChip tone="neutral">{selectedMember.role}</StatusChip>
+                  <StatusChip
+                    tone={MEMBERSHIP_STATUS_TONES[selectedMember.membershipStatus]}
+                  >
+                    {MEMBERSHIP_STATUS_LABELS[selectedMember.membershipStatus] ??
+                      selectedMember.membershipStatus}
+                  </StatusChip>
+                  <StatusChip
+                    tone={
+                      selectedMember.status === "ติดตามแล้ว"
+                        ? "success"
+                        : "warning"
+                    }
+                  >
                     {selectedMember.status}
-                  </span>
+                  </StatusChip>
                   {selectedMember.consentGiven && (
-                    <span style={{ fontSize: 10, color: "#1e9b68", display: "flex", alignItems: "center", gap: 3 }}>
-                      <ShieldCheck size={12} /> ยินยอม PDPA แล้ว
-                    </span>
+                    <StatusChip tone="success">
+                      <ShieldCheck
+                        size={12}
+                        aria-hidden="true"
+                        className="mr-1"
+                      />
+                      ยินยอม PDPA แล้ว
+                    </StatusChip>
                   )}
                 </div>
               </div>
-
               {qrCodeDataUrl && (
-                <div style={{ textAlign: "center", background: "#fff", padding: "8px", borderRadius: "12px", border: "1px solid #d9e6f3", flexShrink: 0 }}>
-                  <img src={qrCodeDataUrl} alt="Member QR Code" style={{ width: "80px", height: "80px", display: "block" }} />
-                  <div style={{ fontSize: "9px", color: "#6a7e93", marginTop: "3px", fontWeight: 600 }}>Personal QR</div>
+                <div className="shrink-0 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-2 text-center">
+                  <img
+                    src={qrCodeDataUrl}
+                    alt={`รหัส QR สำหรับเช็คชื่อของ ${selectedMember.name}`}
+                    width={80}
+                    height={80}
+                    className="block size-20"
+                  />
+                  <p className="type-fine mt-1 text-[var(--color-body-muted)]">
+                    รหัสเช็คชื่อ
+                  </p>
                 </div>
               )}
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, fontSize: 12 }}>
-              <div style={{ background: "#fff", border: "1px solid #edf2f6", borderRadius: 12, padding: 12 }}>
-                <strong style={{ display: "block", color: "var(--ink)", marginBottom: 8 }}>ข้อมูลการติดต่อ</strong>
-                <p style={{ margin: "4px 0", color: "#60758c" }}>เบอร์โทร: <b>{selectedMember.phone || "ไม่มีข้อมูล"}</b></p>
-                <p style={{ margin: "4px 0", color: "#60758c" }}>อีเมล: <b>{selectedMember.email || "ไม่มีข้อมูล"}</b></p>
-                <p style={{ margin: "4px 0", color: "#60758c" }}>LINE ID: <b>{selectedMember.lineId || "ไม่มีข้อมูล"}</b></p>
-                <p style={{ margin: "4px 0", color: "#60758c" }}>ที่อยู่: <b>{selectedMember.address || "ไม่มีข้อมูล"}</b></p>
-              </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <section className="rounded-[var(--radius-md)] border border-[var(--color-hairline)] p-4">
+                <h3 className="type-caption-strong mb-2 text-[var(--color-ink)]">
+                  ช่องทางติดต่อ
+                </h3>
+                <dl className="type-caption space-y-1.5 text-[var(--color-text-secondary)]">
+                  <div className="flex gap-2">
+                    <dt className="shrink-0">เบอร์โทร:</dt>
+                    <dd className="font-semibold text-[var(--color-ink)]">
+                      {selectedMember.phone || "ไม่มีข้อมูล"}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="shrink-0">อีเมล:</dt>
+                    <dd className="min-w-0 break-words font-semibold text-[var(--color-ink)]">
+                      {selectedMember.email || "ไม่มีข้อมูล"}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="shrink-0">LINE:</dt>
+                    <dd className="font-semibold text-[var(--color-ink)]">
+                      {selectedMember.lineId || "ไม่มีข้อมูล"}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="shrink-0">ที่อยู่:</dt>
+                    <dd className="font-semibold text-[var(--color-ink)]">
+                      {selectedMember.address || "ไม่มีข้อมูล"}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
 
-              <div style={{ background: "#fff", border: "1px solid #edf2f6", borderRadius: 12, padding: 12 }}>
-                <strong style={{ display: "block", color: "var(--ink)", marginBottom: 8 }}>ข้อมูลคริสตจักร & ฉุกเฉิน</strong>
-                <p style={{ margin: "4px 0", color: "#60758c" }}>พื้นที่: <b>{selectedMember.area || "-"}</b></p>
-                <p style={{ margin: "4px 0", color: "#60758c" }}>กลุ่มย่อย: <b>{selectedMember.group || "ยังไม่มีกลุ่ม"}</b></p>
-                <p style={{ margin: "4px 0", color: "#60758c" }}>วันที่เข้าร่วม: <b>{formatDate(selectedMember.joinedAt)}</b></p>
-                <p style={{ margin: "4px 0", color: "#60758c" }}>ผู้ติดต่อฉุกเฉิน: <b>{selectedMember.emergencyContactName ? `${selectedMember.emergencyContactName} (${selectedMember.emergencyContactPhone || "-"})` : "ไม่มีข้อมูล"}</b></p>
-              </div>
+              <section className="rounded-[var(--radius-md)] border border-[var(--color-hairline)] p-4">
+                <h3 className="type-caption-strong mb-2 text-[var(--color-ink)]">
+                  คริสตจักรและผู้ติดต่อฉุกเฉิน
+                </h3>
+                <dl className="type-caption space-y-1.5 text-[var(--color-text-secondary)]">
+                  <div className="flex gap-2">
+                    <dt className="shrink-0">พื้นที่:</dt>
+                    <dd className="font-semibold text-[var(--color-ink)]">
+                      {selectedMember.area || "-"}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="shrink-0">กลุ่มแคร์:</dt>
+                    <dd className="font-semibold text-[var(--color-ink)]">
+                      {selectedMember.group || "ยังไม่มีกลุ่ม"}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="shrink-0">เข้าร่วมเมื่อ:</dt>
+                    <dd className="font-semibold tabular-nums text-[var(--color-ink)]">
+                      {formatDate(selectedMember.joinedAt)}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="shrink-0">ผู้ติดต่อฉุกเฉิน:</dt>
+                    <dd className="font-semibold text-[var(--color-ink)]">
+                      {selectedMember.emergencyContactName
+                        ? `${selectedMember.emergencyContactName} (${selectedMember.emergencyContactPhone || "-"})`
+                        : "ไม่มีข้อมูล"}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
             </div>
 
             {selectedMember.notes && (
-              <div style={{ marginTop: 14, background: "#fdfbf7", border: "1px solid #f0e6d2", borderRadius: 12, padding: 12 }}>
-                <strong style={{ display: "block", color: "#9a6a16", marginBottom: 4, fontSize: 11 }}>บันทึกฝ่ายอภิบาล (Pastoral Care Notes)</strong>
-                <p style={{ margin: 0, fontSize: 12, color: "#594827", lineHeight: 1.5 }}>{selectedMember.notes}</p>
-              </div>
+              <section className="rounded-[var(--radius-md)] bg-[var(--color-warning-soft)] p-4">
+                <h3 className="type-caption-strong mb-1 text-[var(--color-warning)]">
+                  บันทึกฝ่ายอภิบาล (เห็นเฉพาะเจ้าหน้าที่)
+                </h3>
+                <p className="type-caption whitespace-pre-line text-[var(--color-ink)]">
+                  {selectedMember.notes}
+                </p>
+              </section>
             )}
 
-            <div style={{ marginTop: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <strong style={{ color: "var(--ink)", fontSize: 12 }}>กิจกรรมพันธกิจล่าสุด</strong>
-                <button
-                  type="button"
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: "var(--blue)",
-                    background: "none",
-                    border: "1px dashed #b9d3ec",
-                    borderRadius: 10,
-                    padding: "4px 10px",
-                    cursor: "pointer",
-                  }}
-                  onClick={async () => {
-                    try {
-                      await api.post("/api/follow-ups", {
-                        title: `ติดตาม: ${selectedMember.name}`,
-                        subjectMemberId: selectedMember.id,
-                      });
-                      toast.success("สร้างรายการติดตามแล้ว");
-                    } catch (err) {
-                      toast.error(err instanceof ApiError ? err.message : "สร้างรายการติดตามไม่สำเร็จ");
-                    }
-                  }}
-                >
-                  + สร้างรายการติดตาม
-                </button>
-              </div>
-              <ActivityTimeline subjectType="member" subjectId={selectedMember.id} />
-            </div>
-
-            <div className="modal-actions" style={{ marginTop: 20 }}>
-              <button type="button" className="cancel-button" onClick={() => setSelectedMember(null)}>
-                ปิดหน้าต่าง
-              </button>
-              {canManage && (
-                <button
-                  type="button"
-                  className="primary-action"
-                  onClick={() => {
-                    const target = selectedMember;
-                    setSelectedMember(null);
-                    openEdit(target);
-                  }}
-                >
-                  <Pencil size={ICON_SIZE.sm} /> แก้ไขข้อมูลนี้
-                </button>
-              )}
-            </div>
+            <section>
+              <h3 className="type-caption-strong mb-2 text-[var(--color-ink)]">
+                กิจกรรมพันธกิจล่าสุด
+              </h3>
+              <ActivityTimeline
+                subjectType="member"
+                subjectId={selectedMember.id}
+              />
+            </section>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Confirm Soft Delete */}
       {deleteTarget && (

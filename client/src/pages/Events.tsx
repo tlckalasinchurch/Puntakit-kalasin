@@ -1,8 +1,17 @@
 import { useState } from "react";
-import { AlertCircle, CalendarDays, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
+import {
+  EmptyState,
+  ErrorState,
+  Field,
+  Modal,
+  PageHeader,
+  SectionHeader,
+  StatusChip,
+  type StatusTone,
+} from "@/components/DesignSystem";
 import { CardGridSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +44,25 @@ const STATUS_LABEL: Record<Event["status"], string> = {
   completed: "เสร็จสิ้น",
 };
 
+const STATUS_TONE: Record<Event["status"], StatusTone> = {
+  scheduled: "info",
+  cancelled: "error",
+  completed: "success",
+};
+
+const CONTROL_CLASS =
+  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 py-2 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+const PRIMARY_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const CANCEL_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const DANGER_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-error)]/40 px-4 text-sm font-semibold text-[var(--color-error)] transition-colors hover:bg-[var(--color-error)]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+const CARD_ACTION_CLASS =
+  "inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] px-3 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+const CARD_DELETE_CLASS =
+  "inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--color-error)]/40 px-3 text-sm font-semibold text-[var(--color-error)] transition-colors hover:bg-[var(--color-error)]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+
 function toLocalInput(iso?: string) {
   if (!iso) return "";
   const d = new Date(iso);
@@ -59,7 +87,7 @@ export default function Events() {
   const { user } = useAuth();
   // Mirrors the server's `requireAdmin` (shared/roles.ts ADMIN_ROLES).
   const isAdmin = hasRole(user?.role, ADMIN_ROLES);
-  const { items, isLoading, error, reload, create, update, remove } = useResource<Event>("/api/events");
+  const { items, isLoading, error, errorTechnical, reload, create, update, remove } = useResource<Event>("/api/events");
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Event | null>(null);
@@ -121,189 +149,221 @@ export default function Events() {
     }
   };
 
+  const countLabel = !isLoading && !error ? `${items.length.toLocaleString("th-TH")} กิจกรรม` : undefined;
+
   return (
     <AppLayout>
-      {/* Page Heading */}
-      <div className="events-page-hero mb-6 flex flex-col gap-5 rounded-[24px] border border-blue-100 px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-        <div>
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700">
-            <CalendarDays size={13} /> ACTIVITY PULSE
-          </span>
-          <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-[var(--color-primary)] sm:text-3xl">
-            การนมัสการ / กิจกรรม
-          </h1>
-          <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-600 sm:text-sm">
-            ดูกิจกรรมล่าสุดและวางแผนการมีส่วนร่วมของคริสตจักรในมุมมองเดียว
-          </p>
-        </div>
-        {isAdmin && (
-          <button
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs"
-            onClick={openCreate}
-          >
-            <Plus size={ICON_SIZE.sm} /> เพิ่มกิจกรรม
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="การนมัสการ / กิจกรรม"
+        description="ดูกิจกรรมล่าสุดและวางแผนการมีส่วนร่วมของคริสตจักรในมุมมองเดียว"
+        primaryAction={isAdmin ? { label: "เพิ่มกิจกรรม", icon: Plus, onClick: openCreate } : undefined}
+      />
 
-      <section className="tailadmin-card overflow-hidden border-blue-100 p-5 shadow-[0_12px_32px_rgba(36,92,146,0.07)] sm:p-6">
+      <section aria-labelledby="events-heading">
+        <SectionHeader id="events-heading" title="รายการกิจกรรม" description={countLabel} />
+
         {isLoading ? (
           <CardGridSkeleton count={6} />
         ) : error ? (
-          <div className="p-10 text-center text-rose-600">
-            <AlertCircle size={ICON_SIZE.xl} className="mx-auto mb-2 text-rose-500" />
-            <h3 className="font-bold text-sm">โหลดข้อมูลไม่สำเร็จ</h3>
-            <p className="text-xs text-slate-500 mt-1">{error}</p>
-            <button
-              className="mt-4 rounded-xl bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-100"
-              onClick={reload}
-            >
-              ลองใหม่
-            </button>
-          </div>
+          <ErrorState
+            title="โหลดกิจกรรมไม่สำเร็จ"
+            description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+            technical={errorTechnical ?? undefined}
+            onRetry={reload}
+          />
         ) : items.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
-            <CalendarDays size={40} className="mx-auto text-slate-300 mb-2" />
-            <h3 className="font-semibold text-slate-700 text-sm">ยังไม่มีกิจกรรม</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              {isAdmin ? "เริ่มเพิ่มกิจกรรมแรกของคุณ" : "รอผู้ดูแลระบบเพิ่มกิจกรรม"}
-            </p>
-          </div>
+          <EmptyState
+            icon={CalendarDays}
+            title="ยังไม่มีกิจกรรม"
+            description={
+              isAdmin
+                ? "เริ่มเพิ่มกิจกรรมแรกเพื่อวางแผนการนมัสการและพันธกิจของคริสตจักร"
+                : "รอผู้ดูแลระบบเพิ่มกิจกรรม แล้วกลับมาตรวจสอบอีกครั้ง"
+            }
+            action={
+              isAdmin
+                ? { label: "เพิ่มกิจกรรม", icon: Plus, onClick: openCreate }
+                : { label: "โหลดใหม่", onClick: reload }
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {items.map((ev) => (
-              <div
-                className="event-surface group flex flex-col justify-between rounded-2xl border border-blue-100 bg-white p-5 shadow-[0_8px_24px_rgba(36,92,146,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_14px_30px_rgba(36,92,146,0.12)]"
+            {items.map(ev => (
+              <article
                 key={ev.id}
+                className="flex flex-col justify-between rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5 transition-shadow hover:shadow-[var(--shadow)] motion-reduce:transition-none"
               >
                 <div>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="min-w-0"><span className="mb-2 inline-flex rounded-lg bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700">{CATEGORY_LABEL[ev.category]}</span><h3 className="font-bold text-slate-800 text-base leading-snug">{ev.title}</h3></div>
-                    <span
-                      className={`flex-shrink-0 inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                        ev.status === "cancelled"
-                          ? "bg-rose-50 text-rose-600"
-                          : ev.status === "completed"
-                          ? "bg-slate-100 text-slate-600"
-                          : "bg-emerald-50 text-emerald-600"
-                      }`}
-                    >
-                      {STATUS_LABEL[ev.status]}
-                    </span>
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <StatusChip tone="neutral" className="mb-2">
+                        {CATEGORY_LABEL[ev.category]}
+                      </StatusChip>
+                      <h3 className="type-body-strong leading-snug text-[var(--color-ink)]">{ev.title}</h3>
+                    </div>
+                    <StatusChip tone={STATUS_TONE[ev.status]}>{STATUS_LABEL[ev.status]}</StatusChip>
                   </div>
                   {ev.description && (
-                    <p className="text-xs text-slate-500 mb-4 line-clamp-3 leading-relaxed">
+                    <p className="type-caption mb-4 line-clamp-3 text-[var(--color-text-secondary)]">
                       {ev.description}
                     </p>
                   )}
-                  <div className="space-y-1.5 text-xs text-slate-500 mb-4">
-                    <div className="flex items-center gap-2">
-                      <CalendarDays size={ICON_SIZE.xs} className="text-blue-500" />
+                  <div className="mb-4 space-y-1.5">
+                    <p className="type-caption flex items-center gap-2 text-[var(--color-text-secondary)]">
+                      <CalendarDays size={ICON_SIZE.sm} aria-hidden="true" className="shrink-0 text-[var(--color-primary)]" />
                       <span>{formatDateTime(ev.eventDate)}</span>
-                    </div>
+                    </p>
                     {ev.location && (
-                      <div className="flex items-center gap-2">
-                        <MapPin size={ICON_SIZE.xs} className="text-amber-500" />
+                      <p className="type-caption flex items-center gap-2 text-[var(--color-text-secondary)]">
+                        <MapPin size={ICON_SIZE.sm} aria-hidden="true" className="shrink-0 text-[var(--color-body-muted)]" />
                         <span className="truncate">{ev.location}</span>
-                      </div>
+                      </p>
                     )}
                   </div>
                 </div>
 
                 {isAdmin && (
-                  <div className="flex items-center gap-2 pt-3 border-t border-slate-100 mt-2">
-                    <button
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                      onClick={() => openEdit(ev)}
-                    >
-                      <Pencil size={ICON_SIZE.xs} /> แก้ไข
+                  <div className="mt-2 flex items-center gap-2 border-t border-[var(--color-divider)] pt-3">
+                    <button type="button" className={CARD_ACTION_CLASS} onClick={() => openEdit(ev)}>
+                      <Pencil size={ICON_SIZE.sm} aria-hidden="true" /> แก้ไข
                     </button>
-                    <button
-                      className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-100 transition-colors"
-                      onClick={() => setDeleteTarget(ev)}
-                    >
-                      <Trash2 size={ICON_SIZE.xs} /> ลบ
+                    <button type="button" className={CARD_DELETE_CLASS} onClick={() => setDeleteTarget(ev)}>
+                      <Trash2 size={ICON_SIZE.sm} aria-hidden="true" /> ลบ
                     </button>
                   </div>
                 )}
-              </div>
+              </article>
             ))}
           </div>
         )}
       </section>
 
-      {formOpen && (
-        <div className="modal-backdrop" onClick={() => setFormOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: "0 0 14px" }}>{editing ? "แก้ไขกิจกรรม" : "เพิ่มกิจกรรม"}</h3>
-            <form className="form-grid" onSubmit={handleSubmit}>
-              <label className="full-field">
-                ชื่อกิจกรรม
-                <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-              </label>
-              <label>
-                วันเวลา
+      <Modal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        title={editing ? "แก้ไขกิจกรรม" : "เพิ่มกิจกรรม"}
+        size="wide"
+        footer={
+          <>
+            <button type="button" className={CANCEL_BUTTON_CLASS} onClick={() => setFormOpen(false)}>
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              form="event-form"
+              className={PRIMARY_BUTTON_CLASS}
+              disabled={submitting}
+            >
+              {submitting ? "กำลังบันทึก..." : "บันทึก"}
+            </button>
+          </>
+        }
+      >
+        <form id="event-form" className="grid grid-cols-1 gap-5 sm:grid-cols-2" onSubmit={handleSubmit}>
+          <div className="sm:col-span-2">
+            <Field label="ชื่อกิจกรรม" required>
+              {props => (
                 <input
-                  type="datetime-local"
+                  {...props}
+                  className={CONTROL_CLASS}
                   required
-                  value={form.eventDate}
-                  onChange={(e) => setForm({ ...form, eventDate: e.target.value })}
+                  value={form.title}
+                  onChange={e => setForm({ ...form, title: e.target.value })}
                 />
-              </label>
-              <label>
-                สถานที่
-                <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
-              </label>
-              <label>
-                ประเภท
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value as Event["category"] })}
-                >
-                  <option value="worship">นมัสการ</option>
-                  <option value="activity">กิจกรรม</option>
-                  <option value="meeting">ประชุม</option>
-                  <option value="other">อื่นๆ</option>
-                </select>
-              </label>
-              <label>
-                สถานะ
-                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as Event["status"] })}>
-                  <option value="scheduled">กำหนดการ</option>
-                  <option value="cancelled">ยกเลิก</option>
-                  <option value="completed">เสร็จสิ้น</option>
-                </select>
-              </label>
-              <label className="full-field">
-                รายละเอียด
+              )}
+            </Field>
+          </div>
+          <Field label="วันเวลา" required>
+            {props => (
+              <input
+                {...props}
+                type="datetime-local"
+                className={CONTROL_CLASS}
+                required
+                value={form.eventDate}
+                onChange={e => setForm({ ...form, eventDate: e.target.value })}
+              />
+            )}
+          </Field>
+          <Field label="สถานที่">
+            {props => (
+              <input
+                {...props}
+                className={CONTROL_CLASS}
+                value={form.location}
+                onChange={e => setForm({ ...form, location: e.target.value })}
+              />
+            )}
+          </Field>
+          <Field label="ประเภท" required>
+            {props => (
+              <select
+                {...props}
+                className={CONTROL_CLASS}
+                value={form.category}
+                onChange={e => setForm({ ...form, category: e.target.value as Event["category"] })}
+              >
+                <option value="worship">นมัสการ</option>
+                <option value="activity">กิจกรรม</option>
+                <option value="meeting">ประชุม</option>
+                <option value="other">อื่นๆ</option>
+              </select>
+            )}
+          </Field>
+          <Field label="สถานะ" required>
+            {props => (
+              <select
+                {...props}
+                className={CONTROL_CLASS}
+                value={form.status}
+                onChange={e => setForm({ ...form, status: e.target.value as Event["status"] })}
+              >
+                <option value="scheduled">กำหนดการ</option>
+                <option value="cancelled">ยกเลิก</option>
+                <option value="completed">เสร็จสิ้น</option>
+              </select>
+            )}
+          </Field>
+          <div className="sm:col-span-2">
+            <Field label="รายละเอียด">
+              {props => (
                 <textarea
+                  {...props}
+                  className={`${CONTROL_CLASS} resize-y`}
                   rows={4}
                   value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  onChange={e => setForm({ ...form, description: e.target.value })}
                 />
-              </label>
-              <div className="modal-actions full-field">
-                <button type="button" className="cancel-button" onClick={() => setFormOpen(false)}>
-                  ยกเลิก
-                </button>
-                <button type="submit" className="primary-action" disabled={submitting}>
-                  {submitting ? "กำลังบันทึก..." : "บันทึก"}
-                </button>
-              </div>
-            </form>
+              )}
+            </Field>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
-      {deleteTarget && (
-        <ConfirmDialog
-          title="ยืนยันการลบกิจกรรม"
-          description={`ต้องการลบ "${deleteTarget.title}" ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`}
-          isSubmitting={deleting}
-          onConfirm={handleDelete}
-          onCancel={() => setDeleteTarget(null)}
-        />
-      )}
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title="ยืนยันการลบกิจกรรม"
+        footer={
+          <>
+            <button
+              type="button"
+              className={CANCEL_BUTTON_CLASS}
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+            >
+              ยกเลิก
+            </button>
+            <button type="button" className={DANGER_BUTTON_CLASS} onClick={handleDelete} disabled={deleting}>
+              {deleting ? "กำลังลบ..." : "ลบกิจกรรม"}
+            </button>
+          </>
+        }
+      >
+        <p className="type-caption text-[var(--color-body-muted)]">
+          ต้องการลบ "{deleteTarget?.title}" ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้
+        </p>
+      </Modal>
     </AppLayout>
   );
 }
