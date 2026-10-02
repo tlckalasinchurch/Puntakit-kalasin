@@ -3,7 +3,7 @@ import { clerkClient } from "@clerk/express";
 import { getDb } from "../db/client.js";
 import { users } from "../../shared/schema.js";
 import type { AuthenticatedUser } from "./auth.js";
-import { ForbiddenError, UnauthorizedError } from "./errors.js";
+import { AccountLinkConflictError, AccountSuspendedError, ForbiddenError, UnauthorizedError } from "./errors.js";
 
 /**
  * Clerk authentication helpers.
@@ -88,8 +88,13 @@ export async function provisionClerkUser(
       .limit(1);
     if (byEmail) {
       if (byEmail.clerkId && byEmail.clerkId !== clerkUser.id) {
-        throw new ForbiddenError(
-          "บัญชีอีเมลนี้ถูกเชื่อมกับบัญชี Clerk อื่นอยู่แล้ว"
+        // Permanent, data-level conflict: this email is stamped with a
+        // different Clerk user id (usually from a previous Clerk instance).
+        // Retrying cannot fix it and it must not be reported as a plain 403,
+        // because the browser then treats it as "signed out" and bounces the
+        // user back to /login. Repaired with `pnpm db:relink-clerk`.
+        throw new AccountLinkConflictError(
+          "อีเมลนี้ถูกเชื่อมไว้กับบัญชี Clerk อื่นอยู่แล้ว กรุณาติดต่อผู้ดูแลระบบเพื่อแก้ไข"
         );
       }
       // One-time link: stamp the Clerk id on the legacy account.
@@ -171,7 +176,7 @@ export async function loadClerkUser(req: {
   });
 
   if (user.status === "suspended") {
-    throw new ForbiddenError("บัญชีผู้ใช้งานของคุณถูกระงับการใช้งานชั่วคราว");
+    throw new AccountSuspendedError();
   }
 
   return {

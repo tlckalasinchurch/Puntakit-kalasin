@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useAuth as useClerkAuth, useClerk } from "@clerk/react";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import type { UserRole } from "@shared/schema";
 
 export interface AuthUser {
@@ -13,10 +13,29 @@ export interface AuthUser {
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
+  /**
+   * Why the signed-in identity could not be turned into a local profile.
+   *
+   * This used to not exist. `AuthContext` caught every failure from
+   * `/api/auth/me` and set `user` to `null`, which is indistinguishable from
+   * "not signed in": `ProtectedRoute` then redirected to `/login`, Clerk saw a
+   * still-valid session and pushed the user back to `/`, and the two fought
+   * each other in a redirect loop that users described as "ล็อกอินแล้วเด้งออก".
+   * A 401 genuinely means signed out. A 403, a 5xx, or a dead connection mean
+   * the account is real and the *app* is broken — so they surface here instead.
+   */
+  error: ApiError | null;
+  /** Re-run the profile sync. Safe to call from the error screen's retry. */
+  retry: () => void;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+/** True only for a genuine "you are not signed in" answer from the API. */
+function isSignedOut(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 401;
+}
 
 /**
  * Clerk is the only identity provider. Clerk owns the browser session and the
@@ -27,24 +46,43 @@ function useClerkAuthValue(): AuthContextValue {
   const { isLoaded, isSignedIn, userId } = useClerkAuth();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [synced, setSynced] = useState(false);
+  const [error, setError] = useState<ApiError | null>(null);
+  /** Bumped by `retry()` to re-trigger the sync effect. */
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!isLoaded) return;
 
     if (!isSignedIn || !userId) {
       setUser(null);
+      setError(null);
       setSynced(true);
       return;
     }
 
     let cancelled = false;
+    setError(null);
+    setSynced(false);
     api
       .get<AuthUser>("/api/auth/me")
       .then(data => {
         if (!cancelled) setUser(data);
       })
-      .catch(() => {
-        if (!cancelled) setUser(null);
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        // Only a 401 is "signed out". Everything else is a real failure that
+        // must reach the user instead of being read as a logout.
+        if (isSignedOut(err)) {
+          setUser(null);
+          setError(null);
+        } else {
+          setUser(null);
+          setError(
+            err instanceof ApiError
+              ? err
+              : new ApiError("เชื่อมต่อกับระบบไม่สำเร็จ", 0, "NETWORK_ERROR")
+          );
+        }
       })
       .finally(() => {
         if (!cancelled) setSynced(true);
@@ -53,17 +91,22 @@ function useClerkAuthValue(): AuthContextValue {
     return () => {
       cancelled = true;
     };
-  }, [isLoaded, isSignedIn, userId]);
+  }, [isLoaded, isSignedIn, userId, attempt]);
 
-  const logout = async () => {
+  const retry = useCallback(() => setAttempt(n => n + 1), []);
+
+  const logout = useCallback(async () => {
     await clerk.signOut({ redirectUrl: "/login" }).catch(() => undefined);
     setUser(null);
+    setError(null);
     setSynced(false);
-  };
+  }, [clerk]);
 
   return {
     user,
     isLoading: !isLoaded || (Boolean(isSignedIn) && !synced),
+    error,
+    retry,
     logout,
   };
 }
@@ -71,16 +114,28 @@ function useClerkAuthValue(): AuthContextValue {
 function useDemoAuthValue(): AuthContextValue {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<ApiError | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setIsLoading(true);
+    setError(null);
     api
       .get<AuthUser>("/api/auth/me")
       .then(data => {
         if (!cancelled) setUser(data);
       })
-      .catch(() => {
-        if (!cancelled) setUser(null);
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        if (!isSignedOut(err)) {
+          setError(
+            err instanceof ApiError
+              ? err
+              : new ApiError("เชื่อมต่อกับระบบไม่สำเร็จ", 0, "NETWORK_ERROR")
+          );
+        }
+        setUser(null);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -88,9 +143,15 @@ function useDemoAuthValue(): AuthContextValue {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
 
-  return { user, isLoading, logout: async () => setUser(null) };
+  return {
+    user,
+    isLoading,
+    error,
+    retry: () => setAttempt(n => n + 1),
+    logout: async () => setUser(null),
+  };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

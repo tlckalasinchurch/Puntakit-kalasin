@@ -59,6 +59,10 @@ export function friendlyMessageFor(status: number, code?: string): string {
       return "ข้อมูลนี้ซ้ำกับที่มีอยู่แล้ว";
     case "FORBIDDEN":
       return "คุณไม่มีสิทธิ์ดำเนินการนี้";
+    case "ACCOUNT_SUSPENDED":
+      return "บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ";
+    case "ACCOUNT_LINK_CONFLICT":
+      return "อีเมลนี้ถูกเชื่อมไว้กับบัญชีอื่นแล้ว กรุณาติดต่อผู้ดูแลระบบ";
     case "UNAUTHORIZED":
       return "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง";
     case "DATABASE_UNAVAILABLE":
