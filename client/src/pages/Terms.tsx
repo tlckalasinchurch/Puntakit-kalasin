@@ -84,13 +84,13 @@ export default function Terms() {
         <div style={{ marginTop: 32, paddingTop: 20, borderTop: "1px solid var(--line)" }}>
           <Link
             href="/privacy"
-            style={{ fontSize: 13, fontWeight: 600, color: "var(--blue)", textDecoration: "none", marginRight: 20 }}
+            style={{ fontSize: 14, minHeight: 44, display: "inline-flex", alignItems: "center", fontWeight: 600, color: "var(--blue)", textDecoration: "none", marginRight: 20 }}
           >
             อ่านนโยบายความเป็นส่วนตัว →
           </Link>
           <Link
             href="/login"
-            style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}
+            style={{ fontSize: 14, minHeight: 44, display: "inline-flex", alignItems: "center", fontWeight: 600, color: "var(--muted)", textDecoration: "none", gap: 4 }}
           >
             <ArrowLeft size={14} /> กลับหน้าเข้าสู่ระบบ
           </Link>

@@ -21,6 +21,7 @@ import {
 import { Link, useLocation } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { OrgSnapshot } from "@/components/OrgSnapshot";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -135,7 +136,6 @@ interface HealthStatus {
 }
 
 const MINISTRY_PREVIEW_LIMIT = 6;
-const IDENTITY_IMAGE = "/manus-storage/puntakit-hero_d9170436.png";
 
 /** Whole days past `dueAt`, or null if the date is missing/unparseable. */
 function daysOverdue(dueAt: string | null): number | null {
@@ -433,7 +433,7 @@ function AttentionRow({
       >
         <IconBadge icon={icon} tone={alert ? "alert" : "primary"} />
         <span className="min-w-0 flex-1">
-          <span className="type-body-strong block text-[var(--color-ink)]">
+          <span className="type-body-strong block text-[var(--color-ink)] [overflow-wrap:anywhere]">
             {label}
           </span>
           {detail && (
@@ -586,7 +586,6 @@ export default function Home() {
   const canSeeOperations = Boolean(
     user && OPERATIONS_ROLES.includes(user.role)
   );
-  const [identityImageFailed, setIdentityImageFailed] = useState(false);
 
   // Redirect member role directly to Member PWA
   useEffect(() => {
@@ -614,41 +613,18 @@ export default function Home() {
   return (
     <AppLayout>
       <div className="home-editorial space-y-12 lg:space-y-20">
-        {/* Identity + Global Search */}
-        <section
-          aria-labelledby="home-title"
-          className={`grid gap-6 lg:gap-12 ${
-            identityImageFailed
-              ? ""
-              : "lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
-          }`}
-        >
-          <div className="flex flex-col justify-center lg:py-8">
+        {/* Greeting + search, then the organisation at a glance */}
+        <section aria-labelledby="home-title" className="space-y-6">
+          <div>
             <p className="type-caption-strong text-[var(--color-primary)]">
-              PUNTAKIT KALASIN
+              สวัสดี {user?.name ?? "ทีมงานพันธกิจ"}
             </p>
-            <h1
-              id="home-title"
-              className="type-display-md mt-3 text-[var(--color-ink)]"
-            >
-              ค้นพบผู้คนและพันธกิจ
-              <span className="block">ที่กำลังเติบโตไปด้วยกัน</span>
+            <h1 id="home-title" className="type-display-md mt-2 text-[var(--color-ink)]">
+              ภาพรวมพันธกิจ
             </h1>
-            <p className="type-body mt-4 max-w-xl text-[var(--color-body-muted)]">
-              สวัสดีครับ {user?.name ?? "ทีมงานพันธกิจ"} —
-              ดูสิ่งที่กำลังเกิดขึ้นในพันธกิจ
-              และผู้คนที่ต้องการการดูแลได้จากหน้านี้
-            </p>
-            <GlobalSearch variant="prominent" className="mt-8 max-w-xl" />
           </div>
-          {!identityImageFailed && (
-            <img
-              src={IDENTITY_IMAGE}
-              alt=""
-              onError={() => setIdentityImageFailed(true)}
-              className="h-40 w-full rounded-[var(--radius-lg)] bg-[var(--color-canvas-soft)] object-cover sm:h-56 lg:h-full lg:min-h-[320px]"
-            />
-          )}
+          <GlobalSearch variant="prominent" className="max-w-xl" />
+          {canSeeOperations && <OrgSnapshot />}
         </section>
 
         {/* Active ministry: the one canonical upcoming-events presentation */}
@@ -724,7 +700,7 @@ export default function Home() {
             className={`grid gap-4 ${canSeeOperations ? "lg:grid-cols-2" : ""}`}
           >
             {canSeeOperations && (
-              <Card className="gap-0 py-0">
+              <Card className="min-w-0 gap-0 py-0">
                 <div className="flex items-center justify-between gap-4 border-b border-[var(--color-divider)] px-6 py-4">
                   <h3 className="type-body-strong flex items-center gap-2 text-[var(--color-ink)]">
                     <Camera
@@ -772,7 +748,7 @@ export default function Home() {
               </Card>
             )}
 
-            <Card className="gap-0 py-0">
+            <Card className="min-w-0 gap-0 py-0">
               <div className="flex items-center justify-between gap-4 border-b border-[var(--color-divider)] px-6 py-4">
                 <h3 className="type-body-strong flex items-center gap-2 text-[var(--color-ink)]">
                   <Megaphone
@@ -919,7 +895,7 @@ export default function Home() {
             description="รายการที่รอการตัดสินใจหรือการติดตามจากทีม"
           />
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="gap-0 py-0">
+            <Card className="min-w-0 gap-0 py-0">
               <h3 className="type-body-strong border-b border-[var(--color-divider)] px-6 py-4 text-[var(--color-ink)]">
                 สิ่งที่ต้องดูแล
               </h3>
@@ -935,7 +911,7 @@ export default function Home() {
                         <AttentionRow
                           href="/inbox"
                           icon={InboxIcon}
-                          label="รอตรวจสอบในกล่องข้อมูลนำเข้า"
+                          label="ข้อมูลที่รอตรวจสอบ"
                           count={data.pendingSubmissionsCount}
                         />
                         <AttentionRow
@@ -1008,7 +984,7 @@ export default function Home() {
               </QueryView>
             </Card>
 
-            <Card className="gap-0 py-0">
+            <Card className="min-w-0 gap-0 py-0">
               <div className="flex items-center justify-between gap-4 border-b border-[var(--color-divider)] px-6 py-4">
                 <h3 className="type-body-strong text-[var(--color-ink)]">
                   สมาชิกใหม่ล่าสุด

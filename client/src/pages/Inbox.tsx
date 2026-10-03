@@ -115,7 +115,7 @@ export default function Inbox() {
       const data = await api.get<SubmissionRow[]>(`/api/submissions?${params.toString()}`);
       setItems(data);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "โหลดกล่องข้อมูลนำเข้าไม่สำเร็จ");
+      setError(err instanceof ApiError ? err.message : "โหลดข้อมูลที่ส่งเข้ามาไม่สำเร็จ");
       setErrorTechnical(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
     } finally {
       setIsLoading(false);
@@ -194,7 +194,7 @@ export default function Inbox() {
   return (
     <AppLayout>
       <PageHeader
-        title="กล่องข้อมูลนำเข้า"
+        title="ข้อมูลที่ส่งเข้ามา"
         description="สิ่งที่ยังไม่ได้เป็นข้อมูลทางการ — พิมพ์สิ่งที่ได้รับ (เช่นจาก LINE) แล้วตรวจสอบก่อนเผยแพร่"
         primaryAction={{ label: "บันทึกข้อมูลนำเข้า", icon: Plus, onClick: () => setCaptureOpen(true) }}
       />
@@ -226,7 +226,7 @@ export default function Inbox() {
           <ListSkeleton count={4} />
         ) : error ? (
           <ErrorState
-            title="โหลดกล่องข้อมูลนำเข้าไม่สำเร็จ"
+            title="โหลดข้อมูลที่ส่งเข้ามาไม่สำเร็จ"
             description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
             technical={errorTechnical ?? undefined}
             onRetry={load}

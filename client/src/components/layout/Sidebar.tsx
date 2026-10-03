@@ -1,7 +1,6 @@
 import {
   BarChart3,
   FileSpreadsheet,
-  BookOpen,
   Building2,
   CalendarDays,
   Camera,
@@ -11,7 +10,7 @@ import {
   ListTodo,
   MapPin,
   Megaphone,
-  Settings,
+  Network,
   Sparkles,
   UserCheck,
   UserRound,
@@ -53,7 +52,9 @@ export interface NavGroup {
  * Deliberately NOT gated: `/follow-up`, because `server/routes/followUps.ts`
  * grants access to the owner and the creator of a follow-up regardless of
  * role — hiding the entry could strand someone who was assigned a task.
- * `/settings` and `/media` are unbuilt stubs with no server gate to mirror yet.
+ * `/settings` and `/media` are unbuilt stubs (`ComingSoon`), so they are not in the
+ * menu: an entry that opens "coming soon" teaches people the menu cannot be trusted.
+ * Their routes stay so old links do not 404.
  *
  * Grouping follows what a church team actually does, not the database shape:
  * everyday work with people, talking to the congregation, then church-wide
@@ -62,56 +63,65 @@ export interface NavGroup {
  */
 export const navGroups: NavGroup[] = [
   {
-    name: "งานประจำวัน",
+    name: "หลัก",
     items: [
       { label: "หน้าหลัก", path: "/", icon: HomeIcon },
+      { label: "ผังองค์กร", path: "/org", icon: Network, roles: PRIVILEGED_ROLES },
       { label: "สมาชิก", path: "/members", icon: Users },
       { label: "กลุ่มแคร์", path: "/groups", icon: UsersRound },
+    ],
+  },
+  {
+    name: "งานดูแล",
+    items: [
       { label: "เช็คชื่อเข้าร่วม", path: "/attendance", icon: UserCheck },
       { label: "การติดตาม", path: "/follow-up", icon: ListTodo },
       { label: "การนมัสการ", path: "/events", icon: CalendarDays },
     ],
   },
   {
-    name: "การสื่อสาร",
+    name: "สื่อสารและกิจกรรม",
     items: [
       { label: "ฟีดกิจกรรม", path: "/feed", icon: Camera },
       { label: "การประกาศ", path: "/announcements", icon: Megaphone },
-      {
-        label: "กล่องข้อมูลนำเข้า",
-        path: "/inbox",
-        icon: InboxIcon,
-        roles: CREATE_ROLES,
-      },
-      { label: "แอพสมาชิก", path: "/app", icon: Sparkles },
+      { label: "แผนที่กลุ่มแคร์", path: "/map", icon: MapPin },
     ],
   },
   {
-    name: "คริสตจักรและรายงาน",
+    name: "คริสตจักร",
     items: [
       { label: "ข้อมูลคริสตจักร", path: "/church", icon: Building2 },
       { label: "พันธกิจ", path: "/ministries", icon: HeartHandshake },
-      { label: "แผนที่กลุ่มแคร์", path: "/map", icon: MapPin },
-      {
-        label: "นำเข้าข้อมูล",
-        path: "/import",
-        icon: FileSpreadsheet,
-        roles: PRIVILEGED_ROLES,
-      },
       {
         label: "รายงาน",
         path: "/reports",
         icon: BarChart3,
         roles: PRIVILEGED_ROLES,
       },
-      { label: "สื่อ/เอกสาร", path: "/media", icon: BookOpen },
+    ],
+  },
+  {
+    name: "ผู้ดูแลระบบ",
+    items: [
+      {
+        label: "ข้อมูลที่ส่งเข้ามา",
+        path: "/inbox",
+        icon: InboxIcon,
+        roles: CREATE_ROLES,
+      },
+      {
+        label: "นำเข้าจาก Excel",
+        path: "/import",
+        icon: FileSpreadsheet,
+        roles: PRIVILEGED_ROLES,
+      },
     ],
   },
   {
     name: "บัญชีของฉัน",
     items: [
+      { label: "แอพสมาชิก", path: "/app", icon: Sparkles },
       { label: "โปรไฟล์", path: "/profile", icon: UserRound },
-      { label: "ตั้งค่า", path: "/settings", icon: Settings },
     ],
   },
 ];

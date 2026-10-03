@@ -32,10 +32,13 @@ import {
   PageHeader,
   StatusChip,
   type StatusTone,
+  FilterDisclosure,
 } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
+import { fetchAllMembers } from "@/lib/fetchAll";
+import { parseCareGroupDescription } from "@shared/orgView";
 import { useLocation } from "wouter";
 import type {
   GroupCategory,
@@ -374,10 +377,9 @@ export default function Groups() {
   // client/src/members-list-contract.test.ts).
   const fetchAvailableMembers = async () => {
     try {
-      const members = await api.get<SimpleMember[]>("/api/members?limit=200");
-      setAvailableMembers(members ?? []);
+      setAvailableMembers(await fetchAllMembers<SimpleMember>());
     } catch {
-      // ignore
+      toast.error("โหลดรายชื่อสมาชิกไม่สำเร็จ เพิ่มสมาชิกเข้ากลุ่มไม่ได้ในตอนนี้");
     }
   };
 
@@ -573,6 +575,7 @@ export default function Groups() {
   const activeGroupsCount = groupsList.filter((g) => g.status === "active").length;
   const totalMembersInGroups = groupsList.reduce((acc, g) => acc + (g.memberCount || 0), 0);
 
+  const activeFilterCount = [categoryFilter, statusFilter, privacyFilter, levelFilter].filter(Boolean).length;
   const hasFilters = Boolean(search || categoryFilter || statusFilter || privacyFilter || levelFilter);
   const resetFilters = () => {
     setSearch("");
@@ -655,6 +658,7 @@ export default function Groups() {
           </div>
         </div>
 
+        <FilterDisclosure activeCount={activeFilterCount}>
         <div className="w-full sm:w-auto">
           <label
             htmlFor="groups-category"
@@ -736,6 +740,7 @@ export default function Groups() {
             <option value="confidential">กลุ่มลับเฉพาะ</option>
           </select>
         </div>
+        </FilterDisclosure>
       </div>
 
       {error ? (
@@ -813,10 +818,19 @@ export default function Groups() {
                       {grp.area}
                     </p>
                   )}
-                  {grp.description && (
-                    <p className="type-caption mt-2 line-clamp-3 text-[var(--color-text-secondary)]">
-                      {grp.description}
-                    </p>
+                  {grp.orgLevel === "care" ? (
+                    parseCareGroupDescription(grp.description).careLeaderName && (
+                      <p className="type-caption mt-2 text-[var(--color-text-secondary)]">
+                        หนค. {parseCareGroupDescription(grp.description).careLeaderName}
+                      </p>
+                    )
+                  ) : (
+                    !grp.orgLevel &&
+                    grp.description && (
+                      <p className="type-caption mt-2 line-clamp-3 text-[var(--color-text-secondary)]">
+                        {grp.description}
+                      </p>
+                    )
                   )}
                 </div>
 

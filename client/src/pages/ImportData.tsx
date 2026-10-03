@@ -150,7 +150,7 @@ export default function ImportData() {
   if (!canRead) {
     return (
       <AppLayout>
-        <PageHeader title="นำเข้าข้อมูล" description="นำเข้าทะเบียนพันธกิจจากไฟล์ Excel" />
+        <PageHeader title="นำเข้าจาก Excel" description="นำเข้าทะเบียนพันธกิจจากไฟล์ Excel (ตรวจสอบก่อน ยังไม่เข้าทะเบียนสมาชิก)" />
         <EmptyState icon={Lock} title="ไม่มีสิทธิ์เข้าถึง" description="หน้านี้จำกัดเฉพาะผู้ดูแลระบบ เจ้าหน้าที่ และผู้นำพันธกิจ" />
       </AppLayout>
     );
@@ -159,7 +159,7 @@ export default function ImportData() {
   return (
     <AppLayout>
       <PageHeader
-        title="นำเข้าข้อมูล"
+        title="นำเข้าจาก Excel"
         description="อัปโหลดทะเบียนพันธกิจ (.xlsx) เพื่อตรวจสอบก่อน ข้อมูลยังไม่ถูกส่งเข้าทะเบียนสมาชิกหรือกลุ่ม"
         secondaryActions={[
           { label: "ตรวจสอบข้อมูลซ้ำ", href: "/import/duplicates" },

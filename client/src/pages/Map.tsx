@@ -467,7 +467,20 @@ export default function MapPage() {
 
         {state.status === "success" && filtered.length > 0 && (
           <>
-            {view === "map" && (
+            {view === "map" && withCoordinates.length === 0 && (
+              <div className="flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-6 py-12 text-center">
+                <MapPin size={ICON_SIZE["2xl"]} aria-hidden="true" className="text-[var(--color-body-muted)]" />
+                <p className="type-body-strong text-[var(--color-ink)]">ยังไม่มีกลุ่มที่ระบุพิกัด</p>
+                <p className="type-caption max-w-sm text-[var(--color-body-muted)]">
+                  กลุ่ม {withoutCoordinates.toLocaleString("th-TH")} กลุ่มยังไม่มีตำแหน่งบนแผนที่ ดูเป็นรายการได้ทันที หรือเพิ่มพิกัดที่หน้ากลุ่ม
+                </p>
+                <Button onClick={() => setView("list")}>
+                  <ListTree aria-hidden="true" />
+                  ดูเป็นรายการ
+                </Button>
+              </div>
+            )}
+            {view === "map" && withCoordinates.length > 0 && (
               <>
                 <MapView
                   className="h-[420px] rounded-[var(--radius-lg)] border border-[var(--color-hairline)] sm:h-[520px]"

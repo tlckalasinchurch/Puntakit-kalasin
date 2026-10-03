@@ -28,6 +28,7 @@ import {
   PageHeader,
   StatusChip,
   type StatusTone,
+  FilterDisclosure,
 } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
@@ -471,6 +472,7 @@ export default function Members() {
           </div>
         </div>
 
+        <FilterDisclosure activeCount={[area, status, membershipStatus].filter((v) => v !== "ทั้งหมด").length}>
         <div className="w-full sm:w-auto">
           <label
             htmlFor="members-area"
@@ -533,6 +535,7 @@ export default function Members() {
             <option value="inactive">ขาดการติดต่อ</option>
           </select>
         </div>
+        </FilterDisclosure>
       </div>
 
       {/* Result summary: one useful sentence instead of four KPI cards. */}
@@ -593,15 +596,12 @@ export default function Members() {
           <div className="hidden overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] md:block">
             <table className="w-full border-collapse text-left">
               <caption className="sr-only">
-                รายชื่อสมาชิก พร้อมสถานะสมาชิก การติดตาม พื้นที่และกลุ่ม
+                รายชื่อสมาชิก พร้อมประเภทสมาชิก กลุ่ม และการติดตาม
               </caption>
               <thead>
                 <tr className="border-b border-[var(--color-hairline)] bg-[var(--color-canvas-soft)]">
                   <th scope="col" className="type-fine px-4 py-3 font-semibold text-[var(--color-text-tertiary)]">
                     สมาชิก
-                  </th>
-                  <th scope="col" className="type-fine px-4 py-3 font-semibold text-[var(--color-text-tertiary)]">
-                    ติดต่อ
                   </th>
                   <th scope="col" className="type-fine px-4 py-3 font-semibold text-[var(--color-text-tertiary)]">
                     ประเภทสมาชิก
@@ -611,9 +611,6 @@ export default function Members() {
                   </th>
                   <th scope="col" className="type-fine px-4 py-3 font-semibold text-[var(--color-text-tertiary)]">
                     การติดตาม
-                  </th>
-                  <th scope="col" className="type-fine px-4 py-3 font-semibold text-[var(--color-text-tertiary)]">
-                    เข้าร่วมเมื่อ
                   </th>
                   <th scope="col" className="type-fine px-4 py-3 text-right font-semibold text-[var(--color-text-tertiary)]">
                     จัดการ
@@ -633,24 +630,20 @@ export default function Members() {
                           <p className="type-caption-strong truncate text-[var(--color-ink)]">
                             {m.name} {m.nickname ? `(${m.nickname})` : ""}
                           </p>
-                          <p className="type-fine truncate text-[var(--color-text-tertiary)]">
-                            {m.gender === "male"
-                              ? "ชาย"
-                              : m.gender === "female"
-                                ? "หญิง"
-                                : "ไม่ระบุเพศ"}
-                            {m.birthDate ? ` · เกิด ${formatDate(m.birthDate)}` : ""}
-                          </p>
+                          {(() => {
+                            const detail = [
+                              m.phone || m.email || m.lineId,
+                              m.gender === "male" ? "ชาย" : m.gender === "female" ? "หญิง" : null,
+                              m.birthDate ? `เกิด ${formatDate(m.birthDate)}` : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ");
+                            return detail ? (
+                              <p className="type-fine truncate text-[var(--color-text-tertiary)]">{detail}</p>
+                            ) : null;
+                          })()}
                         </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="type-caption text-[var(--color-text-secondary)]">
-                        {m.phone || "-"}
-                      </p>
-                      <p className="type-fine truncate text-[var(--color-text-tertiary)]">
-                        {m.email || m.lineId || "ไม่มีช่องทางอื่น"}
-                      </p>
                     </td>
                     <td className="px-4 py-3">
                       <StatusChip
@@ -661,12 +654,14 @@ export default function Members() {
                       </StatusChip>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="type-caption text-[var(--color-text-secondary)]">
-                        {m.area || "-"}
-                      </p>
-                      <p className="type-fine text-[var(--color-text-tertiary)]">
+                      <p className="type-caption whitespace-nowrap text-[var(--color-text-secondary)]">
                         {m.group || "ยังไม่มีกลุ่ม"}
                       </p>
+                      {m.area && (
+                        <p className="type-fine whitespace-nowrap text-[var(--color-text-tertiary)]">
+                          อ.{m.area}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <StatusChip
@@ -674,9 +669,6 @@ export default function Members() {
                       >
                         {m.status}
                       </StatusChip>
-                    </td>
-                    <td className="type-caption px-4 py-3 tabular-nums text-[var(--color-text-secondary)]">
-                      {formatDate(m.joinedAt)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">

@@ -29,6 +29,7 @@ import {
 } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
+import { fetchAllMembers, fetchAllPages } from "@/lib/fetchAll";
 import type { AttendanceStatus, ServiceType } from "@shared/schema";
 
 interface MemberItem {
@@ -250,7 +251,7 @@ export default function Attendance() {
       // `{ items }` wrapper, so the result must be typed as an array.
       // Pinned by server/routes/members.test.ts (list contract) and
       // client/src/members-list-contract.test.ts.
-      const members = await api.get<MemberItem[]>("/api/members?limit=300");
+      const members = await fetchAllMembers<MemberItem>();
       setAllMembers(members ?? []);
 
       // 2. Fetch existing attendance records for this date & service
@@ -258,11 +259,10 @@ export default function Attendance() {
         startDate: selectedDate,
         endDate: selectedDate,
         serviceType: selectedService,
-        limit: "300",
       });
       if (selectedGroupId) attParams.set("groupId", selectedGroupId);
 
-      const attRes = await api.get<AttendanceRecordItem[]>(`/api/attendance?${attParams.toString()}`);
+      const attRes = await fetchAllPages<AttendanceRecordItem>(`/api/attendance?${attParams.toString()}`);
       const map: Record<string, AttendanceStatus> = {};
       (attRes || []).forEach((r) => {
         map[r.memberId] = r.status;

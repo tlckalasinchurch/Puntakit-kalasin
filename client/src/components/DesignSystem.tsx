@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   ChevronDown,
+  SlidersHorizontal,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -564,6 +565,53 @@ export function Modal({
         )}
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FilterDisclosure — filters that fold away on phones
+// ---------------------------------------------------------------------------
+
+/**
+ * Wraps a page's secondary filters. From `sm` up the children render in place
+ * (`display: contents`, so the parent's grid/flex layout still applies). On a
+ * phone they sit behind one "ตัวกรอง" button, so the first screen shows the
+ * list instead of four stacked dropdowns. Keep the search field OUTSIDE this
+ * wrapper: searching is the first thing people do and must stay visible.
+ */
+export function FilterDisclosure({
+  activeCount = 0,
+  children,
+}: {
+  /** Number of filters currently narrowing the list; shown on the button. */
+  activeCount?: number;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        className="type-caption-strong flex min-h-11 w-full items-center justify-between rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] sm:hidden"
+      >
+        <span className="flex items-center gap-2">
+          <SlidersHorizontal size={ICON_SIZE.sm} aria-hidden="true" />
+          ตัวกรอง{activeCount > 0 ? ` (${activeCount})` : ""}
+        </span>
+        <ChevronDown
+          size={ICON_SIZE.sm}
+          aria-hidden="true"
+          className={`transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      <div id={panelId} className={`${open ? "flex" : "hidden"} flex-col gap-3 sm:contents`}>
+        {children}
+      </div>
+    </>
   );
 }
 

@@ -119,7 +119,7 @@ export default function ImportOrgData() {
       <PageHeader
         title="โหลดข้อมูลผังองค์กร"
         description="โหลดบอดี้ แคร์ และสมาชิกจากไฟล์ข้อมูลที่เตรียมไว้ ระบบเพิ่มข้อมูลเท่านั้น และรันซ้ำได้โดยไม่เกิดข้อมูลซ้ำ"
-        secondaryActions={[{ label: "กลับไปหน้านำเข้าข้อมูล", href: "/import" }]}
+        secondaryActions={[{ label: "กลับไปหน้านำเข้าจาก Excel", href: "/import" }]}
       />
 
       <section className="card-surface mb-4 p-4 sm:p-5">
