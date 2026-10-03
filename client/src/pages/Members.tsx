@@ -69,6 +69,8 @@ interface Member {
   role: string;
   area: string | null;
   group: string | null;
+  /** Current care group (a real membership), with its body. */
+  careGroup: { id: string; name: string; bodyName: string | null } | null;
   membershipStatus: MembershipStatus;
   status: "ติดตามแล้ว" | "ต้องติดตาม";
   assignedLeaderId: string | null;
@@ -93,7 +95,7 @@ const EMPTY_FORM = {
   address: "",
   role: "สมาชิก",
   area: "",
-  group: "",
+  careGroupId: "",
   membershipStatus: "visitor" as MembershipStatus,
   status: "ต้องติดตาม" as Member["status"],
   emergencyContactName: "",
@@ -155,7 +157,7 @@ function MemberCard({
           </span>
           <span className="type-fine mt-2 block text-[var(--color-text-tertiary)]">
             {member.area ? `${member.area} · ` : ""}
-            {member.group || "ยังไม่มีกลุ่ม"} · เข้าร่วม{" "}
+            {member.careGroup?.name ?? member.group ?? "ยังไม่มีกลุ่ม"} · เข้าร่วม{" "}
             {formatDate(member.joinedAt)}
           </span>
         </span>
@@ -202,6 +204,17 @@ export default function Members() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
+  // Care groups grouped by body, for the form picker and the list filter. The
+  // org overview is limited to staff roles; without it the picker simply hides.
+  const [careOptions, setCareOptions] = useState<{ body: string; cares: { id: string; name: string }[] }[]>([]);
+  const [careFilter, setCareFilter] = useState("");
+  useEffect(() => {
+    api
+      .get<{ bodies: { name: string; careGroups: { id: string; name: string }[] }[] }>("/api/org/overview")
+      .then((o) => setCareOptions(o.bodies.map((b) => ({ body: b.name, cares: b.careGroups }))))
+      .catch(() => setCareOptions([]));
+  }, []);
+
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -226,6 +239,7 @@ export default function Members() {
         params.set("limit", "15");
         if (query.trim()) params.set("search", query.trim());
         if (area !== "ทั้งหมด") params.set("area", area);
+        if (careFilter) params.set("careGroupId", careFilter);
         if (status !== "ทั้งหมด") params.set("status", status);
         if (membershipStatus !== "ทั้งหมด") params.set("membershipStatus", membershipStatus);
 
@@ -245,7 +259,7 @@ export default function Members() {
         setIsLoading(false);
       }
     },
-    [query, area, status, membershipStatus]
+    [query, area, status, membershipStatus, careFilter]
   );
 
   useEffect(() => {
@@ -308,7 +322,7 @@ export default function Members() {
       address: m.address ?? "",
       role: m.role,
       area: m.area ?? "",
-      group: m.group ?? "",
+      careGroupId: m.careGroup?.id ?? "",
       membershipStatus: m.membershipStatus ?? "visitor",
       status: m.status,
       emergencyContactName: m.emergencyContactName ?? "",
@@ -336,10 +350,14 @@ export default function Members() {
 
     setSubmitting(true);
     try {
+      const { careGroupId, ...rest } = form;
       const payload = {
-        ...form,
+        ...rest,
         gender: form.gender ? form.gender : null,
         birthDate: form.birthDate ? new Date(form.birthDate).toISOString() : null,
+        // Only send the care group when the person changed it, so editing
+        // another field never ends a membership by accident.
+        ...(!editing || (editing.careGroup?.id ?? "") !== careGroupId ? { careGroupId } : {}),
       };
 
       if (editing) {
@@ -476,7 +494,7 @@ export default function Members() {
           </div>
         </div>
 
-        <FilterDisclosure activeCount={[area, status, membershipStatus].filter((v) => v !== "ทั้งหมด").length}>
+        <FilterDisclosure activeCount={[area, status, membershipStatus].filter((v) => v !== "ทั้งหมด").length + (careFilter ? 1 : 0)}>
         <div className="w-full sm:w-auto">
           <label
             htmlFor="members-area"
@@ -498,6 +516,31 @@ export default function Members() {
             ))}
           </select>
         </div>
+
+        {careOptions.length > 0 && (
+          <div className="w-full sm:w-auto">
+            <label htmlFor="members-care" className="type-caption-strong block text-[var(--color-ink)]">
+              แคร์
+            </label>
+            <select
+              id="members-care"
+              value={careFilter}
+              onChange={(e) => setCareFilter(e.target.value)}
+              className={`${SELECT_CLASS} mt-1.5 sm:w-48`}
+            >
+              <option value="">ทุกแคร์</option>
+              {careOptions.map((b) => (
+                <optgroup key={b.body} label={b.body}>
+                  {b.cares.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name.trim()}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="w-full sm:w-auto">
           <label
@@ -659,7 +702,7 @@ export default function Members() {
                     </td>
                     <td className="px-4 py-3">
                       <p className="type-caption whitespace-nowrap text-[var(--color-text-secondary)]">
-                        {m.group || "ยังไม่มีกลุ่ม"}
+                        {m.careGroup?.name ?? m.group ?? "ยังไม่มีกลุ่ม"}
                       </p>
                       {m.area && (
                         <p className="type-fine whitespace-nowrap text-[var(--color-text-tertiary)]">
@@ -969,17 +1012,29 @@ export default function Members() {
                   />
                 )}
               </Field>
-              <Field label="กลุ่มแคร์">
-                {fieldProps => (
-                  <input
-                    {...fieldProps}
-                    className={INPUT_CLASS}
-                    placeholder="เช่น กลุ่มบ้านสันติสุข"
-                    value={form.group}
-                    onChange={(e) => setForm({ ...form, group: e.target.value })}
-                  />
-                )}
-              </Field>
+              {careOptions.length > 0 && (
+                <Field label="แคร์" hint="เลือกแคร์ที่สมาชิกเข้าร่วม ย้ายแคร์ได้ภายหลัง">
+                  {fieldProps => (
+                    <select
+                      {...fieldProps}
+                      className={SELECT_CLASS}
+                      value={form.careGroupId}
+                      onChange={(e) => setForm({ ...form, careGroupId: e.target.value })}
+                    >
+                      <option value="">ยังไม่ระบุแคร์</option>
+                      {careOptions.map((b) => (
+                        <optgroup key={b.body} label={b.body}>
+                          {b.cares.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name.trim()}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  )}
+                </Field>
+              )}
               <Field label="บทบาทในคริสตจักร">
                 {fieldProps => (
                   <input
@@ -1210,7 +1265,7 @@ export default function Members() {
                   <div className="flex gap-2">
                     <dt className="shrink-0">กลุ่มแคร์:</dt>
                     <dd className="font-semibold text-[var(--color-ink)]">
-                      {selectedMember.group || "ยังไม่มีกลุ่ม"}
+                      {selectedMember.careGroup ? `${selectedMember.careGroup.name}${selectedMember.careGroup.bodyName ? ` · ${selectedMember.careGroup.bodyName}` : ""}` : selectedMember.group || "ยังไม่มีกลุ่ม"}
                     </dd>
                   </div>
                   <div className="flex gap-2">

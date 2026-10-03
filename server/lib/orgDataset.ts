@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import { inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Database } from "../db/client.js";
-import { getDatabaseHandle } from "../db/client.js";
 import { groupMembers, groups, members } from "../../shared/schema.js";
 import { HEAD_ROLE } from "../../shared/orgView.js";
+import { runAtomically } from "./atomicWrites.js";
 
 /**
  * Org dataset loader: body -> care group -> member rows from a prepared
@@ -222,23 +222,6 @@ export function buildOrgRows(dataset: OrgDataset): OrgRows {
     groupIds: [...bodies, ...careGroups].map((r) => r.id!),
     nameFromNickname,
   };
-}
-
-/**
- * Runs the statements as ONE unit: neon-http has no transactions, but
- * db.batch() sends the statements in one request that commits or rolls back
- * together; the other drivers use a normal transaction.
- */
-async function runAtomically(build: (db: Database) => unknown[]): Promise<void> {
-  const handle = getDatabaseHandle();
-  if (handle.driver === "neon") {
-    const statements = build(handle.db as unknown as Database);
-    if (statements.length) await handle.db.batch(statements as unknown as Parameters<typeof handle.db.batch>[0]);
-    return;
-  }
-  await (handle.db as unknown as Database).transaction(async (tx) => {
-    for (const statement of build(tx as unknown as Database)) await statement;
-  });
 }
 
 export async function describeOrgLoad(db: Database, rows: OrgRows) {

@@ -21,6 +21,8 @@ import {
 } from "./schema.js";
 
 export const memberInputSchema = z.object({
+  /** Care group the person belongs to (a real membership). "" or null = none. */
+  careGroupId: z.string().uuid("รหัสแคร์ไม่ถูกต้อง").optional().or(z.literal("")).nullable(),
   name: z.string().trim().min(1, "กรุณากรอกชื่อ").max(200),
   nickname: z.string().trim().max(100).optional().or(z.literal("")),
   avatarUrl: z.string().trim().max(500).optional().or(z.literal("")),
@@ -51,6 +53,7 @@ export const memberQuerySchema = z.object({
   search: z.string().trim().optional(),
   area: z.string().trim().optional(),
   group: z.string().trim().optional(),
+  careGroupId: z.string().uuid().optional(),
   status: z.enum(["ติดตามแล้ว", "ต้องติดตาม"]).optional(),
   membershipStatus: z.enum(MEMBERSHIP_STATUSES).optional(),
   sortBy: z.enum(["name", "joinedAt", "createdAt"]).default("createdAt"),
