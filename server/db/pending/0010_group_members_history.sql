@@ -6,7 +6,8 @@
 --   Run GET /api/import/precheck/group-members as an admin.
 --   Apply this file only when data.gate.verdict is "CLEAR".
 --
--- Numbering: 0009 is now taken by import_duplicate_decisions, so this migration
+-- Numbering: 0009 and 0010 are now taken (import_duplicate_decisions and
+-- import_merge_plans), so this migration
 -- will be generated under a later number (the next free one). The file name here
 -- is kept so the plan and the test still find it.
 --

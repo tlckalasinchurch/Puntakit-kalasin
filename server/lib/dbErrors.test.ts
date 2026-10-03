@@ -59,8 +59,8 @@ describe("isUniqueViolation", () => {
 
   it("does not claim a unique violation of a DIFFERENT constraint", async () => {
     const error = await failure(() => db.insert(schema.importBatches).values(batch("dup-checksum")));
+    expect(isUniqueViolation(error, KNOWN_UNIQUE_CONSTRAINTS.mergePlanOneOpenPerGroup)).toBe(false);
     expect(isUniqueViolation(error, "some_other_constraint")).toBe(false);
-    expect(isUniqueViolation(error, "import_source_rows_pkey")).toBe(false);
   });
 
   it("does not claim other database errors (a foreign-key violation stays a 500)", async () => {

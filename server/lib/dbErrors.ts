@@ -32,4 +32,5 @@ export function isUniqueViolation(error: unknown, constraintName: string): boole
 /** Constraint names the import routes know how to turn into a 409. */
 export const KNOWN_UNIQUE_CONSTRAINTS = {
   importFileChecksum: "import_batches_file_checksum_unique",
+  mergePlanOneOpenPerGroup: "import_merge_plans_one_open_per_group",
 } as const;

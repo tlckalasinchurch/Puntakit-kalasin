@@ -9,8 +9,10 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { IMPORT_DUPLICATE_DECISIONS } from "./importDecisions.js";
+import { IMPORT_MERGE_PLAN_STATUSES, type ImportMergeField } from "./importMerge.js";
 
 const id = () =>
   text("id")
@@ -784,6 +786,46 @@ export const importDuplicateDecisions = pgTable(
   ]
 );
 
+/**
+ * Merge PLANS for duplicate groups a reviewer decided are the same person.
+ * A plan names the surviving row and the source row of each field; a SECOND
+ * person approves or rejects it (four-eyes). Approval records agreement only:
+ * nothing here merges rows or writes to members/groups (L3 does not exist for
+ * imported rows yet). The proposal columns never change; only the review
+ * columns are filled in, once.
+ *
+ * Only one plan per group can be open at a time (partial unique index), and a
+ * plan is tied to the exact rows and to the `same_person` decision it came from.
+ */
+export const importMergePlans = pgTable(
+  "import_merge_plans",
+  {
+    id: id(),
+    nickname: text("nickname").notNull(),
+    groupFingerprint: text("group_fingerprint").notNull(),
+    sourceRowIds: text("source_row_ids").array().notNull(),
+    decisionId: text("decision_id")
+      .notNull()
+      .references(() => importDuplicateDecisions.id, { onDelete: "restrict" }),
+    primarySourceRowId: text("primary_source_row_id").notNull(),
+    fieldChoices: jsonb("field_choices").$type<Record<ImportMergeField, string>>().notNull(),
+    note: text("note"),
+    status: text("status", { enum: IMPORT_MERGE_PLAN_STATUSES }).notNull().default("proposed"),
+    proposedById: text("proposed_by_id").references(() => users.id, { onDelete: "set null" }),
+    proposedAt: timestamp("proposed_at", { withTimezone: true }).notNull().defaultNow(),
+    reviewedById: text("reviewed_by_id").references(() => users.id, { onDelete: "set null" }),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewNote: text("review_note"),
+  },
+  (table) => [
+    uniqueIndex("import_merge_plans_one_open_per_group")
+      .on(table.groupFingerprint)
+      .where(sql`${table.status} = 'proposed'`),
+    index("import_merge_plans_fingerprint_idx").on(table.groupFingerprint, table.proposedAt),
+    index("import_merge_plans_status_idx").on(table.status, table.proposedAt),
+  ]
+);
+
 export type User = typeof users.$inferSelect;
 export type UserSession = typeof userSessions.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
@@ -808,3 +850,4 @@ export type ImportSourceRow = typeof importSourceRows.$inferSelect;
 export type NormalizationRule = typeof normalizationRules.$inferSelect;
 export type ImportRowNorm = typeof importRowNorm.$inferSelect;
 export type ImportDuplicateDecisionRow = typeof importDuplicateDecisions.$inferSelect;
+export type ImportMergePlanRow = typeof importMergePlans.$inferSelect;
