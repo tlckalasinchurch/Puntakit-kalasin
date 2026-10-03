@@ -3,6 +3,7 @@ import { clerkClient } from "@clerk/express";
 import { getDb } from "../db/client.js";
 import { users } from "../../shared/schema.js";
 import type { AuthenticatedUser } from "./auth.js";
+import { applyBootstrapAdmin } from "./bootstrapAdmin.js";
 import { AccountLinkConflictError, AccountSuspendedError, ForbiddenError, UnauthorizedError } from "./errors.js";
 
 /**
@@ -159,13 +160,11 @@ export async function loadClerkUser(req: {
   }
 
   const clerkUser = await clerkClient.users.getUser(clerkUserId);
+  const primaryAddress = clerkUser.emailAddresses.find(e => e.id === clerkUser.primaryEmailAddressId);
   const primaryEmail =
-    clerkUser.emailAddresses.find(e => e.id === clerkUser.primaryEmailAddressId)
-      ?.emailAddress ??
-    clerkUser.emailAddresses[0]?.emailAddress ??
-    null;
+    primaryAddress?.emailAddress ?? clerkUser.emailAddresses[0]?.emailAddress ?? null;
 
-  const { user } = await provisionClerkUser({
+  const { user: provisioned } = await provisionClerkUser({
     id: clerkUser.id,
     email: primaryEmail,
     name:
@@ -175,9 +174,14 @@ export async function loadClerkUser(req: {
         .trim() || null,
   });
 
-  if (user.status === "suspended") {
+  if (provisioned.status === "suspended") {
     throw new AccountSuspendedError();
   }
+
+  // Only the verified PRIMARY address can trigger the first-admin bootstrap.
+  const user = await applyBootstrapAdmin(provisioned, {
+    emailVerified: primaryAddress?.verification?.status === "verified",
+  });
 
   return {
     id: user.id,
