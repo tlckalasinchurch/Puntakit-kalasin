@@ -543,6 +543,7 @@ Blocked:    4  checkbox fields — semantics unconfirmed
 | **0** | **Pre-check (no migration)** — count duplicate `(group_id, member_id)` in production; count members where `group IS NOT NULL` | nothing |
 | 1 | `0008_import_audit` — `import_batches`, `import_source_rows`, `normalization_rules`, `import_row_norm` — **done** | 0 |
 | 1b | `0009_import_duplicate_decisions` — append-only log of human duplicate-review decisions (`import_duplicate_decisions`); **done**. It took the number `0009`, so every later migration in this table moves up by one when it is generated: `mission_domain` becomes `0010`, `group_members_history` `0011`, and so on. Only the file names change; the order and the dependencies do not | 1 |
+| 1c | `0010_import_merge_plans` — merge PLANS for groups judged "same person", each approved or rejected by a second admin (`import_merge_plans`); **done**. Approval records agreement only: no row is merged and `members`/`groups` are not written. It took `0010`, so `mission_domain` becomes `0011` and `group_members_history` becomes `0012` when they are generated | 1 |
 | 2 | `0009_mission_domain` — `areas`, `mission_member_details`, `members.realName`, `groups.groupKind/teamCode/villageName/coordinatorName/coordinatorPhone/areaId` | 1 |
 | 3 | `0010_group_members_history` — constraint swap **on the existing table**, in one migration: drop `group_members_group_member_uniq`, create `UNIQUE (group_id, member_id) WHERE left_at IS NULL` | 0 |
 | 4 | `0011_weekly_reports` — the three weekly tables | 2 |

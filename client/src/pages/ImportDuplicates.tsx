@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Copy, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { EmptyState, ErrorState, Field, PageHeader, StatusChip } from "@/components/DesignSystem";
 import { ListSkeleton } from "@/components/LoadingStates";
@@ -13,6 +14,14 @@ import {
   IMPORT_DUPLICATE_NOTE_MAX,
   type ImportDuplicateDecision,
 } from "@shared/importDecisions";
+import {
+  IMPORT_MERGE_FIELDS,
+  IMPORT_MERGE_FIELD_LABELS,
+  IMPORT_MERGE_NOTE_MAX,
+  IMPORT_MERGE_PLAN_STATUS_LABELS,
+  type ImportMergeField,
+  type ImportMergePlanStatus,
+} from "@shared/importMerge";
 
 /**
  * Admin → ตรวจสอบข้อมูลซ้ำ (§17). Shows every row that shares a normalized
@@ -59,6 +68,8 @@ interface Candidate {
   members: Member[];
   /** Newest first. */
   decisions: DecisionEntry[];
+  /** The newest merge plan for exactly these rows, any status. */
+  mergePlan: { id: string; status: ImportMergePlanStatus } | null;
 }
 
 type StatusFilter = "all" | "undecided" | "decided";
@@ -197,6 +208,116 @@ function DecisionPanel({ candidate, canDecide, onSaved }: { candidate: Candidate
   );
 }
 
+/**
+ * Proposes a merge PLAN for a group judged "same person": which row survives
+ * and where each field value comes from. A second admin approves it on the
+ * approvals page. Nothing is merged: this only records the plan.
+ */
+function MergePlanPanel({ candidate, canDecide, onSaved }: { candidate: Candidate; canDecide: boolean; onSaved: () => void }) {
+  const first = candidate.members[0]?.sourceRowId ?? "";
+  const [primary, setPrimary] = useState(first);
+  const [choices, setChoices] = useState<Record<ImportMergeField, string>>({ fullName: first, age: first, occupation: first, workplace: first });
+  const [note, setNote] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const plan = candidate.mergePlan;
+  const decidedSame = currentDecision(candidate)?.decision === "same_person";
+
+  if (plan?.status === "proposed" || plan?.status === "approved") {
+    return (
+      <div className="mt-4 border-t border-[var(--color-hairline)] pt-4">
+        <p className="type-caption text-[var(--color-ink)]">
+          <StatusChip tone={plan.status === "approved" ? "success" : "info"}>แผนรวม: {IMPORT_MERGE_PLAN_STATUS_LABELS[plan.status]}</StatusChip>{" "}
+          <Link href="/import/merge-approvals" className="underline">
+            ไปหน้าอนุมัติแผนรวม
+          </Link>
+          {plan.status === "approved" && <span className="text-[var(--color-body-muted)]"> · ยังไม่ได้รวมข้อมูลจริง</span>}
+        </p>
+      </div>
+    );
+  }
+  if (!canDecide || !decidedSame) return null;
+
+  const labelOf = (rowId: string) => `แถวที่ ${candidate.members.findIndex((m) => m.sourceRowId === rowId) + 1}`;
+  const valueOf = (member: Member, field: ImportMergeField) =>
+    ({ fullName: member.rawFullName, age: member.rawAge, occupation: member.rawOccupation, workplace: member.rawWorkplace })[field]?.trim() || "—";
+
+  const save = async () => {
+    setIsSaving(true);
+    try {
+      await api.post("/api/import/merge-plans", {
+        nickname: candidate.nickname,
+        sourceRowIds: candidate.members.map((m) => m.sourceRowId),
+        primarySourceRowId: primary,
+        fieldChoices: choices,
+        note: note.trim() === "" ? undefined : note.trim(),
+      });
+      toast.success("เสนอแผนรวมแล้ว รอผู้ดูแลระบบอีกคนอนุมัติ");
+      onSaved();
+    } catch (err) {
+      toast.error(messageOf(err, "เสนอแผนรวมไม่สำเร็จ"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <details className="mt-4 border-t border-[var(--color-hairline)] pt-4">
+      <summary className="type-caption cursor-pointer font-medium text-[var(--color-ink)]">
+        เสนอแผนรวมข้อมูล{plan?.status === "rejected" ? " (แผนก่อนหน้าถูกปฏิเสธ)" : ""}
+      </summary>
+      <div className="mt-3 flex flex-col gap-3">
+        <Field label="แถวหลักที่จะเก็บไว้">
+          {(props) => (
+            <select id={props.id} aria-describedby={props["aria-describedby"]} className={CONTROL_CLASS} value={primary} onChange={(e) => setPrimary(e.target.value)}>
+              {candidate.members.map((m, index) => (
+                <option key={m.sourceRowId} value={m.sourceRowId}>
+                  แถวที่ {index + 1} ({m.sheetName} / {m.excelRow})
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        {IMPORT_MERGE_FIELDS.map((field) => (
+          <Field key={field} label={`${IMPORT_MERGE_FIELD_LABELS[field]} ใช้ค่าจาก`}>
+            {(props) => (
+              <select
+                id={props.id}
+                aria-describedby={props["aria-describedby"]}
+                className={CONTROL_CLASS}
+                value={choices[field]}
+                onChange={(e) => setChoices((prev) => ({ ...prev, [field]: e.target.value }))}
+              >
+                {candidate.members.map((m) => (
+                  <option key={m.sourceRowId} value={m.sourceRowId}>
+                    {labelOf(m.sourceRowId)}: {valueOf(m, field)}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+        ))}
+        <Field label="เหตุผล (ไม่บังคับ)" hint={`ไม่เกิน ${IMPORT_MERGE_NOTE_MAX} ตัวอักษร`}>
+          {(props) => (
+            <textarea id={props.id} aria-describedby={props["aria-describedby"]} rows={2} maxLength={IMPORT_MERGE_NOTE_MAX} className={`${CONTROL_CLASS} py-2`} value={note} onChange={(e) => setNote(e.target.value)} />
+          )}
+        </Field>
+        <div>
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => void save()}
+            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
+          >
+            {isSaving ? "กำลังส่ง…" : "ส่งแผนรวมเพื่อขออนุมัติ"}
+          </button>
+          <p className="type-fine mt-2 text-[var(--color-body-muted)]">ผู้ดูแลระบบอีกคนต้องอนุมัติ และระบบยังไม่รวมข้อมูลจริง</p>
+        </div>
+      </div>
+    </details>
+  );
+}
+
 function CandidateCard({ candidate, canDecide, onSaved }: { candidate: Candidate; canDecide: boolean; onSaved: () => void }) {
   const fieldRows = useMemo(() => buildFieldRows(candidate.members), [candidate.members]);
   const differing = fieldRows.filter((row) => differs(row.values)).length;
@@ -263,6 +384,7 @@ function CandidateCard({ candidate, canDecide, onSaved }: { candidate: Candidate
         </table>
       </div>
       <DecisionPanel key={candidate.decisions[0]?.id ?? "none"} candidate={candidate} canDecide={canDecide} onSaved={onSaved} />
+      <MergePlanPanel key={`${candidate.mergePlan?.id ?? "none"}-${candidate.decisions[0]?.id ?? "none"}`} candidate={candidate} canDecide={canDecide} onSaved={onSaved} />
     </article>
   );
 }
@@ -327,7 +449,10 @@ export default function ImportDuplicates() {
       <PageHeader
         title="ตรวจสอบข้อมูลซ้ำ"
         description="แสดงแถวที่ใช้ชื่อเล่นเดียวกัน เรียงข้างกันเพื่อให้คนตัดสินเอง ผู้ดูแลระบบบันทึกผลได้ ระบบไม่รวมข้อมูลให้อัตโนมัติ"
-        secondaryActions={[{ label: "กลับไปหน้านำเข้าข้อมูล", href: "/import" }]}
+        secondaryActions={[
+          { label: "อนุมัติแผนรวม", href: "/import/merge-approvals" },
+          { label: "กลับไปหน้านำเข้าข้อมูล", href: "/import" },
+        ]}
       />
 
       <section className="card-surface mb-4 p-4 sm:p-5">
