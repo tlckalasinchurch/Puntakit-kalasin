@@ -49,7 +49,7 @@ NEVER TURN UNKNOWN DATA INTO FACT.
 | Normalization engine | **Done.** 7 rules at `NORMALIZATION_VERSION = 1`; bad values are quarantined, never guessed | `server/lib/missionImport.ts` |
 | `/api/import` routes | **Done.** upload · batches · preview · report · duplicates · rule confirm | `server/routes/import.ts` |
 | Step 0 pre-check | **Written and reachable in production** — `GET /api/import/precheck/group-members` (admin) runs the same read-only function against the live Neon database | `server/lib/groupMembersPreCheck.ts`, `server/routes/import.ts`, `server/scripts/pre-migration-check.ts` |
-| `0010_group_members_history` | **Not started — gated on step 0** | §13 |
+| `0010_group_members_history` | **Dry-run SQL written** at `server/db/pending/0010_group_members_history.sql`; not applied, gated on step 0 | §13 |
 | Migration steps 2, 4–7 and the whole L3/L4 surface | **Not started** | — |
 
 At this revision `pnpm check` is clean and `pnpm test` reports 26 files / 303
