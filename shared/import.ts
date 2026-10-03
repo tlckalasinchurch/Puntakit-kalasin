@@ -41,9 +41,4 @@ export type ImportDuplicatesQuery = z.infer<typeof importDuplicatesQuerySchema>;
 export const importRuleConfirmSchema = z.object({});
 export type ImportRuleConfirm = z.infer<typeof importRuleConfirmSchema>;
 
-/**
- * Upload metadata travels in headers (the workbook bytes are the body):
- * `x-source-filename` must name an .xlsx file. Sanitized server-side.
- */
-export const IMPORT_UPLOAD_FILENAME_HEADER = "x-source-filename";
-export const IMPORT_UPLOAD_MAX_BYTES = 120 * 1024 * 1024; // largest observed workbook: ~27 MB
+export * from "./importUpload.js";

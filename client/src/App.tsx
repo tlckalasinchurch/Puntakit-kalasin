@@ -24,6 +24,7 @@ const Home = lazy(() => import("./pages/Home"));
 const Feed = lazy(() => import("./pages/Feed"));
 const FollowUps = lazy(() => import("./pages/FollowUps"));
 const Inbox = lazy(() => import("./pages/Inbox"));
+const ImportData = lazy(() => import("./pages/ImportData"));
 const Members = lazy(() => import("./pages/Members"));
 const Groups = lazy(() => import("./pages/Groups"));
 const MapPage = lazy(() => import("./pages/Map"));
@@ -131,6 +132,11 @@ function Router() {
       <Route path="/inbox">
         <ProtectedRoute>
           <Inbox />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/import">
+        <ProtectedRoute>
+          <ImportData />
         </ProtectedRoute>
       </Route>
       <Route path="/members">

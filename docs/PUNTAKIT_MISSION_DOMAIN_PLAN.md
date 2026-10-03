@@ -649,7 +649,9 @@ design system and no new dependency.
 ## 18. API Impact
 
 ```
-POST /api/import/upload                 multipart → parse → batchId (admin)
+POST /api/import/upload                 raw .xlsx body, up to 4 MB → parse → batch (admin)
+POST /api/import/upload/token           Vercel Blob client-upload handshake (admin)
+POST /api/import/upload/from-blob       read the private blob, import it, delete the blob (admin)
 GET  /api/import/batches                list with counts
 GET  /api/import/batches/:id/preview    raw + normalized + blocked fields
 POST /api/import/batches/:id/confirm    promote L2 → L3 (admin)
