@@ -6,7 +6,11 @@
 --   Run GET /api/import/precheck/group-members as an admin.
 --   Apply this file only when data.gate.verdict is "CLEAR".
 --
--- To promote: copy this file to server/db/migrations/0010_group_members_history.sql,
+-- Numbering: 0009 is now taken by import_duplicate_decisions, so this migration
+-- will be generated under a later number (the next free one). The file name here
+-- is kept so the plan and the test still find it.
+--
+-- To promote: copy this file to server/db/migrations/ under the next free number,
 -- replace "group_members_group_member_uniq" in shared/schema.ts with the partial
 -- index below, then run `pnpm db:generate` to create the journal entry. Run
 -- `pnpm check` and `pnpm test` first.

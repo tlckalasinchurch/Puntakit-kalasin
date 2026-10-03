@@ -1,19 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { Copy, Lock } from "lucide-react";
+import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { EmptyState, ErrorState, Field, PageHeader, StatusChip } from "@/components/DesignSystem";
 import { ListSkeleton } from "@/components/LoadingStates";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
-import { PRIVILEGED_ROLES, hasRole } from "@shared/roles";
+import { ADMIN_ROLES, PRIVILEGED_ROLES, hasRole } from "@shared/roles";
+import {
+  IMPORT_DUPLICATE_DECISIONS,
+  IMPORT_DUPLICATE_DECISION_LABELS,
+  IMPORT_DUPLICATE_NOTE_MAX,
+  type ImportDuplicateDecision,
+} from "@shared/importDecisions";
 
 /**
  * Admin → ตรวจสอบข้อมูลซ้ำ (§17). Shows every row that shares a normalized
  * nickname, side by side with the verbatim Excel values.
  *
- * It is a READ-ONLY review aid (§8): the system flags candidates and shows
- * evidence; it never merges rows and never decides that two rows are one
- * person. Promotion into members (L3) is a later, human-confirmed phase.
+ * A review aid (§8): the system flags candidates and shows evidence; it never
+ * merges rows and never decides that two rows are one person. An admin can
+ * RECORD a judgement ("same person" / "different people"). That is an
+ * append-only log: nothing is merged, edited or promoted into members (L3).
  */
 
 interface BatchOption {
@@ -22,6 +30,7 @@ interface BatchOption {
 }
 
 interface Member {
+  sourceRowId: string;
   batchId: string;
   sourceFileName: string;
   sheetName: string;
@@ -34,10 +43,33 @@ interface Member {
   rawWorkplace: string | null;
 }
 
+interface DecisionEntry {
+  id: string;
+  decision: ImportDuplicateDecision;
+  note: string | null;
+  decidedAt: string;
+  decidedByName: string | null;
+  /** False once a later import changed the group's rows after this decision. */
+  matchesCurrentRows: boolean;
+}
+
 interface Candidate {
   nickname: string;
   occurrences: number;
   members: Member[];
+  /** Newest first. */
+  decisions: DecisionEntry[];
+}
+
+type StatusFilter = "all" | "undecided" | "decided";
+
+/** The decision that still applies to the group's current rows, if any. */
+const currentDecision = (candidate: Candidate) => candidate.decisions.find((d) => d.matchesCurrentRows) ?? null;
+/** A decision was recorded, but the group has changed since. */
+const hasStaleDecision = (candidate: Candidate) => candidate.decisions.length > 0 && currentDecision(candidate) === null;
+
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString("th-TH", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 interface DuplicatesResponse {
@@ -65,7 +97,107 @@ function buildFieldRows(members: Member[]): FieldRow[] {
 
 const differs = (values: string[]) => new Set(values).size > 1;
 
-function CandidateCard({ candidate }: { candidate: Candidate }) {
+function DecisionPanel({ candidate, canDecide, onSaved }: { candidate: Candidate; canDecide: boolean; onSaved: () => void }) {
+  const current = currentDecision(candidate);
+  const [choice, setChoice] = useState<ImportDuplicateDecision | "">(current?.decision ?? "");
+  const [note, setNote] = useState(current?.note ?? "");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const save = async () => {
+    if (choice === "") return;
+    setIsSaving(true);
+    try {
+      await api.post("/api/import/duplicates/decisions", {
+        nickname: candidate.nickname,
+        sourceRowIds: candidate.members.map((m) => m.sourceRowId),
+        decision: choice,
+        note: note.trim() === "" ? undefined : note.trim(),
+      });
+      toast.success("บันทึกการตัดสินใจแล้ว");
+      onSaved();
+    } catch (err) {
+      toast.error(messageOf(err, "บันทึกการตัดสินใจไม่สำเร็จ"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 border-t border-[var(--color-hairline)] pt-4">
+      {hasStaleDecision(candidate) && (
+        <p role="status" className="type-caption mb-3 text-[var(--color-warning)]">
+          มีการนำเข้าใหม่ที่เปลี่ยนแถวในกลุ่มนี้หลังการตัดสินใจครั้งก่อน กรุณาตรวจและตัดสินใหม่
+        </p>
+      )}
+      {canDecide && (
+        <fieldset className="flex flex-col gap-3">
+          <legend className="type-caption mb-2 font-medium text-[var(--color-ink)]">ผลการตรวจสอบของคุณ</legend>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {IMPORT_DUPLICATE_DECISIONS.map((value) => (
+              <label
+                key={value}
+                className="flex min-h-11 flex-1 cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] px-3 text-sm text-[var(--color-ink)] has-[:checked]:border-[var(--color-primary)] has-[:checked]:bg-[var(--color-canvas-soft)]"
+              >
+                <input
+                  type="radio"
+                  name={`decision-${candidate.nickname}`}
+                  value={value}
+                  checked={choice === value}
+                  onChange={() => setChoice(value)}
+                />
+                {IMPORT_DUPLICATE_DECISION_LABELS[value]}
+              </label>
+            ))}
+          </div>
+          <Field label="เหตุผล (ไม่บังคับ)" hint={`ไม่เกิน ${IMPORT_DUPLICATE_NOTE_MAX} ตัวอักษร`}>
+            {(props) => (
+              <textarea
+                id={props.id}
+                aria-describedby={props["aria-describedby"]}
+                rows={2}
+                maxLength={IMPORT_DUPLICATE_NOTE_MAX}
+                className={`${CONTROL_CLASS} py-2`}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            )}
+          </Field>
+          <div>
+            <button
+              type="button"
+              disabled={choice === "" || isSaving}
+              onClick={() => void save()}
+              className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
+            >
+              {isSaving ? "กำลังบันทึก…" : "บันทึกการตัดสินใจ"}
+            </button>
+            <p className="type-fine mt-2 text-[var(--color-body-muted)]">การบันทึกไม่รวมหรือแก้ข้อมูลใด ๆ ระบบเก็บเป็นประวัติเท่านั้น</p>
+          </div>
+        </fieldset>
+      )}
+      {candidate.decisions.length > 0 && (
+        <details className="mt-3">
+          <summary className="type-caption cursor-pointer text-[var(--color-body-muted)]">
+            ประวัติการตัดสินใจ ({candidate.decisions.length})
+          </summary>
+          <ul className="type-caption mt-2 flex flex-col gap-2">
+            {candidate.decisions.map((d) => (
+              <li key={d.id} className="text-[var(--color-ink)]">
+                <span className="font-semibold">{IMPORT_DUPLICATE_DECISION_LABELS[d.decision]}</span>
+                {" · "}
+                {d.decidedByName ?? "ผู้ใช้ที่ถูกลบ"} · {formatDateTime(d.decidedAt)}
+                {!d.matchesCurrentRows && <span className="text-[var(--color-warning)]"> · ใช้กับแถวชุดเดิม</span>}
+                {d.note && <span className="block text-[var(--color-body-muted)]">{d.note}</span>}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function CandidateCard({ candidate, canDecide, onSaved }: { candidate: Candidate; canDecide: boolean; onSaved: () => void }) {
   const fieldRows = useMemo(() => buildFieldRows(candidate.members), [candidate.members]);
   const differing = fieldRows.filter((row) => differs(row.values)).length;
   const sources = new Set(candidate.members.map((m) => `${m.batchId}/${m.sheetName}`)).size;
@@ -79,6 +211,12 @@ function CandidateCard({ candidate }: { candidate: Candidate }) {
           {differing === 0 ? "ข้อมูลเหมือนกันทุกช่อง" : `ต่างกัน ${differing} ช่อง`}
         </StatusChip>
         {sources > 1 && <StatusChip>อยู่ใน {sources} ชีต/ไฟล์</StatusChip>}
+        {(() => {
+          const current = currentDecision(candidate);
+          if (current) return <StatusChip tone="success">ตัดสินแล้ว: {IMPORT_DUPLICATE_DECISION_LABELS[current.decision]}</StatusChip>;
+          if (hasStaleDecision(candidate)) return <StatusChip tone="warning">ต้องตรวจใหม่</StatusChip>;
+          return <StatusChip>ยังไม่ตัดสิน</StatusChip>;
+        })()}
       </header>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[28rem] border-collapse text-left text-sm">
@@ -124,6 +262,7 @@ function CandidateCard({ candidate }: { candidate: Candidate }) {
           </tbody>
         </table>
       </div>
+      <DecisionPanel key={candidate.decisions[0]?.id ?? "none"} candidate={candidate} canDecide={canDecide} onSaved={onSaved} />
     </article>
   );
 }
@@ -131,6 +270,7 @@ function CandidateCard({ candidate }: { candidate: Candidate }) {
 export default function ImportDuplicates() {
   const { user } = useAuth();
   const canRead = hasRole(user?.role, PRIVILEGED_ROLES);
+  const canDecide = hasRole(user?.role, ADMIN_ROLES);
 
   const [batches, setBatches] = useState<BatchOption[]>([]);
   const [batchId, setBatchId] = useState("");
@@ -138,6 +278,7 @@ export default function ImportDuplicates() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   useEffect(() => {
     if (!canRead) return;
@@ -164,6 +305,14 @@ export default function ImportDuplicates() {
     };
   }, [canRead, batchId, reloadKey]);
 
+  const decidedCount = data ? data.duplicates.filter((c) => currentDecision(c) !== null).length : 0;
+  const visible = useMemo(() => {
+    const all = data?.duplicates ?? [];
+    if (statusFilter === "decided") return all.filter((c) => currentDecision(c) !== null);
+    if (statusFilter === "undecided") return all.filter((c) => currentDecision(c) === null);
+    return all;
+  }, [data, statusFilter]);
+
   if (!canRead) {
     return (
       <AppLayout>
@@ -177,11 +326,27 @@ export default function ImportDuplicates() {
     <AppLayout>
       <PageHeader
         title="ตรวจสอบข้อมูลซ้ำ"
-        description="แสดงแถวที่ใช้ชื่อเล่นเดียวกัน เรียงข้างกันเพื่อให้คนตัดสินเอง ระบบไม่รวมข้อมูลให้อัตโนมัติ"
+        description="แสดงแถวที่ใช้ชื่อเล่นเดียวกัน เรียงข้างกันเพื่อให้คนตัดสินเอง ผู้ดูแลระบบบันทึกผลได้ ระบบไม่รวมข้อมูลให้อัตโนมัติ"
         secondaryActions={[{ label: "กลับไปหน้านำเข้าข้อมูล", href: "/import" }]}
       />
 
       <section className="card-surface mb-4 p-4 sm:p-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="สถานะการตัดสินใจ" hint="กรองตามผลที่บันทึกไว้">
+          {(props) => (
+            <select
+              id={props.id}
+              aria-describedby={props["aria-describedby"]}
+              className={CONTROL_CLASS}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+            >
+              <option value="all">ทั้งหมด</option>
+              <option value="undecided">ยังไม่ตัดสิน / ต้องตรวจใหม่</option>
+              <option value="decided">ตัดสินแล้ว</option>
+            </select>
+          )}
+        </Field>
         <Field label="ไฟล์ที่นำเข้า" hint="เว้นว่างไว้เพื่อดูทุกไฟล์รวมกัน">
           {(props) => (
             <select
@@ -200,25 +365,30 @@ export default function ImportDuplicates() {
             </select>
           )}
         </Field>
+        </div>
       </section>
 
       {isLoading ? (
         <ListSkeleton count={3} />
       ) : error ? (
         <ErrorState description={error} onRetry={() => setReloadKey((k) => k + 1)} />
-      ) : !data || data.duplicates.length === 0 ? (
+      ) : !data || visible.length === 0 ? (
         <EmptyState
           icon={Copy}
-          title="ไม่พบชื่อเล่นซ้ำ"
-          description="ยังไม่มีแถวที่ใช้ชื่อเล่นเดียวกันในไฟล์ที่เลือก"
+          title={data && data.duplicates.length > 0 ? "ไม่มีรายการตามสถานะที่เลือก" : "ไม่พบชื่อเล่นซ้ำ"}
+          description={
+            data && data.duplicates.length > 0
+              ? "เปลี่ยนตัวกรองสถานะเพื่อดูรายการอื่น"
+              : "ยังไม่มีแถวที่ใช้ชื่อเล่นเดียวกันในไฟล์ที่เลือก"
+          }
         />
       ) : (
         <div className="flex flex-col gap-4">
           <p className="type-caption text-[var(--color-body-muted)]">
-            พบ {data.duplicates.length} ชื่อเล่นที่ซ้ำ ชื่อเล่นเดียวกันอาจเป็นคนละคน ตรวจช่องที่ทำเครื่องหมาย "ต่างกัน" ก่อนตัดสิน
+            พบ {data.duplicates.length} ชื่อเล่นที่ซ้ำ (ตัดสินแล้ว {decidedCount}) ชื่อเล่นเดียวกันอาจเป็นคนละคน ตรวจช่องที่ทำเครื่องหมาย "ต่างกัน" ก่อนตัดสิน
           </p>
-          {data.duplicates.map((candidate) => (
-            <CandidateCard key={candidate.nickname} candidate={candidate} />
+          {visible.map((candidate) => (
+            <CandidateCard key={candidate.nickname} candidate={candidate} canDecide={canDecide} onSaved={() => setReloadKey((k) => k + 1)} />
           ))}
         </div>
       )}

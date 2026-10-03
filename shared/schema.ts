@@ -10,6 +10,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { randomUUID } from "node:crypto";
+import { IMPORT_DUPLICATE_DECISIONS } from "./importDecisions.js";
 
 const id = () =>
   text("id")
@@ -753,6 +754,36 @@ export const importRowNorm = pgTable(
   (table) => [uniqueIndex("import_row_norm_source_row_uniq").on(table.sourceRowId)]
 );
 
+/**
+ * Human decisions on duplicate-review candidates (§8). APPEND-ONLY: a changed
+ * mind is a new row, so the history of who decided what and when is kept.
+ *
+ * A decision is about a specific set of source rows, not about a nickname:
+ * `groupFingerprint` is a hash of the sorted `sourceRowIds`. When a later
+ * upload adds a row with the same nickname, the group's fingerprint changes
+ * and the old decision no longer matches, so the group needs review again.
+ *
+ * `sourceRowIds` has no foreign key (an array cannot carry one) and a decision
+ * never changes L1, L2 or L3: it only records a judgement for a later phase.
+ */
+export const importDuplicateDecisions = pgTable(
+  "import_duplicate_decisions",
+  {
+    id: id(),
+    nickname: text("nickname").notNull(),
+    groupFingerprint: text("group_fingerprint").notNull(),
+    sourceRowIds: text("source_row_ids").array().notNull(),
+    decision: text("decision", { enum: IMPORT_DUPLICATE_DECISIONS }).notNull(),
+    note: text("note"),
+    decidedById: text("decided_by_id").references(() => users.id, { onDelete: "set null" }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("import_duplicate_decisions_nickname_idx").on(table.nickname, table.decidedAt),
+    index("import_duplicate_decisions_fingerprint_idx").on(table.groupFingerprint),
+  ]
+);
+
 export type User = typeof users.$inferSelect;
 export type UserSession = typeof userSessions.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
@@ -776,3 +807,4 @@ export type ImportBatch = typeof importBatches.$inferSelect;
 export type ImportSourceRow = typeof importSourceRows.$inferSelect;
 export type NormalizationRule = typeof normalizationRules.$inferSelect;
 export type ImportRowNorm = typeof importRowNorm.$inferSelect;
+export type ImportDuplicateDecisionRow = typeof importDuplicateDecisions.$inferSelect;
