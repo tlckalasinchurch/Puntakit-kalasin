@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  FileSpreadsheet,
   BookOpen,
   Building2,
   CalendarDays,
@@ -91,6 +92,12 @@ export const navGroups: NavGroup[] = [
       { label: "ข้อมูลคริสตจักร", path: "/church", icon: Building2 },
       { label: "พันธกิจ", path: "/ministries", icon: HeartHandshake },
       { label: "แผนที่กลุ่มแคร์", path: "/map", icon: MapPin },
+      {
+        label: "นำเข้าข้อมูล",
+        path: "/import",
+        icon: FileSpreadsheet,
+        roles: PRIVILEGED_ROLES,
+      },
       {
         label: "รายงาน",
         path: "/reports",

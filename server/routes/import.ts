@@ -17,12 +17,14 @@ import {
   importPreviewQuerySchema,
   importRuleConfirmSchema,
   IMPORT_UPLOAD_FILENAME_HEADER,
+  importFromBlobBodySchema,
   IMPORT_UPLOAD_MAX_BYTES,
 } from "../../shared/import.js";
 import { PRIVILEGED_ROLES } from "../../shared/roles.js";
 import { requireAdmin, requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { runGroupMembersPreCheck } from "../lib/groupMembersPreCheck.js";
+import { createImportUploadToken, deleteImportBlob, readImportBlob } from "../lib/importBlob.js";
 import { ConflictError, NotFoundError, ValidationError } from "../lib/errors.js";
 import {
   checksumBuffer,
@@ -214,7 +216,122 @@ const BLOCKED_FIELD_NOTE = "ยังไม่ยืนยัน semantic meanin
 const blockedFields = () =>
   IMPORT_BLOCKED_FIELD_KEYS.map((key) => ({ key, note: BLOCKED_FIELD_NOTE }));
 
+/**
+ * Shared by every upload path (raw body and Blob hand-off): dedupe by
+ * checksum, parse, normalize, then write L1 + L2 in one transaction. It never
+ * touches L3.
+ */
+async function importWorkbookBytes(req: Request, bytes: Buffer, fileName: string) {
+  const db = getDb();
+  const checksum = checksumBuffer(bytes);
+
+  // §15: the same workbook is never imported twice silently.
+  const [existing] = await db
+    .select({ id: importBatches.id, sourceFileName: importBatches.sourceFileName })
+    .from(importBatches)
+    .where(eq(importBatches.fileChecksum, checksum))
+    .limit(1);
+  if (existing) {
+    throw new ConflictError("ไฟล์นี้ถูกนำเข้าไปแล้ว — ไม่นำเข้าซ้ำโดยอัตโนมัติ", [
+      { field: "existingBatchId", message: existing.id },
+    ]);
+  }
+
+  let parsed: ParsedWorkbook;
+  try {
+    parsed = await withTempWorkbook(bytes, (filePath) => parseWorkbookFile(filePath));
+  } catch (error) {
+    throw new ValidationError(
+      `อ่านไฟล์ไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+  if (parsed.memberRowCount === 0) {
+    throw new ValidationError(
+      "ไม่พบแถวสมาชิกใด ๆ ในไฟล์นี้ (ไม่มี sheet ที่ header ตรงกับทะเบียนพันธกิจ)"
+    );
+  }
+
+  // Normalize BEFORE writing, so a batch is written all-or-nothing.
+  const prepared = prepareSourceRows(parsed);
+  const quarantinedCount = prepared.filter((p) => p.outcome.status === "quarantined").length;
+  const layoutVariants = Array.from(
+    new Set(
+      parsed.sheets
+        .map((s) => s.analysis.layout?.signature)
+        .filter((signature): signature is string => Boolean(signature))
+    )
+  );
+
+  await seedNormalizationRules();
+
+  const CHUNK = 500;
+  const batchId = await db.transaction(async (tx) => {
+    const [batch] = await tx
+      .insert(importBatches)
+      .values({
+        sourceFileName: fileName,
+        fileChecksum: checksum,
+        layoutVariants,
+        checkboxConventions: parsed.checkboxConventions,
+        worksheetCount: parsed.worksheetCount,
+        rowCount: parsed.dataRowCount,
+        memberCount: parsed.memberRowCount,
+        quarantinedCount,
+        normalizationVersion: NORMALIZATION_VERSION,
+        importedById: req.user!.id,
+      })
+      .returning();
+
+    for (let i = 0; i < prepared.length; i += CHUNK) {
+      const chunk = prepared.slice(i, i + CHUNK);
+      const saved = await tx
+        .insert(importSourceRows)
+        .values(chunk.map((item) => toSourceRowInsert(item, batch.id)))
+        .returning({ id: importSourceRows.id, sheetName: importSourceRows.sheetName, excelRow: importSourceRows.excelRow });
+
+      const normValues: (typeof importRowNorm.$inferInsert)[] = [];
+      for (const sourceRow of saved) {
+        const item = chunk.find(
+          (c) => c.sheetName === sourceRow.sheetName && c.excelRow === sourceRow.excelRow
+        );
+        if (!item || item.outcome.status !== "ok") continue;
+        normValues.push({ sourceRowId: sourceRow.id, ...item.outcome.norm });
+      }
+      if (normValues.length > 0) {
+        await tx.insert(importRowNorm).values(normValues);
+      }
+    }
+
+    return batch.id;
+  });
+
+  await logAudit({
+    req,
+    action: "IMPORT_BATCH_CREATED",
+    entityType: "import_batch",
+    entityId: batchId,
+    details: { sourceFileName: fileName, memberCount: parsed.memberRowCount, quarantinedCount },
+  });
+
+  const batch = await fetchBatchOrThrow(batchId);
+  return {
+      batch,
+      counts: {
+        worksheets: parsed.worksheetCount,
+        dataRows: parsed.dataRowCount,
+        memberRows: parsed.memberRowCount,
+        normalized: parsed.memberRowCount - quarantinedCount,
+        quarantined: quarantinedCount,
+        skipped: 0, // §12: nothing is ever silently dropped
+      },
+      blockedFields: blockedFields(),
+  };
+}
+
 // 1. POST /upload — parse a workbook into L1 + L2 (admin only)
+// Raw body path. Vercel caps a function request at 4.5 MB, so real workbooks
+// go through /upload/token + /upload/from-blob below; this path stays for
+// small files, self-hosted deployments and tests.
 importRouter.post(
   "/upload",
   // The workbook bytes ARE the request body (application/octet-stream). No
@@ -228,119 +345,43 @@ importRouter.post(
       if (!Buffer.isBuffer(bytes) || bytes.length === 0) {
         throw new ValidationError("ต้องส่งไฟล์เป็น raw bytes (application/octet-stream)");
       }
-
-      const db = getDb();
-      const checksum = checksumBuffer(bytes);
-
-      // §15: the same workbook is never imported twice silently.
-      const [existing] = await db
-        .select({ id: importBatches.id, sourceFileName: importBatches.sourceFileName })
-        .from(importBatches)
-        .where(eq(importBatches.fileChecksum, checksum))
-        .limit(1);
-      if (existing) {
-        throw new ConflictError("ไฟล์นี้ถูกนำเข้าไปแล้ว — ไม่นำเข้าซ้ำโดยอัตโนมัติ", [
-          { field: "existingBatchId", message: existing.id },
-        ]);
-      }
-
-      let parsed: ParsedWorkbook;
-      try {
-        parsed = await withTempWorkbook(bytes, (filePath) => parseWorkbookFile(filePath));
-      } catch (error) {
-        throw new ValidationError(
-          `อ่านไฟล์ไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}`
-        );
-      }
-      if (parsed.memberRowCount === 0) {
-        throw new ValidationError(
-          "ไม่พบแถวสมาชิกใด ๆ ในไฟล์นี้ (ไม่มี sheet ที่ header ตรงกับทะเบียนพันธกิจ)"
-        );
-      }
-
-      // Normalize BEFORE writing, so a batch is written all-or-nothing.
-      const prepared = prepareSourceRows(parsed);
-      const quarantinedCount = prepared.filter((p) => p.outcome.status === "quarantined").length;
-      const layoutVariants = Array.from(
-        new Set(
-          parsed.sheets
-            .map((s) => s.analysis.layout?.signature)
-            .filter((signature): signature is string => Boolean(signature))
-        )
-      );
-
-      await seedNormalizationRules();
-
-      const CHUNK = 500;
-      const batchId = await db.transaction(async (tx) => {
-        const [batch] = await tx
-          .insert(importBatches)
-          .values({
-            sourceFileName: fileName,
-            fileChecksum: checksum,
-            layoutVariants,
-            checkboxConventions: parsed.checkboxConventions,
-            worksheetCount: parsed.worksheetCount,
-            rowCount: parsed.dataRowCount,
-            memberCount: parsed.memberRowCount,
-            quarantinedCount,
-            normalizationVersion: NORMALIZATION_VERSION,
-            importedById: req.user!.id,
-          })
-          .returning();
-
-        for (let i = 0; i < prepared.length; i += CHUNK) {
-          const chunk = prepared.slice(i, i + CHUNK);
-          const saved = await tx
-            .insert(importSourceRows)
-            .values(chunk.map((item) => toSourceRowInsert(item, batch.id)))
-            .returning({ id: importSourceRows.id, sheetName: importSourceRows.sheetName, excelRow: importSourceRows.excelRow });
-
-          const normValues: (typeof importRowNorm.$inferInsert)[] = [];
-          for (const sourceRow of saved) {
-            const item = chunk.find(
-              (c) => c.sheetName === sourceRow.sheetName && c.excelRow === sourceRow.excelRow
-            );
-            if (!item || item.outcome.status !== "ok") continue;
-            normValues.push({ sourceRowId: sourceRow.id, ...item.outcome.norm });
-          }
-          if (normValues.length > 0) {
-            await tx.insert(importRowNorm).values(normValues);
-          }
-        }
-
-        return batch.id;
-      });
-
-      await logAudit({
-        req,
-        action: "IMPORT_BATCH_CREATED",
-        entityType: "import_batch",
-        entityId: batchId,
-        details: { sourceFileName: fileName, memberCount: parsed.memberRowCount, quarantinedCount },
-      });
-
-      const batch = await fetchBatchOrThrow(batchId);
-      res.status(201).json({
-        success: true,
-        data: {
-          batch,
-          counts: {
-            worksheets: parsed.worksheetCount,
-            dataRows: parsed.dataRowCount,
-            memberRows: parsed.memberRowCount,
-            normalized: parsed.memberRowCount - quarantinedCount,
-            quarantined: quarantinedCount,
-            skipped: 0, // §12: nothing is ever silently dropped
-          },
-          blockedFields: blockedFields(),
-        },
-      });
+      res.status(201).json({ success: true, data: await importWorkbookBytes(req, bytes, fileName) });
     } catch (err) {
       next(err);
     }
   }
 );
+
+// 1b. POST /upload/token — Vercel Blob client-upload handshake (admin only).
+// The browser uploads straight to a PRIVATE blob; only a short token passes here.
+importRouter.post("/upload/token", requireAdmin, async (req, res, next) => {
+  try {
+    res.json(await createImportUploadToken(req));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 1c. POST /upload/from-blob — import a workbook the browser put in Blob (admin only).
+// The blob is deleted afterwards, success or not: member data is not kept in storage.
+importRouter.post("/upload/from-blob", requireAdmin, async (req, res, next) => {
+  const parsedBody = importFromBlobBodySchema.safeParse(req.body);
+  try {
+    if (!parsedBody.success) {
+      throw new ValidationError("ข้อมูลไม่ถูกต้อง", parsedBody.error.issues.map((i) => ({ field: i.path.join("."), message: i.message })));
+    }
+    const { pathname, fileName } = parsedBody.data;
+    const safeName = sanitizeFileName(fileName);
+    try {
+      const bytes = await readImportBlob(pathname);
+      res.status(201).json({ success: true, data: await importWorkbookBytes(req, bytes, safeName) });
+    } finally {
+      await deleteImportBlob(pathname);
+    }
+  } catch (err) {
+    next(err);
+  }
+});
 
 // 2. GET /batches — list batches with their counts
 importRouter.get("/batches", requireImportReader, async (req, res, next) => {
