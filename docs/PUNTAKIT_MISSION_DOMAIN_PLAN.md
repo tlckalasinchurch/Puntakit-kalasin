@@ -1,10 +1,14 @@
 ﻿# Puntakit — Mission Domain Plan
 
-Status: **PROPOSED — awaiting approval. Nothing in this document has been implemented.**
+Status: **PARTIALLY IMPLEMENTED.** Phase 1 (read-only source audit) and Phase 2
+(L1/L2 import infrastructure: migration `0008_import_audit`, the normalization
+engine, the `/api/import` routes, and the read-only `group_members` pre-check)
+are built and tested. Migration step 2 onward is still proposed only.
 
-Date: 2026-10-02
+Date: 2026-10-02 · revised 2026-10-03
 Scope: งานพันธกิจบ้าน (mission groups) from the Excel registration workbooks
-Source data: 6 unique workbooks outside the repo, 662 member rows, ~23 groups, 0 coordinates
+Source data: 6 churches · 8 `.xlsx` files · 8 distinct sha256 · 674 member rows
+across 75 worksheets · ~23 groups · 0 coordinates
 
 ## Decision log
 
@@ -17,9 +21,9 @@ Source data: 6 unique workbooks outside the repo, 662 member rows, ~23 groups, 0
 | Q5 | Checkbox meaning | Do not interpret. Store raw + convention + provenance; semantics only after a human confirms |
 | Q6 | Sparse checkbox fields | Store, report completeness, do not force into UI |
 | Q7 | Map | No coordinates exist. Humans place pins. Never derive |
-| Q8 | Membership history | Verify production data first, then migrate the unique index to a partial index |
+| Q8 | Membership history | **Decided 2026-10-03.** Keep `group_members` as the source of truth; swap its full unique index for `UNIQUE (group_id, member_id) WHERE left_at IS NULL` so join → leave → rejoin is possible. No new table |
 | Q9 | `members.name` | Phased migration: add `realName`, derive `displayName`, retire `name` last |
-| Q10 | `members.group` | New `group_memberships` table becomes the source of truth; `members.group` becomes legacy |
+| Q10 | `members.group` | Stays legacy text, retired last. It is not repointed at a new table — the partial unique index is what makes the backfill into `group_members` possible, and `members.group` retires after that history is real |
 | Q11 | Excel-only member fields | New `mission_member_details` (1:1) |
 | Q12 | Weekly report | New `weekly_reports` / `weekly_report_attendance` / `weekly_report_activities` |
 | Q13 | Geography | Flat `areas` table |
@@ -33,6 +37,27 @@ NEVER USE NICKNAME TO FILL REAL NAME.
 NEVER USE GROUP NAME TEXT AS RELATIONSHIP IDENTITY.
 NEVER TURN UNKNOWN DATA INTO FACT.
 ```
+
+---
+
+## Implementation status (revised 2026-10-03)
+
+| Item | State | Where |
+|---|---|---|
+| Phase 1 — read-only source audit | **Done.** 8 files, 75 worksheets, 674 member rows, every sha256 verified | `docs/PUNTAKIT_MISSION_SOURCE_AUDIT.md`, `server/scripts/audit-mission-workbooks.ts` |
+| L1/L2 tables + migration | **Done.** `0008_import_audit` is additive only and does not touch `group_members` | `shared/schema.ts`, `server/db/migrations/0008_import_audit.sql` |
+| Normalization engine | **Done.** 7 rules at `NORMALIZATION_VERSION = 1`; bad values are quarantined, never guessed | `server/lib/missionImport.ts` |
+| `/api/import` routes | **Done.** upload · batches · preview · report · duplicates · rule confirm | `server/routes/import.ts` |
+| Step 0 pre-check | **Written, never run against production** | `server/lib/groupMembersPreCheck.ts`, `server/scripts/pre-migration-check.ts` |
+| `0010_group_members_history` | **Not started — gated on step 0** | §13 |
+| Migration steps 2, 4–7 and the whole L3/L4 surface | **Not started** | — |
+
+At this revision `pnpm check` is clean and `pnpm test` reports 26 files / 303
+tests green.
+
+Two things deliberately do not exist yet: a promotion path from L2 into L3, and
+any meaning attached to `1` or `/` (Q5). The importer stops at "recorded
+faithfully and reported", which is the honest state of this data.
 
 ---
 
@@ -63,9 +88,10 @@ their semantics are unconfirmed (Q5).
 The organisation as it actually is. No knowledge of Excel exists here. This is
 what every screen and every API reads.
 
-- `areas`, `groups`, `members`, `group_memberships`, `mission_member_details`,
-  `weekly_reports`, `weekly_report_attendance`, `weekly_report_activities`,
-  plus everything already present (`missionActivities`, `attendanceRecords`, …)
+- `areas`, `groups`, `members`, `group_members` (existing table, made
+  history-capable), `mission_member_details`, `weekly_reports`,
+  `weekly_report_attendance`, `weekly_report_activities`, plus everything
+  already present (`missionActivities`, `attendanceRecords`, …)
 
 ### L4 — User-Facing
 
@@ -111,10 +137,12 @@ areas
   displayName, normalizedName, createdAt, updatedAt
   UNIQUE (normalizedName)
 
-group_memberships
+// ── L3 business — no new membership table ───────────────
+group_members                              (existing; migration 0010 alters it)
   id, groupId → groups, memberId → members,
-  role, status, joinedAt, leftAt, createdAt, updatedAt
-  UNIQUE (group_id, member_id) WHERE left_at IS NULL     -- partial index
+  role, status, joinedAt, leftAt, createdAt, updatedAt   -- already present
+  UNIQUE (group_id, member_id)                          -- dropped
+  UNIQUE (group_id, member_id) WHERE left_at IS NULL    -- replaces it, partial
 
 mission_member_details
   memberId → members UNIQUE (1:1),
@@ -170,7 +198,7 @@ users ──────────────┐
       │                                                    (validation + dedup)
       │                                                          ▼
       ▼                                                       members
-areas ──1:N── groups ──1:N── group_memberships ──N:1── members
+areas ──1:N── groups ──1:N── group_members ──N:1── members
             │                        │
             │                        └── leftAt = NULL      → current membership
             │                        └── leftAt IS NOT NULL → history
@@ -202,7 +230,7 @@ groups ──1:N── mission_activities      (existing — reused unchanged)
 | Table | Field | Why it is legacy | Retirement |
 |---|---|---|---|
 | `members` | `name` | Implies a real full name; 96% of imported rows have none | Last, after §Q9 phase 2 |
-| `members` | `group` | Text, not a relation — blocks all membership history | After `group_memberships` is populated |
+| `members` | `group` | Text, not a relation — blocks all membership history | After `group_members` carries a real `left_at` history (§13 step 5) |
 | `members` | `area` | Duplicates `groups.area`, ignores residence vs group area | After `residenceAreaId` exists |
 | `members` | `role` | Thai free text defaulting to "สมาชิก" | Migrate to `USER_ROLES` |
 | `groups` | `area` | Free text, filtered by `ILIKE` | After `areaId` is populated |
@@ -287,7 +315,7 @@ Promotion from L2 into L3 happens only through an explicit, confirmed step.
 | `goalCode` | `mission_member_details.missionGoalCode` | **Blocked** until confirmed |
 | sheet name + team | `groups.name`, `groups.teamCode` | With a collision report |
 | group locality | `areas` → `groups.areaId` | New or matched by `normalizedName` |
-| group membership | `group_memberships` | `joinedAt` unknown → NULL, not `now()` |
+| group membership | `group_members` | `joinedAt` unknown → NULL, not `now()`; one active row per pair only |
 
 **The four blocked mappings are the honest state of this project.** They live in
 L1 and L2, appear in the import preview as
@@ -301,6 +329,12 @@ simply do not become domain values yet.
 **Nickname is never an identity.** Measured: 375 distinct nicknames across 662
 rows; 201 names appear more than once; 488 rows are involved. `"นาง"` appears 12
 times at six different ages.
+
+> **Stale baseline.** Those duplicate-signal counts were measured on the 662-row
+> set that Phase 1 later corrected to **674**. They are recorded as measured, not
+> adjusted. Recompute them on the verified 674-row set before the review queue is
+> built — a review queue scored against the wrong row count is a review queue
+> with wrong numbers in it.
 
 Duplicate detection produces a **review queue**, never an automatic merge.
 
@@ -374,7 +408,7 @@ weekly_reports (draft → submitted → acknowledged)
 ## 10. Membership History Workflow
 
 ```
-join:    INSERT group_memberships { groupId, memberId, joinedAt }
+join:    INSERT group_members { groupId, memberId, joinedAt }
 leave:   UPDATE … SET leftAt = now(), status='inactive'      (never DELETE)
 move:    leave(old) then join(new)  — two rows, not one UPDATE
 rejoin:  a new row; the previous row keeps its own leftAt
@@ -385,12 +419,28 @@ rejoin:  a new row; the previous row keeps its own leftAt
 - "Currently in group X" → `WHERE left_at IS NULL`.
 - "Has ever been in group X" → a plain lookup across all rows.
 
-**Prerequisite not yet met.** `group_members` already has `joinedAt` / `leftAt` /
-`status` but carries `uniqueIndex(group_members_group_member_uniq)` on
-`(groupId, memberId)`, which forbids re-entry. Migrating it requires first
-proving production holds no duplicate `(group_id, member_id)` pairs. **That
-check has not been run** — it needs production credentials and the Vercel
-secrets are write-only. See §13 step 0.
+**Decided 2026-10-03: `group_members` stays the source of truth.** The table
+already carries `joined_at`, `left_at`, `role` and `status`. Exactly one thing
+blocks history: `uniqueIndex(group_members_group_member_uniq)` on
+`(group_id, member_id)` rejects a second row for the same pair, and that is
+exactly what re-entry is. So the fix is a **constraint swap, not a new table**.
+
+- **No `group_memberships` table is created.** Every endpoint and response
+  shape keeps reading `group_members`, so membership history is a purely
+  additive improvement and no screen has to be repointed.
+- The swap happens **inside one migration**: drop the full unique index and
+  create the partial one in the same transaction. Dropping the old index and
+  leaving the table without a replacement is forbidden — it opens a window in
+  which duplicate active memberships can appear.
+
+**The gate is a pre-check, and it is written but unrun.**
+`server/lib/groupMembersPreCheck.ts` inspects five conditions read-only —
+duplicate `(group_id, member_id)` pairs, rows that already carry a `left_at`,
+duplicate active rows, `status` contradicting `left_at`, and orphan references —
+and reports `migrationBlocked`. **It has not been run against production**: that
+needs credentials the agent does not have (Vercel secrets are write-only). See
+§13 step 0 and "Open blocker". No DDL touching `group_members` ships before its
+report is clean.
 
 ---
 
@@ -475,7 +525,7 @@ Response attitude         18%     82%
 Group participation       27%     73%
 Mission goal              94%      6%
 
-Imported:   662 members
+Imported:   674 members
 Skipped:    0            ← never silently dropped
 Flagged:    488  possible duplicates (review list, not merged)
 Warnings:   7  records missing village
@@ -490,16 +540,20 @@ Blocked:    4  checkbox fields — semantics unconfirmed
 | # | Migration | Depends on |
 |---|---|---|
 | **0** | **Pre-check (no migration)** — count duplicate `(group_id, member_id)` in production; count members where `group IS NOT NULL` | nothing |
-| 1 | `0008_import_audit` — `import_batches`, `import_source_rows`, `normalization_rules`, `import_row_norm` | 0 |
+| 1 | `0008_import_audit` — `import_batches`, `import_source_rows`, `normalization_rules`, `import_row_norm` — **done** | 0 |
 | 2 | `0009_mission_domain` — `areas`, `mission_member_details`, `members.realName`, `groups.groupKind/teamCode/villageName/coordinatorName/coordinatorPhone/areaId` | 1 |
-| 3 | `0010_group_memberships` — create the table, then drop the old unique index and add the partial one | 0 |
+| 3 | `0010_group_members_history` — constraint swap **on the existing table**, in one migration: drop `group_members_group_member_uniq`, create `UNIQUE (group_id, member_id) WHERE left_at IS NULL` | 0 |
 | 4 | `0011_weekly_reports` — the three weekly tables | 2 |
-| 5 | `0012_backfill_memberships` — data migration, idempotent, row-count verified | 3 |
+| 5 | `0012_backfill_memberships` — set `left_at = NULL` for current rows and flag every row whose `status` contradicts it; idempotent, row-count verified | 3 |
 | 6 | `0013_group_coords_numeric` — `latitude`/`longitude` `text` → `numeric(9,6)`, guarded so non-numeric values are nulled and reported, never truncated | 0 |
 | 7 | Application phase — read paths repointed one screen at a time (§17) | 3,5 |
 
 **Step 0 is a gate.** No DDL touching `group_members` runs until it reports
-clean. If it finds duplicates, a human resolves them first.
+clean. If it finds duplicates, a human resolves them first. The check itself is
+**written** — `server/lib/groupMembersPreCheck.ts`, 6 tests, strictly read-only —
+so what is missing is production credentials, not code. Step 3 consumes that
+report: a clean run is the precondition for the constraint swap, and an unclean
+run means the data is fixed by a human before any DDL is attempted.
 
 ---
 
@@ -509,7 +563,7 @@ clean. If it finds duplicates, a human resolves them first.
 |---|---|---|
 | 0008 | `DROP TABLE` the four new tables | none — nothing references them |
 | 0009 | `DROP TABLE` + `DROP COLUMN` | **loses imported data**, so a snapshot is taken first |
-| 0010 | `DROP TABLE`; recreate the old unique index from a recorded definition | re-entry becomes impossible again |
+| 0010 | Recreate `group_members_group_member_uniq` from a recorded definition | re-entry becomes impossible again |
 | 0011 | `DROP TABLE` ×3 | none |
 | 0012 | Idempotent and reversible; old rows are retained and flagged, never deleted | low |
 | 0013 | Widen back to `text` | lossy for non-numeric values, so those are reported first |
@@ -524,7 +578,7 @@ rollback cannot restore the original data is not allowed on production.
 
 | Constraint | Table | Why |
 |---|---|---|
-| `UNIQUE (group_id, member_id) WHERE left_at IS NULL` | `group_memberships` | One current membership, unlimited history |
+| `UNIQUE (group_id, member_id) WHERE left_at IS NULL` | `group_members` | One current membership, unlimited history |
 | `UNIQUE (group_id, week_start)` | `weekly_reports` | One report per group per week |
 | `UNIQUE (weekly_report_id, member_id)` | `weekly_report_attendance` | No double-ticking |
 | `UNIQUE (member_id)` | `mission_member_details` | It is 1:1 |
@@ -535,7 +589,7 @@ rollback cannot restore the original data is not allowed on production.
 | `CHECK (week_end = week_start + 6)` | `weekly_reports` | Derived fields cannot drift |
 | `CHECK (latitude BETWEEN -90 AND 90)`, `CHECK (longitude BETWEEN -180 AND 180)` | `groups` | Only meaningful once numeric |
 | `ON DELETE SET NULL` | every `→ users` FK | Deleting a Clerk account must not delete history |
-| `ON DELETE CASCADE` | `group_memberships.groupId` | Removing a group removes its memberships |
+| `ON DELETE CASCADE` | `group_members.groupId` | Removing a group removes its memberships |
 | **No cascade to `members`** | — | A member is never destroyed by a downstream delete |
 
 ---
@@ -573,7 +627,7 @@ below as out of scope for now.
 | Members list | Shows `displayName`; badge `"ยังไม่ระบุชื่อ-สกุล"` when `realName` is null | 3 |
 | Member detail | Mission fields from `mission_member_details`, visibly optional | 3 |
 | Group detail | Team, village, coordinator, and a pin-drop control | 3 |
-| Group → สมาชิก | Reads `group_memberships`; adds "ย้ายกลุ่ม" and "ออกจากกลุ่ม" | 5 |
+| Group → สมาชิก | Reads `group_members` with an unchanged response shape; adds "ย้ายกลุ่ม" and "ออกจากกลุ่ม" | 5 |
 | รายงานประจำสัปดาห์ | **New.** The 4-step mobile flow from §9 | 4 |
 | Dashboard | Adds "กลุ่มที่ยังไม่ส่งรายงานสัปดาห์นี้" | 4 |
 | Map | Pins only where coordinates exist; unplaced groups listed as "ยังไม่มีพิกัด" | 3 |
@@ -642,7 +696,10 @@ PUT  /api/groups/:id/location           latitude/longitude
 | Constraint | `UNIQUE (group_id, week_start)` rejects a second report for the same week |
 | Weekly flow | Attendance count is derived, never trusted from the client |
 | Route | Import endpoints are admin-gated; weekly submit is limited to current members |
-| Regression | The existing 230 tests stay green — no response shape is removed |
+| Regression | The full suite stays green — no response shape is removed. Baseline at this revision: 26 files / 303 tests |
+| Pre-check | `runGroupMembersPreCheck()` writes nothing and reports each condition separately: duplicate pairs, historical `left_at` rows, duplicate active rows, `status` vs `left_at` conflicts, orphan references |
+| Pre-check | `migrationBlocked` stays true while any blocking count is non-zero, so migration 0010 can never be justified by a partial report |
+| Pre-check | The current full unique index provably rejects a rejoin (`23505`) — the test asserts today's failure so the constraint swap is visibly the thing that fixes it |
 | UI | Empty, error and skeleton states for every new screen |
 | Mobile | 360 / 375 / 390 / 414 px for the 4-step weekly flow |
 
@@ -666,13 +723,15 @@ PUT  /api/groups/:id/location           latitude/longitude
 
 ## Open blocker
 
-Migration step 0 cannot be run by the agent: the production `DATABASE_URL` is
-write-only in Vercel (`vercel env pull` returns `[SENSITIVE]`) and the local
-`.env.prod.local` holds no usable value. Someone with dashboard access must run:
+The check is written. Running it against production is not something the agent can
+do: the production `DATABASE_URL` is write-only in Vercel (`vercel env pull`
+returns `[SENSITIVE]`) and the local `.env.production.local` holds no usable
+value. Someone with dashboard access must run:
 
 ```bash
-dotenv -e .env.production.local -- tsx server/scripts/pre-migration-check.ts
+pnpm exec dotenv -e .env.production.local -- tsx server/scripts/pre-migration-check.ts
 ```
 
-and paste the output here. **No DDL touching `group_members` runs before that
-report is clean.**
+and paste the output here — add `--json` for the machine-readable form.
+**No DDL touching `group_members` runs before that report is clean**, and the
+clean report is what authorises writing migration `0010`, not writing it.

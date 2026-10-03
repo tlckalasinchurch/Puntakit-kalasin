@@ -14,7 +14,7 @@ no cell value was interpreted. Checkbox tokens below are raw observations.
 
 | Prior claim | Verdict | Evidence |
 |---|---|---|
-| 6 unique workbooks | **CONFIRMED** | 8 files, 8 distinct sha256 |
+| 6 unique workbooks | **REFINED** | 8 files, 8 distinct sha256, **0 byte-identical pairs**. The accurate statement is *6 churches across 8 files*. "Unique" was right at byte level and wrong at content level: เมือง 1 / เมือง 1 New and เมือง 2 / เมือง 2(1) are content-equivalent without being identical. |
 | เมือง 2(1) is a 100% duplicate of เมือง 2 | **NOT CONFIRMED at byte level** | Different sha256 (`49014dab…` vs `99fb0e62…`). Both have 11 sheets and both yield exactly 80 member rows, so they are *content-equivalent*, but the bytes are not identical. "New" therefore must still not be assumed newer or authoritative. |
 | เมือง 1 New adds a non-member sheet | **CONFIRMED** | เมือง 1 = 14 sheets / 133 rows; เมือง 1 New = 15 sheets / 133 rows. The extra sheet resolves to no member header. |
 | ~662 member rows | **CORRECTED → 674** | 674 rows carry a non-empty nickname, across all 8 files. |
@@ -129,7 +129,14 @@ These remain **UNKNOWN** and must not be inferred:
 
 ## 7. Next gate
 
-Phase 2 (L1/L2 import infrastructure) may begin. Before any DDL touches
-`group_members`, the production pre-check from
-`docs/PUNTAKIT_MISSION_DOMAIN_PLAN.md` §13 step 0 must be run by someone with
-database access and reported here.
+Phase 2 (L1/L2 import infrastructure) is **built** — migration
+`0008_import_audit`, the normalization engine, and the `/api/import` routes.
+It stops at L2 on purpose: nothing is promoted into L3 and no checkbox
+semantics are assigned.
+
+The next gate is still the same one, and it is **not the code that is missing —
+the credentials are.** Before any DDL touches `group_members`, the read-only
+pre-check (`server/scripts/pre-migration-check.ts`, defined in
+`docs/PUNTAKIT_MISSION_DOMAIN_PLAN.md` §13 step 0) must be run against
+production by someone with database access and reported here. Until its output
+exists, migration `0010` must not be written.

@@ -1,4 +1,14 @@
-import { boolean, index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  real,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { randomUUID } from "node:crypto";
 
 const id = () =>
@@ -578,6 +588,171 @@ export const missionSubmissions = pgTable(
   ]
 );
 
+// ── Mission import pipeline: L1 raw + L2 normalized ──────────────────────
+//
+// Additive L1/L2 infrastructure from docs/PUNTAKIT_MISSION_DOMAIN_PLAN.md
+// (migration 0008_import_audit, §13 row 1). These tables make every later
+// import decision reversible:
+//
+//   L1  import_batches / import_source_rows — verbatim workbook cells,
+//       append-only, never edited, never interpreted.
+//   L2  normalization_rules / import_row_norm — structural cleanup only
+//       (trim, integer coercion); every *Code column stays OPAQUE until a
+//       human confirms the rule that would give it meaning (Q5).
+//
+// Nothing here references `group_members`, `members` or `groups`: this layer
+// promotes into L3 only through a later, explicit phase.
+
+export const IMPORT_NORM_STATUSES = ["ok", "quarantined"] as const;
+export type ImportNormStatus = (typeof IMPORT_NORM_STATUSES)[number];
+
+/**
+ * Field mappings that stay BLOCKED until a human confirms semantics (Q5/Q6).
+ * Their L2 codes hold raw marker tokens verbatim — never domain values.
+ */
+export const IMPORT_BLOCKED_FIELD_KEYS = ["marital", "response", "participation", "goal"] as const;
+export type ImportBlockedFieldKey = (typeof IMPORT_BLOCKED_FIELD_KEYS)[number];
+
+export const importBatches = pgTable(
+  "import_batches",
+  {
+    id: id(),
+    sourceFileName: text("source_file_name").notNull(),
+    /** sha256 of the uploaded bytes — the same workbook is never imported twice silently (§15). */
+    fileChecksum: text("file_checksum").notNull().unique(),
+    /** Distinct structural signatures observed across the file's sheets (Phase 1 `signature`). */
+    layoutVariants: text("layout_variants").array().notNull(),
+    /** Distinct raw checkbox marker tokens observed, verbatim (e.g. "1", "/"). */
+    checkboxConventions: text("checkbox_conventions").array().notNull(),
+    worksheetCount: integer("worksheet_count").notNull(),
+    /** Physical data rows below resolved headers, blanks included. */
+    rowCount: integer("row_count").notNull(),
+    /** Member rows (non-empty nickname) — the Phase 1 member rule. */
+    memberCount: integer("member_count").notNull(),
+    /** Member rows a structural rule failed: kept in L1, never promoted (§12). */
+    quarantinedCount: integer("quarantined_count").notNull().default(0),
+    /** Version of the normalization rule set that produced this batch's L2 output. */
+    normalizationVersion: integer("normalization_version").notNull(),
+    importedById: text("imported_by_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("import_batches_created_at_idx").on(table.createdAt)]
+);
+
+/**
+ * L1 — one row per member row, every original cell value verbatim
+ * (no trimming, no coercion, no interpretation). Append-only by design:
+ * there is deliberately no `updatedAt`.
+ */
+export const importSourceRows = pgTable(
+  "import_source_rows",
+  {
+    id: id(),
+    batchId: text("batch_id")
+      .notNull()
+      .references(() => importBatches.id, { onDelete: "cascade" }),
+    sheetName: text("sheet_name").notNull(),
+    /**
+     * Verbatim first non-empty cell above the resolved header — the sheet's
+     * title row (the workbook's group-name/team line). Recorded as seen,
+     * never parsed into a group name or team code: that is L3 work.
+     */
+    team: text("team"),
+    /** 1-based row number in the worksheet, as a human sees it in Excel. */
+    excelRow: integer("excel_row").notNull(),
+    rawSequence: text("raw_sequence"),
+    rawFullName: text("raw_full_name"),
+    rawNickname: text("raw_nickname"),
+    rawAge: text("raw_age"),
+    rawOccupation: text("raw_occupation"),
+    rawWorkplace: text("raw_workplace"),
+    /** Scalar cells, present in the plan for future layouts; null in today's source. */
+    rawMarital: text("raw_marital"),
+    rawBeliefYear: text("raw_belief_year"),
+    rawResponse: text("raw_response"),
+    rawParticipation: text("raw_participation"),
+    rawGoal: text("raw_goal"),
+    /** Per-option marker tokens, verbatim and in column order (e.g. ["", "1", ""]). */
+    rawMaritalCheckbox: jsonb("raw_marital_checkbox").$type<string[]>(),
+    rawResponseCheckbox: jsonb("raw_response_checkbox").$type<string[]>(),
+    rawParticipationCheckbox: jsonb("raw_participation_checkbox").$type<string[]>(),
+    /** Reserved for a future scalar/checkbox goal split; null in today's source. */
+    rawGoalCheckbox: jsonb("raw_goal_checkbox").$type<string[]>(),
+    /** Outcome of the structural normalization run at import time. */
+    normStatus: text("norm_status", { enum: IMPORT_NORM_STATUSES }).notNull(),
+    /** Why a quarantined row stayed in L1 (e.g. AGE_NOT_NUMERIC). Null when ok. */
+    normIssue: text("norm_issue"),
+    normVersion: integer("norm_version"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("import_source_rows_batch_id_idx").on(table.batchId),
+    index("import_source_rows_batch_sheet_idx").on(table.batchId, table.sheetName),
+  ]
+);
+
+/**
+ * The versioned rule set that produced an L2 layer (§6). A rule with
+ * `confirmedById = NULL` is unconfirmed: its output stays in L2 and is never
+ * promoted into `members` / `mission_member_details`.
+ */
+export const normalizationRules = pgTable(
+  "normalization_rules",
+  {
+    id: id(),
+    version: integer("version").notNull(),
+    /** Field the rule applies to, or "*" for every text field. */
+    fieldKey: text("field_key").notNull(),
+    /** Layout variant the rule applies to, or "*" for all. */
+    layoutVariant: text("layout_variant").notNull().default("*"),
+    ruleKind: text("rule_kind").notNull(),
+    fromPattern: text("from_pattern"),
+    toCode: text("to_code"),
+    /** Deterministic structural rules carry 1; heuristic rules carry < 1. */
+    confidence: real("confidence").notNull().default(1),
+    confirmedById: text("confirmed_by_id").references(() => users.id, { onDelete: "set null" }),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("normalization_rules_natural_uniq").on(
+      table.version,
+      table.fieldKey,
+      table.ruleKind,
+      table.layoutVariant,
+      table.fromPattern
+    ),
+    index("normalization_rules_version_idx").on(table.version),
+  ]
+);
+
+/**
+ * L2 — one row per source row, structurally normalized but still opaque.
+ * 1:1 with `import_source_rows`. Quarantined rows get no L2 row at all.
+ */
+export const importRowNorm = pgTable(
+  "import_row_norm",
+  {
+    id: id(),
+    sourceRowId: text("source_row_id")
+      .notNull()
+      .references(() => importSourceRows.id, { onDelete: "cascade" }),
+    fullName: text("full_name"),
+    nickname: text("nickname"),
+    age: integer("age"),
+    occupation: text("occupation"),
+    workplace: text("workplace"),
+    beliefYear: integer("belief_year"),
+    /** OPAQUE: raw marker tokens verbatim, never a domain value (Q5). */
+    maritalCode: text("marital_code"),
+    responseCode: text("response_code"),
+    participationCode: text("participation_code"),
+    goalCode: text("goal_code"),
+    normalizedAt: timestamp("normalized_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("import_row_norm_source_row_uniq").on(table.sourceRowId)]
+);
+
 export type User = typeof users.$inferSelect;
 export type UserSession = typeof userSessions.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
@@ -597,3 +772,7 @@ export type MissionActivityParticipant = typeof missionActivityParticipants.$inf
 export type MissionActivityMedia = typeof missionActivityMedia.$inferSelect;
 export type FollowUp = typeof followUps.$inferSelect;
 export type MissionSubmission = typeof missionSubmissions.$inferSelect;
+export type ImportBatch = typeof importBatches.$inferSelect;
+export type ImportSourceRow = typeof importSourceRows.$inferSelect;
+export type NormalizationRule = typeof normalizationRules.$inferSelect;
+export type ImportRowNorm = typeof importRowNorm.$inferSelect;
