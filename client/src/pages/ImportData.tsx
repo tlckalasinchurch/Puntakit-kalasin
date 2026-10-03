@@ -161,7 +161,10 @@ export default function ImportData() {
       <PageHeader
         title="นำเข้าข้อมูล"
         description="อัปโหลดทะเบียนพันธกิจ (.xlsx) เพื่อตรวจสอบก่อน ข้อมูลยังไม่ถูกส่งเข้าทะเบียนสมาชิกหรือกลุ่ม"
-        secondaryActions={[{ label: "รีเฟรช", icon: RefreshCw, onClick: () => void loadBatches() }]}
+        secondaryActions={[
+          { label: "ตรวจสอบข้อมูลซ้ำ", href: "/import/duplicates" },
+          { label: "รีเฟรช", icon: RefreshCw, onClick: () => void loadBatches() },
+        ]}
       />
 
       {canImport && (

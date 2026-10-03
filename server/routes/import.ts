@@ -536,17 +536,41 @@ importRouter.get("/duplicates", requireImportReader, async (req, res, next) => {
         nickname: importRowNorm.nickname,
         age: importRowNorm.age,
         batchId: importSourceRows.batchId,
+        sourceFileName: importBatches.sourceFileName,
         sheetName: importSourceRows.sheetName,
         excelRow: importSourceRows.excelRow,
+        team: importSourceRows.team,
+        rawFullName: importSourceRows.rawFullName,
+        rawAge: importSourceRows.rawAge,
+        rawOccupation: importSourceRows.rawOccupation,
+        rawWorkplace: importSourceRows.rawWorkplace,
       })
       .from(importRowNorm)
       .innerJoin(importSourceRows, eq(importRowNorm.sourceRowId, importSourceRows.id))
+      .innerJoin(importBatches, eq(importSourceRows.batchId, importBatches.id))
       .where(and(...conditions));
+
+    // Per-row evidence so a reviewer can compare candidates side by side.
+    // L1 values stay verbatim; only `age` is the L2 coerced number.
+    const occurrencesByNickname = new Map<string, typeof rows>();
+    for (const row of rows) {
+      const key = (row.nickname ?? "").trim();
+      if (key === "") continue;
+      const list = occurrencesByNickname.get(key) ?? [];
+      list.push(row);
+      occurrencesByNickname.set(key, list);
+    }
+    const duplicates = groupDuplicateCandidates(rows, parsed.data.limit).map((group) => ({
+      ...group,
+      members: (occurrencesByNickname.get(group.nickname) ?? [])
+        .map(({ nickname: _nickname, ...member }) => member)
+        .sort((a, b) => a.sourceFileName.localeCompare(b.sourceFileName) || a.sheetName.localeCompare(b.sheetName) || a.excelRow - b.excelRow),
+    }));
 
     res.json({
       success: true,
       data: {
-        duplicates: groupDuplicateCandidates(rows, parsed.data.limit),
+        duplicates,
         note: "ชื่อเล่นซ้ำเป็นเพียงผู้เข้ารอบตรวจสอบ — ระบบไม่รวมบันทึกอัตโนมัติ (§8)",
       },
     });

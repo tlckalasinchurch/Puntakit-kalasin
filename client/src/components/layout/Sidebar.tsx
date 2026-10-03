@@ -178,7 +178,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   // events entry must also read as current on that route.
                   const isActive =
                     location === path ||
-                    (path === "/events" && location === "/worship");
+                    (path === "/events" && location === "/worship") ||
+                    (path === "/import" && location.startsWith("/import/"));
                   return (
                     <li key={path}>
                       <Link

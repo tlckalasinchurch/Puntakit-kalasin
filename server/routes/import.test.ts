@@ -290,6 +290,24 @@ describe("Mission import API — Phase 2 L1/L2 (real PGlite Postgres)", () => {
       expect(body.data.duplicates.map((d) => d.nickname)).toEqual(["หนู"]);
       expect(body.data.note).toContain("ไม่รวมบันทึกอัตโนมัติ");
     });
+
+    it("lists every occurrence of a flagged nickname with its verbatim L1 values", async () => {
+      const res = await fetch(`${baseUrl}/api/import/duplicates`, { headers: { Cookie: staffCookie } });
+      const body = (await res.json()) as {
+        data: {
+          duplicates: Array<{
+            nickname: string;
+            occurrences: number;
+            members: Array<{ sheetName: string; excelRow: number; sourceFileName: string; rawAge: string | null; age: number | null }>;
+          }>;
+        };
+      };
+      const group = body.data.duplicates[0];
+      expect(group.members).toHaveLength(group.occurrences);
+      expect(group.members.every((m) => m.sourceFileName === "workbook.xlsx")).toBe(true);
+      expect(group.members.map((m) => m.excelRow)).toEqual([...group.members.map((m) => m.excelRow)].sort((a, b) => a - b));
+      expect(group.members.every((m) => typeof m.rawAge === "string" || m.rawAge === null)).toBe(true);
+    });
   });
 
   describe("rule confirmation (admin only)", () => {
