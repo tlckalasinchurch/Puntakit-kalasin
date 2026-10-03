@@ -22,6 +22,7 @@ import {
 import { PRIVILEGED_ROLES } from "../../shared/roles.js";
 import { requireAdmin, requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
+import { runGroupMembersPreCheck } from "../lib/groupMembersPreCheck.js";
 import { ConflictError, NotFoundError, ValidationError } from "../lib/errors.js";
 import {
   checksumBuffer,
@@ -539,6 +540,38 @@ importRouter.post("/rules/:id/confirm", requireAdmin, async (req, res, next) => 
     });
 
     res.json({ success: true, data: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 7. GET /precheck/group-members — the Q2 gate, readable by an admin (read-only)
+//
+// Migration 0010 swaps `group_members_group_member_uniq` for a partial unique
+// index, and that DDL is not allowed until this check reports clean against
+// PRODUCTION. The production DATABASE_URL is a write-only Vercel secret, so
+// the CLI in server/scripts/pre-migration-check.ts cannot be run from a laptop.
+// This route runs the very same function inside the deployed app, where the
+// Neon connection already exists: an admin opens it and the report is the
+// gate. Admin-only because the numbers are production aggregates and the
+// verdict authorises DDL — readers of import data are not enough.
+importRouter.get("/precheck/group-members", requireAdmin, async (_req, res, next) => {
+  try {
+    const report = await runGroupMembersPreCheck();
+    res.json({
+      success: true,
+      data: {
+        report,
+        gate: {
+          migrationBlocked: report.migrationBlocked,
+          verdict: report.migrationBlocked ? "BLOCKED" : "CLEAR",
+          verdictThai: report.migrationBlocked
+            ? "มี active membership ซ้ำต่อคู่ (group_id, member_id) — migration 0010 ห้ามรันจนกว่าคนจะแก้ข้อมูลเอง"
+            : "ไม่พบกรณีที่บล็อก — เขียนและรัน migration 0010 ได้ (ยังต้องผ่านการอนุมัติของคน)",
+        },
+        note: "read-only — ทุกคำสั่งที่รันเป็น SELECT ไม่มีการแก้ไขข้อมูลใดๆ",
+      },
+    });
   } catch (err) {
     next(err);
   }

@@ -48,7 +48,7 @@ NEVER TURN UNKNOWN DATA INTO FACT.
 | L1/L2 tables + migration | **Done.** `0008_import_audit` is additive only and does not touch `group_members` | `shared/schema.ts`, `server/db/migrations/0008_import_audit.sql` |
 | Normalization engine | **Done.** 7 rules at `NORMALIZATION_VERSION = 1`; bad values are quarantined, never guessed | `server/lib/missionImport.ts` |
 | `/api/import` routes | **Done.** upload · batches · preview · report · duplicates · rule confirm | `server/routes/import.ts` |
-| Step 0 pre-check | **Written, never run against production** | `server/lib/groupMembersPreCheck.ts`, `server/scripts/pre-migration-check.ts` |
+| Step 0 pre-check | **Written and reachable in production** — `GET /api/import/precheck/group-members` (admin) runs the same read-only function against the live Neon database | `server/lib/groupMembersPreCheck.ts`, `server/routes/import.ts`, `server/scripts/pre-migration-check.ts` |
 | `0010_group_members_history` | **Not started — gated on step 0** | §13 |
 | Migration steps 2, 4–7 and the whole L3/L4 surface | **Not started** | — |
 
@@ -437,10 +437,11 @@ exactly what re-entry is. So the fix is a **constraint swap, not a new table**.
 `server/lib/groupMembersPreCheck.ts` inspects five conditions read-only —
 duplicate `(group_id, member_id)` pairs, rows that already carry a `left_at`,
 duplicate active rows, `status` contradicting `left_at`, and orphan references —
-and reports `migrationBlocked`. **It has not been run against production**: that
-needs credentials the agent does not have (Vercel secrets are write-only). See
-§13 step 0 and "Open blocker". No DDL touching `group_members` ships before its
-report is clean.
+and reports `migrationBlocked`. **It has not been run against production yet**,
+but the blocker is no longer credentials: `GET /api/import/precheck/group-members`
+(admin only) calls the very same function inside the deployed app, where the Neon
+connection already exists. See §13 step 0 and "Open blocker". No DDL touching
+`group_members` ships before its report is clean.
 
 ---
 
@@ -551,9 +552,10 @@ Blocked:    4  checkbox fields — semantics unconfirmed
 **Step 0 is a gate.** No DDL touching `group_members` runs until it reports
 clean. If it finds duplicates, a human resolves them first. The check itself is
 **written** — `server/lib/groupMembersPreCheck.ts`, 6 tests, strictly read-only —
-so what is missing is production credentials, not code. Step 3 consumes that
-report: a clean run is the precondition for the constraint swap, and an unclean
-run means the data is fixed by a human before any DDL is attempted.
+and reachable from production as `GET /api/import/precheck/group-members`
+(admin only, same function, live Neon connection). Step 3 consumes that report:
+a clean run is the precondition for the constraint swap, and an unclean run means
+the data is fixed by a human before any DDL is attempted.
 
 ---
 
@@ -654,6 +656,7 @@ POST /api/import/batches/:id/confirm    promote L2 → L3 (admin)
 GET  /api/import/batches/:id/report     completeness + duplicate report
 POST /api/import/rules/:id/confirm      confirm a normalization rule
 GET  /api/import/duplicates             review queue
+GET  /api/import/precheck/group-members read-only Q2 gate + CLEAR/BLOCKED (admin)
 
 GET   /api/weekly-reports?groupId&weekStart
 POST  /api/weekly-reports
@@ -723,15 +726,23 @@ PUT  /api/groups/:id/location           latitude/longitude
 
 ## Open blocker
 
-The check is written. Running it against production is not something the agent can
-do: the production `DATABASE_URL` is write-only in Vercel (`vercel env pull`
-returns `[SENSITIVE]`) and the local `.env.production.local` holds no usable
-value. Someone with dashboard access must run:
+**The credentials blocker is gone; only the report is missing.** The check runs
+inside the deployed app, where the production Neon connection already exists.
+An admin opens:
+
+```text
+GET https://puntakit-kalasin.vercel.app/api/import/precheck/group-members
+```
+
+and pastes `data.gate` back here. It is read-only (every statement is a SELECT)
+and admin-only, because the verdict authorises DDL.
+
+The CLI remains for anyone who does hold a connection string:
 
 ```bash
 pnpm exec dotenv -e .env.production.local -- tsx server/scripts/pre-migration-check.ts
 ```
 
-and paste the output here — add `--json` for the machine-readable form.
-**No DDL touching `group_members` runs before that report is clean**, and the
-clean report is what authorises writing migration `0010`, not writing it.
+(add `--json` for the machine-readable form.) **No DDL touching `group_members`
+runs before that report is clean**, and the clean report is what authorises
+writing migration `0010`, not writing it.

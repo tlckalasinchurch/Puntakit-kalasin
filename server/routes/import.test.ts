@@ -5,6 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import ExcelJS from "exceljs";
+import { count as sqlCount } from "drizzle-orm";
 
 /**
  * Mission import API integration test against a real (embedded) PostgreSQL
@@ -322,6 +323,69 @@ describe("Mission import API — Phase 2 L1/L2 (real PGlite Postgres)", () => {
         body: "{}",
       });
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe("group_members pre-check (Q2 gate, admin only, read-only)", () => {
+    it("rejects the pre-check without a session", async () => {
+      expect((await fetch(`${baseUrl}/api/import/precheck/group-members`)).status).toBe(401);
+    });
+
+    it("rejects the pre-check for a non-admin import reader", async () => {
+      const res = await fetch(`${baseUrl}/api/import/precheck/group-members`, {
+        headers: { Cookie: staffCookie },
+      });
+      expect(res.status).toBe(403);
+    });
+
+    it("rejects the pre-check for a plain member", async () => {
+      const res = await fetch(`${baseUrl}/api/import/precheck/group-members`, {
+        headers: { Cookie: outsiderCookie },
+      });
+      expect(res.status).toBe(403);
+    });
+
+    it("lets an admin read the report and a verdict", async () => {
+      const res = await fetch(`${baseUrl}/api/import/precheck/group-members`, {
+        headers: { Cookie: adminCookie },
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        success: boolean;
+        data: {
+          report: {
+            totalRows: number;
+            activeRows: number;
+            historicalRows: number;
+            duplicateActivePairs: number;
+            migrationBlocked: boolean;
+          };
+          gate: { verdict: string; migrationBlocked: boolean };
+          note: string;
+        };
+      };
+      expect(body.success).toBe(true);
+      expect(body.data.note).toContain("read-only");
+      expect(["CLEAR", "BLOCKED"]).toContain(body.data.gate.verdict);
+      // The counts must add up: an inconsistent report must not authorise DDL.
+      expect(body.data.report.totalRows).toBe(
+        body.data.report.activeRows + body.data.report.historicalRows,
+      );
+      expect(body.data.gate.migrationBlocked).toBe(body.data.report.duplicateActivePairs > 0);
+      expect(body.data.gate.migrationBlocked).toBe(body.data.report.migrationBlocked);
+    });
+
+    it("reports the rows it actually found, so an empty database is distinguishable", async () => {
+      const res = await fetch(`${baseUrl}/api/import/precheck/group-members`, {
+        headers: { Cookie: adminCookie },
+      });
+      const body = (await res.json()) as {
+        data: { report: { totalRows: number }; gate: { verdict: string } };
+      };
+      const [row] = await db.select({ total: sqlCount() }).from(schema.groupMembers);
+      expect(body.data.report.totalRows).toBe(Number(row?.total ?? 0));
+      // No duplicate active pair can exist yet: the FULL unique index forbids it.
+      expect(body.data.gate.verdict).toBe("CLEAR");
     });
   });
 });

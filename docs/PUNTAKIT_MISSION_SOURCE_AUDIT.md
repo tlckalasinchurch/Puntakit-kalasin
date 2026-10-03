@@ -134,9 +134,10 @@ Phase 2 (L1/L2 import infrastructure) is **built** — migration
 It stops at L2 on purpose: nothing is promoted into L3 and no checkbox
 semantics are assigned.
 
-The next gate is still the same one, and it is **not the code that is missing —
-the credentials are.** Before any DDL touches `group_members`, the read-only
-pre-check (`server/scripts/pre-migration-check.ts`, defined in
-`docs/PUNTAKIT_MISSION_DOMAIN_PLAN.md` §13 step 0) must be run against
-production by someone with database access and reported here. Until its output
-exists, migration `0010` must not be written.
+The next gate is still the same one, and **not the code — the report.** Before any
+DDL touches `group_members`, the read-only pre-check
+(`docs/PUNTAKIT_MISSION_DOMAIN_PLAN.md` §13 step 0) must run against production.
+It is reachable in production as `GET /api/import/precheck/group-members`
+(admin only) — same read-only function, live Neon connection — so an admin opens
+it and pastes `data.gate` back. Until that output exists, migration `0010` must
+not be written.
