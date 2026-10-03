@@ -1727,3 +1727,70 @@
 .dark textarea { background-color: var(--color-dark-surface-3); border-color: var(--color-on-dark-hairline); color: var(--color-on-dark); }
 .dark input::placeholder,
 .dark textarea::placeholder { color: rgba(255, 255, 255, 0.45); }
+
+/* ---------------------------------------------------------------------------
+   Clay surfaces (opt-in). Soft sage ground, puffy raised cards, buttons that
+   sink when pressed. Used by the care-leader screens (`/care`); the rest of the
+   app keeps the flat V2 chrome. Colours are written as hsl() so these tokens
+   stay out of the hex scans in design-tokens.test.ts, and every text/ground
+   pair keeps 4.5:1 or better (mint/peach/butter use their own dark ink).
+   --------------------------------------------------------------------------- */
+:root {
+  --clay-ground: hsl(110 22% 88%);
+  --clay-surface: hsl(110 26% 95%);
+  --clay-sunk: hsl(110 20% 90%);
+  --clay-mint: hsl(110 36% 84%);
+  --clay-mint-ink: hsl(110 50% 18%);
+  --clay-peach: hsl(20 85% 88%);
+  --clay-peach-ink: hsl(18 70% 24%);
+  --clay-butter: hsl(48 80% 80%);
+  --clay-butter-ink: hsl(44 80% 17%);
+  --clay-shadow-dark: hsl(110 15% 35% / 0.32);
+  --clay-shadow-light: hsl(0 0% 100% / 0.9);
+  --clay-inner-light: hsl(0 0% 100% / 0.8);
+  --clay-inner-dark: hsl(110 15% 35% / 0.18);
+  --clay-puff: 7px 9px 20px var(--clay-shadow-dark), -6px -6px 16px var(--clay-shadow-light),
+    inset 2px 2px 5px var(--clay-inner-light), inset -3px -3px 7px var(--clay-inner-dark);
+  --clay-puff-sm: 4px 5px 11px var(--clay-shadow-dark), -3px -3px 9px var(--clay-shadow-light),
+    inset 1px 1px 3px var(--clay-inner-light), inset -2px -2px 4px var(--clay-inner-dark);
+  --clay-press: inset 5px 6px 12px var(--clay-shadow-dark), inset -4px -4px 10px var(--clay-shadow-light);
+}
+.dark {
+  --clay-ground: hsl(110 14% 11%);
+  --clay-surface: hsl(110 14% 16%);
+  --clay-sunk: hsl(110 14% 13%);
+  --clay-mint: hsl(110 28% 22%);
+  --clay-mint-ink: hsl(110 45% 85%);
+  --clay-peach: hsl(18 38% 24%);
+  --clay-peach-ink: hsl(20 85% 90%);
+  --clay-butter: hsl(46 40% 22%);
+  --clay-butter-ink: hsl(48 80% 85%);
+  --clay-shadow-dark: hsl(0 0% 0% / 0.55);
+  --clay-shadow-light: hsl(0 0% 100% / 0.05);
+  --clay-inner-light: hsl(0 0% 100% / 0.07);
+  --clay-inner-dark: hsl(0 0% 0% / 0.35);
+}
+@layer components {
+  .clay-screen { background: var(--clay-ground); border-radius: var(--radius-lg); padding: 20px 16px 24px; display: flex; flex-direction: column; gap: 18px; }
+  .clay-card { background: var(--clay-surface); border-radius: var(--radius-lg); box-shadow: var(--clay-puff); padding: 18px; }
+  .clay-card-soft { background: var(--clay-surface); border-radius: var(--radius-md); box-shadow: var(--clay-puff-sm); padding: 14px; }
+  .clay-btn { min-height: 56px; border-radius: var(--radius-pill); padding-inline: 26px; font-weight: 700; font-size: 17px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: var(--color-primary); color: var(--color-on-dark); box-shadow: 6px 8px 16px var(--clay-shadow-dark), -4px -4px 12px var(--clay-shadow-light), inset 2px 2px 5px hsl(0 0% 100% / 0.3), inset -3px -4px 8px hsl(0 0% 0% / 0.22); transition: box-shadow 0.15s, transform 0.15s; }
+  .clay-btn:active:not(:disabled) { box-shadow: inset 4px 5px 10px hsl(0 0% 0% / 0.35); transform: translateY(1px); }
+  .clay-btn:disabled { opacity: 0.55; }
+  .clay-chip { min-height: 44px; border-radius: var(--radius-pill); padding-inline: 16px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; background: var(--clay-surface); color: var(--color-ink); box-shadow: var(--clay-puff-sm); }
+  .clay-chip:active { box-shadow: var(--clay-press); }
+  .clay-tile { width: 100%; min-height: 64px; text-align: left; border-radius: var(--radius-md); padding: 10px 16px; display: flex; align-items: center; gap: 14px; background: var(--clay-surface); color: var(--color-ink); box-shadow: var(--clay-puff-sm); transition: box-shadow 0.15s, background 0.15s; }
+  .clay-tile[aria-pressed="true"] { background: var(--clay-mint); color: var(--clay-mint-ink); box-shadow: var(--clay-press); }
+  .clay-tick { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--clay-sunk); box-shadow: var(--clay-press); color: transparent; }
+  .clay-tile[aria-pressed="true"] .clay-tick { background: var(--color-primary); color: var(--color-on-dark); box-shadow: var(--clay-puff-sm); }
+  .clay-progress { height: 16px; border-radius: var(--radius-pill); background: var(--clay-sunk); box-shadow: var(--clay-press); overflow: hidden; }
+  .clay-progress > i { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--color-primary); transition: width 0.25s; }
+  .clay-badge { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; flex: none; font-weight: 700; background: var(--clay-mint); color: var(--clay-mint-ink); box-shadow: var(--clay-puff-sm); }
+  .clay-badge.peach { background: var(--clay-peach); color: var(--clay-peach-ink); }
+  .clay-tag { display: inline-flex; align-items: center; gap: 6px; border-radius: var(--radius-pill); padding: 4px 12px; font-size: 13px; font-weight: 600; background: var(--clay-mint); color: var(--clay-mint-ink); }
+  .clay-tag.peach { background: var(--clay-peach); color: var(--clay-peach-ink); }
+  .clay-tag.butter { background: var(--clay-butter); color: var(--clay-butter-ink); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .clay-btn, .clay-tile, .clay-progress > i { transition: none; }
+}

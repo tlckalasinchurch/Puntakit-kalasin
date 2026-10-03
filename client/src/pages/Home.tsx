@@ -34,7 +34,7 @@ import {
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { PRIVILEGED_ROLES as OPERATIONS_ROLES } from "@shared/roles";
+import { CREATE_ROLES, PRIVILEGED_ROLES as OPERATIONS_ROLES } from "@shared/roles";
 
 // ---------------------------------------------------------------------------
 // Types (shapes of existing API responses)
@@ -624,6 +624,11 @@ export default function Home() {
             </h1>
           </div>
           <GlobalSearch variant="prominent" className="max-w-xl" />
+          {user && CREATE_ROLES.includes(user.role) && (
+            <Link href="/care" className="clay-btn w-full max-w-xl">
+              เช็คชื่อแคร์วันนี้
+            </Link>
+          )}
           {canSeeOperations && <OrgSnapshot />}
         </section>
 
