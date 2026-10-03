@@ -5,6 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import ExcelJS from "exceljs";
+import { count as sqlCount, eq } from "drizzle-orm";
 
 /**
  * Large-workbook path: /upload/token + /upload/from-blob. @vercel/blob is
@@ -13,9 +14,30 @@ import ExcelJS from "exceljs";
 
 const blobs = new Map<string, Uint8Array>();
 const deleted: string[] = [];
+/** What happened, in order: "get:<path>" then "del:<path>". */
+const events: string[] = [];
+const readFailures = new Set<string>();
+const deleteFailures = new Set<string>();
+/** Set by the tests: how many import_batches rows exist right now. */
+const probe = { batchCount: async () => 0 };
+/** import_batches rows that existed at the moment each blob was deleted. */
+const batchesWhenDeleted: Record<string, number> = {};
 
 vi.mock("@vercel/blob", () => ({
   get: vi.fn(async (pathname: string) => {
+    events.push(`get:${pathname}`);
+    if (readFailures.has(pathname)) {
+      return {
+        statusCode: 200,
+        stream: new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.error(new Error("connection reset while reading the blob"));
+          },
+        }),
+        headers: new Headers(),
+        blob: { size: 10, contentType: "application/octet-stream" },
+      };
+    }
     const bytes = blobs.get(pathname);
     if (!bytes) return null;
     return {
@@ -31,6 +53,9 @@ vi.mock("@vercel/blob", () => ({
     };
   }),
   del: vi.fn(async (pathname: string) => {
+    events.push(`del:${pathname}`);
+    batchesWhenDeleted[pathname] = await probe.batchCount();
+    if (deleteFailures.has(pathname)) throw new Error("blob service unavailable");
     deleted.push(pathname);
     blobs.delete(pathname);
   }),
@@ -54,13 +79,13 @@ afterAll(() => {
   if (tempRoot) fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 
-async function buildWorkbookBytes(): Promise<Uint8Array> {
+async function buildWorkbookBytes(seed = "x"): Promise<Uint8Array> {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet("กลุ่ม ก");
   ws.addRow(["ทะเบียนพันธกิจบ้าน กลุ่ม ก ทีม A"]);
   ws.addRow([]);
   ws.addRow(["ที่", "ชื่อ-สกุล", "ชื่อเล่น", "อายุ", "อาชีพ", "สถานที่ทำงาน", "สถานภาพครอบครัว", "", "", "", "", "", "", "", "", ""]);
-  ws.addRow([1, "สมชาย ใจดี", "ชาย", 40, "ครู", "โรงเรียน", "1"]);
+  ws.addRow([1, "สมชาย ใจดี", `ชาย${seed}`, 40, "ครู", "โรงเรียน", "1"]);
   return new Uint8Array(await wb.xlsx.writeBuffer());
 }
 
@@ -70,6 +95,8 @@ describe("import via Vercel Blob", () => {
   let adminCookie: string;
   let staffCookie: string;
   let workbookBytes: Uint8Array;
+  let db: ReturnType<typeof import("../db/client.js").getDb>;
+  let schema: typeof import("../../shared/schema.js");
 
   beforeAll(async () => {
     for (const key of MANAGED_KEYS) delete process.env[key];
@@ -81,11 +108,12 @@ describe("import via Vercel Blob", () => {
 
     const client = await import("../db/client.js");
     const bootstrap = await import("../db/bootstrap.js");
-    const schema = await import("../../shared/schema.js");
+    schema = await import("../../shared/schema.js");
     const authLib = await import("../lib/auth.js");
     const { createApp } = await import("../app.js");
     await bootstrap.bootstrapDatabase({ logger: { log: () => {}, warn: () => {} } });
-    const db = client.getDb();
+    db = client.getDb();
+    probe.batchCount = async () => Number((await db.select({ n: sqlCount() }).from(schema.importBatches))[0].n);
 
     await new Promise<void>((resolve) => {
       server = createApp().listen(0, "127.0.0.1", () => {
@@ -111,7 +139,12 @@ describe("import via Vercel Blob", () => {
   beforeEach(() => {
     blobs.clear();
     deleted.length = 0;
+    events.length = 0;
+    readFailures.clear();
+    deleteFailures.clear();
   });
+
+  const audits = (action: string) => db.select().from(schema.auditLogs).where(eq(schema.auditLogs.action, action));
 
   const post = (route: string, cookie: string | null, body: unknown) =>
     fetch(`${baseUrl}/api/import/${route}`, {
@@ -166,5 +199,65 @@ describe("import via Vercel Blob", () => {
     const junk = await post("upload/from-blob", adminCookie, { pathname: "import/junk.xlsx", fileName: "junk.xlsx" });
     expect(junk.status).toBe(400);
     expect(deleted).toContain("import/junk.xlsx");
+  });
+
+  it("deletes the blob only AFTER its bytes were fully read, and BEFORE the workbook is written", async () => {
+    const before = await probe.batchCount();
+    blobs.set("import/order.xlsx", await buildWorkbookBytes("order"));
+
+    const res = await post("upload/from-blob", adminCookie, { pathname: "import/order.xlsx", fileName: "order.xlsx" });
+
+    expect(res.status).toBe(201);
+    expect(events).toEqual(["get:import/order.xlsx", "del:import/order.xlsx"]); // read first, delete second
+    expect(batchesWhenDeleted["import/order.xlsx"]).toBe(before); // nothing was imported yet at delete time
+    expect(await probe.batchCount()).toBe(before + 1); // the import still completed afterwards
+  });
+
+  it("records the blob and its deletion in the audit log of a successful import", async () => {
+    blobs.set("import/audit.xlsx", await buildWorkbookBytes("audit"));
+    const res = await post("upload/from-blob", adminCookie, { pathname: "import/audit.xlsx", fileName: "audit.xlsx" });
+    expect(res.status).toBe(201);
+
+    const created = (await audits("IMPORT_BATCH_CREATED")).find((row) => JSON.parse(row.details!).blobPathname === "import/audit.xlsx");
+    expect(JSON.parse(created!.details!)).toMatchObject({ source: "blob", sourceFileName: "audit.xlsx", blobDeleted: true });
+  });
+
+  it("a failed import still removes the blob (re-upload needed) and says so in the audit log", async () => {
+    blobs.set("import/broken.xlsx", new Uint8Array([9, 9, 9]));
+    const res = await post("upload/from-blob", adminCookie, { pathname: "import/broken.xlsx", fileName: "broken.xlsx" });
+
+    expect(res.status).toBe(400);
+    expect(deleted).toContain("import/broken.xlsx");
+    const failure = (await audits("IMPORT_BATCH_FAILED")).find((row) => JSON.parse(row.details!).blobPathname === "import/broken.xlsx");
+    expect(JSON.parse(failure!.details!)).toMatchObject({ stage: "parse", source: "blob", blobDeleted: true, sourceFileName: "broken.xlsx" });
+  });
+
+  it("if the delete itself fails the import still succeeds and the leftover blob is audited", async () => {
+    blobs.set("import/stuck.xlsx", await buildWorkbookBytes("stuck"));
+    deleteFailures.add("import/stuck.xlsx");
+
+    const res = await post("upload/from-blob", adminCookie, { pathname: "import/stuck.xlsx", fileName: "stuck.xlsx" });
+
+    expect(res.status).toBe(201);
+    expect(blobs.has("import/stuck.xlsx")).toBe(true); // still in storage
+    const leftover = (await audits("IMPORT_BLOB_DELETE_FAILED")).find((row) => JSON.parse(row.details!).pathname === "import/stuck.xlsx");
+    expect(leftover).toBeDefined();
+    const created = (await audits("IMPORT_BATCH_CREATED")).find((row) => JSON.parse(row.details!).blobPathname === "import/stuck.xlsx");
+    expect(JSON.parse(created!.details!)).toMatchObject({ blobDeleted: false });
+  });
+
+  it("if the read breaks midway the blob is NOT deleted (it is still the only copy) and the audit log keeps the reference", async () => {
+    blobs.set("import/halfread.xlsx", await buildWorkbookBytes("half"));
+    readFailures.add("import/halfread.xlsx");
+
+    const res = await post("upload/from-blob", adminCookie, { pathname: "import/halfread.xlsx", fileName: "halfread.xlsx" });
+
+    expect(res.status).toBe(500);
+    expect(events).toEqual(["get:import/halfread.xlsx"]); // no delete was attempted
+    expect(blobs.has("import/halfread.xlsx")).toBe(true);
+    const retained = (await audits("IMPORT_BLOB_RETAINED")).find((row) => JSON.parse(row.details!).pathname === "import/halfread.xlsx");
+    expect(JSON.parse(retained!.details!)).toMatchObject({ reason: "READ_FAILED", sourceFileName: "halfread.xlsx" });
+    const failure = (await audits("IMPORT_BATCH_FAILED")).find((row) => JSON.parse(row.details!).blobPathname === "import/halfread.xlsx");
+    expect(JSON.parse(failure!.details!)).toMatchObject({ stage: "read-blob" });
   });
 });

@@ -7,7 +7,15 @@ import { ValidationError } from "./errors.js";
 
 /**
  * Vercel Blob hand-off for workbooks larger than Vercel's 4.5 MB request limit.
- * Blobs are PRIVATE (they hold member data) and are deleted after the import.
+ * Blobs are PRIVATE (they hold member data). Retention rules:
+ *  - the route deletes a blob as soon as its bytes are fully loaded into memory,
+ *    BEFORE parsing and writing, so a slow or failed import does not keep the
+ *    file in storage;
+ *  - that makes a failed import require a re-upload (the file is gone);
+ *  - deletion is NOT guaranteed: if the function is killed (timeout) or the
+ *    read fails midway, or `del` itself fails, the blob stays. Those cases are
+ *    written to the audit log (IMPORT_BLOB_RETAINED / IMPORT_BLOB_DELETE_FAILED)
+ *    so an admin can find and remove the file.
  * Needs BLOB_READ_WRITE_TOKEN; without it every call here fails closed.
  */
 
@@ -64,11 +72,17 @@ export async function readImportBlob(pathname: string): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-/** Best effort: a failed delete must not turn a finished import into an error. */
-export async function deleteImportBlob(pathname: string): Promise<void> {
+/**
+ * Best effort: a failed delete must not turn a finished import into an error.
+ * Returns whether the blob is gone, so the caller can record a leftover file
+ * in the audit log instead of losing track of it.
+ */
+export async function deleteImportBlob(pathname: string): Promise<boolean> {
   try {
     await del(pathname);
+    return true;
   } catch (error) {
     console.warn("[import] could not delete blob", pathname, error instanceof Error ? error.message : error);
+    return false;
   }
 }
