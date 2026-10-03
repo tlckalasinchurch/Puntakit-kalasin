@@ -327,7 +327,7 @@ export default function ImportDuplicates() {
       <PageHeader
         title="ตรวจสอบข้อมูลซ้ำ"
         description="แสดงแถวที่ใช้ชื่อเล่นเดียวกัน เรียงข้างกันเพื่อให้คนตัดสินเอง ผู้ดูแลระบบบันทึกผลได้ ระบบไม่รวมข้อมูลให้อัตโนมัติ"
-        secondaryActions={[{ label: "กลับไปหน้านำเข้าข้อมูล", href: "/import" }]}
+        secondaryActions={[{ label: "กลับไปหน้านำเข้าจาก Excel", href: "/import" }]}
       />
 
       <section className="card-surface mb-4 p-4 sm:p-5">

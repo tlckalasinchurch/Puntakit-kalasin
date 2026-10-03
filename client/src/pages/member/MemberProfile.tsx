@@ -14,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { MemberAppLayout } from "@/components/layout/MemberAppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
@@ -176,10 +177,16 @@ export default function MemberProfile() {
     }
   };
 
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const handleLogout = async () => {
-    if (window.confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) {
+    setLoggingOut(true);
+    try {
       await logout();
       navigate("/login");
+    } finally {
+      setLoggingOut(false);
+      setConfirmLogout(false);
     }
   };
 
@@ -624,13 +631,25 @@ export default function MemberProfile() {
       <div className="pt-1">
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() => setConfirmLogout(true)}
           className="type-caption-strong inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-[var(--color-error)] bg-[var(--color-canvas)] px-4 text-[var(--color-error)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none"
         >
           <LogOut size={ICON_SIZE.sm} aria-hidden="true" />
           <span>ออกจากระบบ</span>
         </button>
       </div>
+
+      {confirmLogout && (
+        <ConfirmDialog
+          title="ออกจากระบบ"
+          description="คุณต้องการออกจากระบบใช่หรือไม่? ครั้งหน้าต้องเข้าสู่ระบบใหม่"
+          confirmLabel="ออกจากระบบ"
+          busyLabel="กำลังออกจากระบบ…"
+          isSubmitting={loggingOut}
+          onConfirm={() => void handleLogout()}
+          onCancel={() => setConfirmLogout(false)}
+        />
+      )}
     </MemberAppLayout>
   );
 }

@@ -26,6 +26,7 @@ const FollowUps = lazy(() => import("./pages/FollowUps"));
 const Inbox = lazy(() => import("./pages/Inbox"));
 const ImportData = lazy(() => import("./pages/ImportData"));
 const ImportDuplicates = lazy(() => import("./pages/ImportDuplicates"));
+const OrgChart = lazy(() => import("./pages/OrgChart"));
 const ImportOrgData = lazy(() => import("./pages/ImportOrgData"));
 const Members = lazy(() => import("./pages/Members"));
 const Groups = lazy(() => import("./pages/Groups"));
@@ -139,6 +140,11 @@ function Router() {
       <Route path="/import">
         <ProtectedRoute>
           <ImportData />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/org">
+        <ProtectedRoute>
+          <OrgChart />
         </ProtectedRoute>
       </Route>
       <Route path="/import/org">

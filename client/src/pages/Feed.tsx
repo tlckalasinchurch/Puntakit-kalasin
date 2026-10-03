@@ -23,11 +23,13 @@ import {
   SectionHeader,
   StatusChip,
   type StatusTone,
+  FilterDisclosure,
 } from "@/components/DesignSystem";
 import { CardGridSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
+import { fetchAllMembers } from "@/lib/fetchAll";
 import type { MissionActivityStatus, MissionActivityType } from "@shared/schema";
 import { CREATE_ROLES } from "@shared/roles";
 
@@ -134,6 +136,7 @@ export default function Feed() {
 
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [members, setMembers] = useState<MemberOption[]>([]);
+  const [participantQuery, setParticipantQuery] = useState("");
 
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -169,14 +172,17 @@ export default function Feed() {
   useEffect(() => {
     if (!canCreate) return;
     api.get<GroupOption[]>("/api/groups").then(setGroups).catch(() => setGroups([]));
-    api
-      .get<MemberOption[]>("/api/members?limit=200")
+    fetchAllMembers<MemberOption>()
       .then(setMembers)
-      .catch(() => setMembers([]));
+      .catch(() => {
+        setMembers([]);
+        toast.error("โหลดรายชื่อสมาชิกไม่สำเร็จ เลือกผู้เข้าร่วมไม่ได้ในตอนนี้");
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canCreate]);
 
   const openCreate = () => {
+    setParticipantQuery("");
     setForm(EMPTY_FORM);
     setFormOpen(true);
   };
@@ -249,6 +255,11 @@ export default function Feed() {
 
   const countLabel = !isLoading && !error ? `${items.length.toLocaleString("th-TH")} กิจกรรม` : undefined;
 
+  const pq = participantQuery.trim().toLowerCase();
+  const visibleMembers = pq
+    ? members.filter((m) => `${m.name} ${m.nickname ?? ""}`.toLowerCase().includes(pq) || form.participantMemberIds.includes(m.id))
+    : members;
+
   return (
     <AppLayout>
       <PageHeader
@@ -258,6 +269,7 @@ export default function Feed() {
       />
 
       <div className="mb-5 grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
+        <FilterDisclosure activeCount={[typeFilter, statusFilter].filter(Boolean).length}>
         <Field label="ประเภทกิจกรรม">
           {(props) => (
             <select {...props} className={CONTROL_CLASS} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
@@ -282,6 +294,7 @@ export default function Feed() {
             </select>
           )}
         </Field>
+        </FilterDisclosure>
       </div>
 
       <section aria-labelledby="feed-heading">
@@ -520,11 +533,22 @@ export default function Feed() {
             <legend className="type-caption-strong text-[var(--color-ink)]">
               ผู้เกี่ยวข้อง ({form.participantMemberIds.length} คน)
             </legend>
+            <input
+              type="search"
+              aria-label="ค้นหาผู้เกี่ยวข้อง"
+              placeholder="ค้นหาด้วยชื่อหรือชื่อเล่น"
+              value={participantQuery}
+              onChange={(e) => setParticipantQuery(e.target.value)}
+              className={`${CONTROL_CLASS} mt-1.5`}
+            />
             <div className="mt-1.5 max-h-40 space-y-1 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--color-hairline)] p-2">
               {members.length === 0 && (
                 <p className="type-fine p-2 text-[var(--color-body-muted)]">ไม่มีข้อมูลสมาชิก</p>
               )}
-              {members.map((m) => (
+              {members.length > 0 && visibleMembers.length === 0 && (
+                <p className="type-fine p-2 text-[var(--color-body-muted)]">ไม่พบสมาชิกที่ค้นหา</p>
+              )}
+              {visibleMembers.map((m) => (
                 <label
                   key={m.id}
                   className="type-caption flex min-h-11 items-center gap-2 rounded-[var(--radius-sm)] px-2 text-[var(--color-ink)] hover:bg-[var(--color-canvas-soft)]"

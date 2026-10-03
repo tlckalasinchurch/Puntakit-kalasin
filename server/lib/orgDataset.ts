@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Database } from "../db/client.js";
 import { getDatabaseHandle } from "../db/client.js";
 import { groupMembers, groups, members } from "../../shared/schema.js";
+import { HEAD_ROLE } from "../../shared/orgView.js";
 
 /**
  * Org dataset loader: body -> care group -> member rows from a prepared
@@ -116,7 +117,7 @@ export function buildOrgRows(dataset: OrgDataset): OrgRows {
     people.push({
       id: derivedId("person|head"),
       name: clean(head.name),
-      role: "ศบ.อาจารย์ / หัวหน้าทีม",
+      role: HEAD_ROLE,
       membershipStatus: "active",
       notes: "ผู้นำจังหวัด",
     });
