@@ -188,6 +188,9 @@ export default function Attendance() {
   // Data lists
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [allMembers, setAllMembers] = useState<MemberItem[]>([]);
+  // Active members of the chosen care group (by real membership, not by the
+  // free-text `group` label, which can repeat across bodies). null = everyone.
+  const [groupMemberIds, setGroupMemberIds] = useState<Set<string> | null>(null);
   const [currentAttendance, setCurrentAttendance] = useState<Record<string, AttendanceStatus>>({});
   const [loadingLive, setLoadingLive] = useState(false);
   const [liveError, setLiveError] = useState<string | null>(null);
@@ -253,6 +256,13 @@ export default function Attendance() {
       // client/src/members-list-contract.test.ts.
       const members = await fetchAllMembers<MemberItem>();
       setAllMembers(members ?? []);
+
+      if (selectedGroupId) {
+        const memberships = await api.get<{ memberId: string; status: string }[]>(`/api/groups/${selectedGroupId}/members`);
+        setGroupMemberIds(new Set((memberships ?? []).filter((x) => x.status === "active").map((x) => x.memberId)));
+      } else {
+        setGroupMemberIds(null);
+      }
 
       // 2. Fetch existing attendance records for this date & service
       const attParams = new URLSearchParams({
@@ -390,10 +400,7 @@ export default function Attendance() {
 
   // Filter members list for live roster
   const filteredMembers = allMembers.filter((m) => {
-    if (selectedGroupId && m.group) {
-      const targetGroup = groups.find((g) => g.id === selectedGroupId);
-      if (targetGroup && m.group !== targetGroup.name) return false;
-    }
+    if (groupMemberIds && !groupMemberIds.has(m.id)) return false;
     if (!memberSearch.trim()) return true;
     const q = memberSearch.toLowerCase();
     return (

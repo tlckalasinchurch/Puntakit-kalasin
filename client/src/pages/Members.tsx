@@ -41,7 +41,7 @@ import {
   MEMBER_UPDATE_ROLES,
   hasRole,
 } from "@shared/roles";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 
 // Thai labels live in shared/labels.ts (same map the Member PWA renders), so
 // admin and member surfaces can never show different words for a status.
@@ -183,7 +183,11 @@ export default function Members() {
   const [error, setError] = useState<string | null>(null);
   const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
 
-  const [query, setQuery] = useState("");
+  // The home and top-bar search send people here as /members?search=…, so the
+  // page must start from (and follow) that parameter.
+  const urlQuery = new URLSearchParams(useSearch()).get("search") ?? "";
+  const [query, setQuery] = useState(urlQuery);
+  useEffect(() => setQuery(urlQuery), [urlQuery]);
   const [area, setArea] = useState("ทั้งหมด");
   const [status, setStatus] = useState("ทั้งหมด");
   const [membershipStatus, setMembershipStatus] = useState("ทั้งหมด");
