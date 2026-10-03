@@ -23,6 +23,7 @@ import { PRIVILEGED_ROLES } from "../../shared/roles.js";
 import { requireAdmin, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { duplicateGroupFingerprint } from "../lib/missionImport.js";
+import { isUniqueViolation, KNOWN_UNIQUE_CONSTRAINTS } from "../lib/dbErrors.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 
 /**
@@ -202,28 +203,47 @@ mergePlansRouter.post("/", requireAdmin, async (req, res, next) => {
       throw new ValidationError("ต้องบันทึกผลตรวจสอบว่า “คนเดียวกัน” กับกลุ่มนี้ก่อนจึงเสนอแผนรวมได้");
     }
 
-    const [open] = await db
-      .select({ id: importMergePlans.id })
-      .from(importMergePlans)
-      .where(and(eq(importMergePlans.groupFingerprint, groupFingerprint), eq(importMergePlans.status, "proposed")))
-      .limit(1);
-    if (open) {
-      throw new ConflictError("กลุ่มนี้มีแผนรวมที่รออนุมัติอยู่แล้ว", [{ field: "openPlanId", message: open.id }]);
-    }
+    const findOpenPlanId = async () => {
+      const [open] = await db
+        .select({ id: importMergePlans.id })
+        .from(importMergePlans)
+        .where(and(eq(importMergePlans.groupFingerprint, groupFingerprint), eq(importMergePlans.status, "proposed")))
+        .limit(1);
+      return open?.id ?? null;
+    };
+    const openConflict = (openPlanId: string | null) =>
+      new ConflictError(
+        "กลุ่มนี้มีแผนรวมที่รออนุมัติอยู่แล้ว",
+        openPlanId ? [{ field: "openPlanId", message: openPlanId }] : undefined
+      );
 
-    const [created] = await db
-      .insert(importMergePlans)
-      .values({
-        nickname,
-        groupFingerprint,
-        sourceRowIds: [...sourceRowIds].sort(),
-        decisionId: decision.id,
-        primarySourceRowId,
-        fieldChoices,
-        note: note ?? null,
-        proposedById: req.user!.id,
-      })
-      .returning();
+    const alreadyOpen = await findOpenPlanId();
+    if (alreadyOpen) throw openConflict(alreadyOpen);
+
+    let created: ImportMergePlanRow;
+    try {
+      [created] = await db
+        .insert(importMergePlans)
+        .values({
+          nickname,
+          groupFingerprint,
+          sourceRowIds: [...sourceRowIds].sort(),
+          decisionId: decision.id,
+          primarySourceRowId,
+          fieldChoices,
+          note: note ?? null,
+          proposedById: req.user!.id,
+        })
+        .returning();
+    } catch (error) {
+      // Two proposals for the same group raced past the check above; the
+      // partial unique index allowed only one. Known conflict: 409. Any other
+      // database error is unexpected and stays a 500.
+      if (isUniqueViolation(error, KNOWN_UNIQUE_CONSTRAINTS.mergePlanOneOpenPerGroup)) {
+        throw openConflict(await findOpenPlanId());
+      }
+      throw error;
+    }
 
     await logAudit({
       req,

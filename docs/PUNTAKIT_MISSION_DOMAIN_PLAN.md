@@ -675,6 +675,28 @@ POST /api/members/:id/move-group
 PUT  /api/groups/:id/location           latitude/longitude
 ```
 
+### Import operations notes
+
+- **Atomic write.** One import writes `import_batches` + every `import_source_rows` row +
+  every `import_row_norm` row as ONE unit (`server/db/atomic.ts`). On Neon HTTP, which has no
+  `db.transaction()`, that is one `db.batch([...])` (one request, one database transaction,
+  ids generated in the application). Other drivers use `db.transaction()`. A batch cannot be
+  split without losing atomicity, so the whole file travels in one request. The size limit of
+  that request on Neon is not verified here: a file over it fails as a whole (nothing is
+  written) with a 500.
+- **Blob retention.** `/upload/from-blob` deletes the blob as soon as its bytes are fully in
+  memory, before parsing and writing. A failed import therefore needs a **re-upload**. Deletion
+  is not guaranteed: a function timeout, a read that breaks midway, or a failed `del` leaves
+  the blob in storage. These are written to the audit log (`IMPORT_BLOB_RETAINED`,
+  `IMPORT_BLOB_DELETE_FAILED`) so an admin can find and remove the file. There is no automatic
+  cleanup job.
+- **Audit trail.** Every import writes `IMPORT_BATCH_CREATED` or `IMPORT_BATCH_FAILED` (with the
+  stage `precheck`, `parse`, `write` or `read-blob`, the error code, file name and size).
+- **Conflicts.** A duplicate file checksum and a second open merge plan for a group are mapped
+  from PostgreSQL error `23505` to `409`, for those known constraints only. Any other database
+  error stays a `500`.
+
+
 | Endpoint | Change | Compatibility |
 |---|---|---|
 | `GET /api/members` | adds `displayName`, `realName` | **Additive** |

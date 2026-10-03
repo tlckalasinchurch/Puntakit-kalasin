@@ -22,6 +22,7 @@ import {
   type ImportMergeField,
   type ImportMergePlanStatus,
 } from "@shared/importMerge";
+import { decisionPanelKey, defaultMergePlanForm, mergePlanPanelKey } from "./importDuplicatesKeys";
 
 /**
  * Admin → ตรวจสอบข้อมูลซ้ำ (§17). Shows every row that shares a normalized
@@ -214,9 +215,11 @@ function DecisionPanel({ candidate, canDecide, onSaved }: { candidate: Candidate
  * approvals page. Nothing is merged: this only records the plan.
  */
 function MergePlanPanel({ candidate, canDecide, onSaved }: { candidate: Candidate; canDecide: boolean; onSaved: () => void }) {
-  const first = candidate.members[0]?.sourceRowId ?? "";
-  const [primary, setPrimary] = useState(first);
-  const [choices, setChoices] = useState<Record<ImportMergeField, string>>({ fullName: first, age: first, occupation: first, workplace: first });
+  // The panel is remounted (see mergePlanPanelKey) whenever the compared rows
+  // change, so this initial state always refers to the rows on screen.
+  const [initial] = useState(() => defaultMergePlanForm(candidate.members));
+  const [primary, setPrimary] = useState(initial.primary);
+  const [choices, setChoices] = useState<Record<ImportMergeField, string>>(initial.choices);
   const [note, setNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -383,8 +386,8 @@ function CandidateCard({ candidate, canDecide, onSaved }: { candidate: Candidate
           </tbody>
         </table>
       </div>
-      <DecisionPanel key={candidate.decisions[0]?.id ?? "none"} candidate={candidate} canDecide={canDecide} onSaved={onSaved} />
-      <MergePlanPanel key={`${candidate.mergePlan?.id ?? "none"}-${candidate.decisions[0]?.id ?? "none"}`} candidate={candidate} canDecide={canDecide} onSaved={onSaved} />
+      <DecisionPanel key={decisionPanelKey(candidate)} candidate={candidate} canDecide={canDecide} onSaved={onSaved} />
+      <MergePlanPanel key={mergePlanPanelKey(candidate)} candidate={candidate} canDecide={canDecide} onSaved={onSaved} />
     </article>
   );
 }
