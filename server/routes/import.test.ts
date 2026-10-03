@@ -344,6 +344,140 @@ describe("Mission import API — Phase 2 L1/L2 (real PGlite Postgres)", () => {
     });
   });
 
+  describe("duplicate decisions (append-only human judgement)", () => {
+    type DupGroup = {
+      nickname: string;
+      members: Array<{ sourceRowId: string }>;
+      decisions: Array<{ decision: string; note: string | null; matchesCurrentRows: boolean; decidedByName: string | null }>;
+    };
+
+    async function loadGroup(): Promise<DupGroup> {
+      const res = await fetch(`${baseUrl}/api/import/duplicates`, { headers: { Cookie: adminCookie } });
+      const body = (await res.json()) as { data: { duplicates: DupGroup[] } };
+      return body.data.duplicates.find((g) => g.nickname === "หนู")!;
+    }
+
+    function decide(cookie: string | null, payload: unknown) {
+      return fetch(`${baseUrl}/api/import/duplicates/decisions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(cookie ? { Cookie: cookie } : {}) },
+        body: JSON.stringify(payload),
+      });
+    }
+
+    it("gates the write: 401 without a session, 403 for staff", async () => {
+      const group = await loadGroup();
+      const payload = { nickname: "หนู", sourceRowIds: group.members.map((m) => m.sourceRowId), decision: "same_person" };
+      expect((await decide(null, payload)).status).toBe(401);
+      expect((await decide(staffCookie, payload)).status).toBe(403);
+    });
+
+    it("starts with no decision on the group", async () => {
+      expect((await loadGroup()).decisions).toEqual([]);
+    });
+
+    it("records a decision with who decided it, and it matches the current rows", async () => {
+      const group = await loadGroup();
+      const res = await decide(adminCookie, {
+        nickname: "หนู",
+        sourceRowIds: group.members.map((m) => m.sourceRowId),
+        decision: "same_person",
+        note: "ชื่อ-สกุลและอายุตรงกัน",
+      });
+      expect(res.status).toBe(201);
+
+      const after = await loadGroup();
+      expect(after.decisions).toHaveLength(1);
+      expect(after.decisions[0]).toMatchObject({
+        decision: "same_person",
+        note: "ชื่อ-สกุลและอายุตรงกัน",
+        matchesCurrentRows: true,
+        decidedByName: "Admin",
+      });
+    });
+
+    it("does not add a row for an identical repeated decision", async () => {
+      const group = await loadGroup();
+      const res = await decide(adminCookie, {
+        nickname: "หนู",
+        sourceRowIds: group.members.map((m) => m.sourceRowId),
+        decision: "same_person",
+        note: "ชื่อ-สกุลและอายุตรงกัน",
+      });
+      expect(res.status).toBe(200);
+      expect((await loadGroup()).decisions).toHaveLength(1);
+    });
+
+    it("keeps history when the reviewer changes their mind (newest first)", async () => {
+      const group = await loadGroup();
+      const res = await decide(adminCookie, {
+        nickname: "หนู",
+        sourceRowIds: group.members.map((m) => m.sourceRowId),
+        decision: "different_people",
+      });
+      expect(res.status).toBe(201);
+      const after = await loadGroup();
+      expect(after.decisions.map((d) => d.decision)).toEqual(["different_people", "same_person"]);
+      expect(after.decisions.every((d) => d.matchesCurrentRows)).toBe(true);
+    });
+
+    it("rejects rows that do not share the nickname, unknown ids and a single row", async () => {
+      const group = await loadGroup();
+      const ids = group.members.map((m) => m.sourceRowId);
+      const other = await db.select({ id: schema.importSourceRows.id, nickname: schema.importRowNorm.nickname })
+        .from(schema.importSourceRows)
+        .innerJoin(schema.importRowNorm, (await import("drizzle-orm")).eq(schema.importRowNorm.sourceRowId, schema.importSourceRows.id));
+      const stranger = other.find((row) => row.nickname !== "หนู")!;
+
+      expect((await decide(adminCookie, { nickname: "หนู", sourceRowIds: [ids[0], stranger.id], decision: "same_person" })).status).toBe(400);
+      expect((await decide(adminCookie, { nickname: "หนู", sourceRowIds: [ids[0], "00000000-0000-4000-8000-000000000000"], decision: "same_person" })).status).toBe(400);
+      expect((await decide(adminCookie, { nickname: "หนู", sourceRowIds: [ids[0]], decision: "same_person" })).status).toBe(400);
+      expect((await decide(adminCookie, { nickname: "หนู", sourceRowIds: ids, decision: "merge" })).status).toBe(400);
+    });
+
+    it("stops matching once a later import adds a row to the group", async () => {
+      const { eq: eqOp } = await import("drizzle-orm");
+      const [batch] = await db
+        .insert(schema.importBatches)
+        .values({
+          sourceFileName: "later.xlsx",
+          fileChecksum: "later-upload-checksum",
+          layoutVariants: [],
+          checkboxConventions: [],
+          worksheetCount: 1,
+          rowCount: 1,
+          memberCount: 1,
+          normalizationVersion: 1,
+        })
+        .returning();
+      const [row] = await db
+        .insert(schema.importSourceRows)
+        .values({ batchId: batch.id, sheetName: "กลุ่ม ข", excelRow: 4, rawNickname: "หนู", normStatus: "ok" })
+        .returning();
+      await db.insert(schema.importRowNorm).values({ sourceRowId: row.id, nickname: "หนู" });
+
+      const group = await loadGroup();
+      expect(group.members).toHaveLength(3);
+      expect(group.decisions.length).toBeGreaterThan(0);
+      expect(group.decisions.every((d) => d.matchesCurrentRows === false)).toBe(true);
+
+      await db.delete(schema.importBatches).where(eqOp(schema.importBatches.id, batch.id));
+    });
+
+    it("never changes the import layers (L1/L2 row counts stay the same)", async () => {
+      const [{ n: sourceBefore }] = await db.select({ n: sqlCount() }).from(schema.importSourceRows);
+      const group = await loadGroup();
+      await decide(adminCookie, {
+        nickname: "หนู",
+        sourceRowIds: group.members.map((m) => m.sourceRowId),
+        decision: "same_person",
+        note: "ตรวจซ้ำ",
+      });
+      const [{ n: sourceAfter }] = await db.select({ n: sqlCount() }).from(schema.importSourceRows);
+      expect(Number(sourceAfter)).toBe(Number(sourceBefore));
+    });
+  });
+
   describe("group_members pre-check (Q2 gate, admin only, read-only)", () => {
     it("rejects the pre-check without a session", async () => {
       expect((await fetch(`${baseUrl}/api/import/precheck/group-members`)).status).toBe(401);

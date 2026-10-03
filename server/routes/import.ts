@@ -1,18 +1,21 @@
 import { Router, type Request } from "express";
 import express from "express";
-import { and, count, desc, eq, isNotNull } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull } from "drizzle-orm";
 
 import { getDb } from "../db/client.js";
 import {
   importBatches,
+  importDuplicateDecisions,
   importRowNorm,
   importSourceRows,
   normalizationRules,
+  users,
   IMPORT_BLOCKED_FIELD_KEYS,
   type ImportBatch,
 } from "../../shared/schema.js";
 import {
   importBatchQuerySchema,
+  importDuplicateDecisionBodySchema,
   importDuplicatesQuerySchema,
   importPreviewQuerySchema,
   importRuleConfirmSchema,
@@ -29,6 +32,7 @@ import { ConflictError, NotFoundError, ValidationError } from "../lib/errors.js"
 import {
   checksumBuffer,
   computeCompleteness,
+  duplicateGroupFingerprint,
   groupDuplicateCandidates,
   NORMALIZATION_RULES,
   NORMALIZATION_VERSION,
@@ -535,6 +539,7 @@ importRouter.get("/duplicates", requireImportReader, async (req, res, next) => {
       .select({
         nickname: importRowNorm.nickname,
         age: importRowNorm.age,
+        sourceRowId: importSourceRows.id,
         batchId: importSourceRows.batchId,
         sourceFileName: importBatches.sourceFileName,
         sheetName: importSourceRows.sheetName,
@@ -560,12 +565,44 @@ importRouter.get("/duplicates", requireImportReader, async (req, res, next) => {
       list.push(row);
       occurrencesByNickname.set(key, list);
     }
-    const duplicates = groupDuplicateCandidates(rows, parsed.data.limit).map((group) => ({
+    const candidates = groupDuplicateCandidates(rows, parsed.data.limit).map((group) => ({
       ...group,
       members: (occurrencesByNickname.get(group.nickname) ?? [])
         .map(({ nickname: _nickname, ...member }) => member)
         .sort((a, b) => a.sourceFileName.localeCompare(b.sourceFileName) || a.sheetName.localeCompare(b.sheetName) || a.excelRow - b.excelRow),
     }));
+
+    // Recorded human decisions, newest first. A decision applies to a group
+    // only while the group's rows are exactly the rows that were compared.
+    const decisionRows =
+      candidates.length === 0
+        ? []
+        : await db
+            .select({
+              id: importDuplicateDecisions.id,
+              nickname: importDuplicateDecisions.nickname,
+              groupFingerprint: importDuplicateDecisions.groupFingerprint,
+              decision: importDuplicateDecisions.decision,
+              note: importDuplicateDecisions.note,
+              decidedAt: importDuplicateDecisions.decidedAt,
+              decidedByName: users.name,
+            })
+            .from(importDuplicateDecisions)
+            .leftJoin(users, eq(importDuplicateDecisions.decidedById, users.id))
+            .where(inArray(importDuplicateDecisions.nickname, candidates.map((c) => c.nickname)))
+            .orderBy(desc(importDuplicateDecisions.decidedAt));
+    const duplicates = candidates.map((group) => {
+      const fingerprint = duplicateGroupFingerprint(group.members.map((m) => m.sourceRowId));
+      return {
+        ...group,
+        decisions: decisionRows
+          .filter((d) => d.nickname === group.nickname)
+          .map(({ groupFingerprint, nickname: _nickname, ...d }) => ({
+            ...d,
+            matchesCurrentRows: groupFingerprint === fingerprint,
+          })),
+      };
+    });
 
     res.json({
       success: true,
@@ -574,6 +611,76 @@ importRouter.get("/duplicates", requireImportReader, async (req, res, next) => {
         note: "ชื่อเล่นซ้ำเป็นเพียงผู้เข้ารอบตรวจสอบ — ระบบไม่รวมบันทึกอัตโนมัติ (§8)",
       },
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 5b. POST /duplicates/decisions — record a human decision on a candidate group (admin).
+// Append-only; it never merges, edits or promotes any row (§8).
+importRouter.post("/duplicates/decisions", requireAdmin, async (req, res, next) => {
+  try {
+    const parsed = importDuplicateDecisionBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError(
+        "ข้อมูลการตัดสินใจไม่ถูกต้อง",
+        parsed.error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message }))
+      );
+    }
+    const { nickname, decision, note } = parsed.data;
+    const sourceRowIds = Array.from(new Set(parsed.data.sourceRowIds));
+    if (sourceRowIds.length < 2) {
+      throw new ValidationError("ต้องเลือกอย่างน้อย 2 แถวเพื่อตัดสินใจ");
+    }
+
+    const db = getDb();
+    // Every row must exist and carry this nickname: a decision cannot be
+    // recorded against rows the reviewer did not actually compare.
+    const found = await db
+      .select({ id: importSourceRows.id, nickname: importRowNorm.nickname })
+      .from(importSourceRows)
+      .innerJoin(importRowNorm, eq(importRowNorm.sourceRowId, importSourceRows.id))
+      .where(inArray(importSourceRows.id, sourceRowIds));
+    if (found.length !== sourceRowIds.length || found.some((row) => (row.nickname ?? "").trim() !== nickname)) {
+      throw new ValidationError("แถวที่เลือกไม่ตรงกับชื่อเล่นนี้ หรือไม่พบในระบบ");
+    }
+
+    const groupFingerprint = duplicateGroupFingerprint(sourceRowIds);
+
+    // A repeated click records nothing new: the latest decision for this exact
+    // group with the same outcome and note is returned as is.
+    const [latest] = await db
+      .select()
+      .from(importDuplicateDecisions)
+      .where(eq(importDuplicateDecisions.groupFingerprint, groupFingerprint))
+      .orderBy(desc(importDuplicateDecisions.decidedAt))
+      .limit(1);
+    if (latest && latest.decision === decision && (latest.note ?? undefined) === note) {
+      res.json({ success: true, data: latest });
+      return;
+    }
+
+    const [created] = await db
+      .insert(importDuplicateDecisions)
+      .values({
+        nickname,
+        groupFingerprint,
+        sourceRowIds: [...sourceRowIds].sort(),
+        decision,
+        note: note ?? null,
+        decidedById: req.user!.id,
+      })
+      .returning();
+
+    await logAudit({
+      req,
+      action: "IMPORT_DUPLICATE_DECIDED",
+      entityType: "import_duplicate_decision",
+      entityId: created.id,
+      details: { nickname, decision, rowCount: sourceRowIds.length },
+    });
+
+    res.status(201).json({ success: true, data: created });
   } catch (err) {
     next(err);
   }

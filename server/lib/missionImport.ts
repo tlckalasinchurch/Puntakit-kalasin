@@ -375,6 +375,17 @@ export function checksumBuffer(bytes: Uint8Array): string {
 }
 
 /**
+ * Identity of a duplicate-review group: sha256 of its sorted source-row ids.
+ * A decision matches a group only while the group has exactly the same rows,
+ * so a later upload that adds a row puts the group back in the queue.
+ */
+export function duplicateGroupFingerprint(sourceRowIds: readonly string[]): string {
+  return createHash("sha256")
+    .update(Array.from(new Set(sourceRowIds)).sort().join("\n"))
+    .digest("hex");
+}
+
+/**
  * Writes the uploaded bytes to a private temp file so the streaming reader
  * (which takes a path) can consume it, then removes it. The bytes are never
  * stored anywhere else.
