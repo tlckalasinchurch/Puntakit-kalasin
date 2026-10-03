@@ -22,7 +22,7 @@ const MANAGED_KEYS = [
 /** Number of `.sql` files in server/db/migrations (drizzle journal entries).
  *  0008_import_audit added the mission import L1/L2 tables (Phase 2);
  *  0009_import_duplicate_decisions added the duplicate-review decision log. */
-const MIGRATION_COUNT = 10;
+const MIGRATION_COUNT = 11;
 
 const originalEnv = { ...process.env };
 const tempDirs: string[] = [];

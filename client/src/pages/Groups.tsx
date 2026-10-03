@@ -46,11 +46,18 @@ import type {
 } from "@shared/schema";
 import { ADMIN_ROLES, GROUP_MANAGE_ANY_ROLES, hasRole } from "@shared/roles";
 
+type OrgLevel = "body" | "care";
+
+const ORG_LEVEL_LABELS: Record<OrgLevel, string> = { body: "บอดี้", care: "แคร์" };
+
 interface GroupItem {
   id: string;
   name: string;
   leaderId: string | null;
   coLeaderId: string | null;
+  orgLevel: OrgLevel | null;
+  parentGroupId: string | null;
+  leaderMemberId: string | null;
   category: GroupCategory;
   privacy: GroupPrivacy;
   status: GroupStatus;
@@ -162,6 +169,8 @@ const EMPTY_FORM = {
   name: "",
   leaderId: "",
   coLeaderId: "",
+  orgLevel: "" as OrgLevel | "",
+  parentGroupId: "",
   category: "cell" as GroupCategory,
   privacy: "public" as GroupPrivacy,
   status: "active" as GroupStatus,
@@ -285,6 +294,8 @@ export default function Groups() {
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [privacyFilter, setPrivacyFilter] = useState<string>("");
+  const [levelFilter, setLevelFilter] = useState<string>("");
+  const [bodies, setBodies] = useState<GroupItem[]>([]);
 
   // Create / Edit modal
   const [modalOpen, setModalOpen] = useState(false);
@@ -339,6 +350,25 @@ export default function Groups() {
     fetchGroups();
   }, [fetchGroups]);
 
+  // Bodies are needed for the care-group parent picker and the body label on
+  // each card, independent of the active list filters.
+  const fetchBodies = useCallback(async () => {
+    try {
+      setBodies(await api.get<GroupItem[]>("/api/groups?orgLevel=body"));
+    } catch {
+      setBodies([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBodies();
+  }, [fetchBodies]);
+
+  const bodyNameById = new Map(bodies.map((b) => [b.id, b.name]));
+  const visibleGroups = levelFilter
+    ? groupsList.filter((g) => (levelFilter === "none" ? !g.orgLevel : g.orgLevel === levelFilter))
+    : groupsList;
+
   // Load available members for adding. GET /api/members returns the rows as
   // a bare array in `data` — no `{ items }` wrapper (see
   // client/src/members-list-contract.test.ts).
@@ -365,6 +395,8 @@ export default function Groups() {
       name: grp.name,
       leaderId: grp.leaderId || "",
       coLeaderId: grp.coLeaderId || "",
+      orgLevel: grp.orgLevel ?? "",
+      parentGroupId: grp.parentGroupId ?? "",
       category: grp.category,
       privacy: grp.privacy || "public",
       status: grp.status || "active",
@@ -402,6 +434,8 @@ export default function Groups() {
         name: form.name.trim(),
         leaderId: form.leaderId ? form.leaderId : null,
         coLeaderId: form.coLeaderId ? form.coLeaderId : null,
+        orgLevel: form.orgLevel || null,
+        parentGroupId: form.orgLevel === "care" && form.parentGroupId ? form.parentGroupId : null,
         category: form.category,
         privacy: form.privacy,
         status: form.status,
@@ -423,6 +457,7 @@ export default function Groups() {
       }
       setModalOpen(false);
       fetchGroups();
+      fetchBodies();
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "บันทึกข้อมูลไม่สำเร็จ";
@@ -538,7 +573,7 @@ export default function Groups() {
   const activeGroupsCount = groupsList.filter((g) => g.status === "active").length;
   const totalMembersInGroups = groupsList.reduce((acc, g) => acc + (g.memberCount || 0), 0);
 
-  const hasFilters = Boolean(search || categoryFilter || statusFilter || privacyFilter);
+  const hasFilters = Boolean(search || categoryFilter || statusFilter || privacyFilter || levelFilter);
   const resetFilters = () => {
     setSearch("");
     setCategoryFilter("");
@@ -644,6 +679,26 @@ export default function Groups() {
 
         <div className="w-full sm:w-auto">
           <label
+            htmlFor="groups-level"
+            className="type-caption-strong block text-[var(--color-ink)]"
+          >
+            ระดับในผังองค์กร
+          </label>
+          <select
+            id="groups-level"
+            value={levelFilter}
+            onChange={(e) => setLevelFilter(e.target.value)}
+            className={`${SELECT_CLASS} mt-1.5 sm:w-40`}
+          >
+            <option value="">ทุกระดับ</option>
+            <option value="body">บอดี้</option>
+            <option value="care">แคร์</option>
+            <option value="none">กลุ่มทั่วไป</option>
+          </select>
+        </div>
+
+        <div className="w-full sm:w-auto">
+          <label
             htmlFor="groups-status"
             className="type-caption-strong block text-[var(--color-ink)]"
           >
@@ -694,7 +749,7 @@ export default function Groups() {
         <div role="status" aria-label="กำลังโหลดข้อมูลกลุ่ม">
           <CardGridSkeleton count={6} />
         </div>
-      ) : groupsList.length === 0 ? (
+      ) : visibleGroups.length === 0 ? (
         hasFilters ? (
           <EmptyState
             icon={Search}
@@ -716,7 +771,7 @@ export default function Groups() {
         )
       ) : (
         <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {groupsList.map((grp) => {
+          {visibleGroups.map((grp) => {
             const statusCfg = STATUS_LABELS[grp.status] ?? STATUS_LABELS.active;
             const privacyCfg = PRIVACY_LABELS[grp.privacy] ?? PRIVACY_LABELS.public;
             const canEditThis = canEditGroup(grp);
@@ -730,9 +785,16 @@ export default function Groups() {
                 className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <StatusChip tone={CATEGORY_TONES[grp.category] ?? "neutral"}>
-                    {CATEGORY_LABELS[grp.category] ?? grp.category}
-                  </StatusChip>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {grp.orgLevel && (
+                      <StatusChip tone={grp.orgLevel === "body" ? "success" : "info"}>
+                        {ORG_LEVEL_LABELS[grp.orgLevel]}
+                      </StatusChip>
+                    )}
+                    <StatusChip tone={CATEGORY_TONES[grp.category] ?? "neutral"}>
+                      {CATEGORY_LABELS[grp.category] ?? grp.category}
+                    </StatusChip>
+                  </div>
                   <StatusChip tone={statusCfg.tone}>{statusCfg.label}</StatusChip>
                 </div>
 
@@ -740,6 +802,11 @@ export default function Groups() {
                   <h2 className="type-body-strong text-[var(--color-ink)]">
                     {grp.name}
                   </h2>
+                  {grp.parentGroupId && bodyNameById.get(grp.parentGroupId) && (
+                    <p className="type-caption mt-1 text-[var(--color-body-muted)]">
+                      {bodyNameById.get(grp.parentGroupId)}
+                    </p>
+                  )}
                   {grp.area && (
                     <p className="type-caption mt-1 flex items-center gap-1.5 text-[var(--color-body-muted)]">
                       <MapPin size={ICON_SIZE.xs} aria-hidden="true" />
@@ -911,6 +978,45 @@ export default function Groups() {
               )}
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="ระดับในผังองค์กร">
+                {fieldProps => (
+                  <select
+                    {...fieldProps}
+                    className={SELECT_CLASS}
+                    value={form.orgLevel}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        orgLevel: e.target.value as OrgLevel | "",
+                        parentGroupId: e.target.value === "care" ? form.parentGroupId : "",
+                      })
+                    }
+                  >
+                    <option value="">กลุ่มทั่วไป (ไม่อยู่ในผัง)</option>
+                    <option value="body">บอดี้</option>
+                    <option value="care">แคร์</option>
+                  </select>
+                )}
+              </Field>
+              {form.orgLevel === "care" && (
+                <Field label="อยู่ใต้บอดี้">
+                  {fieldProps => (
+                    <select
+                      {...fieldProps}
+                      className={SELECT_CLASS}
+                      value={form.parentGroupId}
+                      onChange={(e) => setForm({ ...form, parentGroupId: e.target.value })}
+                    >
+                      <option value="">— ยังไม่ระบุบอดี้ —</option>
+                      {bodies.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </Field>
+              )}
               <Field label="ประเภทกลุ่ม">
                 {fieldProps => (
                   <select

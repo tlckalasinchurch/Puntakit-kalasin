@@ -25,6 +25,55 @@ export const groupsRouter = Router();
 
 groupsRouter.use(requireAuth);
 
+type OrgFields = {
+  orgLevel: "body" | "care" | null;
+  parentGroupId: string | null;
+  leaderMemberId: string | null;
+};
+
+/**
+ * Org-chart rules (ศบ. -> body -> care): a body has no parent, a care group's
+ * parent must be a live body, and a plain group has no parent. A body that
+ * still has live children cannot be turned into another level.
+ */
+async function assertOrgHierarchy(groupId: string | null, next: OrgFields) {
+  const db = getDb();
+  const bad = (message: string, field: string) => new ValidationError(message, [{ field, message }]);
+
+  if (next.orgLevel === "body" && next.parentGroupId) {
+    throw bad("บอดี้ไม่มีกลุ่มแม่", "parentGroupId");
+  }
+  if (!next.orgLevel && next.parentGroupId) {
+    throw bad("กลุ่มที่มีกลุ่มแม่ต้องระบุระดับเป็นแคร์", "orgLevel");
+  }
+  if (next.parentGroupId) {
+    if (next.parentGroupId === groupId) throw bad("กลุ่มแม่ต้องไม่ใช่กลุ่มเดียวกัน", "parentGroupId");
+    const [parent] = await db
+      .select({ id: groups.id, orgLevel: groups.orgLevel })
+      .from(groups)
+      .where(and(eq(groups.id, next.parentGroupId), isNull(groups.deletedAt)))
+      .limit(1);
+    if (!parent) throw bad("ไม่พบกลุ่มแม่", "parentGroupId");
+    if (parent.orgLevel !== "body") throw bad("กลุ่มแม่ของแคร์ต้องเป็นบอดี้", "parentGroupId");
+  }
+  if (next.leaderMemberId) {
+    const [leader] = await db
+      .select({ id: members.id })
+      .from(members)
+      .where(and(eq(members.id, next.leaderMemberId), isNull(members.deletedAt)))
+      .limit(1);
+    if (!leader) throw bad("ไม่พบสมาชิกที่เป็นผู้นำ", "leaderMemberId");
+  }
+  if (groupId && next.orgLevel !== "body") {
+    const [child] = await db
+      .select({ id: groups.id })
+      .from(groups)
+      .where(and(eq(groups.parentGroupId, groupId), isNull(groups.deletedAt)))
+      .limit(1);
+    if (child) throw new ConflictError("บอดี้นี้ยังมีแคร์อยู่ ย้ายหรือลบแคร์ก่อนเปลี่ยนระดับ");
+  }
+}
+
 // Helper to check if user can manage the group. Role set is shared with the
 // client via `GROUP_MANAGE_ANY_ROLES` (shared/roles.ts); a group_leader gets
 // an extra ownership check below.
@@ -125,7 +174,7 @@ groupsRouter.get("/", async (req, res, next) => {
       );
     }
 
-    const { search, category, status, privacy, area } = parsed.data;
+    const { search, category, status, privacy, area, orgLevel, parentGroupId } = parsed.data;
     const db = getDb();
     const conditions = [isNull(groups.deletedAt)];
 
@@ -140,6 +189,12 @@ groupsRouter.get("/", async (req, res, next) => {
     }
     if (area) {
       conditions.push(ilike(groups.area, `%${area}%`));
+    }
+    if (orgLevel) {
+      conditions.push(eq(groups.orgLevel, orgLevel));
+    }
+    if (parentGroupId) {
+      conditions.push(eq(groups.parentGroupId, parentGroupId));
     }
     if (search) {
       conditions.push(
@@ -158,6 +213,9 @@ groupsRouter.get("/", async (req, res, next) => {
         name: groups.name,
         leaderId: groups.leaderId,
         coLeaderId: groups.coLeaderId,
+        orgLevel: groups.orgLevel,
+        parentGroupId: groups.parentGroupId,
+        leaderMemberId: groups.leaderMemberId,
         category: groups.category,
         privacy: groups.privacy,
         status: groups.status,
@@ -339,11 +397,19 @@ groupsRouter.post(
         );
       }
 
+      const org: OrgFields = {
+        orgLevel: parsed.data.orgLevel ?? null,
+        parentGroupId: parsed.data.parentGroupId || null,
+        leaderMemberId: parsed.data.leaderMemberId || null,
+      };
+      await assertOrgHierarchy(null, org);
+
       const db = getDb();
       const [newGroup] = await db
         .insert(groups)
         .values({
           ...parsed.data,
+          ...org,
           leaderId: parsed.data.leaderId || null,
           coLeaderId: parsed.data.coLeaderId || null,
           createdById: req.user!.id,
@@ -396,10 +462,26 @@ groupsRouter.put("/:id", async (req, res, next) => {
       throw new NotFoundError("ไม่พบกลุ่มที่ต้องการแก้ไข");
     }
 
+    const org: OrgFields = {
+      orgLevel: parsed.data.orgLevel !== undefined ? parsed.data.orgLevel : existing.orgLevel,
+      parentGroupId:
+        parsed.data.parentGroupId !== undefined ? parsed.data.parentGroupId || null : existing.parentGroupId,
+      leaderMemberId:
+        parsed.data.leaderMemberId !== undefined ? parsed.data.leaderMemberId || null : existing.leaderMemberId,
+    };
+    if (
+      parsed.data.orgLevel !== undefined ||
+      parsed.data.parentGroupId !== undefined ||
+      parsed.data.leaderMemberId !== undefined
+    ) {
+      await assertOrgHierarchy(id, org);
+    }
+
     const [updatedGroup] = await db
       .update(groups)
       .set({
         ...parsed.data,
+        ...org,
         leaderId: parsed.data.leaderId !== undefined ? (parsed.data.leaderId || null) : existing.leaderId,
         coLeaderId: parsed.data.coLeaderId !== undefined ? (parsed.data.coLeaderId || null) : existing.coLeaderId,
         updatedAt: new Date(),

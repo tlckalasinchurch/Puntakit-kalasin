@@ -1,4 +1,5 @@
 import {
+  type AnyPgColumn,
   boolean,
   index,
   integer,
@@ -215,6 +216,10 @@ export const GROUP_CATEGORIES = [
 ] as const;
 export type GroupCategory = (typeof GROUP_CATEGORIES)[number];
 
+/** Org-chart level of a group: body (บอดี้, led by หนบ.) or care (แคร์, led by หนค.). Null = ordinary group. */
+export const GROUP_ORG_LEVELS = ["body", "care"] as const;
+export type GroupOrgLevel = (typeof GROUP_ORG_LEVELS)[number];
+
 export const GROUP_STATUSES = ["active", "paused", "closed"] as const;
 export type GroupStatus = (typeof GROUP_STATUSES)[number];
 
@@ -249,6 +254,9 @@ export const groups = pgTable(
     name: text("name").notNull(),
     leaderId: text("leader_id").references(() => users.id, { onDelete: "set null" }),
     coLeaderId: text("co_leader_id").references(() => users.id, { onDelete: "set null" }),
+    orgLevel: text("org_level", { enum: GROUP_ORG_LEVELS }),
+    parentGroupId: text("parent_group_id").references((): AnyPgColumn => groups.id, { onDelete: "set null" }),
+    leaderMemberId: text("leader_member_id").references(() => members.id, { onDelete: "set null" }),
     category: text("category", { enum: GROUP_CATEGORIES }).notNull().default("cell"),
     privacy: text("privacy", { enum: GROUP_PRIVACIES }).notNull().default("public"),
     status: text("status", { enum: GROUP_STATUSES }).notNull().default("active"),
@@ -276,6 +284,9 @@ export const groups = pgTable(
     index("groups_area_idx").on(table.area),
     index("groups_leader_id_idx").on(table.leaderId),
     index("groups_co_leader_id_idx").on(table.coLeaderId),
+    index("groups_parent_group_id_idx").on(table.parentGroupId),
+    index("groups_org_level_idx").on(table.orgLevel),
+    index("groups_leader_member_id_idx").on(table.leaderMemberId),
     index("groups_deleted_at_idx").on(table.deletedAt),
   ]
 );
