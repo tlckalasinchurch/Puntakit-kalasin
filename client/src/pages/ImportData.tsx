@@ -163,6 +163,7 @@ export default function ImportData() {
         description="อัปโหลดทะเบียนพันธกิจ (.xlsx) เพื่อตรวจสอบก่อน ข้อมูลยังไม่ถูกส่งเข้าทะเบียนสมาชิกหรือกลุ่ม"
         secondaryActions={[
           { label: "ตรวจสอบข้อมูลซ้ำ", href: "/import/duplicates" },
+          { label: "โหลดข้อมูลผังองค์กร", href: "/import/org" },
           { label: "รีเฟรช", icon: RefreshCw, onClick: () => void loadBatches() },
         ]}
       />

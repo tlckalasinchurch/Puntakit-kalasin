@@ -16,6 +16,7 @@ import { reportsRouter } from "./routes/reports.js";
 import { groupsRouter } from "./routes/groups.js";
 import { attendanceRouter } from "./routes/attendance.js";
 import { importRouter } from "./routes/import.js";
+import { orgDataRouter } from "./routes/orgData.js";
 import { portalRouter } from "./routes/portal.js";
 import { requestIdMiddleware } from "./middleware/requestId.js";
 import { isDemoModeEnabled, isLegacyTestAuthEnabled } from "./middleware/auth.js";
@@ -111,6 +112,7 @@ export function createApp() {
   app.use("/api/submissions", submissionsRouter);
   app.use("/api/attendance", attendanceRouter);
   app.use("/api/import", importRouter);
+  app.use("/api/org-data", orgDataRouter);
   app.use("/api/me", portalRouter);
   app.use("/api/announcements", announcementsRouter);
   app.use("/api/events", eventsRouter);
