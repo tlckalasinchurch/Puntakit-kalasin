@@ -3,6 +3,7 @@ import { Lock } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { EmptyState, PageHeader } from "@/components/DesignSystem";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
@@ -47,6 +48,7 @@ export default function ImportOrgData() {
   const [done, setDone] = useState<(Done & { kind: "apply" | "rollback" }) | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<"apply" | "rollback" | null>(null);
 
   if (!isAdmin) {
     return (
@@ -95,16 +97,16 @@ export default function ImportOrgData() {
     if (result) setDry(result);
   };
   const onApply = async () => {
-    if (!window.confirm("โหลดข้อมูลเข้าระบบจริงตอนนี้? ระบบจะเพิ่มข้อมูลเท่านั้น ไม่แก้ข้อมูลเดิม")) return;
     const result = await run<Done>("apply", true);
+    setConfirming(null);
     if (result) {
       setDone({ ...result, kind: "apply" });
       toast.success("โหลดข้อมูลเรียบร้อยแล้ว");
     }
   };
   const onRollback = async () => {
-    if (!window.confirm("ถอนกลับ: ลบบอดี้ แคร์ และสมาชิกที่โหลดจากไฟล์นี้ รวมถึงการแก้ไขที่ทำกับข้อมูลเหล่านั้นภายหลัง ต้องการดำเนินการต่อ?")) return;
     const result = await run<Done>("rollback", true);
+    setConfirming(null);
     if (result) {
       setDone({ ...result, kind: "rollback" });
       setDry(null);
@@ -138,10 +140,10 @@ export default function ImportOrgData() {
           <button type="button" className={OUTLINE} disabled={busy || dataset === null} onClick={() => void onDryRun()}>
             ตรวจสอบก่อน (ยังไม่บันทึก)
           </button>
-          <button type="button" className={PRIMARY} disabled={busy || !dry} onClick={() => void onApply()}>
+          <button type="button" className={PRIMARY} disabled={busy || !dry} onClick={() => setConfirming("apply")}>
             โหลดข้อมูล
           </button>
-          <button type="button" className={OUTLINE} disabled={busy || dataset === null} onClick={() => void onRollback()}>
+          <button type="button" className={OUTLINE} disabled={busy || dataset === null} onClick={() => setConfirming("rollback")}>
             ถอนกลับ
           </button>
         </div>
@@ -174,6 +176,35 @@ export default function ImportOrgData() {
             <li>กลุ่ม: {done.targetBefore.groups} → {done.targetAfter.groups}</li>
           </ul>
         </section>
+      )}
+
+      {confirming === "apply" && dry && (
+        <ConfirmDialog
+          title="ยืนยันการโหลดข้อมูลเข้าระบบ"
+          description="ระบบจะเพิ่มข้อมูลใหม่เท่านั้น ไม่แก้หรือลบข้อมูลเดิม และรันซ้ำได้โดยไม่เกิดข้อมูลซ้ำ"
+          details={[
+            `บอดี้ ${dry.plan.bodies} · แคร์ ${dry.plan.careGroups}`,
+            `สมาชิก ${dry.plan.members} คน · ผู้นำ ${dry.plan.people} คน`,
+            `ใช้ชื่อเล่นแทนชื่อ-สกุล ${dry.plan.nameFromNickname} คน`,
+          ]}
+          tone="primary"
+          confirmLabel="โหลดข้อมูล"
+          busyLabel="กำลังโหลด…"
+          isSubmitting={busy}
+          onConfirm={() => void onApply()}
+          onCancel={() => setConfirming(null)}
+        />
+      )}
+      {confirming === "rollback" && (
+        <ConfirmDialog
+          title="ยืนยันการถอนกลับ"
+          description="ระบบจะลบบอดี้ แคร์ และสมาชิกที่โหลดจากไฟล์นี้ รวมถึงการแก้ไขที่ทำกับข้อมูลเหล่านั้นภายหลัง ข้อมูลอื่นไม่ถูกแตะ"
+          confirmLabel="ถอนกลับ"
+          busyLabel="กำลังถอนกลับ…"
+          isSubmitting={busy}
+          onConfirm={() => void onRollback()}
+          onCancel={() => setConfirming(null)}
+        />
       )}
     </AppLayout>
   );
