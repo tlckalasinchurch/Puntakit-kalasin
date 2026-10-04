@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import QRCode from "qrcode";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { DateField } from "@/components/DateField";
 import { TableSkeleton } from "@/components/LoadingStates";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -479,19 +480,11 @@ export default function Attendance() {
       <section className="card-surface mb-4 p-4 sm:p-5">
         <div className="flex flex-wrap items-end gap-4">
           <div className="min-w-[200px] flex-1 sm:max-w-[240px]">
-            <Field label="วันที่รอบการนมัสการ">
-              {(props) => (
-                <input
-                  id={props.id}
-                  aria-describedby={props["aria-describedby"]}
-                  aria-invalid={props["aria-invalid"]}
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className={CONTROL_CLASS}
-                />
-              )}
-            </Field>
+            <DateField
+              label="วันที่รอบการนมัสการ"
+              value={selectedDate}
+              onChange={setSelectedDate}
+            />
           </div>
 
           <div className="min-w-[220px] flex-1 sm:max-w-[280px]">

@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import QRCode from "qrcode";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { DateField } from "@/components/DateField";
 import { TableSkeleton } from "@/components/LoadingStates";
 import {
   EmptyState,
@@ -968,17 +969,12 @@ export default function Members() {
                   />
                 )}
               </Field>
-              <Field label="วันเกิด">
-                {fieldProps => (
-                  <input
-                    {...fieldProps}
-                    type="date"
-                    className={INPUT_CLASS}
-                    value={form.birthDate}
-                    onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
-                  />
-                )}
-              </Field>
+              <DateField
+                label="วันเกิด"
+                value={form.birthDate}
+                onChange={(birthDate) => setForm({ ...form, birthDate })}
+                clearable
+              />
               <Field label="เพศ">
                 {fieldProps => (
                   <select
