@@ -69,13 +69,13 @@ export const navGroups: NavGroup[] = [
       { label: "หน้าหลัก", path: "/", icon: HomeIcon },
       { label: "ผังองค์กร", path: "/org", icon: Network, roles: PRIVILEGED_ROLES },
       { label: "สมาชิก", path: "/members", icon: Users },
-      { label: "กลุ่มแคร์", path: "/groups", icon: UsersRound },
+      { label: "พันธกิจ", path: "/groups", icon: UsersRound },
     ],
   },
   {
     name: "งานดูแล",
     items: [
-      { label: "เช็คชื่อแคร์", path: "/care", icon: ListChecks, roles: CREATE_ROLES },
+      { label: "เช็คชื่อพันธกิจ", path: "/care", icon: ListChecks, roles: CREATE_ROLES },
       { label: "เช็คชื่อเข้าร่วม", path: "/attendance", icon: UserCheck },
       { label: "การติดตาม", path: "/follow-up", icon: ListTodo },
       { label: "การนมัสการ", path: "/events", icon: CalendarDays },
@@ -86,14 +86,14 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "ฟีดกิจกรรม", path: "/feed", icon: Camera },
       { label: "การประกาศ", path: "/announcements", icon: Megaphone },
-      { label: "แผนที่กลุ่มแคร์", path: "/map", icon: MapPin },
+      { label: "แผนที่พันธกิจ", path: "/map", icon: MapPin },
     ],
   },
   {
     name: "คริสตจักร",
     items: [
       { label: "ข้อมูลคริสตจักร", path: "/church", icon: Building2 },
-      { label: "พันธกิจ", path: "/ministries", icon: HeartHandshake },
+      { label: "ฝ่ายงาน", path: "/ministries", icon: HeartHandshake },
       {
         label: "รายงาน",
         path: "/reports",

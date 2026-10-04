@@ -7,7 +7,7 @@ import { ListSkeleton } from "@/components/LoadingStates";
 import { api, ApiError } from "@/lib/api";
 
 /**
- * เช็คชื่อแคร์ — the care leader's weekly job on one screen.
+ * เช็คชื่อพันธกิจ — the care leader's weekly job on one screen.
  *
  *   home    : who should be called (missed 2+ meetings in a row) + one big button
  *   checkin : tap the names of the people who came, then save
@@ -151,22 +151,22 @@ export default function CareToday() {
 
   return (
     <AppLayout>
-      <PageHeader title="เช็คชื่อแคร์" description={`${dateLabel} · แตะชื่อคนที่มา แล้วกดบันทึก`} />
+      <PageHeader title="เช็คชื่อพันธกิจ" description={`${dateLabel} · แตะชื่อคนที่มา แล้วกดบันทึก`} />
 
       {bodiesError ? (
-        <ErrorState title="โหลดรายชื่อแคร์ไม่สำเร็จ" description="หน้านี้ใช้ได้เฉพาะเจ้าหน้าที่และหัวหน้ากลุ่ม ลองใหม่อีกครั้ง" technical={bodiesError} />
+        <ErrorState title="โหลดรายชื่อพันธกิจไม่สำเร็จ" description="หน้านี้ใช้ได้เฉพาะเจ้าหน้าที่และหัวหน้ากลุ่ม ลองใหม่อีกครั้ง" technical={bodiesError} />
       ) : !bodies ? (
-        <div role="status" aria-label="กำลังโหลดแคร์">
+        <div role="status" aria-label="กำลังโหลดพันธกิจ">
           <ListSkeleton count={4} />
         </div>
       ) : options.length === 0 ? (
-        <EmptyState icon={Users} title="ยังไม่มีแคร์ในระบบ" description="สร้างแคร์ที่หน้ากลุ่ม หรือโหลดข้อมูลผังองค์กรที่หน้านำเข้าจาก Excel" />
+        <EmptyState icon={Users} title="ยังไม่มีพันธกิจในระบบ" description="สร้างพันธกิจที่หน้ากลุ่ม หรือโหลดข้อมูลผังองค์กรที่หน้านำเข้าจาก Excel" />
       ) : (
         <div className="clay-screen">
           {options.length > 1 && (
             <div>
               <label htmlFor="care-group" className="type-caption-strong block text-[var(--color-ink)]">
-                แคร์
+                พันธกิจ
               </label>
               <select
                 id="care-group"
@@ -188,7 +188,7 @@ export default function CareToday() {
           )}
 
           {rosterError ? (
-            <ErrorState title="โหลดรายชื่อแคร์ไม่สำเร็จ" description="ลองอีกครั้ง" technical={rosterError} onRetry={() => void loadRoster()} />
+            <ErrorState title="โหลดรายชื่อพันธกิจไม่สำเร็จ" description="ลองอีกครั้ง" technical={rosterError} onRetry={() => void loadRoster()} />
           ) : !roster ? (
             <div role="status" aria-label="กำลังโหลดรายชื่อ">
               <ListSkeleton count={4} />
@@ -196,8 +196,8 @@ export default function CareToday() {
           ) : members.length === 0 ? (
             <EmptyState
               icon={Users}
-              title="ยังไม่มีสมาชิกในแคร์นี้"
-              description="เพิ่มสมาชิกเข้าแคร์ที่หน้าสมาชิก แล้วกลับมาเช็คชื่อ"
+              title="ยังไม่มีสมาชิกในพันธกิจนี้"
+              description="เพิ่มสมาชิกเข้าพันธกิจที่หน้าสมาชิก แล้วกลับมาเช็คชื่อ"
               action={{ label: "ไปหน้าสมาชิก", href: "/members" }}
             />
           ) : mode === "checkin" ? (
@@ -259,7 +259,7 @@ export default function CareToday() {
             <>
               <section className="clay-card flex flex-col gap-3" aria-labelledby="home-title">
                 <p className="type-caption-strong text-[var(--color-primary)]">
-                  {roster.group.bodyName ?? "แคร์"}
+                  {roster.group.bodyName ?? "พันธกิจ"}
                   {roster.group.careLeaderName ? ` · หนค. ${roster.group.careLeaderName}` : ""}
                 </p>
                 <h2 id="home-title" className="type-lead font-semibold text-[var(--color-ink)]">
@@ -273,7 +273,7 @@ export default function CareToday() {
                     </span>
                   </p>
                 ) : (
-                  <p className="type-body text-[var(--color-body-muted)]">สมาชิกในแคร์ {members.length} คน ยังไม่ได้เช็คชื่อวันนี้</p>
+                  <p className="type-body text-[var(--color-body-muted)]">สมาชิกในพันธกิจ {members.length} คน ยังไม่ได้เช็คชื่อวันนี้</p>
                 )}
                 <button type="button" className="clay-btn w-full" onClick={startCheckIn}>
                   <ListChecks size={20} aria-hidden="true" />
@@ -289,7 +289,7 @@ export default function CareToday() {
                   {toCall.length > 0 && <span className="clay-tag peach tabular-nums">{toCall.length} คน</span>}
                 </div>
                 {roster.sessions.length === 0 ? (
-                  <p className="clay-card-soft type-caption text-[var(--color-body-muted)]">ยังไม่มีประวัติการเช็คชื่อของแคร์นี้ พอเช็คชื่อครบ 2 ครั้ง รายชื่อคนที่ขาดจะขึ้นที่นี่</p>
+                  <p className="clay-card-soft type-caption text-[var(--color-body-muted)]">ยังไม่มีประวัติการเช็คชื่อของพันธกิจนี้ พอเช็คชื่อครบ 2 ครั้ง รายชื่อคนที่ขาดจะขึ้นที่นี่</p>
                 ) : toCall.length === 0 ? (
                   <p className="clay-card-soft type-caption text-[var(--color-body-muted)]">ไม่มีใครขาดติดกัน {FOLLOW_UP_AFTER} ครั้งขึ้นไป</p>
                 ) : (

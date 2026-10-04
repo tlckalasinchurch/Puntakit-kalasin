@@ -44,7 +44,7 @@ describe("Groups API & Security Tests", () => {
       const res = await fetch(`${baseUrl}/api/groups`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "กลุ่มแคร์เมือง" }),
+        body: JSON.stringify({ name: "พันธกิจเมือง" }),
       });
       expect(res.status).toBe(401);
       const body = (await res.json()) as { success: boolean; error: { code: string } };
@@ -241,7 +241,7 @@ describe("Groups API & Security Tests", () => {
   describe("Group Schema and Validation Enhancements", () => {
     it("validates full group creation with privacy, area, and co-leader", () => {
       const valid = groupInputSchema.safeParse({
-        name: "กลุ่มแคร์วัยรุ่น - ม.กาฬสินธุ์",
+        name: "พันธกิจวัยรุ่น - ม.กาฬสินธุ์",
         category: "youth",
         privacy: "private",
         status: "active",
@@ -309,7 +309,7 @@ describe("Groups API & Security Tests", () => {
 
     it("validates group query filters with area and privacy", () => {
       const query = groupQuerySchema.safeParse({
-        search: "แคร์",
+        search: "พันธกิจ",
         category: "cell",
         status: "active",
         privacy: "private",

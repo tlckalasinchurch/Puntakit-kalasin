@@ -36,7 +36,7 @@ interface MemberAppLayoutProps {
 const NAV_ITEMS = [
   { label: "หน้าแรก", path: "/app", icon: HomeIcon },
   { label: "กิจกรรม", path: "/app/events", icon: CalendarDays },
-  { label: "กลุ่มแคร์", path: "/app/group", icon: UsersRound },
+  { label: "พันธกิจ", path: "/app/group", icon: UsersRound },
   { label: "เข้าโบสถ์", path: "/app/attendance", icon: UserCheck },
   { label: "โปรไฟล์", path: "/app/profile", icon: User },
 ] as const;

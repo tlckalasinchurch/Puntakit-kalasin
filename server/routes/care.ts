@@ -25,7 +25,7 @@ const dayKey = (d: Date | string) => new Date(d).toISOString().slice(0, 10);
 careRouter.get("/groups/:id/roster", async (req, res, next) => {
   try {
     const id = req.params.id;
-    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ValidationError("รหัสแคร์ไม่ถูกต้อง", [{ field: "id", message: "uuid" }]);
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ValidationError("รหัสพันธกิจไม่ถูกต้อง", [{ field: "id", message: "uuid" }]);
     const date = typeof req.query.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date) ? req.query.date : dayKey(new Date());
 
     const db = getDb();
@@ -34,7 +34,7 @@ careRouter.get("/groups/:id/roster", async (req, res, next) => {
       .from(groups)
       .where(and(eq(groups.id, id), eq(groups.orgLevel, "care"), isNull(groups.deletedAt)))
       .limit(1);
-    if (!care) throw new NotFoundError("ไม่พบแคร์ที่ระบุ");
+    if (!care) throw new NotFoundError("ไม่พบพันธกิจที่ระบุ");
     const [body] = care.parentGroupId
       ? await db.select({ name: groups.name }).from(groups).where(eq(groups.id, care.parentGroupId)).limit(1)
       : [];

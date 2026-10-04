@@ -58,7 +58,7 @@ export function OrgSnapshot() {
         <dl className="grid grid-cols-3 gap-4 sm:gap-8">
           {[
             [data.totals.bodies, "บอดี้"],
-            [data.totals.careGroups, "แคร์"],
+            [data.totals.careGroups, "พันธกิจ"],
             [data.totals.members, "สมาชิก"],
           ].map(([value, label]) => (
             <div key={label as string}>
@@ -76,7 +76,7 @@ export function OrgSnapshot() {
               <p className="type-body-strong truncate text-[var(--color-ink)]">{b.name}</p>
               <p className="type-caption truncate text-[var(--color-body-muted)]">
                 {b.leaderName ? `หนบ. ${b.leaderName} · ` : ""}
-                {b.careGroupCount} แคร์
+                {b.careGroupCount} พันธกิจ
               </p>
             </div>
             <div className="hidden sm:block">

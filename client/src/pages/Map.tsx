@@ -35,7 +35,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   women: "กลุ่มผู้หญิง",
   volunteer: "กลุ่มอาสาสมัคร",
   online: "กลุ่มออนไลน์",
-  ministry: "พันธกิจ",
+  ministry: "ฝ่ายงาน",
   fellowship: "กลุ่มสามัคคีธรรม",
   general: "กลุ่มทั่วไป",
   other: "อื่น ๆ",
@@ -219,7 +219,7 @@ function GroupDetailBody({ group }: { group: MapGroup }) {
         )}
       </dl>
       <Button asChild className="w-full">
-        <Link href="/groups">ดูรายละเอียดกลุ่มแคร์</Link>
+        <Link href="/groups">ดูรายละเอียดพันธกิจ</Link>
       </Button>
     </div>
   );
@@ -254,7 +254,7 @@ export default function MapPage() {
             message:
               err instanceof ApiError
                 ? err.message
-                : "โหลดข้อมูลกลุ่มแคร์ไม่สำเร็จ",
+                : "โหลดข้อมูลพันธกิจไม่สำเร็จ",
           });
         }
       }
@@ -348,10 +348,10 @@ export default function MapPage() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="type-lead font-semibold text-[var(--color-ink)]">
-              แผนที่กลุ่มแคร์
+              แผนที่พันธกิจ
             </h1>
             <p className="type-caption mt-1 text-[var(--color-body-muted)]">
-              ตำแหน่งกลุ่มแคร์ที่มีพิกัดในระบบ
+              ตำแหน่งพันธกิจที่มีพิกัดในระบบ
             </p>
           </div>
           <div
@@ -394,7 +394,7 @@ export default function MapPage() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="ค้นหากลุ่มด้วยชื่อ พื้นที่ หรือสถานที่นัดพบ"
-            aria-label="ค้นหากลุ่มแคร์"
+            aria-label="ค้นหาพันธกิจ"
             className="rounded-[var(--radius-pill)] bg-[var(--color-canvas)]"
           />
           {categoriesInUse.length > 0 && (
@@ -417,7 +417,7 @@ export default function MapPage() {
         </div>
 
         {state.status === "loading" && (
-          <div role="status" aria-label="กำลังโหลดข้อมูลกลุ่มแคร์">
+          <div role="status" aria-label="กำลังโหลดข้อมูลพันธกิจ">
             <Skeleton className="h-[420px] w-full rounded-[var(--radius-lg)]" />
           </div>
         )}
@@ -435,7 +435,7 @@ export default function MapPage() {
               />
               <div>
                 <p className="type-body-strong text-[var(--color-ink)]">
-                  โหลดข้อมูลกลุ่มแคร์ไม่สำเร็จ
+                  โหลดข้อมูลพันธกิจไม่สำเร็จ
                 </p>
                 <p className="type-caption text-[var(--color-body-muted)]">
                   {state.message}
@@ -457,10 +457,10 @@ export default function MapPage() {
               className="text-[var(--color-body-muted)]"
             />
             <p className="type-body-strong text-[var(--color-ink)]">
-              ไม่พบกลุ่มแคร์ที่ตรงกับตัวกรอง
+              ไม่พบพันธกิจที่ตรงกับตัวกรอง
             </p>
             <p className="type-caption max-w-sm text-[var(--color-body-muted)]">
-              ลองล้างคำค้นหรือเลือก "ทั้งหมด" เพื่อดูกลุ่มแคร์ทุกประเภท
+              ลองล้างคำค้นหรือเลือก "ทั้งหมด" เพื่อดูพันธกิจทุกประเภท
             </p>
           </div>
         )}
@@ -556,7 +556,7 @@ export default function MapPage() {
                   {selectedGroup.name}
                 </SheetTitle>
                 <SheetDescription className="sr-only">
-                  รายละเอียดกลุ่มแคร์ {selectedGroup.name}
+                  รายละเอียดพันธกิจ {selectedGroup.name}
                 </SheetDescription>
               </SheetHeader>
               <GroupDetailBody group={selectedGroup} />

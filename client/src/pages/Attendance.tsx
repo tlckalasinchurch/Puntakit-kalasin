@@ -79,7 +79,7 @@ interface GroupOption {
 
 const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   sunday_service: "นมัสการวันอาทิตย์",
-  care_group: "กลุ่มแคร์ประจำสัปดาห์",
+  care_group: "พันธกิจประจำสัปดาห์",
   prayer_meeting: "อธิษฐานวันพุธ",
   youth_service: "นมัสการกลุ่มวัยรุ่น",
   special_event: "กิจกรรมพิเศษ / ค่าย",
@@ -426,7 +426,7 @@ export default function Attendance() {
     <AppLayout>
       <PageHeader
         title="ระบบเช็คชื่อและการเข้าร่วม"
-        description="บันทึกการเข้าร่วมนมัสการ กลุ่มแคร์ สแกน QR และติดตามสมาชิกที่ขาดต่อเนื่อง"
+        description="บันทึกการเข้าร่วมนมัสการ พันธกิจ สแกน QR และติดตามสมาชิกที่ขาดต่อเนื่อง"
         secondaryActions={[
           {
             label: "ดาวน์โหลดรายงาน CSV",
@@ -497,7 +497,7 @@ export default function Attendance() {
                   className={CONTROL_CLASS}
                 >
                   <option value="sunday_service">นมัสการวันอาทิตย์</option>
-                  <option value="care_group">กลุ่มแคร์ประจำสัปดาห์</option>
+                  <option value="care_group">พันธกิจประจำสัปดาห์</option>
                   <option value="prayer_meeting">อธิษฐานวันพุธ</option>
                   <option value="youth_service">นมัสการวัยรุ่น</option>
                   <option value="special_event">กิจกรรมพิเศษ</option>
@@ -508,7 +508,7 @@ export default function Attendance() {
 
           {selectedService === "care_group" && (
             <div className="min-w-[200px] flex-1 sm:max-w-[240px]">
-              <Field label="เลือกกลุ่มแคร์">
+              <Field label="เลือกพันธกิจ">
                 {(props) => (
                   <select
                     id={props.id}
@@ -518,7 +518,7 @@ export default function Attendance() {
                     onChange={(e) => setSelectedGroupId(e.target.value)}
                     className={CONTROL_CLASS}
                   >
-                    <option value="">-- ทุกกลุ่มแคร์ --</option>
+                    <option value="">-- ทุกพันธกิจ --</option>
                     {groups.map((g) => (
                       <option key={g.id} value={g.id}>
                         {g.name}
@@ -602,7 +602,7 @@ export default function Attendance() {
               title="ไม่พบสมาชิกที่ตรงกับคำค้นหา"
               description={
                 memberSearch
-                  ? "ลองล้างคำค้นหา หรือตรวจสอบว่าสมาชิกอยู่ในกลุ่มแคร์ที่เลือกไว้"
+                  ? "ลองล้างคำค้นหา หรือตรวจสอบว่าสมาชิกอยู่ในพันธกิจที่เลือกไว้"
                   : "ยังไม่มีสมาชิกให้เช็คชื่อในรอบนี้"
               }
               action={
@@ -638,7 +638,7 @@ export default function Attendance() {
                           )}
                         </p>
                         <p className="type-fine text-[var(--color-body-muted)]">
-                          {m.group || "ไม่ระบุกลุ่มแคร์"}
+                          {m.group || "ไม่ระบุพันธกิจ"}
                           {m.phone ? ` • ${m.phone}` : ""}
                         </p>
                       </div>
@@ -787,7 +787,7 @@ export default function Attendance() {
                 สมาชิกที่ขาดการเข้าร่วมต่อเนื่อง
               </h2>
               <p className="type-caption mt-1 text-[var(--color-body-muted)]">
-                ระบบตรวจจับสมาชิกที่ขาดติดต่อกันเกินเกณฑ์ เพื่อให้ศิษยาภิบาลและผู้นำแคร์ติดตามเยี่ยมนมัสการ
+                ระบบตรวจจับสมาชิกที่ขาดติดต่อกันเกินเกณฑ์ เพื่อให้ศิษยาภิบาลและผู้นำพันธกิจติดตามเยี่ยมนมัสการ
               </p>
             </div>
 

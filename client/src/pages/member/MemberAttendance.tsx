@@ -30,7 +30,7 @@ type FilterType = "all" | "sunday" | "care";
 const FILTER_LABELS: Record<FilterType, string> = {
   all: "ทั้งหมด",
   sunday: "นมัสการวันอาทิตย์",
-  care: "กลุ่มแคร์",
+  care: "พันธกิจ",
 };
 
 export default function MemberAttendance() {
@@ -102,7 +102,7 @@ export default function MemberAttendance() {
       case "prayer_meeting":
         return "อธิษฐานวันพุธ";
       case "cell_group":
-        return "กลุ่มแคร์";
+        return "พันธกิจ";
       case "special_event":
         return "กิจกรรมพิเศษ";
       default:
@@ -173,7 +173,7 @@ export default function MemberAttendance() {
           ประวัติการเข้าร่วม
         </h1>
         <p className="type-caption mt-1 text-[var(--color-body-muted)]">
-          ดูความสม่ำเสมอในการมานมัสการและเข้าร่วมกลุ่มแคร์ของคุณ
+          ดูความสม่ำเสมอในการมานมัสการและเข้าร่วมพันธกิจของคุณ
         </p>
       </header>
 
@@ -288,7 +288,7 @@ export default function MemberAttendance() {
           description={
             records.length > 0
               ? "ยังไม่มีประวัติที่ตรงกับตัวกรองนี้ ลองดูประวัติทั้งหมดอีกครั้ง"
-              : "เมื่อคุณมานมัสการหรือเข้าร่วมกลุ่มแคร์ เจ้าหน้าที่จะบันทึกไว้ หรือคุณใช้บัตรคิวอาร์โค้ดเช็กชื่อได้"
+              : "เมื่อคุณมานมัสการหรือเข้าร่วมพันธกิจ เจ้าหน้าที่จะบันทึกไว้ หรือคุณใช้บัตรคิวอาร์โค้ดเช็กชื่อได้"
           }
           action={
             records.length > 0

@@ -53,7 +53,7 @@ export default function ImportOrgData() {
   if (!isAdmin) {
     return (
       <AppLayout>
-        <PageHeader title="โหลดข้อมูลผังองค์กร" description="โหลดบอดี้ แคร์ และสมาชิกจากไฟล์ข้อมูลที่เตรียมไว้" />
+        <PageHeader title="โหลดข้อมูลผังองค์กร" description="โหลดบอดี้ พันธกิจ และสมาชิกจากไฟล์ข้อมูลที่เตรียมไว้" />
         <EmptyState icon={Lock} title="ไม่มีสิทธิ์เข้าถึง" description="หน้านี้จำกัดเฉพาะผู้ดูแลระบบ" />
       </AppLayout>
     );
@@ -118,7 +118,7 @@ export default function ImportOrgData() {
     <AppLayout>
       <PageHeader
         title="โหลดข้อมูลผังองค์กร"
-        description="โหลดบอดี้ แคร์ และสมาชิกจากไฟล์ข้อมูลที่เตรียมไว้ ระบบเพิ่มข้อมูลเท่านั้น และรันซ้ำได้โดยไม่เกิดข้อมูลซ้ำ"
+        description="โหลดบอดี้ พันธกิจ และสมาชิกจากไฟล์ข้อมูลที่เตรียมไว้ ระบบเพิ่มข้อมูลเท่านั้น และรันซ้ำได้โดยไม่เกิดข้อมูลซ้ำ"
         secondaryActions={[{ label: "กลับไปหน้านำเข้าจาก Excel", href: "/import" }]}
       />
 
@@ -158,7 +158,7 @@ export default function ImportOrgData() {
         <section className="card-surface mb-4 p-4 sm:p-5" aria-label="ผลการตรวจสอบ">
           <h2 className="type-body-strong text-[var(--color-ink)]">ผลการตรวจสอบ (ยังไม่มีการบันทึก)</h2>
           <ul className="type-caption mt-2 space-y-1 text-[var(--color-body-muted)]">
-            <li>ผู้นำ: {dry.plan.people} คน · บอดี้: {dry.plan.bodies} · แคร์: {dry.plan.careGroups} · สมาชิก: {dry.plan.members} คน</li>
+            <li>ผู้นำ: {dry.plan.people} คน · บอดี้: {dry.plan.bodies} · พันธกิจ: {dry.plan.careGroups} · สมาชิก: {dry.plan.members} คน</li>
             <li>ใช้ชื่อเล่นแทนชื่อ-สกุล: {dry.plan.nameFromNickname} คน</li>
             <li>มีอยู่แล้วในระบบ: สมาชิก {dry.alreadyPresent.members} · กลุ่ม {dry.alreadyPresent.groups}</li>
             <li>ก่อนโหลด ระบบมี: สมาชิก {dry.targetBefore.members} · กลุ่ม {dry.targetBefore.groups}</li>
@@ -183,7 +183,7 @@ export default function ImportOrgData() {
           title="ยืนยันการโหลดข้อมูลเข้าระบบ"
           description="ระบบจะเพิ่มข้อมูลใหม่เท่านั้น ไม่แก้หรือลบข้อมูลเดิม และรันซ้ำได้โดยไม่เกิดข้อมูลซ้ำ"
           details={[
-            `บอดี้ ${dry.plan.bodies} · แคร์ ${dry.plan.careGroups}`,
+            `บอดี้ ${dry.plan.bodies} · พันธกิจ ${dry.plan.careGroups}`,
             `สมาชิก ${dry.plan.members} คน · ผู้นำ ${dry.plan.people} คน`,
             `ใช้ชื่อเล่นแทนชื่อ-สกุล ${dry.plan.nameFromNickname} คน`,
           ]}
@@ -198,7 +198,7 @@ export default function ImportOrgData() {
       {confirming === "rollback" && (
         <ConfirmDialog
           title="ยืนยันการถอนกลับ"
-          description="ระบบจะลบบอดี้ แคร์ และสมาชิกที่โหลดจากไฟล์นี้ รวมถึงการแก้ไขที่ทำกับข้อมูลเหล่านั้นภายหลัง ข้อมูลอื่นไม่ถูกแตะ"
+          description="ระบบจะลบบอดี้ พันธกิจ และสมาชิกที่โหลดจากไฟล์นี้ รวมถึงการแก้ไขที่ทำกับข้อมูลเหล่านั้นภายหลัง ข้อมูลอื่นไม่ถูกแตะ"
           confirmLabel="ถอนกลับ"
           busyLabel="กำลังถอนกลับ…"
           isSubmitting={busy}

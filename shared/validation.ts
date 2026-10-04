@@ -22,7 +22,7 @@ import {
 
 export const memberInputSchema = z.object({
   /** Care group the person belongs to (a real membership). "" or null = none. */
-  careGroupId: z.string().uuid("รหัสแคร์ไม่ถูกต้อง").optional().or(z.literal("")).nullable(),
+  careGroupId: z.string().uuid("รหัสพันธกิจไม่ถูกต้อง").optional().or(z.literal("")).nullable(),
   name: z.string().trim().min(1, "กรุณากรอกชื่อ").max(200),
   nickname: z.string().trim().max(100).optional().or(z.literal("")),
   avatarUrl: z.string().trim().max(500).optional().or(z.literal("")),

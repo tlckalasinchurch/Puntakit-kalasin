@@ -75,10 +75,10 @@ export default function Ministries() {
     try {
       if (editing) {
         await update(editing.id, form);
-        toast.success("บันทึกการแก้ไขพันธกิจแล้ว");
+        toast.success("บันทึกการแก้ไขฝ่ายงานแล้ว");
       } else {
         await create(form);
-        toast.success("เพิ่มพันธกิจแล้ว");
+        toast.success("เพิ่มฝ่ายงานแล้ว");
       }
       setFormOpen(false);
     } catch (err) {
@@ -93,7 +93,7 @@ export default function Ministries() {
     setDeleting(true);
     try {
       await remove(deleteTarget.id);
-      toast.success("ลบพันธกิจแล้ว");
+      toast.success("ลบฝ่ายงานแล้ว");
       setDeleteTarget(null);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "ลบไม่สำเร็จ");
@@ -105,9 +105,9 @@ export default function Ministries() {
   return (
     <AppLayout>
       <PageHeader
-        title="พันธกิจ"
-        description="จัดการทีมพันธกิจและผู้รับผิดชอบ"
-        primaryAction={isAdmin ? { label: "เพิ่มพันธกิจ", icon: Plus, onClick: openCreate } : undefined}
+        title="ฝ่ายงาน"
+        description="จัดการฝ่ายงานและผู้รับผิดชอบ"
+        primaryAction={isAdmin ? { label: "เพิ่มฝ่ายงาน", icon: Plus, onClick: openCreate } : undefined}
       />
 
       <section className="card-surface p-4 sm:p-5">
@@ -119,13 +119,13 @@ export default function Ministries() {
           <EmptyState
             inset
             icon={HeartHandshake}
-            title="ยังไม่มีพันธกิจ"
+            title="ยังไม่มีฝ่ายงาน"
             description={
               isAdmin
-                ? "เริ่มเพิ่มพันธกิจแรกของคริสตจักร เพื่อให้ทีมเห็นผู้รับผิดชอบและสถานะได้ชัดเจน"
-                : "รอผู้ดูแลระบบเพิ่มพันธกิจ"
+                ? "เริ่มเพิ่มฝ่ายงานแรกของคริสตจักร เพื่อให้ทีมเห็นผู้รับผิดชอบและสถานะได้ชัดเจน"
+                : "รอผู้ดูแลระบบเพิ่มฝ่ายงาน"
             }
-            action={isAdmin ? { label: "เพิ่มพันธกิจ", icon: Plus, onClick: openCreate } : undefined}
+            action={isAdmin ? { label: "เพิ่มฝ่ายงาน", icon: Plus, onClick: openCreate } : undefined}
           />
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -167,7 +167,7 @@ export default function Ministries() {
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title={editing ? "แก้ไขพันธกิจ" : "เพิ่มพันธกิจ"}
+        title={editing ? "แก้ไขฝ่ายงาน" : "เพิ่มฝ่ายงาน"}
         footer={
           <>
             <button
@@ -185,7 +185,7 @@ export default function Ministries() {
         }
       >
         <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Field label="ชื่อพันธกิจ" required>
+          <Field label="ชื่อฝ่ายงาน" required>
             {(props) => (
               <input
                 id={props.id}
@@ -245,7 +245,7 @@ export default function Ministries() {
 
       {deleteTarget && (
         <ConfirmDialog
-          title="ยืนยันการลบพันธกิจ"
+          title="ยืนยันการลบฝ่ายงาน"
           description={`ต้องการลบ "${deleteTarget.name}" ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`}
           isSubmitting={deleting}
           onConfirm={handleDelete}

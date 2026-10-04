@@ -235,7 +235,7 @@ reportsRouter.get("/export/attendance.csv", async (req, res, next) => {
       .orderBy(desc(attendanceRecords.date))
       .limit(5000);
 
-    const headers = ["วันที่", "รอบการนมัสการ", "ชื่อ-นามสกุล", "กลุ่มแคร์", "สถานะการมา"];
+    const headers = ["วันที่", "รอบการนมัสการ", "ชื่อ-นามสกุล", "พันธกิจ", "สถานะการมา"];
     const csvRows = rows.map((r) => [
       new Date(r.date).toLocaleDateString("th-TH"),
       r.serviceType,

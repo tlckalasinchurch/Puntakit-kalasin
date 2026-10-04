@@ -668,7 +668,7 @@ attendanceRouter.get("/export", async (req, res, next) => {
     const headers = [
       "วันที่",
       "รอบการนมัสการ",
-      "กลุ่มแคร์",
+      "พันธกิจ",
       "ชื่อ-นามสกุล",
       "ชื่อเล่น",
       "เบอร์โทร",
@@ -681,7 +681,7 @@ attendanceRouter.get("/export", async (req, res, next) => {
 
     const serviceTypeMap: Record<string, string> = {
       sunday_service: "นมัสการวันอาทิตย์",
-      care_group: "กลุ่มแคร์",
+      care_group: "พันธกิจ",
       prayer_meeting: "อธิษฐานวันพุธ",
       youth_service: "นมัสการวัยรุ่น",
       special_event: "กิจกรรมพิเศษ",
