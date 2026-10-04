@@ -40,7 +40,7 @@ describe("formatThaiDate", () => {
     expect(formatThaiDate("")).toBe("");
   });
 
-  it("uses the Buddhist year for Thai display", () => {
-    expect(formatThaiDate("2026-10-04")).toContain("2569");
+  it("uses the Gregorian year for Thai display", () => {
+    expect(formatThaiDate("2026-10-04")).toContain("2026");
   });
 });

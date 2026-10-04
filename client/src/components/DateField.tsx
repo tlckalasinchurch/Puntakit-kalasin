@@ -18,10 +18,10 @@ import "react-day-picker/style.css";
  * plain `YYYY-MM-DD` string, so the API contract is unchanged.
  */
 
-/** Calendar caption: Thai month + Buddhist year ("ตุลาคม 2569"). */
+/** Calendar caption: Thai month + Gregorian year ("ตุลาคม 2026"). */
 function formatCaption(month: Date): string {
   const thaiMonth = month.toLocaleDateString("th-TH", { month: "long" });
-  return `${thaiMonth} ${month.getFullYear() + 543}`;
+  return `${thaiMonth} ${month.getFullYear()}`;
 }
 
 const TRIGGER_CLASS =

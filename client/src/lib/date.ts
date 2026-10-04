@@ -2,8 +2,8 @@
  * Date helpers shared by the Thai date field. Kept as pure functions (no
  * React, no CSS) so they can be unit-tested in isolation.
  *
- * The app stores dates as `YYYY-MM-DD` strings and *displays* them in Thai via
- * `toLocaleDateString("th-TH", …)`, which uses the Buddhist calendar.
+ * The app stores dates as `YYYY-MM-DD` strings and *displays* them in Thai with
+ * a Gregorian (ค.ศ.) year.
  */
 
 /** `YYYY-MM-DD` -> a local `Date`, or `undefined` when empty/unparseable. */
@@ -34,13 +34,12 @@ export function dateToIso(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-/** `YYYY-MM-DD` -> Thai display ("4 ต.ค. 2569"), or "" when empty. */
+/** `YYYY-MM-DD` -> Thai display with Gregorian year ("4 ต.ค. 2026"), or "" when empty. */
 export function formatThaiDate(iso: string): string {
   const date = isoToDate(iso);
   if (!date) return "";
-  return date.toLocaleDateString("th-TH", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  const day = date.getDate();
+  const month = date.toLocaleDateString("th-TH", { month: "short" });
+  const year = date.getFullYear();
+  return `${day} ${month} ${year}`;
 }
