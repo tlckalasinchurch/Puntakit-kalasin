@@ -442,7 +442,7 @@ export default function MemberProfile() {
                   className="mt-0.5 size-5 shrink-0 rounded accent-[var(--color-primary)]"
                 />
                 <span className="type-fine text-[var(--color-body-muted)]">
-                  ยินยอมให้คริสตจักรพันธกิจกาฬสินธุ์ จัดเก็บและใช้ข้อมูลส่วนบุคคลนี้เพื่อการอภิบาล
+                  ยินยอมให้คริสตจักรชีวิตสุขสันต์กาฬสินธุ์ จัดเก็บและใช้ข้อมูลส่วนบุคคลนี้เพื่อการอภิบาล
                   การติดต่อประสานงาน และการดำเนินพันธกิจตามนโยบาย PDPA
                 </span>
               </label>

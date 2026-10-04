@@ -322,7 +322,7 @@ export default function MemberAttendance() {
 
               <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--color-divider)] pt-2.5">
                 <span className="type-fine text-[var(--color-body-muted)]">
-                  {r.groupName ? `กลุ่ม: ${r.groupName}` : "คริสตจักรพันธกิจกาฬสินธุ์"}
+                  {r.groupName ? `กลุ่ม: ${r.groupName}` : "คริสตจักรชีวิตสุขสันต์กาฬสินธุ์"}
                 </span>
                 {getMethodBadge(r.checkInMethod)}
               </div>
