@@ -715,7 +715,7 @@ portalRouter.post("/push/send-test", async (req, res, next) => {
       message: `ส่งการแจ้งเตือนทดสอบไปยัง ${user.name} สำเร็จ`,
       data: {
         title: "Puntakit Kalasin",
-        body: "ยินดีต้อนรับสู่ระบบสมาชิกคริสตจักรพันธกิจกาฬสินธุ์",
+        body: "ยินดีต้อนรับสู่ระบบสมาชิกคริสตจักรชีวิตสุขสันต์กาฬสินธุ์",
         icon: "/pwa-192.png",
       },
     });

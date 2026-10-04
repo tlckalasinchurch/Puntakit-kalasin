@@ -196,7 +196,7 @@ export default function MemberHome() {
             สวัสดี, {greetingName}
           </h1>
           <p className="type-caption mt-1 text-[var(--color-body-muted)]">
-            ขอบคุณที่ร่วมนมัสการกับคริสตจักรพันธกิจกาฬสินธุ์
+            ขอบคุณที่ร่วมนมัสการกับคริสตจักรชีวิตสุขสันต์กาฬสินธุ์
           </p>
         </div>
         <button

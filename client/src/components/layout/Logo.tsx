@@ -26,7 +26,7 @@ export function Logo({ tone = "onDark" }: { tone?: "onDark" | "onLight" }) {
           Puntakit
         </strong>
         <span className={`type-fine block font-semibold ${sub}`}>
-          คริสตจักรกาฬสินธุ์
+          คริสตจักรชีวิตสุขสันต์กาฬสินธุ์
         </span>
       </span>
     </span>
