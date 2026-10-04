@@ -51,7 +51,7 @@ import { ADMIN_ROLES, GROUP_MANAGE_ANY_ROLES, hasRole } from "@shared/roles";
 
 type OrgLevel = "body" | "care";
 
-const ORG_LEVEL_LABELS: Record<OrgLevel, string> = { body: "บอดี้", care: "แคร์" };
+const ORG_LEVEL_LABELS: Record<OrgLevel, string> = { body: "บอดี้", care: "พันธกิจ" };
 
 interface GroupItem {
   id: string;
@@ -118,7 +118,7 @@ const CATEGORY_LABELS: Record<GroupCategory, string> = {
   women: "กลุ่มผู้หญิง",
   volunteer: "กลุ่มอาสาสมัคร",
   online: "กลุ่มออนไลน์",
-  ministry: "พันธกิจ",
+  ministry: "ฝ่ายงาน",
   fellowship: "กลุ่มสามัคคีธรรม",
   general: "กลุ่มทั่วไป",
   other: "อื่น ๆ",
@@ -602,7 +602,7 @@ export default function Groups() {
   return (
     <AppLayout>
       <PageHeader
-        title="กลุ่มแคร์"
+        title="พันธกิจ"
         description="กลุ่มย่อยของคริสตจักร ผู้รับผิดชอบ และรายชื่อสมาชิกในแต่ละกลุ่ม"
         primaryAction={
           isAdmin
@@ -696,7 +696,7 @@ export default function Groups() {
           >
             <option value="">ทุกระดับ</option>
             <option value="body">บอดี้</option>
-            <option value="care">แคร์</option>
+            <option value="care">พันธกิจ</option>
             <option value="none">กลุ่มทั่วไป</option>
           </select>
         </div>
@@ -765,7 +765,7 @@ export default function Groups() {
         ) : (
           <EmptyState
             icon={UsersRound}
-            title="ยังไม่มีกลุ่มแคร์ในระบบ"
+            title="ยังไม่มีพันธกิจในระบบ"
             description="สร้างกลุ่มแรกเพื่อเริ่มดูแลสมาชิกเป็นกลุ่มย่อย"
             action={
               isAdmin
@@ -985,7 +985,7 @@ export default function Groups() {
                 <input
                   {...fieldProps}
                   className={INPUT_CLASS}
-                  placeholder="เช่น แคร์เมืองกาฬสินธุ์ 1"
+                  placeholder="เช่น พันธกิจเมืองกาฬสินธุ์ 1"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
@@ -1008,7 +1008,7 @@ export default function Groups() {
                   >
                     <option value="">กลุ่มทั่วไป (ไม่อยู่ในผัง)</option>
                     <option value="body">บอดี้</option>
-                    <option value="care">แคร์</option>
+                    <option value="care">พันธกิจ</option>
                   </select>
                 )}
               </Field>

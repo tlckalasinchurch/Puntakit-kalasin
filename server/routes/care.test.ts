@@ -17,13 +17,13 @@ afterAll(() => {
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const mem = (n: number, nick: string) => ({
-  id: id(100 + n), care_group_id: id(20), sheet_name: "แคร์เอ", excel_row: 5 + n, full_name_raw: "", nickname_raw: nick,
+  id: id(100 + n), care_group_id: id(20), sheet_name: "พันธกิจเอ", excel_row: 5 + n, full_name_raw: "", nickname_raw: nick,
   age_raw: "", occupation_raw: "", workplace_raw: "", belief_year_raw: "", goal_raw: "", goal_q1: "", goal_q2: "", goal_q3: "", goal_q4: "",
   builder_raw: "", marital_marks: "", response_marks: "", participation_marks: "", flags: "",
 });
 const dataset = {
   org_hierarchy: [{ id: id(1), level: 0, title: "ศบ.", name: "" }, { id: id(10), level: 1, title: "หนบ. บอดี้หนึ่ง", name: "" }],
-  care_groups: [{ id: id(20), body_id: id(10), sheet_name: "แคร์เอ", village: "", tambon: "", amphoe: "", province: "", care_code: "", care_leader_raw: "หนค.ตัวอย่าง", coordinator_raw: "", declared_member_count: "" }],
+  care_groups: [{ id: id(20), body_id: id(10), sheet_name: "พันธกิจเอ", village: "", tambon: "", amphoe: "", province: "", care_code: "", care_leader_raw: "หนค.ตัวอย่าง", coordinator_raw: "", declared_member_count: "" }],
   members: [mem(1, "ก้อง"), mem(2, "ข้าว"), mem(3, "ค้อน")],
 };
 
@@ -80,7 +80,7 @@ describe("care roster (real PGlite Postgres)", () => {
 
   it("lists the active members with no marks and no misses before any meeting", async () => {
     const { data } = (await (await roster("2026-10-07")).json()) as { data: any };
-    expect(data.group).toMatchObject({ name: "แคร์เอ", bodyName: "บอดี้หนึ่ง", careLeaderName: "หนค.ตัวอย่าง" });
+    expect(data.group).toMatchObject({ name: "พันธกิจเอ", bodyName: "บอดี้หนึ่ง", careLeaderName: "หนค.ตัวอย่าง" });
     expect(data.sessions).toEqual([]);
     expect(data.members.map((m: any) => m.nickname).sort()).toEqual(["ก้อง", "ข้าว", "ค้อน"].sort());
     expect(data.members.every((m: any) => m.status === null && m.missed === 0)).toBe(true);

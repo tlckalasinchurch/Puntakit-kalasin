@@ -20,7 +20,7 @@ const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")
 const member = (n: number, extra: Record<string, unknown> = {}) => ({
   id: id(100 + n),
   care_group_id: id(20),
-  sheet_name: "แคร์ตัวอย่าง",
+  sheet_name: "พันธกิจตัวอย่าง",
   excel_row: 5 + n,
   full_name_raw: "",
   nickname_raw: `เล่น${n}`,
@@ -50,17 +50,17 @@ const dataset = {
     {
       id: id(20),
       body_id: id(10),
-      sheet_name: "แคร์ตัวอย่าง",
+      sheet_name: "พันธกิจตัวอย่าง",
       village: "บ้านตัวอย่าง",
       tambon: "",
       amphoe: "เมือง",
       province: "กาฬสินธุ์",
       care_code: "G2",
-      care_leader_raw: "ผู้นำแคร์ตัวอย่าง",
+      care_leader_raw: "ผู้นำพันธกิจตัวอย่าง",
       coordinator_raw: "ผู้ประสานงานตัวอย่าง",
       declared_member_count: "2",
     },
-    { id: id(21), body_id: id(11), sheet_name: "แคร์ว่าง", village: "", tambon: "", amphoe: "", province: "", care_code: "", care_leader_raw: "", coordinator_raw: "", declared_member_count: "" },
+    { id: id(21), body_id: id(11), sheet_name: "พันธกิจว่าง", village: "", tambon: "", amphoe: "", province: "", care_code: "", care_leader_raw: "", coordinator_raw: "", declared_member_count: "" },
   ],
   members: [member(1), member(2, { full_name_raw: "ชื่อ จริง", age_raw: "สี่สิบ" })],
 };
@@ -118,10 +118,10 @@ describe("Org chart read API (real PGlite Postgres)", () => {
     const one = data.bodies.find((b: any) => b.name === "บอดี้หนึ่ง");
     expect(one).toMatchObject({ leaderName: "หัวหน้าหนึ่ง", careGroupCount: 1, memberCount: 2 });
     expect(one.careGroups[0]).toMatchObject({
-      name: "แคร์ตัวอย่าง",
+      name: "พันธกิจตัวอย่าง",
       area: "เมือง",
       memberCount: 2,
-      careLeaderName: "ผู้นำแคร์ตัวอย่าง",
+      careLeaderName: "ผู้นำพันธกิจตัวอย่าง",
       coordinatorName: "ผู้ประสานงานตัวอย่าง",
       careCode: "G2",
     });
@@ -134,7 +134,7 @@ describe("Org chart read API (real PGlite Postgres)", () => {
     const res = await get(`/care-groups/${id(20)}/members`);
     expect(res.status).toBe(200);
     const { data } = (await res.json()) as { data: any };
-    expect(data.group).toMatchObject({ name: "แคร์ตัวอย่าง", bodyName: "บอดี้หนึ่ง", careLeaderName: "ผู้นำแคร์ตัวอย่าง" });
+    expect(data.group).toMatchObject({ name: "พันธกิจตัวอย่าง", bodyName: "บอดี้หนึ่ง", careLeaderName: "ผู้นำพันธกิจตัวอย่าง" });
     expect(data.members).toHaveLength(2);
     const byNick = Object.fromEntries(data.members.map((m: any) => [m.nickname, m]));
     expect(byNick["เล่น1"]).toMatchObject({ name: "เล่น1", nameMissing: true, age: 34, occupation: "ครู", workplace: null, beliefYear: "2015", goal: "ผู้เชื่อผูกพัน", builder: "สมศรี" });

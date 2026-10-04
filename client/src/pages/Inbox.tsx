@@ -57,7 +57,7 @@ const TYPE_LABELS: Record<MissionActivityType, string> = {
   evangelism: "ประกาศข่าวประเสริฐ",
   pastoral_visit: "เยี่ยมเยียนอภิบาล",
   outreach: "กิจกรรมชุมชน",
-  ministry_update: "อัปเดตพันธกิจ",
+  ministry_update: "อัปเดตฝ่ายงาน",
   other: "อื่นๆ",
 };
 

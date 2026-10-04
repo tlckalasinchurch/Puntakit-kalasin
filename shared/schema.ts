@@ -216,7 +216,7 @@ export const GROUP_CATEGORIES = [
 ] as const;
 export type GroupCategory = (typeof GROUP_CATEGORIES)[number];
 
-/** Org-chart level of a group: body (บอดี้, led by หนบ.) or care (แคร์, led by หนค.). Null = ordinary group. */
+/** Org-chart level of a group: body (บอดี้, led by หนบ.) or care (พันธกิจ, led by หนค.). Null = ordinary group. */
 export const GROUP_ORG_LEVELS = ["body", "care"] as const;
 export type GroupOrgLevel = (typeof GROUP_ORG_LEVELS)[number];
 

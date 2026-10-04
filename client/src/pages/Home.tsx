@@ -477,7 +477,7 @@ const DISCOVERY_LINKS = [
   {
     href: "/groups",
     icon: Compass,
-    title: "กลุ่มแคร์",
+    title: "พันธกิจ",
     detail: "เชื่อมโยงผู้คนในชุมชน",
   },
   {
@@ -494,7 +494,7 @@ const DISCIPLESHIP_PATHWAY = [
   { title: "ประกาศ", detail: "แบ่งปันข่าวประเสริฐด้วยความรัก" },
   { title: "นำรับเชื่อ", detail: "ต้อนรับและติดตามดูแลใกล้ชิด" },
   { title: "นมัสการ", detail: "ร่วมสามัคคีธรรมที่คริสตจักร" },
-  { title: "เข้ากลุ่มแคร์", detail: "ผูกพันในครอบครัวแห่งความเชื่อ" },
+  { title: "เข้าพันธกิจ", detail: "ผูกพันในครอบครัวแห่งความเชื่อ" },
   { title: "สร้างสาวก", detail: "เติบโตและพร้อมส่งต่อพระพร" },
 ];
 
@@ -626,7 +626,7 @@ export default function Home() {
           <GlobalSearch variant="prominent" className="max-w-xl" />
           {user && CREATE_ROLES.includes(user.role) && (
             <Link href="/care" className="clay-btn w-full max-w-xl">
-              เช็คชื่อแคร์วันนี้
+              เช็คชื่อพันธกิจวันนี้
             </Link>
           )}
           {canSeeOperations && <OrgSnapshot />}
@@ -826,9 +826,9 @@ export default function Home() {
         <section aria-labelledby="home-ministries">
           <SectionHeader
             id="home-ministries"
-            title="พื้นที่พันธกิจ"
-            description="พันธกิจที่กำลังดำเนินอยู่และผู้นำที่รับผิดชอบ"
-            action={{ href: "/ministries", label: "ดูพันธกิจทั้งหมด" }}
+            title="ฝ่ายงาน"
+            description="ฝ่ายงานที่กำลังดำเนินอยู่และผู้นำที่รับผิดชอบ"
+            action={{ href: "/ministries", label: "ดูฝ่ายงานทั้งหมด" }}
           />
           <QueryView
             state={ministries}
@@ -846,9 +846,9 @@ export default function Home() {
                 return (
                   <EmptyState
                     icon={HeartHandshake}
-                    title="ยังไม่มีพันธกิจที่เปิดดำเนินการ"
-                    description="พันธกิจที่มีสถานะเปิดใช้งานจะแสดงที่นี่"
-                    action={{ label: "ไปที่หน้าพันธกิจ", onClick: () => navigate("/ministries") }}
+                    title="ยังไม่มีฝ่ายงานที่เปิดดำเนินการ"
+                    description="ฝ่ายงานที่มีสถานะเปิดใช้งานจะแสดงที่นี่"
+                    action={{ label: "ไปที่หน้าฝ่ายงาน", onClick: () => navigate("/ministries") }}
                   />
                 );
               }
@@ -881,7 +881,7 @@ export default function Home() {
                   </ul>
                   {active.length > MINISTRY_PREVIEW_LIMIT && (
                     <p className="type-caption mt-4 text-[var(--color-body-muted)]">
-                      แสดง {MINISTRY_PREVIEW_LIMIT} จาก {active.length} พันธกิจ
+                      แสดง {MINISTRY_PREVIEW_LIMIT} จาก {active.length} ฝ่ายงาน
                     </p>
                   )}
                 </>

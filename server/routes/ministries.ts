@@ -19,7 +19,7 @@ ministriesRouter.get("/:id", async (req, res) => {
   const db = getDb();
   const [row] = await db.select().from(ministries).where(eq(ministries.id, req.params.id)).limit(1);
   if (!row) {
-    res.status(404).json({ success: false, error: "ไม่พบพันธกิจ" });
+    res.status(404).json({ success: false, error: "ไม่พบฝ่ายงาน" });
     return;
   }
   res.json({ success: true, data: row });
@@ -49,7 +49,7 @@ ministriesRouter.put("/:id", requireAdmin, async (req, res) => {
     .where(eq(ministries.id, req.params.id))
     .returning();
   if (!updated) {
-    res.status(404).json({ success: false, error: "ไม่พบพันธกิจ" });
+    res.status(404).json({ success: false, error: "ไม่พบฝ่ายงาน" });
     return;
   }
   res.json({ success: true, data: updated });
@@ -59,7 +59,7 @@ ministriesRouter.delete("/:id", requireAdmin, async (req, res) => {
   const db = getDb();
   const [deleted] = await db.delete(ministries).where(eq(ministries.id, req.params.id)).returning();
   if (!deleted) {
-    res.status(404).json({ success: false, error: "ไม่พบพันธกิจ" });
+    res.status(404).json({ success: false, error: "ไม่พบฝ่ายงาน" });
     return;
   }
   res.json({ success: true, data: deleted });

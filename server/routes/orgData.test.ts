@@ -21,7 +21,7 @@ const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")
 const member = (n: number, extra: Record<string, unknown> = {}) => ({
   id: id(100 + n),
   care_group_id: id(20),
-  sheet_name: "แคร์ตัวอย่าง",
+  sheet_name: "พันธกิจตัวอย่าง",
   excel_row: 5 + n,
   full_name_raw: "",
   nickname_raw: `ชื่อเล่น${n}`,
@@ -51,7 +51,7 @@ const dataset = {
     {
       id: id(20),
       body_id: id(10),
-      sheet_name: "แคร์ตัวอย่าง",
+      sheet_name: "พันธกิจตัวอย่าง",
       village: "บ้านตัวอย่าง",
       tambon: "ตำบลหนึ่ง",
       amphoe: "เมือง",

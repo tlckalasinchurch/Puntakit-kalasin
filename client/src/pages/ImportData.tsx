@@ -151,7 +151,7 @@ export default function ImportData() {
     return (
       <AppLayout>
         <PageHeader title="นำเข้าจาก Excel" description="นำเข้าทะเบียนพันธกิจจากไฟล์ Excel (ตรวจสอบก่อน ยังไม่เข้าทะเบียนสมาชิก)" />
-        <EmptyState icon={Lock} title="ไม่มีสิทธิ์เข้าถึง" description="หน้านี้จำกัดเฉพาะผู้ดูแลระบบ เจ้าหน้าที่ และผู้นำพันธกิจ" />
+        <EmptyState icon={Lock} title="ไม่มีสิทธิ์เข้าถึง" description="หน้านี้จำกัดเฉพาะผู้ดูแลระบบ เจ้าหน้าที่ และผู้นำฝ่ายงาน" />
       </AppLayout>
     );
   }

@@ -317,7 +317,7 @@ export default function ImportDuplicates() {
     return (
       <AppLayout>
         <PageHeader title="ตรวจสอบข้อมูลซ้ำ" description="เปรียบเทียบแถวที่ใช้ชื่อเล่นเดียวกันจากไฟล์ที่นำเข้า" />
-        <EmptyState icon={Lock} title="ไม่มีสิทธิ์เข้าถึง" description="หน้านี้จำกัดเฉพาะผู้ดูแลระบบ เจ้าหน้าที่ และผู้นำพันธกิจ" />
+        <EmptyState icon={Lock} title="ไม่มีสิทธิ์เข้าถึง" description="หน้านี้จำกัดเฉพาะผู้ดูแลระบบ เจ้าหน้าที่ และผู้นำฝ่ายงาน" />
       </AppLayout>
     );
   }

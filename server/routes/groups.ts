@@ -44,7 +44,7 @@ async function assertOrgHierarchy(groupId: string | null, next: OrgFields) {
     throw bad("บอดี้ไม่มีกลุ่มแม่", "parentGroupId");
   }
   if (!next.orgLevel && next.parentGroupId) {
-    throw bad("กลุ่มที่มีกลุ่มแม่ต้องระบุระดับเป็นแคร์", "orgLevel");
+    throw bad("กลุ่มที่มีกลุ่มแม่ต้องระบุระดับเป็นพันธกิจ", "orgLevel");
   }
   if (next.parentGroupId) {
     if (next.parentGroupId === groupId) throw bad("กลุ่มแม่ต้องไม่ใช่กลุ่มเดียวกัน", "parentGroupId");
@@ -54,7 +54,7 @@ async function assertOrgHierarchy(groupId: string | null, next: OrgFields) {
       .where(and(eq(groups.id, next.parentGroupId), isNull(groups.deletedAt)))
       .limit(1);
     if (!parent) throw bad("ไม่พบกลุ่มแม่", "parentGroupId");
-    if (parent.orgLevel !== "body") throw bad("กลุ่มแม่ของแคร์ต้องเป็นบอดี้", "parentGroupId");
+    if (parent.orgLevel !== "body") throw bad("กลุ่มแม่ของพันธกิจต้องเป็นบอดี้", "parentGroupId");
   }
   if (next.leaderMemberId) {
     const [leader] = await db
@@ -70,7 +70,7 @@ async function assertOrgHierarchy(groupId: string | null, next: OrgFields) {
       .from(groups)
       .where(and(eq(groups.parentGroupId, groupId), isNull(groups.deletedAt)))
       .limit(1);
-    if (child) throw new ConflictError("บอดี้นี้ยังมีแคร์อยู่ ย้ายหรือลบแคร์ก่อนเปลี่ยนระดับ");
+    if (child) throw new ConflictError("บอดี้นี้ยังมีพันธกิจอยู่ ย้ายหรือลบพันธกิจก่อนเปลี่ยนระดับ");
   }
 }
 
