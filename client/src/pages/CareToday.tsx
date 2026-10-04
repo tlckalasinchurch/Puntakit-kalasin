@@ -54,7 +54,7 @@ function localDate(): string {
 }
 const isPresent = (s: RosterMember["status"]) => s === "present" || s === "online";
 const label = (m: RosterMember) => m.nickname?.trim() || m.name;
-const errText = (e: unknown) => (e instanceof ApiError ? (e.serverMessage ?? e.message) : String(e));
+const errText = (e: unknown) => (e instanceof ApiError ? e.message : "ดำเนินการไม่สำเร็จ กรุณาลองอีกครั้ง");
 
 function readStored(): string {
   try {
@@ -80,9 +80,13 @@ export default function CareToday() {
   const loadBodies = useCallback(async () => {
     setBodiesError(null);
     try {
-      const o = await api.get<{ bodies: BodyOption[] }>("/api/org/overview");
-      setBodies(o.bodies);
-      const all = o.bodies.flatMap((b) => b.careGroups);
+      const o = await api.get<{ bodies: BodyOption[]; unassigned?: CareOption[] }>("/api/org/overview");
+      // Care groups with no body still need a check-in screen.
+      const withUnassigned = o.unassigned?.length
+        ? [...o.bodies, { name: "ยังไม่ระบุบอดี้", careGroups: o.unassigned }]
+        : o.bodies;
+      setBodies(withUnassigned);
+      const all = withUnassigned.flatMap((b) => b.careGroups);
       setGroupId((cur) => (all.some((c) => c.id === cur) ? cur : (all[0]?.id ?? "")));
     } catch (e) {
       setBodiesError(errText(e));
@@ -165,7 +169,7 @@ export default function CareToday() {
       <PageHeader title="เช็คชื่อพันธกิจ" description={`${dateLabel} · แตะชื่อคนที่มา แล้วกดบันทึก`} />
 
       {bodiesError ? (
-        <ErrorState title="โหลดรายชื่อพันธกิจไม่สำเร็จ" description="หน้านี้ใช้ได้เฉพาะเจ้าหน้าที่และหัวหน้ากลุ่ม ลองใหม่อีกครั้ง" technical={bodiesError} onRetry={() => void loadBodies()} />
+        <ErrorState title="โหลดรายชื่อพันธกิจไม่สำเร็จ" description={bodiesError} onRetry={() => void loadBodies()} />
       ) : !bodies ? (
         <div role="status" aria-label="กำลังโหลดพันธกิจ">
           <ListSkeleton count={4} />
@@ -199,7 +203,7 @@ export default function CareToday() {
           )}
 
           {rosterError ? (
-            <ErrorState title="โหลดรายชื่อพันธกิจไม่สำเร็จ" description="ลองอีกครั้ง" technical={rosterError} onRetry={() => void loadRoster()} />
+            <ErrorState title="โหลดรายชื่อพันธกิจไม่สำเร็จ" description={rosterError} onRetry={() => void loadRoster()} />
           ) : !roster ? (
             <div role="status" aria-label="กำลังโหลดรายชื่อ">
               <ListSkeleton count={4} />

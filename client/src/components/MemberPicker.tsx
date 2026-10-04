@@ -117,7 +117,7 @@ export function MemberPicker({ value, valueName, onChange, placeholder = "พิ
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={onKeyDown}
         placeholder={placeholder}
-        className="min-h-11 w-full rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] pl-9 pr-3 text-sm text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+        className="min-h-11 w-full rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] pl-9 pr-3 text-base md:text-sm text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
       />
       {listboxVisible && (
         <ul id={listId} role="listbox" className="mt-1.5 max-h-56 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)]">

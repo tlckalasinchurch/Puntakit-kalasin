@@ -35,7 +35,7 @@ never loud. Church blue and deep navy were the previous identity and are fully r
 | Canvas | `#ffffff` | card surfaces |
 | Canvas soft | `#f5f5f7` | wells, table stripes, `secondary` / `muted` / `accent` |
 | Surface | `#fafafc` | the step between canvas and canvas-soft |
-| Sunken | `#f4f8fc` | recessed areas only — inset wells, hover fills |
+| Sunken | `#f2f2f4` | recessed areas only — inset wells, hover fills |
 | Divider | `#f0f0f0` | hairlines inside a card |
 | Hairline | `#e0e0e0` | card borders, inputs (`--border`, `--input`) |
 

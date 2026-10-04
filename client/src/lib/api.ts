@@ -90,6 +90,19 @@ function usableServerMessage(message: string | undefined): string | undefined {
   return trimmed;
 }
 
+/** Fired when any API call except the profile sync answers 401. */
+export const UNAUTHORIZED_EVENT = "puntakit:unauthorized";
+let lastUnauthorizedAt = 0;
+
+function announceUnauthorized(path: string) {
+  if (typeof window === "undefined" || path.startsWith("/api/auth/me")) return;
+  const now = Date.now();
+  // One event per 5 s: a page that fires 6 requests must not trigger 6 re-syncs.
+  if (now - lastUnauthorizedAt < 5000) return;
+  lastUnauthorizedAt = now;
+  window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+}
+
 async function requestRaw<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
   let res: Response;
   try {
@@ -134,6 +147,8 @@ async function requestRaw<T>(path: string, init?: RequestInit): Promise<ApiRespo
         ? usable
         : friendlyMessageFor(res.status, code);
 
+    if (res.status === 401) announceUnauthorized(path);
+
     const error = new ApiError(message, res.status, code, details);
     error.serverMessage = usable;
     throw error;
@@ -156,3 +171,12 @@ export const api = {
     request<T>(path, { method: "PUT", body: data !== undefined ? JSON.stringify(data) : undefined }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
+
+/**
+ * Form-level error text. The "check the data" hint only fits a rejected input
+ * (400/422); on a server fault or a lost connection it would mislead.
+ */
+export function withRecheckHint(message: string, err: unknown): string {
+  const status = err instanceof ApiError ? err.status : 0;
+  return status === 400 || status === 422 ? `${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง` : message;
+}

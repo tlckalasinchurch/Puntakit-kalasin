@@ -88,7 +88,7 @@ const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
 
 /** Shared control styling: >= 44px tall, one hairline border, one focus ring. */
 const CONTROL_CLASS =
-  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-base md:text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
 
 const PRIMARY_BUTTON_CLASS =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
@@ -349,7 +349,11 @@ export default function Attendance() {
 
   // Quick Check-in single member
   const handleSetStatus = async (memberId: string, status: AttendanceStatus) => {
-    setCurrentAttendance((prev) => ({ ...prev, [memberId]: status }));
+    let previous: AttendanceStatus | undefined;
+    setCurrentAttendance((prev) => {
+      previous = prev[memberId];
+      return { ...prev, [memberId]: status };
+    });
     try {
       await api.post("/api/attendance/check-in", {
         date: selectedDate,
@@ -360,7 +364,15 @@ export default function Attendance() {
         checkInMethod: "manual",
       });
     } catch (err) {
-      toast.error("บันทึกการเช็คชื่อไม่สำเร็จ");
+      // Put the roster back to what the server still holds, so the screen
+      // never shows "present" for a save that failed.
+      setCurrentAttendance((prev) => {
+        const next = { ...prev };
+        if (previous === undefined) delete next[memberId];
+        else next[memberId] = previous;
+        return next;
+      });
+      toast.error(err instanceof ApiError ? err.message : "บันทึกการเช็คชื่อไม่สำเร็จ");
     }
   };
 

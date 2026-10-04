@@ -2,14 +2,29 @@ import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ErrorState } from "@/components/DesignSystem";
+import { EmptyState, ErrorState } from "@/components/DesignSystem";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { Lock, LogOut } from "lucide-react";
+import type { UserRole } from "@shared/schema";
+import { hasRole } from "@shared/roles";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 
-export function ProtectedRoute({ children }: { children: React.ReactNode }) {
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  /**
+   * Roles allowed on this route (a set from `@shared/roles`). When omitted,
+   * any signed-in user may open it. This mirrors the server gate for the same
+   * data; the server stays the real enforcement.
+   */
+  allow?: readonly UserRole[];
+}
+
+export function ProtectedRoute({ children, allow }: ProtectedRouteProps) {
   const { user, isLoading, error, retry, logout } = useAuth();
   const [, navigate] = useLocation();
+  const denied = Boolean(user && allow && !hasRole(user.role, allow));
+  // A member-role account has its own app: send it there, not to a dead end.
+  const sendToMemberApp = denied && user?.role === "member";
 
   useEffect(() => {
     // Redirect ONLY on a genuine signed-out state.
@@ -23,6 +38,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
       navigate("/login");
     }
   }, [isLoading, user, error, navigate]);
+
+  useEffect(() => {
+    if (sendToMemberApp) navigate("/app");
+  }, [sendToMemberApp, navigate]);
 
   if (isLoading) {
     // Page-content loading → skeleton (design.md §8); no "..." text
@@ -79,7 +98,22 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) return null;
+  if (!user || sendToMemberApp) return null;
+
+  if (denied) {
+    return (
+      <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-4 px-4 py-10" data-testid="route-denied">
+        <EmptyState
+          icon={Lock}
+          title="คุณไม่มีสิทธิ์เปิดหน้านี้"
+          description="หน้านี้ใช้ได้เฉพาะบางบทบาท หากต้องการใช้งาน กรุณาติดต่อผู้ดูแลระบบ"
+        />
+        <Button asChild className="min-h-11">
+          <Link href="/">กลับหน้าหลัก</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }

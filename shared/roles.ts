@@ -23,6 +23,19 @@ export const PRIVILEGED_ROLES: readonly UserRole[] = [
   "ministry_leader",
 ];
 
+/**
+ * Every role that may open the admin shell (`AppLayout`). A `member` belongs to
+ * the member PWA under `/app/*` and is sent there instead.
+ */
+export const ADMIN_SHELL_ROLES: readonly UserRole[] = [
+  "super_admin",
+  "admin",
+  "ministry_leader",
+  "group_leader",
+  "staff",
+  "viewer",
+];
+
 /** Create mission activity, mission submissions and follow-ups. */
 export const CREATE_ROLES: readonly UserRole[] = [...PRIVILEGED_ROLES, "group_leader"];
 

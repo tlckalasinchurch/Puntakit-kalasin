@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useAuth as useClerkAuth, useClerk } from "@clerk/react";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, UNAUTHORIZED_EVENT } from "@/lib/api";
 import type { UserRole } from "@shared/schema";
 
 export interface AuthUser {
@@ -35,6 +35,19 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 /** True only for a genuine "you are not signed in" answer from the API. */
 function isSignedOut(err: unknown): boolean {
   return err instanceof ApiError && err.status === 401;
+}
+
+/**
+ * An expired session surfaces as a 401 on whatever request the user made
+ * next. Re-run the profile sync: it answers 401 too, which clears the user and
+ * lets `ProtectedRoute` send them to /login instead of showing "connection
+ * failed" on every page.
+ */
+function useResyncOnUnauthorized(retry: () => void) {
+  useEffect(() => {
+    window.addEventListener(UNAUTHORIZED_EVENT, retry);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, retry);
+  }, [retry]);
 }
 
 /**
@@ -94,6 +107,7 @@ function useClerkAuthValue(): AuthContextValue {
   }, [isLoaded, isSignedIn, userId, attempt]);
 
   const retry = useCallback(() => setAttempt(n => n + 1), []);
+  useResyncOnUnauthorized(retry);
 
   const logout = useCallback(async () => {
     await clerk.signOut({ redirectUrl: "/login" }).catch(() => undefined);
@@ -145,11 +159,14 @@ function useDemoAuthValue(): AuthContextValue {
     };
   }, [attempt]);
 
+  const retry = useCallback(() => setAttempt(n => n + 1), []);
+  useResyncOnUnauthorized(retry);
+
   return {
     user,
     isLoading,
     error,
-    retry: () => setAttempt(n => n + 1),
+    retry,
     logout: async () => setUser(null),
   };
 }

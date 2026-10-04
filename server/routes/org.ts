@@ -43,22 +43,21 @@ orgRouter.get("/overview", async (_req, res, next) => {
       .limit(1);
 
     const cares = rows.filter((r) => r.orgLevel === "care");
+    const toCareSummary = (c: (typeof cares)[number]) => ({
+      id: c.id,
+      name: c.name.trim(),
+      area: c.area,
+      memberCount: c.memberCount,
+      ...parseCareGroupDescription(c.description),
+      // A leader picked in the app (a real member) wins over the name
+      // that came in with the imported text.
+      ...(c.leaderName ? { careLeaderName: c.leaderName } : {}),
+      leaderMemberId: c.leaderMemberId,
+    });
     const bodies = rows
       .filter((r) => r.orgLevel === "body")
       .map((b) => {
-        const children = cares
-          .filter((c) => c.parentGroupId === b.id)
-          .map((c) => ({
-            id: c.id,
-            name: c.name.trim(),
-            area: c.area,
-            memberCount: c.memberCount,
-            ...parseCareGroupDescription(c.description),
-            // A leader picked in the app (a real member) wins over the name
-            // that came in with the imported text.
-            ...(c.leaderName ? { careLeaderName: c.leaderName } : {}),
-            leaderMemberId: c.leaderMemberId,
-          }));
+        const children = cares.filter((c) => c.parentGroupId === b.id).map(toCareSummary);
         return {
           id: b.id,
           name: b.name,
@@ -83,6 +82,9 @@ orgRouter.get("/overview", async (_req, res, next) => {
         },
         bodies,
         unassignedCareGroups: unassigned.length,
+        // Care groups with no body above them. Without the rows, a group
+        // created before its body existed is invisible in /care and /org.
+        unassigned: unassigned.map(toCareSummary),
       },
     });
   } catch (err) {

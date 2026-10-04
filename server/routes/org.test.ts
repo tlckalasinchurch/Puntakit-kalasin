@@ -160,4 +160,22 @@ describe("Org chart read API (real PGlite Postgres)", () => {
     expect((await get(`/care-groups/${id(999)}/members`)).status).toBe(404);
     expect((await get(`/care-groups/not-an-id/members`)).status).toBe(400);
   });
+
+  it("lists care groups that have no body, so the UI can show them", async () => {
+    const client = await import("../db/client.js");
+    const schema = await import("../../shared/schema.js");
+    const { eq } = await import("drizzle-orm");
+    const db = client.getDb();
+    const [orphan] = await db.insert(schema.groups).values({ name: "พันธกิจไม่มีบอดี้", orgLevel: "care" }).returning();
+    try {
+      const { data } = (await (await get("/overview")).json()) as { data: any };
+      expect(data.unassignedCareGroups).toBe(1);
+      expect(data.unassigned).toHaveLength(1);
+      expect(data.unassigned[0]).toMatchObject({ id: orphan.id, name: "พันธกิจไม่มีบอดี้", memberCount: 0 });
+      // Groups that belong to a body must not be repeated in the list.
+      expect(data.unassigned.map((c: any) => c.id)).not.toContain(id(20));
+    } finally {
+      await db.delete(schema.groups).where(eq(schema.groups.id, orphan.id));
+    }
+  });
 });

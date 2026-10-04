@@ -11,7 +11,7 @@ import {
 } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, withRecheckHint } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -28,7 +28,7 @@ interface ChurchProfile {
 const EMPTY_FORM = { name: "", address: "", phone: "", email: "", description: "" };
 
 const CONTROL_CLASS =
-  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:cursor-not-allowed disabled:bg-[var(--color-canvas-soft)] disabled:text-[var(--color-body-muted)]";
+  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-base md:text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:cursor-not-allowed disabled:bg-[var(--color-canvas-soft)] disabled:text-[var(--color-body-muted)]";
 
 export default function Church() {
   usePageTitle("ข้อมูลคริสตจักร");
@@ -78,7 +78,7 @@ export default function Church() {
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
-      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      setFormError(withRecheckHint(message, err));
       toast.error(message);
     } finally {
       setSaving(false);
@@ -96,7 +96,7 @@ export default function Church() {
         {isLoading ? (
           <FormSkeleton fields={5} />
         ) : error ? (
-          <ErrorState technical={error} onRetry={load} />
+          <ErrorState description={error ?? undefined} onRetry={load} />
         ) : (
           <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
             {formError && <FormError>{formError}</FormError>}

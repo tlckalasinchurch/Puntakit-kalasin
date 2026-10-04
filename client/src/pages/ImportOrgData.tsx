@@ -88,7 +88,7 @@ export default function ImportOrgData() {
     try {
       return await api.post<T>(`/api/org-data/${path}`, { dataset, confirm });
     } catch (err) {
-      setError(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
+      setError(err instanceof ApiError ? err.message : "ดำเนินการไม่สำเร็จ กรุณาลองอีกครั้ง");
       return null;
     } finally {
       setBusy(false);
@@ -136,7 +136,7 @@ export default function ImportOrgData() {
           type="file"
           accept="application/json,.json"
           onChange={(e) => void readFile(e.target.files?.[0])}
-          className="mt-1.5 block w-full text-sm"
+          className="mt-1.5 block min-h-11 w-full text-base file:mr-3 file:min-h-11 file:rounded-[var(--radius-pill)] file:border file:border-[var(--color-hairline)] file:bg-[var(--color-canvas)] file:px-4 file:text-sm file:font-medium file:text-[var(--color-ink)] md:text-sm"
         />
         {fileName && dataset !== null && (
           <p className="type-caption mt-2 text-[var(--color-body-muted)]">เลือกไฟล์แล้ว: {fileName}</p>

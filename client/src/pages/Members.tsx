@@ -32,7 +32,7 @@ import {
 } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
-import { api, ApiError, type ApiMeta } from "@/lib/api";
+import { api, ApiError, type ApiMeta, withRecheckHint } from "@/lib/api";
 import type { Gender, MembershipStatus } from "@shared/schema";
 import { MEMBERSHIP_STATUS_LABELS } from "@shared/labels";
 import {
@@ -476,7 +476,7 @@ export default function Members() {
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "บันทึกข้อมูลไม่สำเร็จ";
-      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      setFormError(withRecheckHint(message, err));
       toast.error(message);
     } finally {
       setSubmitting(false);

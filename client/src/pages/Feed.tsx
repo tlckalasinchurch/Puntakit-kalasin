@@ -30,7 +30,7 @@ import {
 import { CardGridSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
-import { api, ApiError, type ApiMeta } from "@/lib/api";
+import { api, ApiError, type ApiMeta, withRecheckHint } from "@/lib/api";
 import { fetchAllMembers } from "@/lib/fetchAll";
 import type { MissionActivityStatus, MissionActivityType } from "@shared/schema";
 import { CREATE_ROLES } from "@shared/roles";
@@ -104,7 +104,7 @@ const EMPTY_FORM = {
 };
 
 const CONTROL_CLASS =
-  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 py-2 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 py-2 text-base md:text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
 const PRIMARY_BUTTON_CLASS =
   "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
 const CANCEL_BUTTON_CLASS =
@@ -244,7 +244,7 @@ export default function Feed() {
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
-      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      setFormError(withRecheckHint(message, err));
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -619,7 +619,7 @@ export default function Feed() {
                 >
                   <input
                     type="checkbox"
-                    className="size-4"
+                    className="size-5 shrink-0 accent-[var(--color-primary)]"
                     checked={form.participantMemberIds.includes(m.id)}
                     onChange={() => toggleParticipant(m.id)}
                   />

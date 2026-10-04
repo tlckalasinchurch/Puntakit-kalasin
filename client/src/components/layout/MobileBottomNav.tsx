@@ -29,7 +29,7 @@ export function MobileBottomNav({ onMenu, menuOpen }: MobileBottomNavProps) {
   ];
 
   const base =
-    "type-fine flex min-h-14 flex-1 flex-col items-center justify-center gap-1 px-1 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-focus)]";
+    "type-fine flex min-h-14 flex-1 pb-1 flex-col items-center justify-center gap-1 px-1 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-focus)]";
 
   return (
     <nav
@@ -66,7 +66,9 @@ export function MobileBottomNav({ onMenu, menuOpen }: MobileBottomNavProps) {
         aria-controls="app-sidebar"
         className={`${base} text-[var(--color-body-muted)]`}
       >
-        <Menu size={ICON_SIZE.md} aria-hidden="true" />
+        <span aria-hidden="true" className="flex size-9 items-center justify-center">
+          <Menu size={ICON_SIZE.md} />
+        </span>
         <span>เมนู</span>
       </button>
     </nav>

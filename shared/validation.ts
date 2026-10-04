@@ -20,6 +20,19 @@ import {
   USER_ROLES,
 } from "./schema.js";
 
+/**
+ * A phone number as people type it: digits plus the separators Thai numbers
+ * use ("081-234-5678", "+66 81 234 5678", "043 811 800"). Letters are rejected
+ * so a typo such as "abc" cannot reach a contact list.
+ */
+const phoneField = z
+  .string()
+  .trim()
+  .max(50)
+  .regex(/^[0-9+\-()\s./,]*$/, "เบอร์โทรใช้ได้เฉพาะตัวเลขและเครื่องหมาย + - ( )")
+  .optional()
+  .or(z.literal(""));
+
 export const memberInputSchema = z.object({
   /** Care group the person belongs to (a real membership). "" or null = none. */
   careGroupId: z.string().uuid("รหัสพันธกิจไม่ถูกต้อง").optional().or(z.literal("")).nullable(),
@@ -28,7 +41,7 @@ export const memberInputSchema = z.object({
   avatarUrl: z.string().trim().max(500).optional().or(z.literal("")),
   gender: z.enum(GENDERS).optional().nullable(),
   birthDate: z.coerce.date().optional().nullable(),
-  phone: z.string().trim().max(50).optional().or(z.literal("")),
+  phone: phoneField,
   email: z.string().trim().email("อีเมลไม่ถูกต้อง").max(200).optional().or(z.literal("")),
   lineId: z.string().trim().max(100).optional().or(z.literal("")),
   address: z.string().trim().max(500).optional().or(z.literal("")),
@@ -90,7 +103,7 @@ export const eventInputSchema = z.object({
 export type EventInput = z.infer<typeof eventInputSchema>;
 
 export const ministryInputSchema = z.object({
-  name: z.string().trim().min(1, "กรุณากรอกชื่อพันธกิจ").max(200),
+  name: z.string().trim().min(1, "กรุณากรอกชื่อฝ่ายงาน").max(200),
   description: z.string().trim().max(3000).optional().or(z.literal("")),
   leader: z.string().trim().max(200).optional().or(z.literal("")),
   status: z.enum(["active", "inactive"]).default("active"),
@@ -100,7 +113,7 @@ export type MinistryInput = z.infer<typeof ministryInputSchema>;
 export const churchProfileInputSchema = z.object({
   name: z.string().trim().min(1, "กรุณากรอกชื่อคริสตจักร").max(300),
   address: z.string().trim().max(500).optional().or(z.literal("")),
-  phone: z.string().trim().max(50).optional().or(z.literal("")),
+  phone: phoneField,
   email: z.string().trim().email("อีเมลไม่ถูกต้อง").max(200).optional().or(z.literal("")),
   description: z.string().trim().max(5000).optional().or(z.literal("")),
 });
@@ -235,7 +248,7 @@ export type ConsecutiveAbsenceQuery = z.infer<typeof consecutiveAbsenceQuerySche
 
 export const memberProfileUpdateSchema = z.object({
   nickname: z.string().trim().max(100).optional().or(z.literal("")),
-  phone: z.string().trim().max(50).optional().or(z.literal("")),
+  phone: phoneField,
   lineId: z.string().trim().max(100).optional().or(z.literal("")),
   address: z.string().trim().max(500).optional().or(z.literal("")),
   avatarUrl: z.string().trim().max(500).optional().or(z.literal("")),
@@ -341,11 +354,17 @@ export const followUpQuerySchema = z.object({
 });
 export type FollowUpQuery = z.infer<typeof followUpQuerySchema>;
 
-export const missionSubmissionInputSchema = z.object({
-  rawText: z.string().trim().max(5000).optional().or(z.literal("")),
-  rawMediaUrls: z.array(z.string().trim().url().max(1000)).max(30).optional().default([]),
-  submittedByLabel: z.string().trim().max(200).optional().or(z.literal("")),
-});
+export const missionSubmissionInputSchema = z
+  .object({
+    rawText: z.string().trim().max(5000).optional().or(z.literal("")),
+    rawMediaUrls: z.array(z.string().trim().url().max(1000)).max(30).optional().default([]),
+    submittedByLabel: z.string().trim().max(200).optional().or(z.literal("")),
+  })
+  // An item with no text and no link has nothing for a reviewer to act on.
+  .refine((v) => Boolean(v.rawText) || v.rawMediaUrls.length > 0, {
+    message: "กรุณากรอกข้อความหรือแนบลิงก์อย่างน้อยหนึ่งอย่าง",
+    path: ["rawText"],
+  });
 export type MissionSubmissionInput = z.infer<typeof missionSubmissionInputSchema>;
 
 export const missionSubmissionStatusUpdateSchema = z.object({

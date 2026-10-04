@@ -37,11 +37,14 @@ interface BodySummary {
   memberCount: number;
   careGroups: CareGroupSummary[];
 }
+/** Stand-in "body" that lists care groups with no body above them. */
+const UNASSIGNED_BODY_ID = "unassigned";
 interface Overview {
   head: { id: string; name: string } | null;
   totals: { bodies: number; careGroups: number; members: number };
   bodies: BodySummary[];
   unassignedCareGroups: number;
+  unassigned?: CareGroupSummary[];
 }
 interface MemberRow {
   id: string;
@@ -89,11 +92,27 @@ export default function OrgChart() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const overview = await api.get<Overview>("/api/org/overview");
+      const raw = await api.get<Overview>("/api/org/overview");
+      const overview: Overview = raw.unassigned?.length
+        ? {
+            ...raw,
+            bodies: [
+              ...raw.bodies,
+              {
+                id: UNASSIGNED_BODY_ID,
+                name: "ยังไม่ระบุบอดี้",
+                leaderName: null,
+                careGroupCount: raw.unassigned.length,
+                memberCount: raw.unassigned.reduce((n, c) => n + c.memberCount, 0),
+                careGroups: raw.unassigned,
+              },
+            ],
+          }
+        : raw;
       setData(overview);
       setBodyId((current) => current ?? overview.bodies[0]?.id ?? null);
     } catch (err) {
-      setError(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
+      setError(err instanceof ApiError ? err.message : "โหลดผังองค์กรไม่สำเร็จ");
     }
   }, []);
 
@@ -230,7 +249,7 @@ export default function OrgChart() {
                     {body.careGroupCount} พันธกิจ · {th.format(body.memberCount)} สมาชิก
                   </p>
                 </div>
-                {canManage && (
+                {canManage && body.id !== UNASSIGNED_BODY_ID && (
                   <div className="flex flex-wrap gap-2">
                     <Link
                       href={`/groups?new=care&parent=${body.id}`}
@@ -257,7 +276,7 @@ export default function OrgChart() {
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="ค้นหาพันธกิจ ชื่อ หรือ หนค."
-                      className="min-h-11 w-full rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] pl-9 pr-3 text-sm text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                      className="min-h-11 w-full rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] pl-9 pr-3 text-base md:text-sm text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
                     />
                   </label>
                 )}
