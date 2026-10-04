@@ -19,6 +19,7 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
@@ -136,6 +137,27 @@ interface SidebarProps {
 export function Sidebar({ open, onClose }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
+  const drawerRef = useRef<HTMLElement>(null);
+
+  // While the drawer is open on a phone it behaves like a modal surface:
+  // Escape closes it, background scroll locks, and focus moves in (and back to
+  // the trigger on close) instead of Tab-ing blindly behind it.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const previousFocus = document.activeElement as HTMLElement | null;
+    drawerRef.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus?.();
+    };
+  }, [open, onClose]);
 
   // Roles arrive with the session; until then `hasRole` denies the gated
   // entries, so a `member` never sees a privileged menu item flash by.
@@ -160,8 +182,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       )}
 
       <aside
+        ref={drawerRef}
         id="app-sidebar"
-        className={`fixed inset-y-0 left-0 z-50 flex w-60 max-w-[85vw] flex-col overflow-y-auto bg-[var(--color-dark-surface)] text-[var(--color-on-dark)] transition-transform duration-200 ease-out motion-reduce:transition-none lg:static lg:translate-x-0 ${
+        tabIndex={-1}
+        className={`fixed inset-y-0 left-0 z-50 flex w-60 max-w-[85vw] flex-col overflow-y-auto bg-[var(--color-dark-surface)] text-[var(--color-on-dark)] outline-none transition-transform duration-200 ease-out motion-reduce:transition-none lg:static lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
         aria-label="เมนูหลัก"
@@ -171,7 +195,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <button
             type="button"
             onClick={onClose}
-            className="flex size-11 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-on-dark-muted)] transition-colors hover:bg-white/10 hover:text-[var(--color-on-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-on-dark)] lg:hidden"
+            className="flex size-11 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-on-dark-muted)] transition-colors hover:bg-[var(--color-on-dark)]/10 hover:text-[var(--color-on-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-on-dark)] lg:hidden"
             aria-label="ปิดเมนู"
           >
             <X size={ICON_SIZE.lg} aria-hidden="true" />
@@ -201,7 +225,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                         className={`type-caption-strong flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-on-dark)] ${
                           isActive
                             ? "bg-[var(--color-primary-on-dark)]/15 text-[var(--color-primary-on-dark)]"
-                            : "text-[var(--color-on-dark-muted)] hover:bg-white/5 hover:text-[var(--color-on-dark)]"
+                            : "text-[var(--color-on-dark-muted)] hover:bg-[var(--color-on-dark)]/5 hover:text-[var(--color-on-dark)]"
                         }`}
                       >
                         <Icon

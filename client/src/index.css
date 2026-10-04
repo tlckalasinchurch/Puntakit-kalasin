@@ -736,41 +736,6 @@
     font-size: 10px;
   }
 }
-.state-panel {
-  text-align: center;
-  padding: 55px 20px;
-  color: var(--color-text-quaternary);
-}
-.state-panel svg {
-  color: #a1a1a6;
-}
-.state-panel h3 {
-  margin: 9px 0 4px;
-  color: var(--ink);
-  font-size: 16px;
-}
-.state-panel p {
-  margin: 0;
-  font-size: 12px;
-}
-.state-panel.error-panel svg {
-  color: #e08a95;
-}
-.state-panel.error-panel h3 {
-  color: #c23b4d;
-}
-.retry-button {
-  margin-top: 14px;
-  background: var(--color-canvas-soft);
-  color: var(--color-primary);
-  border-radius: var(--radius-sm);
-  padding: 8px 16px;
-  font-size: 11px;
-  font-weight: 600;
-}
-.retry-button:hover {
-  background: #e5e9e4;
-}
 .login-shell {
   min-height: 100vh;
   display: flex;
@@ -1106,28 +1071,6 @@
   }
 }
 
-/* TailAdmin inspired utilities */
-.tailadmin-card {
-  background-color: #ffffff;
-  border-radius: 1rem;
-  border: 1px solid rgba(226, 232, 240, 0.85);
-  box-shadow:
-    0 1px 3px 0 rgba(0, 0, 0, 0.05),
-    0 1px 2px -1px rgba(0, 0, 0, 0.05);
-}
-
-.tailadmin-card-header {
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid rgba(241, 245, 249, 1);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.tailadmin-card-body {
-  padding: 1.5rem;
-}
-
 /* Home-specific dark tweaks. The token remap itself now lives on `.dark`
    globally, so Home no longer needs its own copy of the palette. */
 .dark .home-editorial input {
@@ -1210,8 +1153,6 @@
 
 .dark body,
 .dark #root { background: var(--color-black); color: var(--color-on-dark); }
-.dark .tailadmin-card,
-.dark .event-surface { box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18); }
 .dark .member-page-hero::after,
 .dark .events-page-hero::after { background: rgba(127, 175, 114, 0.2); }
 .dark input,

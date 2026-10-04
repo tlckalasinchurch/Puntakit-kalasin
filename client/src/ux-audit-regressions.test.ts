@@ -348,3 +348,70 @@ describe("UX audit Batch E — remaining low-severity items", () => {
     expect(css).toMatch(/-webkit-tap-highlight-color: transparent/);
   });
 });
+
+describe("UX audit Batch F — pages added after the first audit", () => {
+  const NEW_PAGES = [
+    "client/src/pages/CareToday.tsx",
+    "client/src/pages/ImportData.tsx",
+    "client/src/pages/ImportDuplicates.tsx",
+    "client/src/pages/ImportOrgData.tsx",
+    "client/src/pages/OrgChart.tsx",
+  ] as const;
+
+  it("every new page sets a per-route document title", () => {
+    for (const rel of NEW_PAGES) {
+      expect(read(rel).includes("usePageTitle("), `${rel} misses usePageTitle`).toBe(true);
+    }
+  });
+
+  it("no nonexistent tokens or hardcoded hex in new pages", () => {
+    const src = read("client/src/pages/ImportOrgData.tsx");
+    expect(src).not.toMatch(/--color-danger/);
+    expect(src).not.toMatch(/#b42318/);
+    expect(src).toMatch(/var\(--color-error\)/);
+  });
+
+  it("ErrorState gets a friendly Thai title with the raw message behind technical", () => {
+    for (const rel of [
+      "client/src/pages/ImportData.tsx",
+      "client/src/pages/ImportDuplicates.tsx",
+    ]) {
+      const src = read(rel);
+      expect(src).toMatch(/<ErrorState\s|<ErrorState$/m);
+      expect(src).toMatch(/technical=\{error\}/);
+      expect(src).not.toMatch(/description=\{error\}/);
+    }
+  });
+
+  it("duplicate candidates are paged, not rendered 100 at once", () => {
+    const src = read("client/src/pages/ImportDuplicates.tsx");
+    expect(src).toMatch(/CARDS_PER_PAGE = 20/);
+    expect(src).toMatch(/<ListPager/);
+  });
+
+  it("ImportData precheck dump sits behind a technical disclosure", () => {
+    const src = read("client/src/pages/ImportData.tsx");
+    expect(src).toMatch(/<details className="mt-3">/);
+    expect(src).toMatch(/รายละเอียดทางเทคนิคของผลตรวจ/);
+  });
+
+  it("MemberPicker is a keyboard-usable combobox with 44px targets", () => {
+    const src = read("client/src/components/MemberPicker.tsx");
+    expect(src).toMatch(/aria-activedescendant/);
+    expect(src).toMatch(/ArrowDown/);
+    expect(src).toMatch(/size-11/);
+    expect(src).not.toMatch(/size-9/);
+  });
+
+  it("MobileBottomNav marks the active item with a shape cue, not colour alone", () => {
+    const src = read("client/src/components/layout/MobileBottomNav.tsx");
+    expect(src).toMatch(/bg-\[var\(--color-accent-soft\)\]/);
+  });
+
+  it("Sidebar drawer closes on Escape with focus moved in and restored", () => {
+    const src = read("client/src/components/layout/Sidebar.tsx");
+    expect(src).toMatch(/drawerRef/);
+    expect(src).toMatch(/"Escape"/);
+    expect(src).not.toMatch(/hover:bg-white\/10/);
+  });
+});
