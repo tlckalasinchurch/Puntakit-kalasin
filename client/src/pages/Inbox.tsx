@@ -7,6 +7,7 @@ import {
   ErrorState,
   Field,
   FormError,
+  ListPager,
   Modal,
   PageHeader,
   SectionHeader,
@@ -16,7 +17,7 @@ import {
 import { ListSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, type ApiMeta } from "@/lib/api";
 import type { MissionActivityType, MissionSubmissionStatus } from "@shared/schema";
 import { PRIVILEGED_ROLES as REVIEW_ROLES } from "@shared/roles";
 
@@ -86,6 +87,8 @@ export default function Inbox() {
   const isReviewer = user && REVIEW_ROLES.includes(user.role);
 
   const [items, setItems] = useState<SubmissionRow[]>([]);
+  const [meta, setMeta] = useState<ApiMeta | null>(null);
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
@@ -107,16 +110,18 @@ export default function Inbox() {
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = async (pageToLoad: number = page) => {
     setIsLoading(true);
     setError(null);
     setErrorTechnical(null);
     try {
       const params = new URLSearchParams();
       if (statusFilter) params.set("status", statusFilter);
+      params.set("page", String(pageToLoad));
       params.set("limit", "50");
-      const data = await api.get<SubmissionRow[]>(`/api/submissions?${params.toString()}`);
-      setItems(data);
+      const res = await api.getWithMeta<SubmissionRow[]>(`/api/submissions?${params.toString()}`);
+      setItems(res.data || []);
+      setMeta(res.meta ?? null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "โหลดข้อมูลที่ส่งเข้ามาไม่สำเร็จ");
       setErrorTechnical(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
@@ -126,7 +131,7 @@ export default function Inbox() {
   };
 
   useEffect(() => {
-    load();
+    load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
@@ -248,7 +253,7 @@ export default function Inbox() {
             title="โหลดข้อมูลที่ส่งเข้ามาไม่สำเร็จ"
             description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
             technical={errorTechnical ?? undefined}
-            onRetry={load}
+            onRetry={() => load()}
           />
         ) : items.length === 0 ? (
           <EmptyState
@@ -265,7 +270,8 @@ export default function Inbox() {
             }}
           />
         ) : (
-          <div className="space-y-3">
+          <>
+            <div className="space-y-3">
             {items.map(row => (
               <article
                 key={row.id}
@@ -336,6 +342,17 @@ export default function Inbox() {
               </article>
             ))}
           </div>
+          {!isLoading && !error && (
+            <ListPager
+              page={page}
+              totalPages={meta?.totalPages ?? 1}
+              onPageChange={p => {
+                setPage(p);
+                load(p);
+              }}
+            />
+          )}
+          </>
         )}
       </section>
 

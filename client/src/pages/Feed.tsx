@@ -19,6 +19,7 @@ import {
   ErrorState,
   Field,
   FormError,
+  ListPager,
   Modal,
   PageHeader,
   SectionHeader,
@@ -29,7 +30,7 @@ import {
 import { CardGridSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, type ApiMeta } from "@/lib/api";
 import { fetchAllMembers } from "@/lib/fetchAll";
 import type { MissionActivityStatus, MissionActivityType } from "@shared/schema";
 import { CREATE_ROLES } from "@shared/roles";
@@ -128,6 +129,8 @@ export default function Feed() {
   const { user } = useAuth();
 
   const [items, setItems] = useState<FeedActivity[]>([]);
+  const [meta, setMeta] = useState<ApiMeta | null>(null);
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
@@ -148,7 +151,7 @@ export default function Feed() {
 
   const canCreate = user && CREATE_ROLES.includes(user.role);
 
-  const load = async () => {
+  const load = async (pageToLoad: number = page) => {
     setIsLoading(true);
     setError(null);
     setErrorTechnical(null);
@@ -156,9 +159,11 @@ export default function Feed() {
       const params = new URLSearchParams();
       if (typeFilter) params.set("type", typeFilter);
       if (statusFilter) params.set("status", statusFilter);
+      params.set("page", String(pageToLoad));
       params.set("limit", "30");
-      const data = await api.get<FeedActivity[]>(`/api/activities?${params.toString()}`);
-      setItems(data);
+      const res = await api.getWithMeta<FeedActivity[]>(`/api/activities?${params.toString()}`);
+      setItems(res.data || []);
+      setMeta(res.meta ?? null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "โหลดฟีดไม่สำเร็จ");
       setErrorTechnical(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
@@ -168,7 +173,7 @@ export default function Feed() {
   };
 
   useEffect(() => {
-    load();
+    load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeFilter, statusFilter]);
 
@@ -317,7 +322,7 @@ export default function Feed() {
             title="โหลดฟีดกิจกรรมไม่สำเร็จ"
             description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
             technical={errorTechnical ?? undefined}
-            onRetry={load}
+            onRetry={() => load()}
           />
         ) : items.length === 0 ? (
           <EmptyState
@@ -329,11 +334,12 @@ export default function Feed() {
                 : "รอทีมงานบันทึกกิจกรรม แล้วกลับมาตรวจสอบอีกครั้ง"
             }
             action={
-              canCreate ? { label: "บันทึกกิจกรรม", icon: Camera, onClick: openCreate } : { label: "โหลดใหม่", onClick: load }
+              canCreate ? { label: "บันทึกกิจกรรม", icon: Camera, onClick: openCreate } : { label: "โหลดใหม่", onClick: () => load() }
             }
           />
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {items.map((activity) => {
               const isMine = user?.id === activity.createdById;
               const canAdvance = isMine || (user && CREATE_ROLES.includes(user.role));
@@ -434,6 +440,17 @@ export default function Feed() {
               );
             })}
           </div>
+          {!isLoading && !error && (
+            <ListPager
+              page={page}
+              totalPages={meta?.totalPages ?? 1}
+              onPageChange={p => {
+                setPage(p);
+                load(p);
+              }}
+            />
+          )}
+          </>
         )}
       </section>
 

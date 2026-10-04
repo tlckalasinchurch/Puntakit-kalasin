@@ -6,6 +6,7 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  ListPager,
   PageHeader,
   SectionHeader,
   StatusChip,
@@ -13,7 +14,7 @@ import {
 } from "@/components/DesignSystem";
 import { ListSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, type ApiMeta } from "@/lib/api";
 import type { FollowUpStatus } from "@shared/schema";
 
 interface FollowUpRow {
@@ -63,6 +64,8 @@ function isOverdue(row: FollowUpRow) {
 
 export default function FollowUps() {
   const [items, setItems] = useState<FollowUpRow[]>([]);
+  const [meta, setMeta] = useState<ApiMeta | null>(null);
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
@@ -70,7 +73,7 @@ export default function FollowUps() {
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [transitioningId, setTransitioningId] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = async (pageToLoad: number = page) => {
     setIsLoading(true);
     setError(null);
     setErrorTechnical(null);
@@ -78,9 +81,11 @@ export default function FollowUps() {
       const params = new URLSearchParams();
       if (statusFilter) params.set("status", statusFilter);
       if (overdueOnly) params.set("overdue", "true");
+      params.set("page", String(pageToLoad));
       params.set("limit", "50");
-      const data = await api.get<FollowUpRow[]>(`/api/follow-ups?${params.toString()}`);
-      setItems(data);
+      const res = await api.getWithMeta<FollowUpRow[]>(`/api/follow-ups?${params.toString()}`);
+      setItems(res.data || []);
+      setMeta(res.meta ?? null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "โหลดรายการติดตามไม่สำเร็จ");
       setErrorTechnical(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
@@ -90,7 +95,7 @@ export default function FollowUps() {
   };
 
   useEffect(() => {
-    load();
+    load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, overdueOnly]);
 
@@ -107,14 +112,17 @@ export default function FollowUps() {
     }
   };
 
-  const countLabel = !isLoading && !error ? `${items.length.toLocaleString("th-TH")} รายการ` : undefined;
+  const countLabel =
+    !isLoading && !error && meta
+      ? `${meta.total.toLocaleString("th-TH")} รายการ`
+      : undefined;
 
   return (
     <AppLayout>
       <PageHeader
         title="รายการติดตาม"
         description="อะไรต้องทำต่อ กับใคร ภายในเมื่อไร — สร้างจากหน้ากิจกรรมพันธกิจหรือโปรไฟล์สมาชิก"
-        secondaryActions={[{ label: "โหลดใหม่", icon: RotateCcw, onClick: load }]}
+        secondaryActions={[{ label: "โหลดใหม่", icon: RotateCcw, onClick: () => load() }]}
       />
 
       <div className="mb-5 flex flex-wrap items-end gap-3">
@@ -158,7 +166,7 @@ export default function FollowUps() {
             title="โหลดรายการติดตามไม่สำเร็จ"
             description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
             technical={errorTechnical ?? undefined}
-            onRetry={load}
+            onRetry={() => load()}
           />
         ) : items.length === 0 ? (
           <EmptyState
@@ -168,7 +176,8 @@ export default function FollowUps() {
             action={{ href: "/feed", label: "ไปที่ฟีดกิจกรรม" }}
           />
         ) : (
-          <div className="space-y-3">
+          <>
+            <div className="space-y-3">
             {items.map(row => (
               <article
                 key={row.id}
@@ -240,6 +249,17 @@ export default function FollowUps() {
               </article>
             ))}
           </div>
+          {!isLoading && !error && (
+            <ListPager
+              page={page}
+              totalPages={meta?.totalPages ?? 1}
+              onPageChange={p => {
+                setPage(p);
+                load(p);
+              }}
+            />
+          )}
+          </>
         )}
       </section>
     </AppLayout>

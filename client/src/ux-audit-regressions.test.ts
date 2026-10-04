@@ -122,3 +122,39 @@ describe("UX audit Batch B — form safety and feedback", () => {
     expect(src).toMatch(/setRemoveTarget\(gm\)/);
   });
 });
+
+describe("UX audit Batch C — navigation and data access", () => {
+  it("Members keeps filters, page and the selected member in the URL", () => {
+    const src = read("client/src/pages/Members.tsx");
+    expect(src).toMatch(/useSearchParams\(\)/);
+    for (const key of ["q", "area", "status", "membershipStatus", "page", "member"]) {
+      expect(src).toMatch(new RegExp(`p\\.(?:set|delete)\\("${key}"`));
+    }
+    // Deep links fetch the member directly; a dead id cleans itself from the URL.
+    expect(src).toMatch(/\/api\/members\/\$\{selectedMemberId\}/);
+    // List rows open the detail through the URL, not through object state.
+    expect(src).not.toMatch(/setSelectedMember\(member\)/);
+    expect(src).not.toMatch(/onClick=\{\(\) => setSelectedMember\(m\)\}/);
+  });
+
+  it("Feed, Inbox and FollowUps page through the server's meta, not silently capped", () => {
+    for (const rel of [
+      "client/src/pages/Feed.tsx",
+      "client/src/pages/Inbox.tsx",
+      "client/src/pages/FollowUps.tsx",
+    ]) {
+      const src = read(rel);
+      expect(src).toMatch(/getWithMeta</);
+      expect(src).toMatch(/params\.set\("page", String\(pageToLoad\)\)/);
+      expect(src).toMatch(/<ListPager/);
+      expect(src).toMatch(/setMeta\(res\.meta \?\? null\)/);
+    }
+  });
+
+  it("ListPager renders nothing when everything fits on one page", () => {
+    const src = read("client/src/components/DesignSystem.tsx");
+    expect(src).toMatch(/function ListPager/);
+    expect(src).toMatch(/if \(totalPages <= 1\) return null;/);
+    expect(src).toMatch(/aria-label="แบ่งหน้าข้อมูล"/);
+  });
+});

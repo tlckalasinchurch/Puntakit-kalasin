@@ -782,6 +782,58 @@ export function FilterDisclosure({
 }
 
 // ---------------------------------------------------------------------------
+// ListPager — prev/next pagination for server-paged lists
+// ---------------------------------------------------------------------------
+
+/**
+ * Renders nothing while everything fits on one page. The count label comes
+ * from the API's `meta`, so the pager can never claim more pages than the
+ * server actually has.
+ */
+export function ListPager({
+  page,
+  totalPages,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  const prevButtonClass =
+    "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:cursor-not-allowed disabled:opacity-50";
+  return (
+    <nav
+      aria-label="แบ่งหน้าข้อมูล"
+      className="flex items-center justify-center gap-3 pt-1"
+    >
+      <button
+        type="button"
+        className={prevButtonClass}
+        disabled={page <= 1}
+        onClick={() => onPageChange(page - 1)}
+      >
+        ก่อนหน้า
+      </button>
+      <span
+        aria-current="page"
+        className="type-caption text-[var(--color-body-muted)]"
+      >
+        หน้า {page} จาก {totalPages}
+      </span>
+      <button
+        type="button"
+        className={prevButtonClass}
+        disabled={page >= totalPages}
+        onClick={() => onPageChange(page + 1)}
+      >
+        ถัดไป
+      </button>
+    </nav>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // DataBar — a single honest data bar (no invented trends)
 // ---------------------------------------------------------------------------
 

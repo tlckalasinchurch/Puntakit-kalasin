@@ -41,7 +41,7 @@ import {
   MEMBER_UPDATE_ROLES,
   hasRole,
 } from "@shared/roles";
-import { useLocation, useSearch } from "wouter";
+import { useLocation, useSearch, useSearchParams } from "wouter";
 
 // Thai labels live in shared/labels.ts (same map the Member PWA renders), so
 // admin and member surfaces can never show different words for a status.
@@ -185,15 +185,70 @@ export default function Members() {
   const [error, setError] = useState<string | null>(null);
   const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
 
-  // The home and top-bar search send people here as /members?search=…, so the
-  // page must start from (and follow) that parameter.
-  const urlSearch = useSearch();
-  const urlQuery = new URLSearchParams(urlSearch).get("search") ?? "";
-  const [query, setQuery] = useState(urlQuery);
-  useEffect(() => setQuery(urlQuery), [urlQuery]);
-  const [area, setArea] = useState("ทั้งหมด");
-  const [status, setStatus] = useState("ทั้งหมด");
-  const [membershipStatus, setMembershipStatus] = useState("ทั้งหมด");
+  // Filters, page and the open member detail live in the URL, so a view of the
+  // list survives refresh, can be shared as a link, and Back/Forward steps
+  // through filter/page/detail changes. `?search=…` is the incoming format the
+  // home and top-bar search produce; once the user edits the box it is
+  // normalised to `q`.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query =
+    searchParams.get("q") ?? searchParams.get("search") ?? "";
+  const area = searchParams.get("area") ?? "ทั้งหมด";
+  const status = searchParams.get("status") ?? "ทั้งหมด";
+  const membershipStatus = searchParams.get("membershipStatus") ?? "ทั้งหมด";
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
+  const selectedMemberId = searchParams.get("member");
+
+  const updateParams = useCallback(
+    (
+      mutate: (params: URLSearchParams) => void,
+      options?: { replace?: boolean }
+    ) => {
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        mutate(next);
+        return next.toString();
+      }, options);
+    },
+    [setSearchParams]
+  );
+
+  const setQuery = (value: string) =>
+    updateParams(
+      p => {
+        if (value) p.set("q", value);
+        else p.delete("q");
+        p.delete("search"); // never keep both spellings of the same filter
+        p.delete("page"); // a new search restarts at page 1
+      },
+      { replace: true }
+    );
+  const setArea = (value: string) =>
+    updateParams(p => {
+      if (value && value !== "ทั้งหมด") p.set("area", value);
+      else p.delete("area");
+      p.delete("page");
+    });
+  const setStatus = (value: string) =>
+    updateParams(p => {
+      if (value && value !== "ทั้งหมด") p.set("status", value);
+      else p.delete("status");
+      p.delete("page");
+    });
+  const setMembershipStatus = (value: string) =>
+    updateParams(p => {
+      if (value && value !== "ทั้งหมด") p.set("membershipStatus", value);
+      else p.delete("membershipStatus");
+      p.delete("page");
+    });
+  const goToPage = (value: number) =>
+    updateParams(p => {
+      if (value > 1) p.set("page", String(value));
+      else p.delete("page");
+    });
+  const openMember = (m: Member) => updateParams(p => p.set("member", m.id));
+  const closeMember = () =>
+    updateParams(p => p.delete("member"), { replace: true });
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Member | null>(null);
@@ -228,6 +283,30 @@ export default function Members() {
       setQrCodeDataUrl("");
     }
   }, [selectedMember]);
+
+  // Deep-link support: `?member=<id>` fetches the member directly so a
+  // shared link opens the detail dialog even when the member is on another
+  // page of the list. A dead or inaccessible id cleans itself from the URL.
+  useEffect(() => {
+    if (!selectedMemberId) {
+      setSelectedMember(null);
+      return;
+    }
+    if (selectedMember?.id === selectedMemberId) return;
+    let cancelled = false;
+    api
+      .get<Member>(`/api/members/${selectedMemberId}`)
+      .then(m => {
+        if (!cancelled) setSelectedMember(m);
+      })
+      .catch(() => {
+        if (!cancelled) closeMember();
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMemberId]);
 
   const loadMembers = useCallback(
     async (pageToLoad: number = 1) => {
@@ -264,8 +343,8 @@ export default function Members() {
   );
 
   useEffect(() => {
-    loadMembers(1);
-  }, [loadMembers]);
+    loadMembers(page);
+  }, [loadMembers, page]);
 
   // Check duplicate phone or email as user types
   useEffect(() => {
@@ -654,7 +733,7 @@ export default function Members() {
               <MemberCard
                 key={member.id}
                 member={member}
-                onOpen={() => setSelectedMember(member)}
+                onOpen={() => openMember(member)}
               />
             ))}
           </ul>
@@ -742,7 +821,7 @@ export default function Members() {
                         <button
                           type="button"
                           className="flex size-11 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-                          onClick={() => setSelectedMember(m)}
+                          onClick={() => openMember(m)}
                           aria-label={`ดูข้อมูลของ ${m.name}`}
                         >
                           <Search size={ICON_SIZE.sm} aria-hidden="true" />
@@ -788,7 +867,7 @@ export default function Members() {
                   type="button"
                   className="type-caption-strong inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
                   disabled={meta.page <= 1}
-                  onClick={() => loadMembers(meta.page - 1)}
+                  onClick={() => goToPage(meta.page - 1)}
                 >
                   <ChevronLeft size={ICON_SIZE.xs} aria-hidden="true" /> ก่อนหน้า
                 </button>
@@ -796,7 +875,7 @@ export default function Members() {
                   type="button"
                   className="type-caption-strong inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
                   disabled={meta.page >= meta.totalPages}
-                  onClick={() => loadMembers(meta.page + 1)}
+                  onClick={() => goToPage(meta.page + 1)}
                 >
                   ถัดไป <ChevronRight size={ICON_SIZE.xs} aria-hidden="true" />
                 </button>
@@ -1146,7 +1225,7 @@ export default function Members() {
       {/* Member detail — the same dialog, sized wide for the two-column body */}
       <Modal
         open={selectedMember !== null}
-        onClose={() => setSelectedMember(null)}
+        onClose={closeMember}
         title="ข้อมูลสมาชิก"
         description={selectedMember?.name}
         size="wide"
@@ -1154,7 +1233,7 @@ export default function Members() {
           <>
             <button
               type="button"
-              onClick={() => setSelectedMember(null)}
+              onClick={closeMember}
               className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-5 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
             >
               ปิด
@@ -1172,7 +1251,7 @@ export default function Members() {
                 type="button"
                 onClick={() => {
                   const target = selectedMember;
-                  setSelectedMember(null);
+                  closeMember();
                   if (target) openEdit(target);
                 }}
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
