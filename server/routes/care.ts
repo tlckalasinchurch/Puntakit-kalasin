@@ -35,6 +35,9 @@ careRouter.get("/groups/:id/roster", async (req, res, next) => {
       .where(and(eq(groups.id, id), eq(groups.orgLevel, "care"), isNull(groups.deletedAt)))
       .limit(1);
     if (!care) throw new NotFoundError("ไม่พบพันธกิจที่ระบุ");
+    const [leader] = care.leaderMemberId
+      ? await db.select({ name: members.name }).from(members).where(eq(members.id, care.leaderMemberId)).limit(1)
+      : [];
     const [body] = care.parentGroupId
       ? await db.select({ name: groups.name }).from(groups).where(eq(groups.id, care.parentGroupId)).limit(1)
       : [];
@@ -89,7 +92,13 @@ careRouter.get("/groups/:id/roster", async (req, res, next) => {
     res.json({
       success: true,
       data: {
-        group: { id: care.id, name: care.name.trim(), bodyName: body?.name ?? null, ...parseCareGroupDescription(care.description) },
+        group: {
+          id: care.id,
+          name: care.name.trim(),
+          bodyName: body?.name ?? null,
+          ...parseCareGroupDescription(care.description),
+          ...(leader ? { careLeaderName: leader.name } : {}),
+        },
         date,
         sessions,
         members: rows,
