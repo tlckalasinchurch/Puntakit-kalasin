@@ -27,6 +27,10 @@ interface UserRow {
   role: UserRole;
   status: "active" | "suspended";
   careGroups: { id: string; name: string }[];
+  /** Every group the user leads or co-leads — the same set the server uses for scope. */
+  ledGroups: { id: string; name: string; orgLevel: "body" | "care" | null; as: "leader" | "co_leader" }[];
+  /** True only for the group_leader role; other roles never get group scope. */
+  scopeActive: boolean;
 }
 interface CareGroupOption {
   id: string;
@@ -142,6 +146,30 @@ export default function AdminUsers() {
                       {u.status === "suspended" && <span className="type-caption ml-2 font-normal text-[var(--color-error)]">ถูกระงับ</span>}
                     </p>
                     <p className="type-caption truncate text-[var(--color-body-muted)]">{u.email}</p>
+                    {u.ledGroups.length > 0 && (
+                      <ul className="mt-2 flex flex-wrap gap-1.5" aria-label={`พันธกิจที่ ${u.name} มีสิทธิ์`}>
+                        {u.ledGroups.map((g) => (
+                          <li
+                            key={`${g.id}-${g.as}`}
+                            className={`type-caption rounded-[var(--radius-pill)] border px-2.5 py-0.5 ${
+                              g.as === "leader"
+                                ? "border-[var(--color-primary)] text-[var(--color-ink)]"
+                                : "border-[var(--color-hairline)] text-[var(--color-body-muted)]"
+                            }`}
+                          >
+                            {g.as === "leader" ? "หัวหน้า" : "ผู้ช่วยหัวหน้า"} · {g.name.trim()}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {u.ledGroups.length > 0 && !u.scopeActive && (
+                      <p className="type-caption mt-1 text-[var(--color-body-muted)]">
+                        ยังไม่มีผล เพราะบทบาทไม่ใช่ “{ROLE_LABELS.group_leader}”
+                      </p>
+                    )}
+                    {u.ledGroups.some((g) => g.as === "co_leader") && (
+                      <p className="type-caption mt-1 text-[var(--color-body-muted)]">ผู้ช่วยหัวหน้าตั้งหรือแก้ที่หน้าพันธกิจ</p>
+                    )}
                   </div>
                 </div>
 

@@ -37,6 +37,7 @@ describe("group_leader tenant scope (real PGlite Postgres)", () => {
   type Actor = { id: string; cookie: string };
   let superA: Actor, adminA: Actor, staffA: Actor, viewerA: Actor, memberU: Actor, leaderA: Actor, leaderB: Actor, lonely: Actor;
   let careA: string, careB: string, mA1: string, mA2: string, mB1: string, mFree: string;
+  let newActor: (key: string, role: "member" | "group_leader") => Promise<Actor>;
 
   beforeAll(async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "puntakit-scope-test-"));
@@ -64,6 +65,7 @@ describe("group_leader tenant scope (real PGlite Postgres)", () => {
       const [u] = await db.insert(schema.users).values({ email: `${key}@scope-test.local`, passwordHash: "x", name: key, role }).returning();
       return { id: u.id, cookie: `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: u.id, email: u.email, role })}` };
     };
+    newActor = (key, role) => mk(key, role);
     superA = await mk("super", "super_admin");
     adminA = await mk("admin", "admin");
     staffA = await mk("staff", "staff");
@@ -298,5 +300,155 @@ describe("group_leader tenant scope (real PGlite Postgres)", () => {
     expect(leader.role).toBe("super_admin");
     const keeps = await bootstrap.applyBootstrapAdmin(await mkUser("keeps@scope-test.local", "super_admin"), { emailVerified: true, allowList: new Set() });
     expect(keeps.role).toBe("super_admin");
+  });
+
+  // ---- follow-up review: F1 (duplicate-contact privacy) and F2 (co-leader scope) ----
+
+  it("11. duplicate-contact errors never reveal who holds the number or email", async () => {
+    // test 9 moved care group A to another account; give it back to leader A
+    await db.update(schema.groups).set({ leaderId: leaderA.id }).where(eq(schema.groups.id, careA));
+    // in the leader's own scope: a duplicate is reported, in one generic sentence without a name
+    const inScope = await call(leaderA, "PUT", `/api/members/${mA1}`, { phone: "0822222222" });
+    expect(inScope.status).toBe(409);
+    const inText = await inScope.text();
+    expect(inText).toContain("ถูกใช้งานแล้วในระบบ");
+    expect(inText).not.toContain("เอ2");
+    expect(inText).not.toContain("0822222222");
+
+    // outside the scope: indistinguishable from "no duplicate", and nothing about the other person is returned
+    const outside = await call(leaderA, "PUT", `/api/members/${mA1}`, { phone: "0833333333" });
+    expect(outside.status).toBe(200);
+    expect(await outside.text()).not.toContain("บี1");
+    await db.update(schema.members).set({ phone: "0811111111" }).where(eq(schema.members.id, mA1));
+
+    // e-mail follows the same policy
+    await db.update(schema.members).set({ email: "a2@scope-test.local" }).where(eq(schema.members.id, mA2));
+    await db.update(schema.members).set({ email: "b1@scope-test.local" }).where(eq(schema.members.id, mB1));
+    const mailIn = await call(leaderA, "PUT", `/api/members/${mA1}`, { email: "a2@scope-test.local" });
+    expect(mailIn.status).toBe(409);
+    expect(await mailIn.text()).not.toContain("เอ2");
+    const mailOut = await call(leaderA, "PUT", `/api/members/${mA1}`, { email: "b1@scope-test.local" });
+    expect(mailOut.status).toBe(200);
+    expect(await mailOut.text()).not.toContain("บี1");
+    await db.update(schema.members).set({ email: null }).where(eq(schema.members.id, mA1));
+
+    // roles that see the whole directory keep the helpful message with the name
+    const staff = await call(staffA, "PUT", `/api/members/${mA1}`, { phone: "0833333333" });
+    expect(staff.status).toBe(409);
+    expect(await staff.text()).toContain("สมาชิก บี1");
+
+    // the separate lookup endpoint stays scoped: an outside number looks like "not found"
+    const lookup = await json(await call(leaderA, "GET", "/api/members/check-duplicate?phone=0833333333"));
+    expect(lookup.data.isDuplicate).toBe(false);
+    const lookupMail = await json(await call(leaderA, "GET", "/api/members/check-duplicate?email=b1@scope-test.local"));
+    expect(lookupMail.data.isDuplicate).toBe(false);
+    const lookupIn = await json(await call(leaderA, "GET", "/api/members/check-duplicate?phone=0822222222"));
+    expect(lookupIn.data.isDuplicate).toBe(true);
+  });
+
+  it("12. co_leader_id grants the same scope as leader_id, and nothing more", async () => {
+    const co = await newActor("coleader", "group_leader");
+    const [c, d] = await db
+      .insert(schema.groups)
+      .values([
+        { name: "พันธกิจ C", orgLevel: "care", coLeaderId: co.id },
+        { name: "พันธกิจ D", orgLevel: "care", leaderId: leaderB.id },
+      ])
+      .returning();
+    const [mC, mD] = await db
+      .insert(schema.members)
+      .values([{ name: "สมาชิก ซี1", phone: "0855555555" }, { name: "สมาชิก ดี1", phone: "0866666666" }])
+      .returning();
+    await db.insert(schema.groupMembers).values([
+      { groupId: c.id, memberId: mC.id, status: "active" },
+      { groupId: d.id, memberId: mD.id, status: "active" },
+    ]);
+    const day = new Date().toISOString();
+    const rec = (memberId: string) => ({ memberId, status: "present", checkInMethod: "manual" });
+
+    // allowed: the co-leader's own group
+    expect(ids((await json(await call(co, "GET", "/api/members?limit=100"))).data)).toEqual([mC.id]);
+    expect((await call(co, "GET", `/api/members/${mC.id}`)).status).toBe(200);
+    expect((await call(co, "GET", `/api/groups/${c.id}`)).status).toBe(200);
+    const roster = await json(await call(co, "GET", `/api/groups/${c.id}/members`));
+    expect(roster.data.map((r: { memberPhone: string }) => r.memberPhone)).toEqual(["0855555555"]);
+    expect((await call(co, "GET", `/api/care/groups/${c.id}/roster`)).status).toBe(200);
+    const mine = (await json(await call(co, "GET", "/api/care/groups"))).data.bodies.flatMap((b: { careGroups: { name: string }[] }) => b.careGroups.map((g) => g.name));
+    expect(mine).toEqual(["พันธกิจ C"]);
+    expect((await call(co, "POST", "/api/attendance/bulk", { date: day, serviceType: "care_group", groupId: c.id, records: [rec(mC.id)] })).status).toBe(200);
+    expect((await call(co, "POST", "/api/activities", { type: "house_mission", title: "เยี่ยม", occurredAt: day, groupId: c.id, participantMemberIds: [mC.id] })).status).toBe(201);
+    expect((await call(co, "POST", "/api/follow-ups", { title: "ติดตาม", subjectMemberId: mC.id })).status).toBe(201);
+    expect((await call(co, "PUT", `/api/groups/${c.id}`, { meetingLocation: "ศาลา" })).status).toBe(200);
+
+    // denied: an unrelated group, by every route, with direct identifiers
+    expect((await call(co, "GET", `/api/members/${mD.id}`)).status).toBe(404);
+    expect((await call(co, "PUT", `/api/members/${mD.id}`, { notes: "x" })).status).toBe(404);
+    expect((await call(co, "GET", `/api/groups/${d.id}`)).status).toBe(403);
+    expect((await call(co, "GET", `/api/groups/${d.id}/members`)).status).toBe(403);
+    expect((await call(co, "GET", `/api/care/groups/${d.id}/roster`)).status).toBe(403);
+    expect((await call(co, "POST", "/api/attendance/bulk", { date: day, serviceType: "care_group", groupId: d.id, records: [rec(mC.id)] })).status).toBe(403);
+    expect((await call(co, "POST", "/api/attendance/bulk", { date: day, serviceType: "care_group", groupId: c.id, records: [rec(mD.id)] })).status).toBe(403);
+    expect((await call(co, "POST", "/api/activities", { type: "house_mission", title: "x", occurredAt: day, groupId: d.id })).status).toBe(403);
+    expect((await call(co, "POST", "/api/follow-ups", { title: "x", subjectMemberId: mD.id })).status).toBe(403);
+    expect((await call(co, "PUT", `/api/groups/${d.id}`, { meetingLocation: "x" })).status).toBe(403);
+    // and a co-leader cannot hand the group to someone else or take it over
+    expect((await call(co, "PUT", `/api/groups/${c.id}`, { leaderId: leaderA.id })).status).toBe(403);
+    expect((await call(co, "PUT", `/api/groups/${c.id}`, { coLeaderId: leaderA.id })).status).toBe(403);
+  });
+
+  it("12b. leading one group and co-leading another gives exactly the union", async () => {
+    const dual = await newActor("dual", "group_leader");
+    const [e, f, g] = await db
+      .insert(schema.groups)
+      .values([
+        { name: "พันธกิจ E", orgLevel: "care", leaderId: dual.id },
+        { name: "พันธกิจ F", orgLevel: "care", coLeaderId: dual.id },
+        { name: "พันธกิจ G", orgLevel: "care" },
+      ])
+      .returning();
+    const made = await db
+      .insert(schema.members)
+      .values([{ name: "สมาชิก อี1" }, { name: "สมาชิก เอฟ1" }, { name: "สมาชิก จี1" }])
+      .returning();
+    await db.insert(schema.groupMembers).values([
+      { groupId: e.id, memberId: made[0].id, status: "active" },
+      { groupId: f.id, memberId: made[1].id, status: "active" },
+      { groupId: g.id, memberId: made[2].id, status: "active" },
+    ]);
+    expect(ids((await json(await call(dual, "GET", "/api/members?limit=100"))).data)).toEqual([made[0].id, made[1].id].sort());
+    expect((await call(dual, "GET", `/api/groups/${e.id}`)).status).toBe(200);
+    expect((await call(dual, "GET", `/api/groups/${f.id}`)).status).toBe(200);
+    expect((await call(dual, "GET", `/api/groups/${g.id}`)).status).toBe(403);
+    expect((await call(dual, "GET", `/api/members/${made[2].id}`)).status).toBe(404);
+  });
+
+  it("12c. /admin/users shows leader and co-leader assignments and whether they take effect", async () => {
+    const list = await json(await call(superA, "GET", "/api/admin/users"));
+    const byEmail = (key: string) => list.data.find((u: { email: string }) => u.email === `${key}@scope-test.local`);
+
+    const dual = byEmail("dual");
+    expect(dual.scopeActive).toBe(true);
+    expect(dual.ledGroups.map((g: { name: string; as: string }) => `${g.as}:${g.name}`).sort()).toEqual(["co_leader:พันธกิจ F", "leader:พันธกิจ E"]);
+    // the picker still edits only the care groups the user leads
+    expect(dual.careGroups.map((g: { name: string }) => g.name)).toEqual(["พันธกิจ E"]);
+
+    const co = byEmail("coleader");
+    expect(co.ledGroups.map((g: { name: string; as: string }) => `${g.as}:${g.name}`)).toEqual(["co_leader:พันธกิจ C"]);
+    expect(co.careGroups).toEqual([]);
+
+    // a name on a group without the group_leader role grants nothing, and the page says so
+    const idle = await newActor("idle", "member");
+    await db.insert(schema.groups).values({ name: "พันธกิจ H", orgLevel: "care", leaderId: idle.id });
+    const again = await json(await call(superA, "GET", "/api/admin/users?search=idle"));
+    expect(again.data[0].scopeActive).toBe(false);
+    expect(again.data[0].ledGroups).toHaveLength(1);
+    expect((await call(idle, "GET", "/api/members?limit=100")).status).toBe(403);
+
+    // conflict rules are unchanged: a different leader of E means 409, a group with only a co-leader does not
+    const other = await newActor("other", "group_leader");
+    const [eRow] = await db.select().from(schema.groups).where(eq(schema.groups.name, "พันธกิจ E"));
+    const [fRow] = await db.select().from(schema.groups).where(eq(schema.groups.name, "พันธกิจ F"));
+    expect((await call(superA, "PUT", `/api/admin/users/${other.id}/care-groups`, { groupIds: [eRow.id] })).status).toBe(409);
+    expect((await call(superA, "PUT", `/api/admin/users/${other.id}/care-groups`, { groupIds: [fRow.id] })).status).toBe(200);
   });
 });
