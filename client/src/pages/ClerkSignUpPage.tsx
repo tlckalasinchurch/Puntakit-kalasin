@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { clerkAppearance } from "@/lib/clerkAppearance";
 import { Logo } from "@/components/layout/Logo";
+import { LegalLinks } from "@/components/LegalLinks";
 
 /**
  * Clerk-hosted sign-up rendered on the /signup route.
@@ -51,6 +52,7 @@ export default function ClerkSignUpPage() {
             appearance={clerkAppearance}
           />
         )}
+        <LegalLinks />
       </div>
     </div>
   );

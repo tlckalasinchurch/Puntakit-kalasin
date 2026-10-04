@@ -5,7 +5,8 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { Link } from "wouter";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 
 /**
@@ -70,6 +71,18 @@ function ActionButton({
   );
 
   if (action.href && !action.disabled) {
+    // Internal routes go through wouter so PageHeader actions keep SPA
+    // navigation (Cmd/Ctrl+click, no full document reload). Only genuinely
+    // external URLs fall back to a plain anchor.
+    const isInternal =
+      action.href.startsWith("/") && !action.href.startsWith("//");
+    if (isInternal) {
+      return (
+        <Link href={action.href} className={className}>
+          {inner}
+        </Link>
+      );
+    }
     return (
       <a href={action.href} className={className}>
         {inner}
@@ -152,12 +165,12 @@ export function SectionHeader({
         )}
       </div>
       {action && (
-        <a
+        <Link
           href={action.href}
           className="type-caption-strong inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-[var(--color-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
         >
           {action.label}
-        </a>
+        </Link>
       )}
     </div>
   );
@@ -449,7 +462,7 @@ export function Field({
 }
 
 // ---------------------------------------------------------------------------
-// Modal — dialog semantics, Escape, focus handling, scroll containment
+// Modal — dialog semantics, Escape, focus trap, dirty-guard, scroll containment
 // ---------------------------------------------------------------------------
 
 interface ModalProps {
@@ -462,7 +475,30 @@ interface ModalProps {
   footer?: React.ReactNode;
   /** `wide` for a two-column form, `full` for the mobile-sheet layout. */
   size?: "default" | "wide";
+  /**
+   * Escape / backdrop / close-button dismissal of a modal the user has typed
+   * into asks for confirmation instead of silently discarding the input.
+   * Pass `false` only for a modal whose body state is safe to throw away.
+   */
+  discardGuard?: boolean;
 }
+
+/**
+ * Open modals register themselves here so only the topmost one reacts to
+ * Escape and Tab. Without it, a ConfirmDialog mounted above a form modal
+ * closed both at once on a single Escape press.
+ */
+const openModalStack: number[] = [];
+let nextModalId = 1;
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+const DISMISS_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+
+const DISCARD_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-error)] px-4 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-error)]";
 
 export function Modal({
   open,
@@ -472,26 +508,120 @@ export function Modal({
   children,
   footer,
   size = "default",
+  discardGuard = true,
 }: ModalProps) {
   const titleId = useId();
   const cardRef = useRef<HTMLDivElement>(null);
+  const idRef = useRef(0);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const discardGuardRef = useRef(discardGuard);
+  discardGuardRef.current = discardGuard;
+  // True once the user actually edited something inside this modal. Native
+  // input/change events fire only for real user edits, so programmatic fills
+  // and form resets never count as unsaved work.
+  const dirtyRef = useRef(false);
+  const confirmingRef = useRef(false);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const continueEditingRef = useRef<HTMLButtonElement>(null);
+
+  const requestClose = useCallback(() => {
+    if (confirmingRef.current || !discardGuardRef.current || !dirtyRef.current) {
+      confirmingRef.current = false;
+      setConfirmingDiscard(false);
+      onCloseRef.current();
+      return;
+    }
+    returnFocusRef.current = document.activeElement as HTMLElement | null;
+    confirmingRef.current = true;
+    setConfirmingDiscard(true);
+  }, []);
+
+  const resumeEditing = useCallback(() => {
+    confirmingRef.current = false;
+    setConfirmingDiscard(false);
+    returnFocusRef.current?.focus?.();
+    returnFocusRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (!open) return;
+    const id = nextModalId++;
+    idRef.current = id;
+    openModalStack.push(id);
+
+    const isTopmost = () =>
+      openModalStack[openModalStack.length - 1] === idRef.current;
+
     const onKeyDown = (event: KeyboardEvent) => {
+      if (!isTopmost()) return;
       if (event.key === "Escape") {
         event.stopPropagation();
-        onClose();
+        requestClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      // Keep Tab cycling inside the dialog: focus must never reach the page
+      // behind it while it is open.
+      const card = cardRef.current;
+      if (!card) return;
+      const focusables = Array.from(
+        card.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      ).filter(el => el.offsetParent !== null);
+      if (focusables.length === 0) {
+        event.preventDefault();
+        card.focus();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (!active || !card.contains(active)) {
+        // Focus escaped the dialog (e.g. the browser moved it to <body>) —
+        // pull it back instead of tabbing further outside.
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+        return;
+      }
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
+
     document.addEventListener("keydown", onKeyDown);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKeyDown);
+      const own = openModalStack.indexOf(id);
+      if (own !== -1) openModalStack.splice(own, 1);
       document.body.style.overflow = previousOverflow;
     };
-  }, [open, onClose]);
+  }, [open, requestClose]);
+
+  // Reset the unsaved-work tracking each time the modal opens, and let any
+  // real edit inside the card mark it dirty.
+  useEffect(() => {
+    if (!open) return;
+    dirtyRef.current = false;
+    confirmingRef.current = false;
+    setConfirmingDiscard(false);
+    const card = cardRef.current;
+    const markDirty = () => {
+      dirtyRef.current = true;
+    };
+    card?.addEventListener("input", markDirty, true);
+    card?.addEventListener("change", markDirty, true);
+    return () => {
+      card?.removeEventListener("input", markDirty, true);
+      card?.removeEventListener("change", markDirty, true);
+    };
+  }, [open]);
 
   // Move focus into the dialog so keyboard and screen-reader users land inside
   // it, and restore it to the trigger on close. Prefer the first *body* control
@@ -512,20 +642,27 @@ export function Modal({
     return () => previouslyFocused?.focus?.();
   }, [open]);
 
+  // When the discard warning appears, focus the safe choice — going back to
+  // the form — so an accidental Enter cannot throw the work away.
+  useEffect(() => {
+    if (confirmingDiscard) continueEditingRef.current?.focus();
+  }, [confirmingDiscard]);
+
   if (!open) return null;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--color-black)]/50 p-0 sm:items-center sm:p-4"
-      onClick={onClose}
+      onClick={requestClose}
     >
       <div
         ref={cardRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        tabIndex={-1}
         onClick={event => event.stopPropagation()}
-        className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[var(--radius-lg)] bg-[var(--color-canvas)] shadow-[var(--shadow)] sm:rounded-[var(--radius-lg)] ${
+        className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[var(--radius-lg)] bg-[var(--color-canvas)] shadow-[var(--shadow)] outline-none sm:rounded-[var(--radius-lg)] ${
           size === "wide" ? "sm:max-w-3xl" : "sm:max-w-lg"
         }`}
         style={{ overscrollBehavior: "contain" }}
@@ -546,7 +683,7 @@ export function Modal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label="ปิดหน้าต่างนี้"
             className="-mr-1 flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-body-muted)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
           >
@@ -557,6 +694,35 @@ export function Modal({
         <div data-modal-body className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           {children}
         </div>
+
+        {confirmingDiscard && (
+          <div
+            role="alert"
+            aria-live="polite"
+            className="border-t border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 px-5 py-3"
+          >
+            <p className="type-caption text-[var(--color-ink)]">
+              มีข้อมูลที่ยังไม่ได้บันทึก ปิดหน้าต่างนี้เลยหรือไม่?
+            </p>
+            <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                ref={continueEditingRef}
+                type="button"
+                onClick={resumeEditing}
+                className={DISMISS_BUTTON_CLASS}
+              >
+                แก้ไขต่อ
+              </button>
+              <button
+                type="button"
+                onClick={() => onCloseRef.current()}
+                className={DISCARD_BUTTON_CLASS}
+              >
+                ปิดโดยไม่บันทึก
+              </button>
+            </div>
+          </div>
+        )}
 
         {footer && (
           <div className="flex flex-col-reverse gap-2 border-t border-[var(--color-divider)] px-5 py-4 sm:flex-row sm:justify-end">

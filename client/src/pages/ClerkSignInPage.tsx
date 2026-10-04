@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { clerkAppearance } from "@/lib/clerkAppearance";
 import { Logo } from "@/components/layout/Logo";
 import { ErrorState } from "@/components/DesignSystem";
+import { LegalLinks } from "@/components/LegalLinks";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { ICON_SIZE } from "@/lib/icon-sizes";
@@ -73,6 +74,7 @@ export default function ClerkSignInPage() {
             appearance={clerkAppearance}
           />
         )}
+        <LegalLinks />
       </div>
     </div>
   );
