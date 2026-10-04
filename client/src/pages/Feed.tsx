@@ -142,6 +142,9 @@ export default function Feed() {
 
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [members, setMembers] = useState<MemberOption[]>([]);
+  // True when the groups dropdown failed to load: the form must say so instead
+  // of silently showing "no groups".
+  const [groupsError, setGroupsError] = useState(false);
   const [participantQuery, setParticipantQuery] = useState("");
 
   const [formOpen, setFormOpen] = useState(false);
@@ -179,9 +182,25 @@ export default function Feed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeFilter, statusFilter]);
 
+  const loadGroups = () => {
+    api
+      .get<GroupOption[]>("/api/groups")
+      .then(groups => {
+        setGroups(groups);
+        setGroupsError(false);
+      })
+      .catch(() => {
+        // A failed option fetch must not masquerade as "no groups": say so,
+        // keep the form usable (group binding is optional), and offer retry.
+        setGroups([]);
+        setGroupsError(true);
+        toast.error("โหลดรายชื่อกลุ่มไม่สำเร็จ กิจกรรมจะยังไม่ผูกกับกลุ่ม");
+      });
+  };
+
   useEffect(() => {
     if (!canCreate) return;
-    api.get<GroupOption[]>("/api/groups").then(setGroups).catch(() => setGroups([]));
+    loadGroups();
     fetchAllMembers<MemberOption>()
       .then(setMembers)
       .catch(() => {
@@ -529,6 +548,21 @@ export default function Feed() {
             )}
           </Field>
 
+          {groupsError && (
+            <div
+              role="alert"
+              className="type-caption flex items-center justify-between gap-2 rounded-[var(--radius-sm)] bg-[var(--color-warning)]/10 p-3 text-[var(--color-ink)]"
+            >
+              <span>โหลดรายชื่อกลุ่มไม่สำเร็จ จะบันทึกโดยไม่ผูกกลุ่มได้</span>
+              <button
+                type="button"
+                onClick={loadGroups}
+                className="type-caption-strong inline-flex min-h-11 shrink-0 items-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+              >
+                ลองอีกครั้ง
+              </button>
+            </div>
+          )}
           <Field label="กลุ่ม (ถ้ามี)">
             {(props) => (
               <select

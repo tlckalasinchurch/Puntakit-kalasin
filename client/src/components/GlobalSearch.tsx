@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,28 @@ export function GlobalSearch({
   const [query, setQuery] = useState("");
   const [, navigate] = useLocation();
   const hintId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const prominent = variant === "prominent";
+
+  // Cmd/Ctrl+K focuses the nearest search — desktop users expect it, and the
+  // hint is only advertised where the accelerator can work (physical keyboard).
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        const target = event.target as HTMLElement | null;
+        const typing =
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target?.isContentEditable;
+        if (typing) return;
+        event.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -52,10 +73,19 @@ export function GlobalSearch({
             className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-body-muted)]"
           />
           <Input
-            type="text"
+            ref={inputRef}
+            type="search"
             enterKeyHint="search"
+            autoComplete="off"
+            spellCheck={false}
             value={query}
             onChange={event => setQuery(event.target.value)}
+            onKeyDown={event => {
+              if (event.key === "Escape" && query) {
+                event.stopPropagation();
+                setQuery("");
+              }
+            }}
             placeholder={PLACEHOLDER}
             aria-label={LABEL}
             aria-describedby={hintId}

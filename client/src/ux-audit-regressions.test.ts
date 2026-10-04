@@ -291,3 +291,60 @@ describe("UX audit Batch D — visual consistency and performance", () => {
     expect(src).toMatch(/tabular-nums/);
   });
 });
+
+describe("UX audit Batch E — remaining low-severity items", () => {
+  it("GlobalSearch is a real search field with a Cmd/Ctrl+K accelerator", () => {
+    const src = read("client/src/components/GlobalSearch.tsx");
+    expect(src).toMatch(/type="search"/);
+    expect(src).toMatch(/autoComplete="off"/);
+    expect(src).toMatch(/spellCheck=\{false\}/);
+    expect(src).toMatch(/metaKey \|\| event\.ctrlKey/);
+    expect(src).toMatch(/"Escape" && query/);
+  });
+
+  it("theme-color follows the in-app theme toggle, not prefers-color-scheme", () => {
+    const html = read("client/index.html");
+    expect(html).toMatch(/<meta name="theme-color" content="#f5f5f7" \/>/);
+    expect(html).not.toMatch(/theme-color[^>]*media=/);
+    const ctx = read("client/src/contexts/ThemeContext.tsx");
+    expect(ctx).toMatch(/meta\[name="theme-color"\]/);
+    expect(ctx).toMatch(/"#000000" : "#f5f5f7"/);
+  });
+
+  it("ErrorBoundary speaks Thai and announces itself", () => {
+    const src = read("client/src/components/ErrorBoundary.tsx");
+    expect(src).toMatch(/role="alert"/);
+    expect(src).toMatch(/เกิดข้อผิดพลาดที่ไม่คาดคิด/);
+    expect(src).not.toMatch(/An unexpected error occurred/);
+  });
+
+  it("option fetches never masquerade as empty lists", () => {
+    const feed = read("client/src/pages/Feed.tsx");
+    expect(feed).toMatch(/setGroupsError\(true\)/);
+    expect(feed).toMatch(/loadGroups/);
+    expect(feed).not.toMatch(/catch\(\(\) => setGroups\(\[\]\)\)/);
+    const attendance = read("client/src/pages/Attendance.tsx");
+    expect(attendance).toMatch(/ตัวกรองกลุ่มยังใช้ไม่ได้ในตอนนี้/);
+    expect(attendance.match(/catch\(\(\) => \{\}\)/g) ?? []).toEqual([]);
+  });
+
+  it("both shells provide a skip link and a named main landmark", () => {
+    for (const rel of [
+      "client/src/components/layout/AppLayout.tsx",
+      "client/src/components/layout/MemberAppLayout.tsx",
+    ]) {
+      const src = read(rel);
+      expect(src).toMatch(/ข้ามไปที่เนื้อหาหลัก/);
+      expect(src).toMatch(/<main id="/);
+    }
+  });
+
+  it("opaque code fields opt out of spellcheck and autofill; touch gestures stay snappy", () => {
+    const attendance = read("client/src/pages/Attendance.tsx");
+    expect(attendance).toMatch(/spellCheck=\{false\}/);
+    expect(attendance).toMatch(/autoComplete="off"/);
+    const css = read("client/src/index.css");
+    expect(css).toMatch(/touch-action: manipulation/);
+    expect(css).toMatch(/-webkit-tap-highlight-color: transparent/);
+  });
+});

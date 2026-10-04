@@ -462,7 +462,7 @@ export default function MapPage() {
               ไม่พบพันธกิจที่ตรงกับตัวกรอง
             </p>
             <p className="type-caption max-w-sm text-[var(--color-body-muted)]">
-              ลองล้างคำค้นหรือเลือก "ทั้งหมด" เพื่อดูพันธกิจทุกประเภท
+              ลองล้างคำค้นหรือเลือก “ทั้งหมด” เพื่อดูพันธกิจทุกประเภท
             </p>
           </div>
         )}

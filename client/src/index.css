@@ -171,6 +171,17 @@
     /* Thai text is denser than Latin at the same size; a little extra leading
        is what keeps .type-caption readable rather than cramped. */
     line-height: 1.5;
+    /* The app paints its own pressed/focus states; Safari's grey flash on tap
+       would read as a second, conflicting feedback channel. */
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Kill the ~300ms double-tap-zoom delay on controls without disabling
+     pinch zoom (viewport meta keeps zoom enabled) or scrolling gestures. */
+  a,
+  button,
+  label,
+  [role="button"] {
+    touch-action: manipulation;
   }
   button,
   input,

@@ -70,6 +70,13 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
 
   return (
     <div className="relative mx-auto flex min-h-screen w-full max-w-[600px] flex-col bg-[var(--color-canvas-soft)] shadow-[var(--shadow)]">
+      <a
+        href="#member-app-main"
+        className="type-caption-strong sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-[var(--radius-sm)] focus:bg-[var(--color-canvas)] focus:px-4 focus:py-3 focus:text-[var(--color-ink)] focus:shadow-[var(--shadow)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-focus)]"
+      >
+        ข้ามไปที่เนื้อหาหลัก
+      </a>
+
       {/* Mobile app header — 60px sticky, token surfaces, no blue tint. */}
       <header className="sticky top-0 z-40 flex h-[60px] items-center justify-between gap-2 border-b border-[var(--color-divider)] bg-[var(--color-canvas)] px-4">
         <Link
@@ -106,7 +113,7 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
       </header>
 
       {/* Main content — bottom padding clears the fixed nav + safe area. */}
-      <main className="flex flex-1 flex-col gap-3.5 px-4 pb-[88px] pt-4">
+      <main id="member-app-main" className="flex flex-1 flex-col gap-3.5 px-4 pb-[88px] pt-4">
         {children}
       </main>
 
