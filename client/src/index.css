@@ -735,6 +735,7 @@
     min-width: 0;
     font-size: 10px;
   }
+}
 .login-shell {
   min-height: 100vh;
   display: flex;
@@ -1068,6 +1069,7 @@
   .coming-soon-card h1 {
     font-size: 25px;
   }
+}
 
 /* Home-specific dark tweaks. The token remap itself now lives on `.dark`
    globally, so Home no longer needs its own copy of the palette. */
