@@ -25,6 +25,7 @@ orgRouter.get("/overview", async (_req, res, next) => {
         parentGroupId: groups.parentGroupId,
         area: groups.area,
         description: groups.description,
+        leaderMemberId: groups.leaderMemberId,
         leaderName: members.name,
         memberCount: sql<number>`cast(count(distinct case when ${groupMembers.status} = 'active' then ${groupMembers.id} end) as int)`,
       })
@@ -53,11 +54,16 @@ orgRouter.get("/overview", async (_req, res, next) => {
             area: c.area,
             memberCount: c.memberCount,
             ...parseCareGroupDescription(c.description),
+            // A leader picked in the app (a real member) wins over the name
+            // that came in with the imported text.
+            ...(c.leaderName ? { careLeaderName: c.leaderName } : {}),
+            leaderMemberId: c.leaderMemberId,
           }));
         return {
           id: b.id,
           name: b.name,
           leaderName: b.leaderName,
+          leaderMemberId: b.leaderMemberId,
           careGroupCount: children.length,
           memberCount: children.reduce((n, c) => n + c.memberCount, 0),
           careGroups: children,
@@ -98,6 +104,9 @@ orgRouter.get("/care-groups/:id/members", async (req, res, next) => {
     const [body] = care.parentGroupId
       ? await db.select({ name: groups.name }).from(groups).where(eq(groups.id, care.parentGroupId)).limit(1)
       : [];
+    const [leader] = care.leaderMemberId
+      ? await db.select({ name: members.name }).from(members).where(eq(members.id, care.leaderMemberId)).limit(1)
+      : [];
 
     const rows = await db
       .select({
@@ -122,6 +131,7 @@ orgRouter.get("/care-groups/:id/members", async (req, res, next) => {
           location: care.meetingLocation,
           bodyName: body?.name ?? null,
           ...parseCareGroupDescription(care.description),
+          ...(leader ? { careLeaderName: leader.name } : {}),
         },
         members: rows.map((m) => {
           const { notes, ...rest } = m;

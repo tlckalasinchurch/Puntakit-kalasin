@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronRight, Lock, Search } from "lucide-react";
+import { ChevronRight, Lock, Pencil, Plus, Search, UserPlus, Users } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DataBar, EmptyState, ErrorState, InitialsAvatar, PageHeader } from "@/components/DesignSystem";
 import { CardGridSkeleton, ListSkeleton } from "@/components/LoadingStates";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
-import { PRIVILEGED_ROLES, hasRole } from "@shared/roles";
+import { Link } from "wouter";
+import { buttonVariants } from "@/components/ui/button";
+import { ADMIN_ROLES, PRIVILEGED_ROLES, hasRole } from "@shared/roles";
 
 /**
  * ผังองค์กร: ศบ. → บอดี้ → พันธกิจ → สมาชิก.
@@ -72,6 +74,8 @@ function Stat({ value, label }: { value: number; label: string }) {
 export default function OrgChart() {
   const { user } = useAuth();
   const canRead = hasRole(user?.role, PRIVILEGED_ROLES);
+  // Adding, editing and deleting live on /groups and /members; admins get shortcuts here.
+  const canManage = hasRole(user?.role, ADMIN_ROLES);
   const [data, setData] = useState<Overview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [bodyId, setBodyId] = useState<string | null>(null);
@@ -135,9 +139,10 @@ export default function OrgChart() {
       <PageHeader
         title="ผังองค์กร"
         description="เลือกบอดี้เพื่อดูพันธกิจ แล้วเลือกพันธกิจเพื่อดูรายชื่อสมาชิก"
+        primaryAction={canManage ? { label: "เพิ่มบอดี้", icon: Plus, href: "/groups?new=body" } : undefined}
         secondaryActions={[
-          { label: "จัดการกลุ่ม", href: "/groups" },
-          { label: "จัดการสมาชิก", href: "/members" },
+          { label: "รายการพันธกิจ", href: "/groups" },
+          { label: "สมาชิกทั้งหมด", href: "/members" },
         ]}
       />
 
@@ -223,6 +228,24 @@ export default function OrgChart() {
                     {body.careGroupCount} พันธกิจ · {th.format(body.memberCount)} สมาชิก
                   </p>
                 </div>
+                {canManage && (
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={`/groups?new=care&parent=${body.id}`}
+                      className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-dark)] hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] focus-visible:ring-offset-2"
+                    >
+                      <Plus size={16} aria-hidden="true" />
+                      เพิ่มพันธกิจ
+                    </Link>
+                    <Link
+                      href={`/groups?edit=${body.id}`}
+                      className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-semibold text-[var(--color-ink)] hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                    >
+                      <Pencil size={16} aria-hidden="true" />
+                      แก้ไข/ลบบอดี้
+                    </Link>
+                  </div>
+                )}
                 {body.careGroups.length > 6 && (
                   <label className="relative block sm:w-72">
                     <span className="sr-only">ค้นหาพันธกิจ</span>
@@ -243,11 +266,11 @@ export default function OrgChart() {
               ) : (
                 <ul className="card-surface divide-y divide-[var(--color-hairline)] overflow-hidden p-0">
                   {careGroups.map((c) => (
-                    <li key={c.id}>
+                    <li key={c.id} className="flex items-stretch">
                       <button
                         type="button"
                         onClick={() => setOpen(c)}
-                        className="flex min-h-11 w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-focus)] sm:px-5"
+                        className="flex min-h-11 min-w-0 flex-1 items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-focus)] sm:px-5"
                       >
                         <span className="min-w-0 flex-1">
                           <span className="type-body-strong block truncate text-[var(--color-ink)]">{c.name}</span>
@@ -264,6 +287,15 @@ export default function OrgChart() {
                         </span>
                         <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-[var(--color-body-muted)]" />
                       </button>
+                      {canManage && (
+                        <Link
+                          href={`/groups?edit=${c.id}`}
+                          aria-label={`แก้ไขพันธกิจ ${c.name}`}
+                          className="flex w-11 shrink-0 items-center justify-center text-[var(--color-body-muted)] hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-ink)]"
+                        >
+                          <Pencil size={16} aria-hidden="true" />
+                        </Link>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -285,6 +317,18 @@ export default function OrgChart() {
             </SheetDescription>
           </SheetHeader>
           <div className="px-4 pb-6">
+            {canManage && open && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                <Link href={`/members?new=1&care=${open.id}`} className={buttonVariants({ variant: "default", className: "min-h-11" })}>
+                  <UserPlus size={16} aria-hidden="true" />
+                  เพิ่มสมาชิกใหม่ในพันธกิจนี้
+                </Link>
+                <Link href={`/members?care=${open.id}`} className={buttonVariants({ variant: "outline", className: "min-h-11" })}>
+                  <Users size={16} aria-hidden="true" />
+                  จัดการสมาชิก
+                </Link>
+              </div>
+            )}
             {detailError ? (
               <ErrorState title="โหลดรายชื่อไม่สำเร็จ" description="กรุณาลองเปิดพันธกิจนี้อีกครั้ง" technical={detailError} onRetry={() => open && setOpen({ ...open })} />
             ) : !detail ? (

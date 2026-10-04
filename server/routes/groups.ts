@@ -527,6 +527,17 @@ groupsRouter.delete(
         throw new NotFoundError("ไม่พบกลุ่มที่ต้องการลบ");
       }
 
+      // A body that still has live พันธกิจ under it would leave them without a
+      // body. Ask the admin to move or delete them first.
+      const [child] = await db
+        .select({ id: groups.id })
+        .from(groups)
+        .where(and(eq(groups.parentGroupId, id), isNull(groups.deletedAt)))
+        .limit(1);
+      if (child) {
+        throw new ConflictError("บอดี้นี้ยังมีพันธกิจอยู่ ย้ายหรือลบพันธกิจก่อน แล้วค่อยลบบอดี้");
+      }
+
       await db
         .update(groups)
         .set({
