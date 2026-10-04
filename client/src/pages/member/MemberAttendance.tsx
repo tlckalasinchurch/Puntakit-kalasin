@@ -15,6 +15,7 @@ import { EmptyState, ErrorState, StatusChip } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { ListSkeleton } from "@/components/LoadingStates";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface AttendanceRecord {
   id: string;
@@ -34,6 +35,7 @@ const FILTER_LABELS: Record<FilterType, string> = {
 };
 
 export default function MemberAttendance() {
+  usePageTitle("ประวัติการเข้าร่วม");
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

@@ -34,7 +34,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = "ลบ",
-  busyLabel = "กำลังลบ...",
+  busyLabel = "กำลังลบ…",
   tone = "danger",
   details,
   isSubmitting,

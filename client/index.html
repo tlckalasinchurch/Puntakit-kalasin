@@ -12,6 +12,18 @@
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/icon.svg" />
     <link rel="manifest" href="/manifest.json" />
+    <!--
+      Prompt is requested as a head <link>, not a CSS @import: the @import sat
+      inside the bundled stylesheet, so the browser only discovered it after
+      downloading and parsing the whole bundle — a serial, render-blocking
+      round trip before any text could render.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800&display=swap"
+    />
     <title>Puntakit Kalasin - คริสตจักรชีวิตสุขสันต์กาฬสินธุ์</title>
   </head>
   <body>

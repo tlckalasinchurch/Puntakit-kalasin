@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { clerkAppearance } from "@/lib/clerkAppearance";
 import { Logo } from "@/components/layout/Logo";
 import { LegalLinks } from "@/components/LegalLinks";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 /**
  * Clerk-hosted sign-up rendered on the /signup route.
@@ -23,6 +24,7 @@ import { LegalLinks } from "@/components/LegalLinks";
  * carry the already-authenticated demo admin home, instead of a raw error.
  */
 export default function ClerkSignUpPage() {
+  usePageTitle("ลงทะเบียน");
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const isDemoMode = import.meta.env.VITE_PUNTAKIT_DEMO_MODE === "1";

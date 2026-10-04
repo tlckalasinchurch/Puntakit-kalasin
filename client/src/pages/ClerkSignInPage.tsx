@@ -9,9 +9,11 @@ import { LegalLinks } from "@/components/LegalLinks";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { ICON_SIZE } from "@/lib/icon-sizes";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 /** Clerk-hosted sign-in rendered on the /login route. */
 export default function ClerkSignInPage() {
+  usePageTitle("เข้าสู่ระบบ");
   const [, navigate] = useLocation();
   const { user, error, retry, logout } = useAuth();
   const isDemoMode = import.meta.env.VITE_PUNTAKIT_DEMO_MODE === "1";

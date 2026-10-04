@@ -12,6 +12,7 @@ import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { PRIVILEGED_ROLES as REPORT_ROLES } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface StatusCount {
   status: string;
@@ -44,6 +45,7 @@ function buildQuery(startDate: string, endDate: string): string {
 }
 
 export default function Reports() {
+  usePageTitle("รายงาน");
   const { user } = useAuth();
   const canView = Boolean(user?.role && REPORT_ROLES.includes(user.role));
 
@@ -153,12 +155,12 @@ export default function Reports() {
             <h2 className="type-caption-strong flex items-center gap-2 text-[var(--color-ink)]">
               <Users size={ICON_SIZE.sm} aria-hidden="true" /> สมาชิก
             </h2>
-            <p className="type-caption mt-2 text-[var(--color-body-muted)]">
-              ทั้งหมด {summary.members.total} คน
+            <p className="type-caption mt-2 tabular-nums text-[var(--color-body-muted)]">
+              ทั้งหมด {summary.members.total.toLocaleString("th-TH")} คน
             </p>
             {(startDate || endDate) && (
-              <p className="type-caption text-[var(--color-body-muted)]">
-                เข้าร่วมใหม่ในช่วงนี้ {summary.members.newInRange} คน
+              <p className="type-caption tabular-nums text-[var(--color-body-muted)]">
+                เข้าร่วมใหม่ในช่วงนี้ {summary.members.newInRange.toLocaleString("th-TH")} คน
               </p>
             )}
           </div>
@@ -166,27 +168,27 @@ export default function Reports() {
             <h2 className="type-caption-strong flex items-center gap-2 text-[var(--color-ink)]">
               <FileBarChart size={ICON_SIZE.sm} aria-hidden="true" /> พันธกิจ
             </h2>
-            <p className="type-caption mt-2 text-[var(--color-body-muted)]">
-              ทั้งหมด {summary.groups.total} กลุ่ม
+            <p className="type-caption mt-2 tabular-nums text-[var(--color-body-muted)]">
+              ทั้งหมด {summary.groups.total.toLocaleString("th-TH")} กลุ่ม
             </p>
           </div>
           <div className="card-surface p-4">
             <h2 className="type-caption-strong flex items-center gap-2 text-[var(--color-ink)]">
               <CalendarDays size={ICON_SIZE.sm} aria-hidden="true" /> การเข้าร่วม
             </h2>
-            <p className="type-caption mt-2 text-[var(--color-body-muted)]">
-              บันทึกทั้งหมด {summary.attendance.total} รายการ
+            <p className="type-caption mt-2 tabular-nums text-[var(--color-body-muted)]">
+              บันทึกทั้งหมด {summary.attendance.total.toLocaleString("th-TH")} รายการ
             </p>
-            <p className="type-caption text-[var(--color-body-muted)]">
-              อัตราการมา {summary.attendance.attendanceRate}%
+            <p className="type-caption tabular-nums text-[var(--color-body-muted)]">
+              อัตราการมา {summary.attendance.attendanceRate.toLocaleString("th-TH", { maximumFractionDigits: 1 })}%
             </p>
           </div>
           <div className="card-surface p-4">
             <h2 className="type-caption-strong flex items-center gap-2 text-[var(--color-ink)]">
               <CalendarDays size={ICON_SIZE.sm} aria-hidden="true" /> กิจกรรม
             </h2>
-            <p className="type-caption mt-2 text-[var(--color-body-muted)]">
-              ทั้งหมด {summary.events.total} รายการ
+            <p className="type-caption mt-2 tabular-nums text-[var(--color-body-muted)]">
+              ทั้งหมด {summary.events.total.toLocaleString("th-TH")} รายการ
             </p>
           </div>
         </div>

@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useResource } from "@/hooks/useResource";
 import { ApiError } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface Ministry {
   id: string;
@@ -44,6 +45,7 @@ const DANGER_BUTTON_CLASS =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-error)] bg-[var(--color-canvas)] px-4 text-sm font-semibold text-[var(--color-error)] transition-colors hover:bg-[var(--color-error)]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-error)] disabled:opacity-50";
 
 export default function Ministries() {
+  usePageTitle("พันธกิจ");
   const { user } = useAuth();
   // Mirrors the server's `requireAdmin` (shared/roles.ts ADMIN_ROLES).
   const isAdmin = hasRole(user?.role, ADMIN_ROLES);
@@ -187,7 +189,7 @@ export default function Ministries() {
               ยกเลิก
             </button>
             <button type="submit" form={formId} className={PRIMARY_BUTTON_CLASS} disabled={submitting}>
-              {submitting ? "กำลังบันทึก..." : "บันทึก"}
+              {submitting ? "กำลังบันทึก…" : "บันทึก"}
             </button>
           </>
         }

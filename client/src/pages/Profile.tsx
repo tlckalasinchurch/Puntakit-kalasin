@@ -7,8 +7,10 @@ import { EmptyState, PageHeader, StatusChip } from "@/components/DesignSystem";
 import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { ROLE_LABELS } from "@shared/labels";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function Profile() {
+  usePageTitle("โปรไฟล์ส่วนตัว");
   const { user, isLoading, logout } = useAuth();
   const [, navigate] = useLocation();
 

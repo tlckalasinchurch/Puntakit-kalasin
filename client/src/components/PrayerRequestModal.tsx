@@ -110,7 +110,7 @@ export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestMo
             disabled={submitting}
           >
             <Send size={ICON_SIZE.sm} aria-hidden="true" />
-            <span>{submitting ? "กำลังส่ง..." : "ส่งคำขออธิษฐาน"}</span>
+            <span>{submitting ? "กำลังส่ง…" : "ส่งคำขออธิษฐาน"}</span>
           </button>
         </>
       }

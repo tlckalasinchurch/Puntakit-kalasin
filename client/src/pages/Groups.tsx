@@ -48,6 +48,7 @@ import type {
   GroupStatus,
 } from "@shared/schema";
 import { ADMIN_ROLES, GROUP_MANAGE_ANY_ROLES, hasRole } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 type OrgLevel = "body" | "care";
 
@@ -280,6 +281,7 @@ function MenuItem({
 }
 
 export default function Groups() {
+  usePageTitle("กลุ่มแคร์");
   const { user } = useAuth();
   const [, navigate] = useLocation();
 

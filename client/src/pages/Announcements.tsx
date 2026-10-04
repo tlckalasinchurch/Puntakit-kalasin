@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useResource } from "@/hooks/useResource";
 import { ApiError } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface Announcement {
   id: string;
@@ -50,6 +51,7 @@ function formatDate(iso: string) {
 }
 
 export default function Announcements() {
+  usePageTitle("การประกาศ");
   const { user } = useAuth();
   // Mirrors the server's `requireAdmin` (shared/roles.ts ADMIN_ROLES).
   const isAdmin = hasRole(user?.role, ADMIN_ROLES);
@@ -206,7 +208,7 @@ export default function Announcements() {
               className={PRIMARY_BUTTON_CLASS}
               disabled={submitting}
             >
-              {submitting ? "กำลังบันทึก..." : "บันทึก"}
+              {submitting ? "กำลังบันทึก…" : "บันทึก"}
             </button>
           </>
         }
@@ -267,7 +269,7 @@ export default function Announcements() {
               ยกเลิก
             </button>
             <button type="button" className={DANGER_BUTTON_CLASS} onClick={handleDelete} disabled={deleting}>
-              {deleting ? "กำลังลบ..." : "ลบประกาศ"}
+              {deleting ? "กำลังลบ…" : "ลบประกาศ"}
             </button>
           </>
         }

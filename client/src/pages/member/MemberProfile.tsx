@@ -30,6 +30,7 @@ import {
 } from "@/components/DesignSystem";
 import { subscribeToPushNotifications } from "@/lib/pwa";
 import { MEMBERSHIP_STATUS_LABELS, ROLE_LABELS } from "@shared/labels";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface MemberProfileData {
   id: string;
@@ -52,6 +53,7 @@ const inputBase =
   "type-caption min-h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-ink)] placeholder:text-[var(--color-text-quaternary)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-focus)]";
 
 export default function MemberProfile() {
+  usePageTitle("โปรไฟล์และข้อมูลส่วนตัว");
   const { user, logout } = useAuth();
   const [, navigate] = useLocation();
 

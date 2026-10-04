@@ -1,8 +1,10 @@
 import { Home } from "lucide-react";
 import { useLocation } from "wouter";
 import { ICON_SIZE } from "@/lib/icon-sizes";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function NotFound() {
+  usePageTitle("ไม่พบหน้าที่ต้องการ");
   const [, setLocation] = useLocation();
 
   return (

@@ -31,6 +31,7 @@ import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { fetchAllMembers, fetchAllPages } from "@/lib/fetchAll";
 import type { AttendanceStatus, ServiceType } from "@shared/schema";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface MemberItem {
   id: string;
@@ -177,6 +178,7 @@ function MetricTile({
 }
 
 export default function Attendance() {
+  usePageTitle("ระบบเช็คชื่อและการเข้าร่วม");
   // Active Tab: "live" | "qr" | "absentees" | "reports"
   const [activeTab, setActiveTab] = useState<"live" | "qr" | "absentees" | "reports">("live");
 
@@ -711,7 +713,7 @@ export default function Attendance() {
                 className={`${PRIMARY_BUTTON_CLASS} mt-4 w-full`}
               >
                 <UserCheck size={ICON_SIZE.sm} aria-hidden="true" />
-                <span>{scanning ? "กำลังประมวลผล..." : "ยืนยันการเช็คชื่อ"}</span>
+                <span>{scanning ? "กำลังประมวลผล…" : "ยืนยันการเช็คชื่อ"}</span>
               </button>
             </form>
 

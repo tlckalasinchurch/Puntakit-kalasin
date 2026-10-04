@@ -34,6 +34,7 @@ import { api, ApiError, type ApiMeta } from "@/lib/api";
 import { fetchAllMembers } from "@/lib/fetchAll";
 import type { MissionActivityStatus, MissionActivityType } from "@shared/schema";
 import { CREATE_ROLES } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface FeedActivity {
   id: string;
@@ -126,6 +127,7 @@ function formatDateTime(iso: string) {
 }
 
 export default function Feed() {
+  usePageTitle("ฟีดกิจกรรมพันธกิจ");
   const { user } = useAuth();
 
   const [items, setItems] = useState<FeedActivity[]>([]);
@@ -464,7 +466,7 @@ export default function Feed() {
               ยกเลิก
             </button>
             <button type="submit" form="feed-activity-form" className={PRIMARY_BUTTON_CLASS} disabled={submitting}>
-              {submitting ? "กำลังบันทึก..." : "บันทึกเป็นฉบับร่าง"}
+              {submitting ? "กำลังบันทึก…" : "บันทึกเป็นฉบับร่าง"}
             </button>
           </>
         }

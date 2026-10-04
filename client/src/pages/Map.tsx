@@ -22,6 +22,7 @@ import {
 import { StatusChip } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 // Same labels the Groups page uses, so a group reads the same way everywhere.
 const CATEGORY_LABELS: Record<string, string> = {
@@ -226,6 +227,7 @@ function GroupDetailBody({ group }: { group: MapGroup }) {
 }
 
 export default function MapPage() {
+  usePageTitle("แผนที่กลุ่มแคร์");
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [category, setCategory] = useState<string | null>(null);

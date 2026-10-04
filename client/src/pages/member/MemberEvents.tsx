@@ -12,6 +12,7 @@ import { EmptyState, ErrorState, StatusChip } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { ListSkeleton } from "@/components/LoadingStates";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface EventItem {
   id: string;
@@ -42,6 +43,7 @@ const TABS: { id: MemberTab; label: string; icon: typeof CalendarDays }[] = [
 ];
 
 export default function MemberEvents() {
+  usePageTitle("ข่าวสารและกิจกรรม");
   const [tab, setTab] = useState<MemberTab>("events");
   const [eventsList, setEventsList] = useState<EventItem[]>([]);
   const [announcementsList, setAnnouncementsList] = useState<

@@ -13,6 +13,7 @@ import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface ChurchProfile {
   id: string;
@@ -30,6 +31,7 @@ const CONTROL_CLASS =
   "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:cursor-not-allowed disabled:bg-[var(--color-canvas-soft)] disabled:text-[var(--color-body-muted)]";
 
 export default function Church() {
+  usePageTitle("ข้อมูลคริสตจักร");
   const { user } = useAuth();
   // Mirrors the server's `requireAdmin` on PUT /api/church-profile
   // (shared/roles.ts ADMIN_ROLES).
@@ -188,7 +190,7 @@ export default function Church() {
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
                 >
                   <Save size={ICON_SIZE.sm} aria-hidden="true" />
-                  <span>{saving ? "กำลังบันทึก..." : "บันทึกข้อมูล"}</span>
+                  <span>{saving ? "กำลังบันทึก…" : "บันทึกข้อมูล"}</span>
                 </button>
               </div>
             )}

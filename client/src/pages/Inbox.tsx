@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError, type ApiMeta } from "@/lib/api";
 import type { MissionActivityType, MissionSubmissionStatus } from "@shared/schema";
 import { PRIVILEGED_ROLES as REVIEW_ROLES } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface SubmissionRow {
   id: string;
@@ -83,6 +84,7 @@ function formatDateTime(iso: string) {
 }
 
 export default function Inbox() {
+  usePageTitle("กล่องข้อมูลนำเข้า");
   const { user } = useAuth();
   const isReviewer = user && REVIEW_ROLES.includes(user.role);
 
@@ -366,7 +368,7 @@ export default function Inbox() {
               ยกเลิก
             </button>
             <button type="submit" form="inbox-capture-form" className={PRIMARY_BUTTON_CLASS} disabled={submitting}>
-              {submitting ? "กำลังบันทึก..." : "บันทึก"}
+              {submitting ? "กำลังบันทึก…" : "บันทึก"}
             </button>
           </>
         }
@@ -442,7 +444,7 @@ export default function Inbox() {
               ยกเลิก
             </button>
             <button type="submit" form="inbox-publish-form" className={PRIMARY_BUTTON_CLASS} disabled={publishing}>
-              {publishing ? "กำลังเผยแพร่..." : "สร้างกิจกรรม (ฉบับร่าง)"}
+              {publishing ? "กำลังเผยแพร่…" : "สร้างกิจกรรม (ฉบับร่าง)"}
             </button>
           </>
         }

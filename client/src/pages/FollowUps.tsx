@@ -16,6 +16,7 @@ import { ListSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError, type ApiMeta } from "@/lib/api";
 import type { FollowUpStatus } from "@shared/schema";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface FollowUpRow {
   id: string;
@@ -63,6 +64,7 @@ function isOverdue(row: FollowUpRow) {
 }
 
 export default function FollowUps() {
+  usePageTitle("รายการติดตาม");
   const [items, setItems] = useState<FollowUpRow[]>([]);
   const [meta, setMeta] = useState<ApiMeta | null>(null);
   const [page, setPage] = useState(1);

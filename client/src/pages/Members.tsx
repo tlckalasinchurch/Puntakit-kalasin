@@ -42,6 +42,7 @@ import {
   hasRole,
 } from "@shared/roles";
 import { useLocation, useSearch, useSearchParams } from "wouter";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 // Thai labels live in shared/labels.ts (same map the Member PWA renders), so
 // admin and member surfaces can never show different words for a status.
@@ -167,6 +168,7 @@ function MemberCard({
 }
 
 export default function Members() {
+  usePageTitle("สมาชิก");
   const { user } = useAuth();
   const [, navigate] = useLocation();
   // Gates mirror the server route gates exactly, from the shared sets in
