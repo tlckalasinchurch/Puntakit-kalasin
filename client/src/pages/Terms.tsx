@@ -1,5 +1,6 @@
 import { ArrowLeft, FileText } from "lucide-react";
 import { Link } from "wouter";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const sections = [
   {
@@ -49,6 +50,7 @@ const sections = [
 ];
 
 export default function Terms() {
+  usePageTitle("เงื่อนไขการใช้งานระบบ");
   return (
     <div className="login-shell" style={{ alignItems: "flex-start", overflowY: "auto", padding: "32px 16px" }}>
       <article

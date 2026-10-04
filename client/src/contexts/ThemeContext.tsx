@@ -37,6 +37,13 @@ export function ThemeProvider({
       root.classList.remove("dark");
     }
 
+    // Keep the browser chrome (address bar / status bar) in step with the
+    // in-app toggle: the meta tag's content is class-driven here, not driven
+    // by prefers-color-scheme, which never learns about this toggle.
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "dark" ? "#000000" : "#f5f5f7");
+
     if (switchable) {
       localStorage.setItem("theme", theme);
     }

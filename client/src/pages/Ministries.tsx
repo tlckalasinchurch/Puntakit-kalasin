@@ -8,6 +8,7 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  FormError,
   Modal,
   PageHeader,
   StatusChip,
@@ -17,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useResource } from "@/hooks/useResource";
 import { ApiError } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface Ministry {
   id: string;
@@ -43,6 +45,7 @@ const DANGER_BUTTON_CLASS =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-error)] bg-[var(--color-canvas)] px-4 text-sm font-semibold text-[var(--color-error)] transition-colors hover:bg-[var(--color-error)]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-error)] disabled:opacity-50";
 
 export default function Ministries() {
+  usePageTitle("พันธกิจ");
   const { user } = useAuth();
   // Mirrors the server's `requireAdmin` (shared/roles.ts ADMIN_ROLES).
   const isAdmin = hasRole(user?.role, ADMIN_ROLES);
@@ -52,6 +55,7 @@ export default function Ministries() {
   const [editing, setEditing] = useState<Ministry | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Ministry | null>(null);
   const [deleting, setDeleting] = useState(false);
   // Modal footer buttons submit the form by id.
@@ -60,17 +64,20 @@ export default function Ministries() {
   const openCreate = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
+    setFormError(null);
     setFormOpen(true);
   };
 
   const openEdit = (m: Ministry) => {
     setEditing(m);
     setForm({ name: m.name, description: m.description ?? "", leader: m.leader ?? "", status: m.status });
+    setFormError(null);
     setFormOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     setSubmitting(true);
     try {
       if (editing) {
@@ -82,7 +89,10 @@ export default function Ministries() {
       }
       setFormOpen(false);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
+      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -179,12 +189,13 @@ export default function Ministries() {
               ยกเลิก
             </button>
             <button type="submit" form={formId} className={PRIMARY_BUTTON_CLASS} disabled={submitting}>
-              {submitting ? "กำลังบันทึก..." : "บันทึก"}
+              {submitting ? "กำลังบันทึก…" : "บันทึก"}
             </button>
           </>
         }
       >
         <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {formError && <FormError>{formError}</FormError>}
           <Field label="ชื่อฝ่ายงาน" required>
             {(props) => (
               <input

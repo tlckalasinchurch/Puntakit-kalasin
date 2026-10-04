@@ -6,12 +6,14 @@ import { FormSkeleton } from "@/components/LoadingStates";
 import {
   ErrorState,
   Field,
+  FormError,
   PageHeader,
 } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface ChurchProfile {
   id: string;
@@ -29,6 +31,7 @@ const CONTROL_CLASS =
   "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:cursor-not-allowed disabled:bg-[var(--color-canvas-soft)] disabled:text-[var(--color-body-muted)]";
 
 export default function Church() {
+  usePageTitle("ข้อมูลคริสตจักร");
   const { user } = useAuth();
   // Mirrors the server's `requireAdmin` on PUT /api/church-profile
   // (shared/roles.ts ADMIN_ROLES).
@@ -39,6 +42,7 @@ export default function Church() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const load = () => {
     setIsLoading(true);
@@ -65,13 +69,17 @@ export default function Church() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     setSaving(true);
     try {
       const saved = await api.put<ChurchProfile>("/api/church-profile", form);
       setUpdatedAt(saved.updatedAt);
       toast.success("บันทึกข้อมูลคริสตจักรแล้ว");
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
+      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -91,6 +99,7 @@ export default function Church() {
           <ErrorState technical={error} onRetry={load} />
         ) : (
           <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+            {formError && <FormError>{formError}</FormError>}
             <Field label="ชื่อคริสตจักร" required>
               {(props) => (
                 <input
@@ -181,7 +190,7 @@ export default function Church() {
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
                 >
                   <Save size={ICON_SIZE.sm} aria-hidden="true" />
-                  <span>{saving ? "กำลังบันทึก..." : "บันทึกข้อมูล"}</span>
+                  <span>{saving ? "กำลังบันทึก…" : "บันทึกข้อมูล"}</span>
                 </button>
               </div>
             )}

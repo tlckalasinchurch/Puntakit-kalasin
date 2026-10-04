@@ -16,6 +16,7 @@ import { EmptyState, ErrorState } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { ListSkeleton } from "@/components/LoadingStates";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface GroupMember {
   id: string;
@@ -39,6 +40,7 @@ interface CareGroupInfo {
 }
 
 export default function MemberGroup() {
+  usePageTitle("กลุ่มแคร์ของฉัน");
   const [group, setGroup] = useState<CareGroupInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

@@ -1,7 +1,7 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { HeartHandshake, Lock, Send } from "lucide-react";
 import { toast } from "sonner";
-import { Field, Modal } from "@/components/DesignSystem";
+import { Field, FormError, Modal } from "@/components/DesignSystem";
 import { api, ApiError } from "@/lib/api";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import type { PrayerCategory } from "@shared/schema";
@@ -33,18 +33,34 @@ export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestMo
   const [category, setCategory] = useState<PrayerCategory>("spiritual");
   const [isConfidential, setIsConfidential] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const [contentError, setContentError] = useState<string | null>(null);
   // The submit button lives in the Modal footer (outside the <form>), so it
   // submits the form by id. Strip React's colons to keep the id selector-safe.
   const formId = `prayer-request-${useId().replace(/:/g, "")}`;
+
+  // Stale field errors must not greet the user the next time they open the form.
+  useEffect(() => {
+    if (open) {
+      setFormError(null);
+      setTitleError(null);
+      setContentError(null);
+    }
+  }, [open]);
 
   if (!open) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) {
-      toast.error("กรุณากรอกหัวข้อและรายละเอียดคำขออธิษฐาน");
-      return;
-    }
+    setFormError(null);
+    setTitleError(null);
+    setContentError(null);
+    // Inline validation next to each field (prompt §11) instead of a
+    // toast-only message that disappears before it can be read.
+    if (!title.trim()) setTitleError("กรุณากรอกหัวข้อคำอธิษฐาน");
+    if (!content.trim()) setContentError("กรุณากรอกรายละเอียดคำขออธิษฐาน");
+    if (!title.trim() || !content.trim()) return;
 
     setSubmitting(true);
     try {
@@ -62,7 +78,10 @@ export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestMo
       onClose();
       if (onSuccess) onSuccess();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "ส่งคำขออธิษฐานไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "ส่งคำขออธิษฐานไม่สำเร็จ";
+      setFormError(`${message} กรุณาลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -88,21 +107,22 @@ export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestMo
             type="submit"
             form={formId}
             className={SUBMIT_BUTTON_CLASS}
-            disabled={submitting || !title.trim() || !content.trim()}
+            disabled={submitting}
           >
             <Send size={ICON_SIZE.sm} aria-hidden="true" />
-            <span>{submitting ? "กำลังส่ง..." : "ส่งคำขออธิษฐาน"}</span>
+            <span>{submitting ? "กำลังส่ง…" : "ส่งคำขออธิษฐาน"}</span>
           </button>
         </>
       }
     >
       <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {formError && <FormError>{formError}</FormError>}
         <div className="flex items-center gap-2 text-[var(--color-primary)]">
           <HeartHandshake size={ICON_SIZE.md} aria-hidden="true" />
           <span className="type-caption-strong">แบ่งปันคำอธิษฐานกับทีมศิษยาภิบาล</span>
         </div>
 
-        <Field label="หัวข้อคำอธิษฐาน" required>
+        <Field label="หัวข้อคำอธิษฐาน" required error={titleError ?? undefined}>
           {(props) => (
             <input
               id={props.id}
@@ -137,7 +157,7 @@ export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestMo
           )}
         </Field>
 
-        <Field label="รายละเอียด" required>
+        <Field label="รายละเอียด" required error={contentError ?? undefined}>
           {(props) => (
             <textarea
               id={props.id}

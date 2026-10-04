@@ -31,6 +31,7 @@ import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { fetchAllMembers, fetchAllPages } from "@/lib/fetchAll";
 import type { AttendanceStatus, ServiceType } from "@shared/schema";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface MemberItem {
   id: string;
@@ -177,6 +178,7 @@ function MetricTile({
 }
 
 export default function Attendance() {
+  usePageTitle("ระบบเช็คชื่อและการเข้าร่วม");
   // Active Tab: "live" | "qr" | "absentees" | "reports"
   const [activeTab, setActiveTab] = useState<"live" | "qr" | "absentees" | "reports">("live");
 
@@ -227,7 +229,11 @@ export default function Attendance() {
     api
       .get<GroupOption[]>("/api/groups")
       .then((res) => setGroups(res || []))
-      .catch(() => {});
+      .catch(() => {
+        // The filter dropdown must not silently render empty on failure.
+        setGroups([]);
+        toast.error("โหลดรายชื่อกลุ่มไม่สำเร็จ ตัวกรองกลุ่มยังใช้ไม่ได้ในตอนนี้");
+      });
   }, []);
 
   // Generate Session QR Code
@@ -241,7 +247,10 @@ export default function Attendance() {
 
     QRCode.toDataURL(sessionPayload, { width: 280, margin: 2, color: { dark: "#272729", light: "#ffffff" } })
       .then(setSessionQrDataUrl)
-      .catch(() => {});
+      .catch(() => {
+        setSessionQrDataUrl("");
+        toast.error("สร้าง QR Code ของรอบนี้ไม่สำเร็จ ลองเปลี่ยนตัวเลือกเพื่อสร้างใหม่");
+      });
   }, [selectedService, selectedDate, selectedGroupId]);
 
   // Load Live Check-in Roster
@@ -696,6 +705,9 @@ export default function Attendance() {
                     aria-describedby={props["aria-describedby"]}
                     aria-invalid={props["aria-invalid"]}
                     type="text"
+                    inputMode="text"
+                    autoComplete="off"
+                    spellCheck={false}
                     autoFocus
                     placeholder="เช่น PK-MEM-123"
                     value={qrInputToken}
@@ -711,7 +723,7 @@ export default function Attendance() {
                 className={`${PRIMARY_BUTTON_CLASS} mt-4 w-full`}
               >
                 <UserCheck size={ICON_SIZE.sm} aria-hidden="true" />
-                <span>{scanning ? "กำลังประมวลผล..." : "ยืนยันการเช็คชื่อ"}</span>
+                <span>{scanning ? "กำลังประมวลผล…" : "ยืนยันการเช็คชื่อ"}</span>
               </button>
             </form>
 

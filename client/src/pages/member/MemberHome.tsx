@@ -23,6 +23,7 @@ import { api, ApiError } from "@/lib/api";
 import { subscribeToPushNotifications } from "@/lib/pwa";
 import { MEMBERSHIP_STATUS_LABELS } from "@shared/labels";
 import type { MembershipStatus } from "@shared/schema";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface PortalData {
   user: {
@@ -73,6 +74,7 @@ interface PortalData {
 }
 
 export default function MemberHome() {
+  usePageTitle("หน้าแรก");
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

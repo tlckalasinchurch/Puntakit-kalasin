@@ -6,6 +6,7 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  FormError,
   Modal,
   PageHeader,
   SectionHeader,
@@ -18,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useResource } from "@/hooks/useResource";
 import { ApiError } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface Event {
   id: string;
@@ -84,6 +86,7 @@ function formatDateTime(iso: string) {
 }
 
 export default function Events() {
+  usePageTitle("การนมัสการ / กิจกรรม");
   const { user } = useAuth();
   // Mirrors the server's `requireAdmin` (shared/roles.ts ADMIN_ROLES).
   const isAdmin = hasRole(user?.role, ADMIN_ROLES);
@@ -93,12 +96,14 @@ export default function Events() {
   const [editing, setEditing] = useState<Event | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Event | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const openCreate = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
+    setFormError(null);
     setFormOpen(true);
   };
 
@@ -112,11 +117,13 @@ export default function Events() {
       category: ev.category,
       status: ev.status,
     });
+    setFormError(null);
     setFormOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     setSubmitting(true);
     try {
       const payload = { ...form, eventDate: new Date(form.eventDate).toISOString() };
@@ -129,7 +136,10 @@ export default function Events() {
       }
       setFormOpen(false);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
+      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -254,12 +264,13 @@ export default function Events() {
               className={PRIMARY_BUTTON_CLASS}
               disabled={submitting}
             >
-              {submitting ? "กำลังบันทึก..." : "บันทึก"}
+              {submitting ? "กำลังบันทึก…" : "บันทึก"}
             </button>
           </>
         }
       >
         <form id="event-form" className="grid grid-cols-1 gap-5 sm:grid-cols-2" onSubmit={handleSubmit}>
+          {formError && <FormError>{formError}</FormError>}
           <div className="sm:col-span-2">
             <Field label="ชื่อกิจกรรม" required>
               {props => (
@@ -355,7 +366,7 @@ export default function Events() {
               ยกเลิก
             </button>
             <button type="button" className={DANGER_BUTTON_CLASS} onClick={handleDelete} disabled={deleting}>
-              {deleting ? "กำลังลบ..." : "ลบกิจกรรม"}
+              {deleting ? "กำลังลบ…" : "ลบกิจกรรม"}
             </button>
           </>
         }

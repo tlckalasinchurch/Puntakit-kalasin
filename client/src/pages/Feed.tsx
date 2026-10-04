@@ -18,6 +18,8 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  FormError,
+  ListPager,
   Modal,
   PageHeader,
   SectionHeader,
@@ -28,10 +30,11 @@ import {
 import { CardGridSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, type ApiMeta } from "@/lib/api";
 import { fetchAllMembers } from "@/lib/fetchAll";
 import type { MissionActivityStatus, MissionActivityType } from "@shared/schema";
 import { CREATE_ROLES } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface FeedActivity {
   id: string;
@@ -124,9 +127,12 @@ function formatDateTime(iso: string) {
 }
 
 export default function Feed() {
+  usePageTitle("ฟีดกิจกรรมพันธกิจ");
   const { user } = useAuth();
 
   const [items, setItems] = useState<FeedActivity[]>([]);
+  const [meta, setMeta] = useState<ApiMeta | null>(null);
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
@@ -136,16 +142,21 @@ export default function Feed() {
 
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [members, setMembers] = useState<MemberOption[]>([]);
+  // True when the groups dropdown failed to load: the form must say so instead
+  // of silently showing "no groups".
+  const [groupsError, setGroupsError] = useState(false);
   const [participantQuery, setParticipantQuery] = useState("");
 
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [titleError, setTitleError] = useState<string | null>(null);
   const [transitioningId, setTransitioningId] = useState<string | null>(null);
 
   const canCreate = user && CREATE_ROLES.includes(user.role);
 
-  const load = async () => {
+  const load = async (pageToLoad: number = page) => {
     setIsLoading(true);
     setError(null);
     setErrorTechnical(null);
@@ -153,9 +164,11 @@ export default function Feed() {
       const params = new URLSearchParams();
       if (typeFilter) params.set("type", typeFilter);
       if (statusFilter) params.set("status", statusFilter);
+      params.set("page", String(pageToLoad));
       params.set("limit", "30");
-      const data = await api.get<FeedActivity[]>(`/api/activities?${params.toString()}`);
-      setItems(data);
+      const res = await api.getWithMeta<FeedActivity[]>(`/api/activities?${params.toString()}`);
+      setItems(res.data || []);
+      setMeta(res.meta ?? null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "โหลดฟีดไม่สำเร็จ");
       setErrorTechnical(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
@@ -165,13 +178,29 @@ export default function Feed() {
   };
 
   useEffect(() => {
-    load();
+    load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeFilter, statusFilter]);
 
+  const loadGroups = () => {
+    api
+      .get<GroupOption[]>("/api/groups")
+      .then(groups => {
+        setGroups(groups);
+        setGroupsError(false);
+      })
+      .catch(() => {
+        // A failed option fetch must not masquerade as "no groups": say so,
+        // keep the form usable (group binding is optional), and offer retry.
+        setGroups([]);
+        setGroupsError(true);
+        toast.error("โหลดรายชื่อกลุ่มไม่สำเร็จ กิจกรรมจะยังไม่ผูกกับกลุ่ม");
+      });
+  };
+
   useEffect(() => {
     if (!canCreate) return;
-    api.get<GroupOption[]>("/api/groups").then(setGroups).catch(() => setGroups([]));
+    loadGroups();
     fetchAllMembers<MemberOption>()
       .then(setMembers)
       .catch(() => {
@@ -184,13 +213,17 @@ export default function Feed() {
   const openCreate = () => {
     setParticipantQuery("");
     setForm(EMPTY_FORM);
+    setFormError(null);
+    setTitleError(null);
     setFormOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+    setTitleError(null);
     if (!form.title.trim()) {
-      toast.error("กรุณากรอกหัวข้อ");
+      setTitleError("กรุณากรอกหัวข้อกิจกรรม");
       return;
     }
     setSubmitting(true);
@@ -209,7 +242,10 @@ export default function Feed() {
       setFormOpen(false);
       load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
+      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -307,7 +343,7 @@ export default function Feed() {
             title="โหลดฟีดกิจกรรมไม่สำเร็จ"
             description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
             technical={errorTechnical ?? undefined}
-            onRetry={load}
+            onRetry={() => load()}
           />
         ) : items.length === 0 ? (
           <EmptyState
@@ -319,11 +355,12 @@ export default function Feed() {
                 : "รอทีมงานบันทึกกิจกรรม แล้วกลับมาตรวจสอบอีกครั้ง"
             }
             action={
-              canCreate ? { label: "บันทึกกิจกรรม", icon: Camera, onClick: openCreate } : { label: "โหลดใหม่", onClick: load }
+              canCreate ? { label: "บันทึกกิจกรรม", icon: Camera, onClick: openCreate } : { label: "โหลดใหม่", onClick: () => load() }
             }
           />
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {items.map((activity) => {
               const isMine = user?.id === activity.createdById;
               const canAdvance = isMine || (user && CREATE_ROLES.includes(user.role));
@@ -424,6 +461,17 @@ export default function Feed() {
               );
             })}
           </div>
+          {!isLoading && !error && (
+            <ListPager
+              page={page}
+              totalPages={meta?.totalPages ?? 1}
+              onPageChange={p => {
+                setPage(p);
+                load(p);
+              }}
+            />
+          )}
+          </>
         )}
       </section>
 
@@ -437,12 +485,13 @@ export default function Feed() {
               ยกเลิก
             </button>
             <button type="submit" form="feed-activity-form" className={PRIMARY_BUTTON_CLASS} disabled={submitting}>
-              {submitting ? "กำลังบันทึก..." : "บันทึกเป็นฉบับร่าง"}
+              {submitting ? "กำลังบันทึก…" : "บันทึกเป็นฉบับร่าง"}
             </button>
           </>
         }
       >
         <form id="feed-activity-form" className="flex flex-col gap-5" onSubmit={handleSubmit}>
+          {formError && <FormError>{formError}</FormError>}
           <Field label="ประเภทกิจกรรม" required>
             {(props) => (
               <select
@@ -460,7 +509,7 @@ export default function Feed() {
             )}
           </Field>
 
-          <Field label="หัวข้อ" required>
+          <Field label="หัวข้อ" required error={titleError ?? undefined}>
             {(props) => (
               <input
                 {...props}
@@ -499,6 +548,21 @@ export default function Feed() {
             )}
           </Field>
 
+          {groupsError && (
+            <div
+              role="alert"
+              className="type-caption flex items-center justify-between gap-2 rounded-[var(--radius-sm)] bg-[var(--color-warning)]/10 p-3 text-[var(--color-ink)]"
+            >
+              <span>โหลดรายชื่อกลุ่มไม่สำเร็จ จะบันทึกโดยไม่ผูกกลุ่มได้</span>
+              <button
+                type="button"
+                onClick={loadGroups}
+                className="type-caption-strong inline-flex min-h-11 shrink-0 items-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+              >
+                ลองอีกครั้ง
+              </button>
+            </div>
+          )}
           <Field label="กลุ่ม (ถ้ามี)">
             {(props) => (
               <select

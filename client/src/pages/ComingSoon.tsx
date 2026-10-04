@@ -2,6 +2,7 @@ import { ArrowLeft, Bell, BookOpen, Settings } from "lucide-react";
 import { useLocation } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ICON_SIZE } from "@/lib/icon-sizes";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 // Only routes that are still genuinely unbuilt live here. /announcements,
 // /worship, /church and /ministries used to be listed but now render real
@@ -14,6 +15,7 @@ const pages: Record<string, { title: string; description: string; icon: typeof B
 export default function ComingSoon() {
   const [location, navigate] = useLocation();
   const page = pages[location] ?? pages["/settings"];
+  usePageTitle(page.title);
   const Icon = page.icon;
   return (
     <AppLayout>

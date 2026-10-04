@@ -35,6 +35,7 @@ import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { CREATE_ROLES, PRIVILEGED_ROLES as OPERATIONS_ROLES } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 // ---------------------------------------------------------------------------
 // Types (shapes of existing API responses)
@@ -581,6 +582,7 @@ function OperationalPulse({
 // ---------------------------------------------------------------------------
 
 export default function Home() {
+  usePageTitle("ภาพรวมพันธกิจ");
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const canSeeOperations = Boolean(

@@ -6,6 +6,8 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  FormError,
+  ListPager,
   Modal,
   PageHeader,
   SectionHeader,
@@ -15,9 +17,10 @@ import {
 import { ListSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, type ApiMeta } from "@/lib/api";
 import type { MissionActivityType, MissionSubmissionStatus } from "@shared/schema";
 import { PRIVILEGED_ROLES as REVIEW_ROLES } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface SubmissionRow {
   id: string;
@@ -81,10 +84,13 @@ function formatDateTime(iso: string) {
 }
 
 export default function Inbox() {
+  usePageTitle("กล่องข้อมูลนำเข้า");
   const { user } = useAuth();
   const isReviewer = user && REVIEW_ROLES.includes(user.role);
 
   const [items, setItems] = useState<SubmissionRow[]>([]);
+  const [meta, setMeta] = useState<ApiMeta | null>(null);
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
@@ -95,6 +101,7 @@ export default function Inbox() {
   const [rawMediaUrls, setRawMediaUrls] = useState<string[]>([]);
   const [submittedByLabel, setSubmittedByLabel] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
 
   const [publishTarget, setPublishTarget] = useState<SubmissionRow | null>(null);
   const [publishForm, setPublishForm] = useState({
@@ -103,17 +110,20 @@ export default function Inbox() {
     occurredAt: new Date().toISOString().slice(0, 16),
   });
   const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = async (pageToLoad: number = page) => {
     setIsLoading(true);
     setError(null);
     setErrorTechnical(null);
     try {
       const params = new URLSearchParams();
       if (statusFilter) params.set("status", statusFilter);
+      params.set("page", String(pageToLoad));
       params.set("limit", "50");
-      const data = await api.get<SubmissionRow[]>(`/api/submissions?${params.toString()}`);
-      setItems(data);
+      const res = await api.getWithMeta<SubmissionRow[]>(`/api/submissions?${params.toString()}`);
+      setItems(res.data || []);
+      setMeta(res.meta ?? null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "โหลดข้อมูลที่ส่งเข้ามาไม่สำเร็จ");
       setErrorTechnical(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
@@ -123,12 +133,13 @@ export default function Inbox() {
   };
 
   useEffect(() => {
-    load();
+    load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
   const submitCapture = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCaptureError(null);
     setSubmitting(true);
     try {
       await api.post("/api/submissions", {
@@ -143,7 +154,10 @@ export default function Inbox() {
       setSubmittedByLabel("");
       load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
+      setCaptureError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -161,6 +175,7 @@ export default function Inbox() {
 
   const openPublish = (row: SubmissionRow) => {
     setPublishTarget(row);
+    setPublishError(null);
     setPublishForm({
       type: "house_mission",
       title: row.rawText ? row.rawText.slice(0, 80) : "",
@@ -171,6 +186,7 @@ export default function Inbox() {
   const submitPublish = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!publishTarget) return;
+    setPublishError(null);
     setPublishing(true);
     try {
       await api.post(`/api/submissions/${publishTarget.id}/publish`, {
@@ -183,7 +199,10 @@ export default function Inbox() {
       setPublishTarget(null);
       load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "เผยแพร่ไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "เผยแพร่ไม่สำเร็จ";
+      setPublishError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setPublishing(false);
     }
@@ -196,7 +215,14 @@ export default function Inbox() {
       <PageHeader
         title="ข้อมูลที่ส่งเข้ามา"
         description="สิ่งที่ยังไม่ได้เป็นข้อมูลทางการ — พิมพ์สิ่งที่ได้รับ (เช่นจาก LINE) แล้วตรวจสอบก่อนเผยแพร่"
-        primaryAction={{ label: "บันทึกข้อมูลนำเข้า", icon: Plus, onClick: () => setCaptureOpen(true) }}
+        primaryAction={{
+          label: "บันทึกข้อมูลนำเข้า",
+          icon: Plus,
+          onClick: () => {
+            setCaptureError(null);
+            setCaptureOpen(true);
+          },
+        }}
       />
 
       <div className="mb-5 w-full sm:w-56">
@@ -229,17 +255,25 @@ export default function Inbox() {
             title="โหลดข้อมูลที่ส่งเข้ามาไม่สำเร็จ"
             description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
             technical={errorTechnical ?? undefined}
-            onRetry={load}
+            onRetry={() => load()}
           />
         ) : items.length === 0 ? (
           <EmptyState
             icon={InboxIcon}
             title="ยังไม่มีข้อมูลนำเข้า"
             description="พิมพ์ข้อความหรือลิงก์รูปที่ได้รับจากทีมภาคสนาม เพื่อตรวจสอบก่อนเผยแพร่เป็นกิจกรรมพันธกิจ"
-            action={{ label: "บันทึกข้อมูลนำเข้า", icon: Plus, onClick: () => setCaptureOpen(true) }}
+            action={{
+              label: "บันทึกข้อมูลนำเข้า",
+              icon: Plus,
+              onClick: () => {
+                setCaptureError(null);
+                setCaptureOpen(true);
+              },
+            }}
           />
         ) : (
-          <div className="space-y-3">
+          <>
+            <div className="space-y-3">
             {items.map(row => (
               <article
                 key={row.id}
@@ -310,6 +344,17 @@ export default function Inbox() {
               </article>
             ))}
           </div>
+          {!isLoading && !error && (
+            <ListPager
+              page={page}
+              totalPages={meta?.totalPages ?? 1}
+              onPageChange={p => {
+                setPage(p);
+                load(p);
+              }}
+            />
+          )}
+          </>
         )}
       </section>
 
@@ -323,12 +368,13 @@ export default function Inbox() {
               ยกเลิก
             </button>
             <button type="submit" form="inbox-capture-form" className={PRIMARY_BUTTON_CLASS} disabled={submitting}>
-              {submitting ? "กำลังบันทึก..." : "บันทึก"}
+              {submitting ? "กำลังบันทึก…" : "บันทึก"}
             </button>
           </>
         }
       >
         <form id="inbox-capture-form" className="flex flex-col gap-5" onSubmit={submitCapture}>
+          {captureError && <FormError>{captureError}</FormError>}
           <Field label="ข้อความที่ได้รับ">
             {props => (
               <textarea
@@ -398,12 +444,13 @@ export default function Inbox() {
               ยกเลิก
             </button>
             <button type="submit" form="inbox-publish-form" className={PRIMARY_BUTTON_CLASS} disabled={publishing}>
-              {publishing ? "กำลังเผยแพร่..." : "สร้างกิจกรรม (ฉบับร่าง)"}
+              {publishing ? "กำลังเผยแพร่…" : "สร้างกิจกรรม (ฉบับร่าง)"}
             </button>
           </>
         }
       >
         <form id="inbox-publish-form" className="flex flex-col gap-5" onSubmit={submitPublish}>
+          {publishError && <FormError>{publishError}</FormError>}
           <Field label="ประเภทกิจกรรม" required>
             {props => (
               <select

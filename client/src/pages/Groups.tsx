@@ -48,6 +48,7 @@ import type {
   GroupStatus,
 } from "@shared/schema";
 import { ADMIN_ROLES, GROUP_MANAGE_ANY_ROLES, hasRole } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 type OrgLevel = "body" | "care";
 
@@ -280,6 +281,7 @@ function MenuItem({
 }
 
 export default function Groups() {
+  usePageTitle("กลุ่มแคร์");
   const { user } = useAuth();
   const [, navigate] = useLocation();
 
@@ -314,6 +316,11 @@ export default function Groups() {
   // Delete dialog
   const [deleteTarget, setDeleteTarget] = useState<GroupItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Remove-member dialog — removing a member is destructive enough to confirm
+  // (reversible afterwards via "รับกลับเข้ากลุ่ม", but never immediate).
+  const [removeTarget, setRemoveTarget] = useState<GroupMemberItem | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   // Group Members modal
   const [activeGroup, setActiveGroup] = useState<GroupItem | null>(null);
@@ -574,17 +581,21 @@ export default function Groups() {
     }
   };
 
-  const handleRemoveMemberFromGroup = async (memberId: string) => {
-    if (!activeGroup) return;
+  const handleRemoveMemberFromGroup = async () => {
+    if (!activeGroup || !removeTarget) return;
+    setRemoving(true);
     try {
-      await api.delete(`/api/groups/${activeGroup.id}/members/${memberId}`);
+      await api.delete(`/api/groups/${activeGroup.id}/members/${removeTarget.memberId}`);
       toast.success("นำสมาชิกออกจากกลุ่มเรียบร้อยแล้ว (สถานะเป็น inactive)");
       // Reload members list to show updated status
       const res = await api.get<{ members: GroupMemberItem[] }>(`/api/groups/${activeGroup.id}`);
       setGroupMembersList(res.members || []);
       fetchGroups();
+      setRemoveTarget(null);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "ไม่สามารถนำสมาชิกออกได้");
+    } finally {
+      setRemoving(false);
     }
   };
 
@@ -1411,7 +1422,7 @@ export default function Groups() {
                         type="button"
                         onClick={() =>
                           gm.status === "active"
-                            ? handleRemoveMemberFromGroup(gm.memberId)
+                            ? setRemoveTarget(gm)
                             : handleReactivateMember(gm.memberId)
                         }
                         className="type-caption-strong inline-flex min-h-11 items-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
@@ -1443,6 +1454,18 @@ export default function Groups() {
           isSubmitting={deleting}
           onConfirm={handleDeleteGroup}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {/* Remove-member Confirmation Dialog */}
+      {removeTarget && (
+        <ConfirmDialog
+          title="ยืนยันการนำออกจากกลุ่ม"
+          description={`คุณแน่ใจหรือไม่ว่าต้องการนำ ${removeTarget.memberName} ออกจากกลุ่ม "${activeGroup?.name ?? ""}"? ระบบจะเปลี่ยนสถานะเป็นพ้นสภาพ และสามารถรับกลับเข้ากลุ่มได้ภายหลัง`}
+          confirmLabel={removing ? "กำลังนำออก…" : "นำออกจากกลุ่ม"}
+          isSubmitting={removing}
+          onConfirm={handleRemoveMemberFromGroup}
+          onCancel={() => setRemoveTarget(null)}
         />
       )}
     </AppLayout>
