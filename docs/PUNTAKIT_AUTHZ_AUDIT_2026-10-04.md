@@ -48,3 +48,27 @@ A member belongs to a care group through an active `group_members` row.
 | `/api/admin/users…` | super_admin | — | handler check (admin gets 403) |
 
 Not changed: `org`, `reports`, `import`, `orgData` (PRIV or admin only), `portal` (own record), events, announcements, ministries, church profile (admin writes).
+
+## Changes made (phase 3)
+- `server/lib/careScope.ts` (new): one definition of "assigned" and the scope helpers.
+- `shared/roles.ts`: `DIRECTORY_ROLES`, `CONTACT_VISIBLE_ROLES`.
+- `members.ts`, `groups.ts`, `attendance.ts`, `care.ts`, `activities.ts`, `followUps.ts`, `dashboard.ts`: role gates and scope checks as in the matrix above.
+  `verifyGroupManagementAccess` no longer accepts "leader of the group through a linked member row"; only `leader_id` / `co_leader_id` count.
+- `care.ts`: new `GET /api/care/groups` (the care groups the caller may check in). `CareToday.tsx` reads it instead of `/api/org/overview`, which a group leader cannot call.
+- `adminUsers.ts` + `AdminUsers.tsx`: giving a care group to someone else returns 409 with the group and current leader; the page asks, then resends with `replaceExisting: true`.
+- `activities.test.ts`: the create step now makes the creator lead the group first (the old test relied on a leader filing for a group they did not lead), then withdraws the leadership so the "no longer leads the group" cases still run.
+
+## Behaviour changes to know about
+- Role `member` now gets 403 on the member, group-roster and attendance endpoints and an empty `recentMembers`. The member app does not call them (it uses `/api/me/*`).
+- Role `viewer` is unchanged except that phone numbers in rosters, attendance rows and the attendance export are masked, and leader account emails are hidden.
+- A group leader's `PUT /api/members/:id` can no longer set `careGroupId` or `assignedLeaderId`.
+
+## Tests
+`server/routes/tenantScope.test.ts` (13 tests, real PGlite, synthetic fixtures). With the four route files reverted to `main`, 10 of the 13 fail; with the fix all pass.
+
+## Not covered
+- Production: Clerk sign-in, Neon `db.batch` atomicity (NOT VERIFIED IN PRODUCTION), real data volumes.
+- A `member` or `viewer` can still find a phone number by searching digits in `GET /api/members?search=` (masked output, but the filter matches the stored value). Not changed.
+- `group_leader` may publish activities of their own group (existing rule).
+- `staff` and `ministry_leader` see all members, as before.
+- `members.user_id` and `groups.leader_member_id` grant no rights.

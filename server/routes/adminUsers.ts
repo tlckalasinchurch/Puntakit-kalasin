@@ -23,7 +23,11 @@ adminUsersRouter.use(requireAuth, (req, _res, next) => {
 });
 
 const roleSchema = z.object({ role: z.enum(USER_ROLES) });
-const careGroupsSchema = z.object({ groupIds: z.array(z.string().uuid()).max(200) });
+const careGroupsSchema = z.object({
+  groupIds: z.array(z.string().uuid()).max(200),
+  /** Must be true to take a care group away from a different current leader. */
+  replaceExisting: z.boolean().optional(),
+});
 
 adminUsersRouter.get("/", async (req, res, next) => {
   try {
@@ -96,6 +100,22 @@ adminUsersRouter.put("/:id/care-groups", async (req, res, next) => {
         .where(and(inArray(groups.id, wanted), eq(groups.orgLevel, "care"), isNull(groups.deletedAt)));
       if (live.length !== wanted.length) throw new ValidationError("มีพันธกิจที่ไม่พบในระบบ", [{ field: "groupIds", message: "unknown care group" }]);
     }
+    // Taking a group from another leader is a decision, not a side effect:
+    // without `replaceExisting` the request is refused and names the groups.
+    if (wanted.length && !parsed.data.replaceExisting) {
+      const taken = await db
+        .select({ id: groups.id, name: groups.name, leaderName: users.name })
+        .from(groups)
+        .innerJoin(users, eq(groups.leaderId, users.id))
+        .where(and(inArray(groups.id, wanted), sql`${groups.leaderId} <> ${target.id}`));
+      if (taken.length) {
+        throw new ConflictError(
+          `พันธกิจ ${taken.length} รายการมีหัวหน้าอยู่แล้ว`,
+          taken.map((t) => ({ field: "groupIds", message: `${t.name.trim()} — หัวหน้าเดิม ${t.leaderName}` }))
+        );
+      }
+    }
+
     const before = await db
       .select({ id: groups.id })
       .from(groups)

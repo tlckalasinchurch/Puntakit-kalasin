@@ -16,10 +16,16 @@ import {
   groupMemberUpdateSchema,
   groupQuerySchema,
 } from "../../shared/validation.js";
-import { ADMIN_ROLES, GROUP_MANAGE_ANY_ROLES } from "../../shared/roles.js";
+import {
+  ADMIN_ROLES,
+  DIRECTORY_ROLES,
+  GROUP_MANAGE_ANY_ROLES,
+  PRIVILEGED_ROLES,
+} from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
+import { assertGroupInScope, isScopedRole, leadsGroup, phoneForRole } from "../lib/careScope.js";
 
 export const groupsRouter = Router();
 
@@ -83,51 +89,23 @@ async function verifyGroupManagementAccess(req: Request, groupId: string) {
     return true;
   }
 
-  if (user.role === "group_leader") {
-    const db = getDb();
-    const [group] = await db
-      .select({ id: groups.id, leaderId: groups.leaderId, coLeaderId: groups.coLeaderId })
-      .from(groups)
-      .where(and(eq(groups.id, groupId), isNull(groups.deletedAt)))
-      .limit(1);
-
-    if (!group) {
-      throw new NotFoundError("ไม่พบข้อมูลกลุ่มที่ระบุ");
-    }
-
-    if (group.leaderId === user.id || group.coLeaderId === user.id) {
-      return true;
-    }
-
-    // Also check if user has leader or assistant_leader role in active group_members
-    // Find linked member record for user
-    const [linkedMember] = await db
-      .select({ id: members.id })
-      .from(members)
-      .where(and(eq(members.userId, user.id), isNull(members.deletedAt)))
-      .limit(1);
-
-    if (linkedMember) {
-      const [membership] = await db
-        .select({ role: groupMembers.role })
-        .from(groupMembers)
-        .where(
-          and(
-            eq(groupMembers.groupId, groupId),
-            eq(groupMembers.memberId, linkedMember.id),
-            eq(groupMembers.status, "active"),
-            inArray(groupMembers.role, ["leader", "assistant_leader"])
-          )
-        )
-        .limit(1);
-
-      if (membership) {
-        return true;
-      }
-    }
+  // A group_leader manages only the groups assigned to them (leader_id or
+  // co_leader_id) — the same rule every other route uses (`careScope.ts`).
+  if (user.role === "group_leader" && (await leadsGroup(user.id, groupId))) {
+    return true;
   }
 
   throw new ForbiddenError("คุณไม่มีสิทธิ์ในการจัดการกลุ่มนี้");
+}
+
+/** Leader account emails are for staff; everyone else gets the name only. */
+function maskLeaderEmail<T extends { leaderEmail?: string | null }>(group: T, req: Request): T {
+  return PRIVILEGED_ROLES.includes(req.user!.role) ? group : { ...group, leaderEmail: null };
+}
+
+/** Roster phone numbers: unmasked only for the roles `maskSensitiveData` also trusts, or the leader of this group. */
+function rosterPhone(phone: string | null, req: Request): string | null {
+  return phoneForRole(phone, req.user!.role);
 }
 
 // Helper to mask location and coordinates for private/confidential groups for non-privileged users
@@ -249,7 +227,7 @@ groupsRouter.get("/", async (req, res, next) => {
     // Apply privacy masking for each group
     const maskedRows = rows.map((g) => {
       const isLeader = g.leaderId === req.user!.id || g.coLeaderId === req.user!.id;
-      return maskGroupLocation(g, req, isLeader);
+      return maskLeaderEmail(maskGroupLocation(g, req, isLeader), req);
     });
 
     res.json({
@@ -262,9 +240,10 @@ groupsRouter.get("/", async (req, res, next) => {
 });
 
 // 2. GET /:id - Group details with active member list and real-time attendance stats
-groupsRouter.get("/:id", async (req, res, next) => {
+groupsRouter.get("/:id", requireRole(...DIRECTORY_ROLES), async (req, res, next) => {
   try {
     const { id } = req.params;
+    await assertGroupInScope(req, id);
     const db = getDb();
 
     const [group] = await db
@@ -368,13 +347,13 @@ groupsRouter.get("/:id", async (req, res, next) => {
 
     const activeMembers = membersList.filter((m) => m.status === "active");
 
-    const maskedGroup = maskGroupLocation(group, req, isActiveMember);
+    const maskedGroup = maskLeaderEmail(maskGroupLocation(group, req, isActiveMember), req);
 
     res.json({
       success: true,
       data: {
         ...maskedGroup,
-        members: membersList,
+        members: membersList.map((m) => ({ ...m, memberPhone: rosterPhone(m.memberPhone, req) })),
         activeMemberCount: activeMembers.length,
         totalMemberCount: membersList.length,
       },
@@ -461,6 +440,22 @@ groupsRouter.put("/:id", async (req, res, next) => {
 
     if (!existing) {
       throw new NotFoundError("ไม่พบกลุ่มที่ต้องการแก้ไข");
+    }
+
+    if (isScopedRole(req.user!.role)) {
+      // A group leader edits meeting details. Who leads the group, where it
+      // sits in the org chart, who may see it and its status stay with admins.
+      const norm = (v: unknown) => (v === "" || v === undefined ? null : v);
+      const protectedFields = [
+        "name", "leaderId", "coLeaderId", "orgLevel", "parentGroupId", "leaderMemberId",
+        "category", "privacy", "status", "area",
+      ] as const;
+      const changed = protectedFields.filter(
+        (f) => f in parsed.data && norm((parsed.data as Record<string, unknown>)[f]) !== norm((existing as Record<string, unknown>)[f])
+      );
+      if (changed.length) {
+        throw new ForbiddenError(`ผู้นำพันธกิจแก้ไขช่องเหล่านี้ไม่ได้: ${changed.join(", ")}`);
+      }
     }
 
     const org: OrgFields = {
@@ -568,9 +563,10 @@ groupsRouter.delete(
 );
 
 // 6. GET /:id/members - Get members of group with real-time last attended date
-groupsRouter.get("/:id/members", async (req, res, next) => {
+groupsRouter.get("/:id/members", requireRole(...DIRECTORY_ROLES), async (req, res, next) => {
   try {
     const { id } = req.params;
+    await assertGroupInScope(req, id);
     const db = getDb();
 
     const [group] = await db
@@ -623,7 +619,7 @@ groupsRouter.get("/:id/members", async (req, res, next) => {
 
     res.json({
       success: true,
-      data: rows,
+      data: rows.map((m) => ({ ...m, memberPhone: rosterPhone(m.memberPhone, req) })),
     });
   } catch (err) {
     next(err);
@@ -667,6 +663,28 @@ groupsRouter.post("/:id/members", async (req, res, next) => {
 
     if (!member) {
       throw new NotFoundError("ไม่พบสมาชิกที่ระบุ");
+    }
+
+    // A group leader may add only people who are not yet in another care
+    // group. Adding someone from another group would widen their own scope.
+    if (isScopedRole(req.user!.role)) {
+      const [elsewhere] = await db
+        .select({ id: groupMembers.id })
+        .from(groupMembers)
+        .innerJoin(groups, eq(groupMembers.groupId, groups.id))
+        .where(
+          and(
+            eq(groupMembers.memberId, memberId),
+            eq(groupMembers.status, "active"),
+            eq(groups.orgLevel, "care"),
+            isNull(groups.deletedAt),
+            sql`${groups.id} <> ${id}`
+          )
+        )
+        .limit(1);
+      if (elsewhere) {
+        throw new ForbiddenError("สมาชิกท่านนี้อยู่ในพันธกิจอื่น ต้องให้ผู้ดูแลระบบย้าย");
+      }
     }
 
     // Check if membership already exists (active or inactive)

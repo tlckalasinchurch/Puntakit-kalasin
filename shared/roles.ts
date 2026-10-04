@@ -73,3 +73,13 @@ export function hasRole(role: UserRole | undefined, allowed: readonly UserRole[]
 
 /** Manage user accounts: change a role, assign care groups (`/api/admin/users`). */
 export const SUPER_ADMIN_ROLES: readonly UserRole[] = ["super_admin"];
+
+/**
+ * Read the member/group/attendance directory. `viewer` is read-only; a
+ * `group_leader` is included but the server limits them to the groups they
+ * lead (`server/lib/careScope.ts`). The `member` role is not included.
+ */
+export const DIRECTORY_ROLES: readonly UserRole[] = [...PRIVILEGED_ROLES, "viewer", "group_leader"];
+
+/** Roles that see member contact data unmasked (same rule as `maskSensitiveData`). */
+export const CONTACT_VISIBLE_ROLES: readonly UserRole[] = ["super_admin", "admin", "staff"];

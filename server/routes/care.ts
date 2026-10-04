@@ -2,6 +2,7 @@ import { Router } from "express";
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/client.js";
 import { attendanceRecords, groupMembers, groups, members } from "../../shared/schema.js";
+import { assertGroupInScope, getLedGroupIds, isScopedRole } from "../lib/careScope.js";
 import { CREATE_ROLES } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { NotFoundError, ValidationError } from "../lib/errors.js";
@@ -22,10 +23,50 @@ const present = new Set(["present", "online"]);
 /** Local calendar date as YYYY-MM-DD (the app records attendance by calendar day). */
 const dayKey = (d: Date | string) => new Date(d).toISOString().slice(0, 10);
 
+/**
+ * Care groups the caller may check in: every care group for staff-level roles,
+ * only the groups they lead for a group_leader (none when unassigned). Same
+ * `{ bodies: [{ name, careGroups: [{ id, name }] }] }` shape the page already reads.
+ */
+careRouter.get("/groups", async (req, res, next) => {
+  try {
+    const db = getDb();
+    const led = isScopedRole(req.user!.role) ? await getLedGroupIds(req.user!.id) : null;
+    const cares = await db
+      .select({ id: groups.id, name: groups.name, parentGroupId: groups.parentGroupId })
+      .from(groups)
+      .where(
+        and(
+          eq(groups.orgLevel, "care"),
+          isNull(groups.deletedAt),
+          led ? (led.length ? inArray(groups.id, led) : sql`false`) : undefined
+        )
+      )
+      .orderBy(asc(groups.name));
+    const bodyRows = await db
+      .select({ id: groups.id, name: groups.name })
+      .from(groups)
+      .where(and(eq(groups.orgLevel, "body"), isNull(groups.deletedAt)))
+      .orderBy(asc(groups.name));
+    const bodies = bodyRows
+      .map((b) => ({
+        name: b.name,
+        careGroups: cares.filter((c) => c.parentGroupId === b.id).map((c) => ({ id: c.id, name: c.name.trim() })),
+      }))
+      .filter((b) => b.careGroups.length > 0);
+    const orphans = cares.filter((c) => !bodyRows.some((b) => b.id === c.parentGroupId));
+    if (orphans.length) bodies.push({ name: "ไม่ระบุบอดี้", careGroups: orphans.map((c) => ({ id: c.id, name: c.name.trim() })) });
+    res.json({ success: true, data: { bodies } });
+  } catch (err) {
+    next(err);
+  }
+});
+
 careRouter.get("/groups/:id/roster", async (req, res, next) => {
   try {
     const id = req.params.id;
     if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ValidationError("รหัสพันธกิจไม่ถูกต้อง", [{ field: "id", message: "uuid" }]);
+    await assertGroupInScope(req, id);
     const date = typeof req.query.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date) ? req.query.date : dayKey(new Date());
 
     const db = getDb();

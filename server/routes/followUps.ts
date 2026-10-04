@@ -17,6 +17,7 @@ import {
   followUpUpdateSchema,
 } from "../../shared/validation.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { assertGroupInScope, assertMembersInScope, getLedGroupIds, isScopedRole } from "../lib/careScope.js";
 import { CREATE_ROLES, PRIVILEGED_ROLES } from "../../shared/roles.js";
 import { logAudit } from "../lib/audit.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
@@ -44,15 +45,6 @@ function isPrivileged(role: UserRole): boolean {
   return PRIVILEGED_ROLES.includes(role);
 }
 
-async function getLedGroupIds(userId: string): Promise<string[]> {
-  const db = getDb();
-  const rows = await db
-    .select({ id: groups.id })
-    .from(groups)
-    .where(and(isNull(groups.deletedAt), or(eq(groups.leaderId, userId), eq(groups.coLeaderId, userId))));
-  return rows.map((r) => r.id);
-}
-
 async function canAccess(
   req: Request,
   followUp: { ownerId: string | null; createdById: string | null; subjectGroupId: string | null }
@@ -65,6 +57,19 @@ async function canAccess(
     return ledGroupIds.includes(followUp.subjectGroupId);
   }
   return false;
+}
+
+/** A group_leader follows up only people and groups in their own scope, and owns the task themselves. */
+async function assertFollowUpScope(
+  req: Request,
+  subjectMemberId: string | null | undefined,
+  subjectGroupId: string | null | undefined,
+  ownerId: string | null | undefined
+): Promise<void> {
+  if (!isScopedRole(req.user!.role)) return;
+  if (subjectMemberId) await assertMembersInScope(req, [subjectMemberId]);
+  if (subjectGroupId) await assertGroupInScope(req, subjectGroupId);
+  if (ownerId && ownerId !== req.user!.id) throw new ForbiddenError("ผู้นำพันธกิจมอบหมายงานติดตามให้ผู้อื่นไม่ได้");
 }
 
 async function fetchDetail(id: string) {
@@ -197,6 +202,7 @@ followUpsRouter.post("/", requireRole(...CREATE_ROLES), async (req, res, next) =
 
     const db = getDb();
     const { subjectMemberId, subjectGroupId, activityId, ownerId, note, dueAt, title } = parsed.data;
+    await assertFollowUpScope(req, subjectMemberId, subjectGroupId, ownerId);
 
     const [created] = await db
       .insert(followUps)
@@ -245,6 +251,7 @@ followUpsRouter.put("/:id", async (req, res, next) => {
     }
 
     const { subjectMemberId, subjectGroupId, activityId, ownerId, note, dueAt, title } = parsed.data;
+    await assertFollowUpScope(req, subjectMemberId, subjectGroupId, ownerId);
     const nextSubjectMemberId = subjectMemberId !== undefined ? subjectMemberId || null : existing.subjectMemberId;
     const nextSubjectGroupId = subjectGroupId !== undefined ? subjectGroupId || null : existing.subjectGroupId;
     if (!nextSubjectMemberId && !nextSubjectGroupId) {

@@ -12,7 +12,7 @@ import { api, ApiError } from "@/lib/api";
  *   home    : who should be called (missed 2+ meetings in a row) + one big button
  *   checkin : tap the names of the people who came, then save
  *
- * Data: GET /api/org/overview (which care groups exist), GET
+ * Data: GET /api/care/groups (which care groups the caller may use), GET
  * /api/care/groups/:id/roster (members, today's marks, consecutive misses) and
  * POST /api/attendance/bulk (save). Clay surfaces come from `.clay-*` in
  * index.css; nothing here is invented: an empty list says it is empty.
@@ -76,7 +76,7 @@ export default function CareToday() {
 
   useEffect(() => {
     api
-      .get<{ bodies: BodyOption[] }>("/api/org/overview")
+      .get<{ bodies: BodyOption[] }>("/api/care/groups")
       .then((o) => {
         setBodies(o.bodies);
         const all = o.bodies.flatMap((b) => b.careGroups);

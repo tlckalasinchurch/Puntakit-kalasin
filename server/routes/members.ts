@@ -10,6 +10,7 @@ import {
 } from "../../shared/validation.js";
 import {
   ADMIN_ROLES,
+  DIRECTORY_ROLES,
   MEMBER_CREATE_ROLES,
   MEMBER_UPDATE_ROLES,
 } from "../../shared/roles.js";
@@ -18,10 +19,22 @@ import { logAudit } from "../lib/audit.js";
 import { runAtomically } from "../lib/atomicWrites.js";
 import { careGroupsOf, careMembershipStatements, requireCareGroup } from "../lib/careMembership.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
+import { getScopedMemberIds, isScopedRole } from "../lib/careScope.js";
 
 export const membersRouter = Router();
 
 membersRouter.use(requireAuth);
+// The `member` role has no business with the directory; a `group_leader` is
+// limited below to the members of the groups they lead.
+membersRouter.use(requireRole(...DIRECTORY_ROLES));
+
+/**
+ * `null` = no limit (every role except group_leader). Otherwise the ids a
+ * group_leader may touch; an empty array means "nothing".
+ */
+async function memberScope(req: Request): Promise<string[] | null> {
+  return isScopedRole(req.user!.role) ? getScopedMemberIds(req.user!.id) : null;
+}
 
 /**
  * Applies the role-based field mask to a member row.
@@ -119,6 +132,9 @@ membersRouter.get("/", async (req, res, next) => {
       );
     }
 
+    const scope = await memberScope(req);
+    if (scope) conditions.push(scope.length ? inArray(members.id, scope) : sql`false`);
+
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Total count for pagination
@@ -182,6 +198,8 @@ membersRouter.get("/check-duplicate", async (req, res, next) => {
     const conditions = [];
     if (phone) conditions.push(eq(members.phone, phone));
     if (email) conditions.push(eq(members.email, email));
+    // A group leader may only learn about people in their own groups.
+    const dupScope = await memberScope(req);
 
     const checkQuery = db
       .select({ id: members.id, name: members.name, phone: members.phone, email: members.email })
@@ -190,6 +208,7 @@ membersRouter.get("/check-duplicate", async (req, res, next) => {
         and(
           isNull(members.deletedAt),
           excludeId ? sql`${members.id} != ${excludeId}` : undefined,
+          dupScope ? (dupScope.length ? inArray(members.id, dupScope) : sql`false`) : undefined,
           or(...conditions)
         )
       )
@@ -222,10 +241,13 @@ membersRouter.get(
   async (req, res, next) => {
     try {
       const db = getDb();
+      const scope = await memberScope(req);
       const rows = await db
         .select()
         .from(members)
-        .where(isNull(members.deletedAt))
+        .where(
+          and(isNull(members.deletedAt), scope ? (scope.length ? inArray(members.id, scope) : sql`false`) : undefined)
+        )
         .orderBy(members.name);
 
       const headers = [
@@ -300,6 +322,10 @@ membersRouter.get("/:id", async (req, res, next) => {
       .from(members)
       .where(and(eq(members.id, req.params.id), isNull(members.deletedAt)))
       .limit(1);
+
+    // Out of scope looks the same as missing, so ids cannot be probed.
+    const scope = await memberScope(req);
+    if (row && scope && !scope.includes(row.id)) throw new NotFoundError("ไม่พบข้อมูลสมาชิกที่ต้องการ");
 
     if (!row) {
       throw new NotFoundError("ไม่พบข้อมูลสมาชิกที่ต้องการ");
@@ -417,6 +443,16 @@ membersRouter.put(
 
       if (!existing) {
         throw new NotFoundError("ไม่พบสมาชิกที่ต้องการแก้ไข");
+      }
+
+      const scope = await memberScope(req);
+      if (scope) {
+        if (!scope.includes(existing.id)) throw new NotFoundError("ไม่พบสมาชิกที่ต้องการแก้ไข");
+        // Moving a person between care groups, or choosing who may see their
+        // contact data, is an administrator's decision.
+        if (parsed.data.careGroupId !== undefined || parsed.data.assignedLeaderId !== undefined) {
+          throw new ForbiddenError("การย้ายพันธกิจหรือกำหนดผู้ดูแลต้องให้ผู้ดูแลระบบดำเนินการ");
+        }
       }
 
       // Check duplicates excluding current member

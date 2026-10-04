@@ -209,9 +209,11 @@ function CareGroupSheet({ user, onClose, onSaved }: { user: UserRow | null; onCl
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
+  const [conflicts, setConflicts] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (!user) return;
+    setConflicts(null);
     setPicked(new Set(user.careGroups.map((g) => g.id)));
     setQuery("");
     setLoadError(null);
@@ -233,15 +235,21 @@ function CareGroupSheet({ user, onClose, onSaved }: { user: UserRow | null; onCl
 
   const shown = (options ?? []).filter((o) => !query.trim() || o.name.includes(query.trim()));
 
-  async function save() {
+  async function save(replaceExisting = false) {
     if (!user) return;
     setSaving(true);
     try {
-      await api.put(`/api/admin/users/${user.id}/care-groups`, { groupIds: Array.from(picked) });
+      await api.put(`/api/admin/users/${user.id}/care-groups`, { groupIds: Array.from(picked), replaceExisting });
       toast.success(`บันทึกพันธกิจของ ${user.name} แล้ว (${picked.size} พันธกิจ)`);
+      setConflicts(null);
       await onSaved();
     } catch (err) {
-      toast.error(errorText(err, "บันทึกไม่สำเร็จ"));
+      // 409: some groups already have another leader. Ask before taking them over.
+      if (err instanceof ApiError && err.status === 409 && err.details?.length) {
+        setConflicts(err.details.map((d) => d.message));
+      } else {
+        toast.error(errorText(err, "บันทึกไม่สำเร็จ"));
+      }
     } finally {
       setSaving(false);
     }
@@ -253,7 +261,7 @@ function CareGroupSheet({ user, onClose, onSaved }: { user: UserRow | null; onCl
         <SheetHeader>
           <SheetTitle className="type-lead pr-8 text-[var(--color-ink)]">พันธกิจที่ {user?.name} ดูแล</SheetTitle>
           <SheetDescription className="type-caption text-[var(--color-body-muted)]">
-            เลือกได้หลายพันธกิจ ถ้าเลือกพันธกิจที่มีหัวหน้าคนอื่นอยู่ หัวหน้าเดิมจะถูกแทนที่
+            เลือกได้หลายพันธกิจ ถ้าพันธกิจมีหัวหน้าคนอื่นอยู่ ระบบจะถามยืนยันก่อนเปลี่ยน
           </SheetDescription>
         </SheetHeader>
         <div className="flex min-h-0 flex-1 flex-col gap-3 px-4">
@@ -306,7 +314,7 @@ function CareGroupSheet({ user, onClose, onSaved }: { user: UserRow | null; onCl
           <span className="type-caption text-[var(--color-body-muted)]">เลือกแล้ว {picked.size} พันธกิจ</span>
           <button
             type="button"
-            onClick={save}
+            onClick={() => save(false)}
             disabled={saving || !options}
             className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
           >
@@ -314,6 +322,19 @@ function CareGroupSheet({ user, onClose, onSaved }: { user: UserRow | null; onCl
           </button>
         </div>
       </SheetContent>
+      {conflicts && (
+        <ConfirmDialog
+          title="เปลี่ยนหัวหน้าพันธกิจ"
+          description="พันธกิจต่อไปนี้มีหัวหน้าอยู่แล้ว ถ้ายืนยัน หัวหน้าเดิมจะไม่ได้ดูแลพันธกิจเหล่านี้อีก"
+          tone="danger"
+          confirmLabel="ยืนยันเปลี่ยน"
+          busyLabel="กำลังบันทึก..."
+          details={conflicts}
+          isSubmitting={saving}
+          onConfirm={() => save(true)}
+          onCancel={() => setConflicts(null)}
+        />
+      )}
     </Sheet>
   );
 }

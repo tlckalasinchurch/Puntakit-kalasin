@@ -12,7 +12,7 @@ import {
   users,
 } from "../../shared/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { PRIVILEGED_ROLES as OPERATIONS_ROLES } from "../../shared/roles.js";
+import { DIRECTORY_ROLES, PRIVILEGED_ROLES as OPERATIONS_ROLES } from "../../shared/roles.js";
 
 export const dashboardRouter = Router();
 
@@ -21,7 +21,7 @@ dashboardRouter.use(requireAuth);
 // OPERATIONS_ROLES is the shared PRIVILEGED_ROLES set (shared/roles.ts).
 const INACTIVE_GROUP_DAYS = 14;
 
-dashboardRouter.get("/summary", async (_req, res, next) => {
+dashboardRouter.get("/summary", async (req, res, next) => {
   try {
     const db = getDb();
 
@@ -100,7 +100,8 @@ dashboardRouter.get("/summary", async (_req, res, next) => {
         needFollowUp,
         followedUp,
         activeMembers,
-        recentMembers,
+        // Names and follow-up status of the newest people: directory roles only.
+        recentMembers: DIRECTORY_ROLES.includes(req.user!.role) && req.user!.role !== "group_leader" ? recentMembers : [],
         recentAnnouncements,
       },
     });

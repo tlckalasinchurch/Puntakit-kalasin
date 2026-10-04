@@ -17,17 +17,26 @@ import {
   consecutiveAbsenceQuerySchema,
   qrCheckInSchema,
 } from "../../shared/validation.js";
-import { ADMIN_ROLES } from "../../shared/roles.js";
+import { ADMIN_ROLES, CREATE_ROLES, DIRECTORY_ROLES, PRIVILEGED_ROLES } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
+import { assertGroupInScope, assertMembersInScope, getScopedMemberIds, isScopedRole, phoneForRole } from "../lib/careScope.js";
 
 export const attendanceRouter = Router();
 
 attendanceRouter.use(requireAuth);
 
+// Reads: the directory roles (a group_leader sees only their own members).
+// Writes: the roles that may record attendance (a group_leader only for their
+// own members). Org-wide summary and the CSV export: privileged roles only.
+// The `member` role uses `/api/me/attendance` for its own history instead.
+const canRead = requireRole(...DIRECTORY_ROLES);
+const canRecord = requireRole(...CREATE_ROLES);
+const orgWide = requireRole(...PRIVILEGED_ROLES);
+
 // 1. GET / - List attendance records with filtering and pagination
-attendanceRouter.get("/", async (req, res, next) => {
+attendanceRouter.get("/", canRead, async (req, res, next) => {
   try {
     const parsed = attendanceQuerySchema.safeParse(req.query);
     if (!parsed.success) {
@@ -61,6 +70,11 @@ attendanceRouter.get("/", async (req, res, next) => {
     }
     if (status) {
       conditions.push(eq(attendanceRecords.status, status));
+    }
+
+    if (isScopedRole(req.user!.role)) {
+      const scope = await getScopedMemberIds(req.user!.id);
+      conditions.push(scope.length ? inArray(attendanceRecords.memberId, scope) : sql`false`);
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -104,7 +118,7 @@ attendanceRouter.get("/", async (req, res, next) => {
 
     res.json({
       success: true,
-      data: rows,
+      data: rows.map((r) => ({ ...r, memberPhone: phoneForRole(r.memberPhone, req.user!.role) })),
       meta: {
         page,
         limit,
@@ -118,7 +132,7 @@ attendanceRouter.get("/", async (req, res, next) => {
 });
 
 // 2. POST /check-in - Single member check-in (Manual or Staff scanner)
-attendanceRouter.post("/check-in", async (req, res, next) => {
+attendanceRouter.post("/check-in", canRecord, async (req, res, next) => {
   try {
     const parsed = attendanceInputSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -130,6 +144,8 @@ attendanceRouter.post("/check-in", async (req, res, next) => {
 
     const { date, serviceType, groupId, eventId, memberId, status, checkInMethod, notes } = parsed.data;
     const db = getDb();
+    if (groupId) await assertGroupInScope(req, groupId);
+    await assertMembersInScope(req, [memberId]);
 
     // Verify member exists
     const [member] = await db
@@ -228,7 +244,7 @@ attendanceRouter.post("/check-in", async (req, res, next) => {
 });
 
 // 3. POST /bulk - Bulk check-in for group or service session
-attendanceRouter.post("/bulk", async (req, res, next) => {
+attendanceRouter.post("/bulk", canRecord, async (req, res, next) => {
   try {
     const parsed = bulkAttendanceInputSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -240,6 +256,8 @@ attendanceRouter.post("/bulk", async (req, res, next) => {
 
     const { date, serviceType, groupId, eventId, records } = parsed.data;
     const db = getDb();
+    if (groupId) await assertGroupInScope(req, groupId);
+    await assertMembersInScope(req, records.map((r) => r.memberId));
     const checkDate = new Date(date);
     const dayStart = new Date(checkDate);
     dayStart.setHours(0, 0, 0, 0);
@@ -318,7 +336,7 @@ attendanceRouter.post("/bulk", async (req, res, next) => {
 });
 
 // 4. POST /qr-scan - Process QR check-in
-attendanceRouter.post("/qr-scan", async (req, res, next) => {
+attendanceRouter.post("/qr-scan", canRecord, async (req, res, next) => {
   try {
     const parsed = qrCheckInSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -364,6 +382,8 @@ attendanceRouter.post("/qr-scan", async (req, res, next) => {
     if (!member) {
       throw new NotFoundError("ไม่พบข้อมูลสมาชิกจากรหัส QR ที่สแกน");
     }
+    if (groupId) await assertGroupInScope(req, groupId);
+    await assertMembersInScope(req, [member.id]);
 
     const checkDate = date ? new Date(date) : new Date();
     const dayStart = new Date(checkDate);
@@ -432,7 +452,7 @@ attendanceRouter.post("/qr-scan", async (req, res, next) => {
       success: true,
       data: {
         attendance: record,
-        member,
+        member: { ...member, phone: phoneForRole(member.phone, req.user!.role) },
       },
       message: `เช็คชื่อสำเร็จ: ${member.name}`,
     });
@@ -442,7 +462,7 @@ attendanceRouter.post("/qr-scan", async (req, res, next) => {
 });
 
 // 5. GET /absentees - Detect consecutive absentees (pastoral follow-up)
-attendanceRouter.get("/absentees", async (req, res, next) => {
+attendanceRouter.get("/absentees", canRead, async (req, res, next) => {
   try {
     const parsed = consecutiveAbsenceQuerySchema.safeParse(req.query);
     if (!parsed.success) {
@@ -486,7 +506,8 @@ attendanceRouter.get("/absentees", async (req, res, next) => {
       });
     }
 
-    // 2. Fetch all active members
+    // 2. Fetch all active members (a group leader: only their own)
+    const absenteeScope = isScopedRole(req.user!.role) ? await getScopedMemberIds(req.user!.id) : null;
     const activeMembers = await db
       .select({
         id: members.id,
@@ -506,7 +527,8 @@ attendanceRouter.get("/absentees", async (req, res, next) => {
       .where(
         and(
           isNull(members.deletedAt),
-          inArray(members.membershipStatus, ["active", "candidate", "visitor"])
+          inArray(members.membershipStatus, ["active", "candidate", "visitor"]),
+          absenteeScope ? (absenteeScope.length ? inArray(members.id, absenteeScope) : sql`false`) : undefined
         )
       );
 
@@ -555,6 +577,8 @@ attendanceRouter.get("/absentees", async (req, res, next) => {
 
         absentees.push({
           ...m,
+          phone: phoneForRole(m.phone, req.user!.role),
+          leaderEmail: PRIVILEGED_ROLES.includes(req.user!.role) ? m.leaderEmail : null,
           consecutiveAbsenceCount: recentDates.length,
           lastAttendedDate: lastRecord ? lastRecord.date : null,
         });
@@ -577,7 +601,7 @@ attendanceRouter.get("/absentees", async (req, res, next) => {
 });
 
 // 6. GET /summary - Attendance statistics & trends
-attendanceRouter.get("/summary", async (_req, res, next) => {
+attendanceRouter.get("/summary", orgWide, async (_req, res, next) => {
   try {
     const db = getDb();
     const now = new Date();
@@ -641,7 +665,7 @@ attendanceRouter.get("/summary", async (_req, res, next) => {
 });
 
 // 7. GET /export - Export attendance records as UTF-8 CSV
-attendanceRouter.get("/export", async (req, res, next) => {
+attendanceRouter.get("/export", orgWide, async (req, res, next) => {
   try {
     const db = getDb();
     const rows = await db
@@ -710,7 +734,7 @@ attendanceRouter.get("/export", async (req, res, next) => {
         `"${r.groupName || "-"}"`,
         `"${r.memberName.replace(/"/g, '""')}"`,
         `"${r.memberNickname || "-"}"`,
-        `"${r.memberPhone || "-"}"`,
+        `"${phoneForRole(r.memberPhone, req.user!.role) || "-"}"`,
         `"${statusMap[r.status] || r.status}"`,
         `"${methodMap[r.checkInMethod] || r.checkInMethod}"`,
         `"${r.checkerName || "-"}"`,
