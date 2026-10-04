@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronRight, Lock, Pencil, Plus, Search, UserPlus, Users } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DataBar, EmptyState, ErrorState, InitialsAvatar, PageHeader } from "@/components/DesignSystem";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { CardGridSkeleton, ListSkeleton } from "@/components/LoadingStates";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
@@ -72,6 +73,7 @@ function Stat({ value, label }: { value: number; label: string }) {
 }
 
 export default function OrgChart() {
+  usePageTitle("ผังองค์กร");
   const { user } = useAuth();
   const canRead = hasRole(user?.role, PRIVILEGED_ROLES);
   // Adding, editing and deleting live on /groups and /members; admins get shortcuts here.
@@ -282,7 +284,7 @@ export default function OrgChart() {
                           <DataBar value={c.memberCount} max={maxCare} label={`${c.name}: สมาชิก ${c.memberCount} คน`} />
                         </span>
                         <span className="w-14 text-right">
-                          <span className="type-body-strong block tabular-nums text-[var(--color-ink)]">{c.memberCount}</span>
+                          <span className="type-body-strong block tabular-nums text-[var(--color-ink)]">{c.memberCount.toLocaleString("th-TH")}</span>
                           <span className="type-fine block text-[var(--color-body-muted)]">คน</span>
                         </span>
                         <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-[var(--color-body-muted)]" />

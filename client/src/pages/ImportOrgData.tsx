@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Lock } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { EmptyState, PageHeader } from "@/components/DesignSystem";
@@ -7,6 +7,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 /**
  * Admin → โหลดข้อมูลผังองค์กร. The admin picks the prepared dataset file
@@ -42,11 +43,13 @@ const OUTLINE = `${BUTTON} border border-[var(--color-hairline)] text-[var(--col
 export default function ImportOrgData() {
   const { user } = useAuth();
   const isAdmin = hasRole(user?.role, ADMIN_ROLES);
+  usePageTitle("โหลดข้อมูลผังองค์กร");
   const [dataset, setDataset] = useState<unknown>(null);
   const [fileName, setFileName] = useState("");
   const [dry, setDry] = useState<DryRun | null>(null);
   const [done, setDone] = useState<(Done & { kind: "apply" | "rollback" }) | null>(null);
   const [busy, setBusy] = useState(false);
+  const [busyOp, setBusyOp] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<"apply" | "rollback" | null>(null);
 
@@ -80,6 +83,7 @@ export default function ImportOrgData() {
 
   const run = async <T,>(path: string, confirm: boolean): Promise<T | null> => {
     setBusy(true);
+    setBusyOp(path);
     setError(null);
     try {
       return await api.post<T>(`/api/org-data/${path}`, { dataset, confirm });
@@ -88,6 +92,7 @@ export default function ImportOrgData() {
       return null;
     } finally {
       setBusy(false);
+      setBusyOp(null);
     }
   };
 
@@ -138,17 +143,20 @@ export default function ImportOrgData() {
         )}
         <div className="mt-4 flex flex-wrap gap-3">
           <button type="button" className={OUTLINE} disabled={busy || dataset === null} onClick={() => void onDryRun()}>
-            ตรวจสอบก่อน (ยังไม่บันทึก)
+            {busyOp === "dry-run" && <Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+            {busyOp === "dry-run" ? "กำลังตรวจสอบ…" : "ตรวจสอบก่อน (ยังไม่บันทึก)"}
           </button>
           <button type="button" className={PRIMARY} disabled={busy || !dry} onClick={() => setConfirming("apply")}>
-            โหลดข้อมูล
+            {busyOp === "apply" && <Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+            {busyOp === "apply" ? "กำลังโหลด…" : "โหลดข้อมูล"}
           </button>
           <button type="button" className={OUTLINE} disabled={busy || dataset === null} onClick={() => setConfirming("rollback")}>
-            ถอนกลับ
+            {busyOp === "rollback" && <Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+            {busyOp === "rollback" ? "กำลังถอนกลับ…" : "ถอนกลับ"}
           </button>
         </div>
         {error && (
-          <p role="alert" className="type-caption mt-3 text-[var(--color-danger,#b42318)]">
+          <p role="alert" className="type-caption mt-3 text-[var(--color-error)]">
             {error}
           </p>
         )}
@@ -158,10 +166,10 @@ export default function ImportOrgData() {
         <section className="card-surface mb-4 p-4 sm:p-5" aria-label="ผลการตรวจสอบ">
           <h2 className="type-body-strong text-[var(--color-ink)]">ผลการตรวจสอบ (ยังไม่มีการบันทึก)</h2>
           <ul className="type-caption mt-2 space-y-1 text-[var(--color-body-muted)]">
-            <li>ผู้นำ: {dry.plan.people} คน · บอดี้: {dry.plan.bodies} · พันธกิจ: {dry.plan.careGroups} · สมาชิก: {dry.plan.members} คน</li>
-            <li>ใช้ชื่อเล่นแทนชื่อ-สกุล: {dry.plan.nameFromNickname} คน</li>
-            <li>มีอยู่แล้วในระบบ: สมาชิก {dry.alreadyPresent.members} · กลุ่ม {dry.alreadyPresent.groups}</li>
-            <li>ก่อนโหลด ระบบมี: สมาชิก {dry.targetBefore.members} · กลุ่ม {dry.targetBefore.groups}</li>
+            <li>ผู้นำ: {dry.plan.people.toLocaleString("th-TH")} คน · บอดี้: {dry.plan.bodies.toLocaleString("th-TH")} · พันธกิจ: {dry.plan.careGroups.toLocaleString("th-TH")} · สมาชิก: {dry.plan.members.toLocaleString("th-TH")} คน</li>
+            <li>ใช้ชื่อเล่นแทนชื่อ-สกุล: {dry.plan.nameFromNickname.toLocaleString("th-TH")} คน</li>
+            <li>มีอยู่แล้วในระบบ: สมาชิก {dry.alreadyPresent.members.toLocaleString("th-TH")} · กลุ่ม {dry.alreadyPresent.groups.toLocaleString("th-TH")}</li>
+            <li>ก่อนโหลด ระบบมี: สมาชิก {dry.targetBefore.members.toLocaleString("th-TH")} · กลุ่ม {dry.targetBefore.groups.toLocaleString("th-TH")}</li>
           </ul>
         </section>
       )}
@@ -172,8 +180,8 @@ export default function ImportOrgData() {
             {done.kind === "apply" ? "โหลดข้อมูลเรียบร้อยแล้ว" : "ถอนกลับเรียบร้อยแล้ว"}
           </h2>
           <ul className="type-caption mt-2 space-y-1 text-[var(--color-body-muted)]">
-            <li>สมาชิก: {done.targetBefore.members} → {done.targetAfter.members}</li>
-            <li>กลุ่ม: {done.targetBefore.groups} → {done.targetAfter.groups}</li>
+            <li>สมาชิก: {done.targetBefore.members.toLocaleString("th-TH")} → {done.targetAfter.members.toLocaleString("th-TH")}</li>
+            <li>กลุ่ม: {done.targetBefore.groups.toLocaleString("th-TH")} → {done.targetAfter.groups.toLocaleString("th-TH")}</li>
           </ul>
         </section>
       )}

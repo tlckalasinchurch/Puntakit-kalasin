@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { Check, ListChecks, MessageCircle, Phone, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -64,6 +65,7 @@ function readStored(): string {
 }
 
 export default function CareToday() {
+  usePageTitle("เช็คชื่อพันธกิจวันนี้");
   const [bodies, setBodies] = useState<BodyOption[] | null>(null);
   const [bodiesError, setBodiesError] = useState<string | null>(null);
   const [groupId, setGroupId] = useState<string>(() => new URLSearchParams(window.location.search).get("group") ?? readStored());
@@ -72,18 +74,24 @@ export default function CareToday() {
   const [mode, setMode] = useState<"home" | "checkin">("home");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const date = useMemo(localDate, []);
 
-  useEffect(() => {
-    api
-      .get<{ bodies: BodyOption[] }>("/api/org/overview")
-      .then((o) => {
-        setBodies(o.bodies);
-        const all = o.bodies.flatMap((b) => b.careGroups);
-        setGroupId((cur) => (all.some((c) => c.id === cur) ? cur : (all[0]?.id ?? "")));
-      })
-      .catch((e) => setBodiesError(errText(e)));
+  const loadBodies = useCallback(async () => {
+    setBodiesError(null);
+    try {
+      const o = await api.get<{ bodies: BodyOption[] }>("/api/org/overview");
+      setBodies(o.bodies);
+      const all = o.bodies.flatMap((b) => b.careGroups);
+      setGroupId((cur) => (all.some((c) => c.id === cur) ? cur : (all[0]?.id ?? "")));
+    } catch (e) {
+      setBodiesError(errText(e));
+    }
   }, []);
+
+  useEffect(() => {
+    void loadBodies();
+  }, [loadBodies]);
 
   const loadRoster = useCallback(async () => {
     if (!groupId) return;
@@ -121,6 +129,7 @@ export default function CareToday() {
   const save = async () => {
     if (!roster) return;
     setSaving(true);
+    setSaveError(null);
     try {
       await api.post("/api/attendance/bulk", {
         date,
@@ -136,7 +145,9 @@ export default function CareToday() {
       setMode("home");
       await loadRoster();
     } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : "บันทึกไม่สำเร็จ ลองอีกครั้ง");
+      const message = e instanceof ApiError ? e.message : "บันทึกไม่สำเร็จ ลองอีกครั้ง";
+      setSaveError(`${message} — รายชื่อยังอยู่ตรงเดิม กดบันทึกได้อีกครั้ง`);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -154,7 +165,7 @@ export default function CareToday() {
       <PageHeader title="เช็คชื่อพันธกิจ" description={`${dateLabel} · แตะชื่อคนที่มา แล้วกดบันทึก`} />
 
       {bodiesError ? (
-        <ErrorState title="โหลดรายชื่อพันธกิจไม่สำเร็จ" description="หน้านี้ใช้ได้เฉพาะเจ้าหน้าที่และหัวหน้ากลุ่ม ลองใหม่อีกครั้ง" technical={bodiesError} />
+        <ErrorState title="โหลดรายชื่อพันธกิจไม่สำเร็จ" description="หน้านี้ใช้ได้เฉพาะเจ้าหน้าที่และหัวหน้ากลุ่ม ลองใหม่อีกครั้ง" technical={bodiesError} onRetry={() => void loadBodies()} />
       ) : !bodies ? (
         <div role="status" aria-label="กำลังโหลดพันธกิจ">
           <ListSkeleton count={4} />
@@ -213,7 +224,7 @@ export default function CareToday() {
                   </h2>
                 </div>
                 <div className="flex items-baseline gap-3">
-                  <b className="type-body-strong tabular-nums" style={{ fontSize: 20 }}>
+                  <b className="type-body-strong tabular-nums text-xl">
                     มา {picked.size} / {members.length}
                   </b>
                   <span className="type-caption ml-auto text-[var(--color-body-muted)]">แตะอีกครั้งเพื่อยกเลิก</span>
@@ -246,6 +257,11 @@ export default function CareToday() {
                 ))}
               </ul>
               <div className="sticky bottom-14 z-10 -mx-1 flex flex-col gap-2 bg-[var(--clay-ground)] px-1 py-3 lg:bottom-0">
+                {saveError && (
+                  <p role="alert" className="type-caption rounded-[var(--radius-sm)] bg-[var(--color-error)]/10 p-3 text-[var(--color-error)]">
+                    {saveError}
+                  </p>
+                )}
                 <button type="button" className="clay-btn w-full" onClick={() => void save()} disabled={saving}>
                   <Check size={20} aria-hidden="true" />
                   {saving ? "กำลังบันทึก…" : "บันทึกการเช็คชื่อ"}

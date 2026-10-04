@@ -2,11 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 import { Copy, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { EmptyState, ErrorState, Field, PageHeader, StatusChip } from "@/components/DesignSystem";
+import {
+  EmptyState,
+  ErrorState,
+  Field,
+  FormError,
+  ListPager,
+  PageHeader,
+  StatusChip,
+} from "@/components/DesignSystem";
 import { ListSkeleton } from "@/components/LoadingStates";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { ADMIN_ROLES, PRIVILEGED_ROLES, hasRole } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import {
   IMPORT_DUPLICATE_DECISIONS,
   IMPORT_DUPLICATE_DECISION_LABELS,
@@ -102,9 +111,14 @@ function DecisionPanel({ candidate, canDecide, onSaved }: { candidate: Candidate
   const [choice, setChoice] = useState<ImportDuplicateDecision | "">(current?.decision ?? "");
   const [note, setNote] = useState(current?.note ?? "");
   const [isSaving, setIsSaving] = useState(false);
+  const [choiceError, setChoiceError] = useState<string | null>(null);
 
   const save = async () => {
-    if (choice === "") return;
+    if (choice === "") {
+      setChoiceError("กรุณาเลือกการตัดสินใจก่อนบันทึก");
+      return;
+    }
+    setChoiceError(null);
     setIsSaving(true);
     try {
       await api.post("/api/import/duplicates/decisions", {
@@ -143,7 +157,10 @@ function DecisionPanel({ candidate, canDecide, onSaved }: { candidate: Candidate
                   name={`decision-${candidate.nickname}`}
                   value={value}
                   checked={choice === value}
-                  onChange={() => setChoice(value)}
+                  onChange={() => {
+                    setChoice(value);
+                    setChoiceError(null);
+                  }}
                 />
                 {IMPORT_DUPLICATE_DECISION_LABELS[value]}
               </label>
@@ -163,9 +180,10 @@ function DecisionPanel({ candidate, canDecide, onSaved }: { candidate: Candidate
             )}
           </Field>
           <div>
+            {choiceError && <FormError>{choiceError}</FormError>}
             <button
               type="button"
-              disabled={choice === "" || isSaving}
+              disabled={isSaving}
               onClick={() => void save()}
               className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
             >
@@ -268,6 +286,7 @@ function CandidateCard({ candidate, canDecide, onSaved }: { candidate: Candidate
 }
 
 export default function ImportDuplicates() {
+  usePageTitle("ตรวจสอบชื่อเล่นซ้ำ");
   const { user } = useAuth();
   const canRead = hasRole(user?.role, PRIVILEGED_ROLES);
   const canDecide = hasRole(user?.role, ADMIN_ROLES);
@@ -285,7 +304,10 @@ export default function ImportDuplicates() {
     api
       .get<BatchOption[]>("/api/import/batches?limit=50")
       .then(setBatches)
-      .catch(() => setBatches([])); // the filter is optional; the list still loads
+      .catch(() => {
+        setBatches([]);
+        toast.error("โหลดรายการไฟล์ที่นำเข้าไม่สำเร็จ ตัวกรองไฟล์ยังใช้ไม่ได้ในตอนนี้");
+      });
   }, [canRead]);
 
   useEffect(() => {
@@ -312,6 +334,17 @@ export default function ImportDuplicates() {
     if (statusFilter === "undecided") return all.filter((c) => currentDecision(c) === null);
     return all;
   }, [data, statusFilter]);
+
+  // Each candidate card is a full comparison table, so 100 of them at once is
+  // an unbounded render — page them 20 at a time, client-side.
+  const CARDS_PER_PAGE = 20;
+  const totalPages = Math.ceil(visible.length / CARDS_PER_PAGE) || 1;
+  const [page, setPage] = useState(1);
+  const safePage = Math.min(page, totalPages);
+  const paged = useMemo(
+    () => visible.slice((safePage - 1) * CARDS_PER_PAGE, safePage * CARDS_PER_PAGE),
+    [visible, safePage]
+  );
 
   if (!canRead) {
     return (
@@ -371,7 +404,12 @@ export default function ImportDuplicates() {
       {isLoading ? (
         <ListSkeleton count={3} />
       ) : error ? (
-        <ErrorState description={error} onRetry={() => setReloadKey((k) => k + 1)} />
+        <ErrorState
+          title="โหลดรายการชื่อเล่นซ้ำไม่สำเร็จ"
+          description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+          technical={error}
+          onRetry={() => setReloadKey((k) => k + 1)}
+        />
       ) : !data || visible.length === 0 ? (
         <EmptyState
           icon={Copy}
@@ -385,11 +423,16 @@ export default function ImportDuplicates() {
       ) : (
         <div className="flex flex-col gap-4">
           <p className="type-caption text-[var(--color-body-muted)]">
-            พบ {data.duplicates.length} ชื่อเล่นที่ซ้ำ (ตัดสินแล้ว {decidedCount}) ชื่อเล่นเดียวกันอาจเป็นคนละคน ตรวจช่องที่ทำเครื่องหมาย "ต่างกัน" ก่อนตัดสิน
+            พบ {data.duplicates.length.toLocaleString("th-TH")} ชื่อเล่นที่ซ้ำ (ตัดสินแล้ว {decidedCount.toLocaleString("th-TH")}) ชื่อเล่นเดียวกันอาจเป็นคนละคน ตรวจช่องที่ทำเครื่องหมาย “ต่างกัน” ก่อนตัดสิน
           </p>
-          {visible.map((candidate) => (
+          {paged.map((candidate) => (
             <CandidateCard key={candidate.nickname} candidate={candidate} canDecide={canDecide} onSaved={() => setReloadKey((k) => k + 1)} />
           ))}
+          <ListPager
+            page={page}
+            totalPages={Math.ceil(visible.length / CARDS_PER_PAGE) || 1}
+            onPageChange={setPage}
+          />
         </div>
       )}
     </AppLayout>

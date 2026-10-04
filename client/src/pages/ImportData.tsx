@@ -8,6 +8,7 @@ import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { ADMIN_ROLES, PRIVILEGED_ROLES, hasRole } from "@shared/roles";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { IMPORT_BLOB_PREFIX, IMPORT_UPLOAD_FILENAME_HEADER, IMPORT_UPLOAD_MAX_BYTES } from "@shared/importUpload";
 
 /**
@@ -70,6 +71,7 @@ function formatSize(bytes: number) {
 const messageOf = (err: unknown, fallback: string) => (err instanceof ApiError ? err.message : fallback);
 
 export default function ImportData() {
+  usePageTitle("นำเข้าข้อมูลจาก Excel");
   const { user } = useAuth();
   const canRead = hasRole(user?.role, PRIVILEGED_ROLES);
   const canImport = hasRole(user?.role, ADMIN_ROLES);
@@ -204,7 +206,13 @@ export default function ImportData() {
         {isLoading ? (
           <ListSkeleton count={3} />
         ) : error ? (
-          <ErrorState inset description={error} onRetry={() => void loadBatches()} />
+          <ErrorState
+            inset
+            title="โหลดรายการชุดข้อมูลไม่สำเร็จ"
+            description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+            technical={error}
+            onRetry={() => void loadBatches()}
+          />
         ) : batches.length === 0 ? (
           <EmptyState inset icon={FileSpreadsheet} title="ยังไม่มีการนำเข้า" description={canImport ? "เลือกไฟล์ Excel ด้านบนเพื่อเริ่ม" : "ผู้ดูแลระบบยังไม่ได้นำเข้าไฟล์"} />
         ) : (
@@ -214,7 +222,7 @@ export default function ImportData() {
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-[var(--color-ink)]">{batch.sourceFileName}</p>
                   <p className="type-caption text-[var(--color-body-muted)]">
-                    {formatDateTime(batch.createdAt)} · {batch.worksheetCount} ชีต · {batch.memberCount} แถวสมาชิก
+                    {formatDateTime(batch.createdAt)} · {batch.worksheetCount.toLocaleString("th-TH")} ชีต · {batch.memberCount.toLocaleString("th-TH")} แถวสมาชิก
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -246,9 +254,14 @@ export default function ImportData() {
               <StatusChip tone={preCheck.gate.migrationBlocked ? "error" : "success"}>
                 {preCheck.gate.verdict} — {preCheck.gate.verdictThai}
               </StatusChip>
-              <pre className="mt-3 max-h-80 overflow-auto rounded-[var(--radius-sm)] bg-[var(--color-canvas-soft)] p-3 text-xs">
-                {JSON.stringify(preCheck.report, null, 2)}
-              </pre>
+              <details className="mt-3">
+                <summary className="type-caption-strong inline-flex min-h-11 cursor-pointer items-center text-[var(--color-body-muted)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]">
+                  รายละเอียดทางเทคนิคของผลตรวจ
+                </summary>
+                <pre className="mt-2 max-h-80 overflow-auto rounded-[var(--radius-sm)] bg-[var(--color-canvas-soft)] p-3 text-xs">
+                  {JSON.stringify(preCheck.report, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </section>
@@ -287,25 +300,26 @@ function BatchDetail({ batchId, onClose }: { batchId: string; onClose: () => voi
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    Promise.all([
-      api.get<BatchReport>(`/api/import/batches/${batchId}/report`),
-      api.get<{ rows: PreviewRow[] }>(`/api/import/batches/${batchId}/preview?limit=100&status=${onlyIssues ? "quarantined" : "all"}`),
-    ])
-      .then(([r, p]) => {
-        if (cancelled) return;
-        setReport(r);
-        setRows(p.rows);
-      })
-      .catch((err) => !cancelled && setError(messageOf(err, "โหลดรายละเอียดไม่สำเร็จ")))
-      .finally(() => !cancelled && setIsLoading(false));
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const [r, p] = await Promise.all([
+        api.get<BatchReport>(`/api/import/batches/${batchId}/report`),
+        api.get<{ rows: PreviewRow[] }>(`/api/import/batches/${batchId}/preview?limit=100&status=${onlyIssues ? "quarantined" : "all"}`),
+      ]);
+      setReport(r);
+      setRows(p.rows);
+    } catch (err) {
+      setError(messageOf(err, "โหลดรายละเอียดไม่สำเร็จ"));
+    } finally {
+      setIsLoading(false);
+    }
   }, [batchId, onlyIssues]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const tone = (status: string): StatusTone => (status === "ok" ? "success" : "warning");
 
@@ -314,16 +328,22 @@ function BatchDetail({ batchId, onClose }: { batchId: string; onClose: () => voi
       {isLoading && !report ? (
         <ListSkeleton count={3} />
       ) : error ? (
-        <ErrorState inset description={error} />
+        <ErrorState
+          inset
+          title="โหลดรายละเอียดชุดข้อมูลไม่สำเร็จ"
+          description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+          technical={error}
+          onRetry={() => void load()}
+        />
       ) : (
         report && (
           <div className="flex flex-col gap-4">
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
-                ["แถวสมาชิก", report.counts.memberRows],
-                ["ผ่านการปรับรูปแบบ", report.counts.normalized],
-                ["ต้องตรวจ", report.counts.quarantined],
-                ["ชื่อที่อาจซ้ำ", report.counts.flaggedDuplicates],
+                ["แถวสมาชิก", report.counts.memberRows.toLocaleString("th-TH")],
+                ["ผ่านการปรับรูปแบบ", report.counts.normalized.toLocaleString("th-TH")],
+                ["ต้องตรวจ", report.counts.quarantined.toLocaleString("th-TH")],
+                ["ชื่อที่อาจซ้ำ", report.counts.flaggedDuplicates.toLocaleString("th-TH")],
               ].map(([label, value]) => (
                 <div key={label as string} className="rounded-[var(--radius-sm)] bg-[var(--color-canvas-soft)] p-3">
                   <dt className="type-fine text-[var(--color-body-muted)]">{label}</dt>
@@ -335,7 +355,7 @@ function BatchDetail({ batchId, onClose }: { batchId: string; onClose: () => voi
               <ul className="type-caption list-disc pl-5 text-[var(--color-ink)]">
                 {report.quarantinedIssues.map((i) => (
                   <li key={i.issue}>
-                    {ISSUE_LABELS[i.issue] ?? i.issue}: {i.rows} แถว
+                    {ISSUE_LABELS[i.issue] ?? i.issue}: {i.rows.toLocaleString("th-TH")} แถว
                   </li>
                 ))}
               </ul>

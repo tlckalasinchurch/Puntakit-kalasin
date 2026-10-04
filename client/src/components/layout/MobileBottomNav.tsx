@@ -45,7 +45,16 @@ export function MobileBottomNav({ onMenu, menuOpen }: MobileBottomNavProps) {
             aria-current={active ? "page" : undefined}
             className={`${base} ${active ? "text-[var(--color-primary)]" : "text-[var(--color-body-muted)]"}`}
           >
-            <Icon size={ICON_SIZE.md} aria-hidden="true" />
+            {/* Shape cue (icon pill), so the active item is never carried by
+                colour alone — design.md §8.1 status rule, applied to nav. */}
+            <span
+              aria-hidden="true"
+              className={`flex size-9 items-center justify-center rounded-[var(--radius-md)] transition-colors motion-reduce:transition-none ${
+                active ? "bg-[var(--color-accent-soft)]" : ""
+              }`}
+            >
+              <Icon size={ICON_SIZE.md} />
+            </span>
             <span>{label}</span>
           </Link>
         );
