@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import {
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -81,6 +80,7 @@ interface GroupItem {
   updatedAt: string;
   leaderName: string | null;
   leaderEmail: string | null;
+  leaderMemberName?: string | null;
   memberCount: number;
 }
 
@@ -645,7 +645,7 @@ export default function Groups() {
     <AppLayout>
       <PageHeader
         title="พันธกิจ"
-        description="กลุ่มย่อยของคริสตจักร ผู้รับผิดชอบ และรายชื่อสมาชิกในแต่ละกลุ่ม"
+        description="บอดี้และพันธกิจ พร้อมหัวหน้าและรายชื่อสมาชิก"
         primaryAction={
           isAdmin
             ? { label: "เพิ่มกลุ่ม", icon: Plus, onClick: openCreateModal }
@@ -821,6 +821,12 @@ export default function Groups() {
           {visibleGroups.map((grp) => {
             const statusCfg = STATUS_LABELS[grp.status] ?? STATUS_LABELS.active;
             const privacyCfg = PRIVACY_LABELS[grp.privacy] ?? PRIVACY_LABELS.public;
+            const leaderLabel = grp.orgLevel === "body" ? "หนบ." : grp.orgLevel === "care" ? "หนค." : "ผู้นำ";
+            const leaderText =
+              grp.leaderMemberName ||
+              (grp.orgLevel === "care" ? parseCareGroupDescription(grp.description).careLeaderName : null) ||
+              grp.leaderName ||
+              null;
             const canEditThis = canEditGroup(grp);
             const schedule = [grp.meetingDay, grp.meetingTime]
               .filter(Boolean)
@@ -838,9 +844,11 @@ export default function Groups() {
                         {ORG_LEVEL_LABELS[grp.orgLevel]}
                       </StatusChip>
                     )}
-                    <StatusChip tone={CATEGORY_TONES[grp.category] ?? "neutral"}>
-                      {CATEGORY_LABELS[grp.category] ?? grp.category}
-                    </StatusChip>
+                    {!(grp.orgLevel && (grp.category === "cell" || grp.category === "general")) && (
+                      <StatusChip tone={CATEGORY_TONES[grp.category] ?? "neutral"}>
+                        {CATEGORY_LABELS[grp.category] ?? grp.category}
+                      </StatusChip>
+                    )}
                   </div>
                   <StatusChip tone={statusCfg.tone}>{statusCfg.label}</StatusChip>
                 </div>
@@ -860,19 +868,10 @@ export default function Groups() {
                       {grp.area}
                     </p>
                   )}
-                  {grp.orgLevel === "care" ? (
-                    parseCareGroupDescription(grp.description).careLeaderName && (
-                      <p className="type-caption mt-2 text-[var(--color-text-secondary)]">
-                        หนค. {parseCareGroupDescription(grp.description).careLeaderName}
-                      </p>
-                    )
-                  ) : (
-                    !grp.orgLevel &&
-                    grp.description && (
-                      <p className="type-caption mt-2 line-clamp-3 text-[var(--color-text-secondary)]">
-                        {grp.description}
-                      </p>
-                    )
+                  {!grp.orgLevel && grp.description && (
+                    <p className="type-caption mt-2 line-clamp-3 text-[var(--color-text-secondary)]">
+                      {grp.description}
+                    </p>
                   )}
                 </div>
 
@@ -916,18 +915,20 @@ export default function Groups() {
                       className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
                     />
                     <dd>
-                      ผู้นำ: {grp.leaderName || "ยังไม่กำหนด"}
+                      {leaderLabel} {leaderText ?? <span className="text-[var(--color-body-muted)]">ยังไม่ระบุ</span>}
                     </dd>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <dt className="sr-only">การเปิดเผยข้อมูล</dt>
-                    <CheckCircle2
-                      size={ICON_SIZE.sm}
-                      aria-hidden="true"
-                      className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
-                    />
-                    <dd>{privacyCfg.label}</dd>
-                  </div>
+                  {grp.privacy !== "public" && (
+                    <div className="flex items-start gap-2">
+                      <dt className="sr-only">การเปิดเผยข้อมูล</dt>
+                      <Lock
+                        size={ICON_SIZE.sm}
+                        aria-hidden="true"
+                        className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
+                      />
+                      <dd>{privacyCfg.label}</dd>
+                    </div>
+                  )}
                 </dl>
 
                 {/* One primary action, then one overflow menu. */}
@@ -937,16 +938,15 @@ export default function Groups() {
                     onClick={() => openMembersModal(grp)}
                     className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
                   >
-                    <Users size={ICON_SIZE.sm} aria-hidden="true" />
-                    สมาชิก {grp.memberCount} คน
+                    <span className="whitespace-nowrap">สมาชิก {grp.memberCount} คน</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => navigate(`/attendance?groupId=${grp.id}`)}
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
                   >
-                    <UserCheck size={ICON_SIZE.sm} aria-hidden="true" />
-                    เช็คชื่อ
+                    <UserCheck size={ICON_SIZE.sm} aria-hidden="true" className="shrink-0" />
+                    <span className="whitespace-nowrap">เช็คชื่อ</span>
                   </button>
                   {(canEditThis || isAdmin) && (
                     <RowMenu label={`ตัวเลือกเพิ่มเติมของกลุ่ม ${grp.name}`}>

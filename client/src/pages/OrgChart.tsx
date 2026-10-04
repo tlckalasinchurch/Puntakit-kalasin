@@ -198,9 +198,9 @@ export default function OrgChart() {
                       <span className="flex items-start justify-between gap-3">
                         <span className="min-w-0">
                           <span className="type-body-strong block truncate text-[var(--color-ink)]">{b.name}</span>
-                          <span className="type-caption block truncate text-[var(--color-body-muted)]">
-                            {b.leaderName ? `หนบ. ${b.leaderName}` : "ยังไม่ระบุ หนบ."}
-                          </span>
+                          {b.leaderName && (
+                            <span className="type-caption line-clamp-2 text-[var(--color-body-muted)]">หนบ. {b.leaderName}</span>
+                          )}
                         </span>
                         <span className="text-right">
                           <span className="type-body-strong block tabular-nums text-[var(--color-ink)]">{th.format(b.memberCount)}</span>

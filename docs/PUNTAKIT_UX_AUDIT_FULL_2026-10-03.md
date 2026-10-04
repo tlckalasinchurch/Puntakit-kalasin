@@ -49,3 +49,19 @@ This file contains no member data.
 - Production runs Clerk in development mode (the Clerk widget says so): switch keys before launch.
 - Thai font: the Prompt web font could not be fetched in the test sandbox, so type rendering was
   not judged.
+
+## Round 2 (2026-10-04) — after the org and CRUD work
+Method: 20 routes at 390 px and 1280 px against the real organisation data (demo mode, no overflow on any route).
+The raw-palette debt listed in `PUNTAKIT_UX_UI_AUDIT_2026-10.md` is gone (0 raw palette classes in pages and components).
+
+| Page | Problem | Fix |
+|---|---|---|
+| Groups | A care card printed "หนค. X" and "ผู้นำ: ยังไม่กำหนด" together. | One leader row: member picked in the app, else imported หนค., else the linked user. API list adds `leaderMemberName` (additive). |
+| Groups | Every card carried the default category chip and a "สาธารณะ" row. | Chip hidden for org units with a default category. Privacy row only when the group is not public. |
+| Groups | Member-count button wrapped; check-in icon collapsed to a sliver. | `whitespace-nowrap`, icon `shrink-0`. |
+| Groups | Subtitle said "กลุ่มย่อย" but the page lists bodies and พันธกิจ. | New subtitle. |
+| Menu | "เช็คชื่อพันธกิจ" and "เช็คชื่อเข้าร่วม" read as the same thing. | Second one is "เช็คชื่อนมัสการ" (menu and page title). |
+| Org chart (phone) | Body leader text cut off ("ยังไม่ระบุ ห…"). | Leader line shown only when set, wraps to 2 lines. |
+| Reports | "เข้าร่วมใหม่ในช่วงนี้ 464" equalled the total because every member has the import date. | Line shown only when a date range is chosen. |
+
+Still open: date inputs show `mm/dd/yyyy` (browser locale); Thai font could not be fetched in the test sandbox, so type rendering is not judged; production not checked.

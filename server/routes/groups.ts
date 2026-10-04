@@ -236,6 +236,7 @@ groupsRouter.get("/", async (req, res, next) => {
         updatedAt: groups.updatedAt,
         leaderName: users.name,
         leaderEmail: users.email,
+        leaderMemberName: sql<string | null>`(select ${members.name} from ${members} where ${members.id} = ${groups.leaderMemberId})`,
         memberCount: sql<number>`cast(count(distinct case when ${groupMembers.status} = 'active' then ${groupMembers.id} end) as int)`,
       })
       .from(groups)

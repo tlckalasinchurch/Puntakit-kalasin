@@ -425,7 +425,7 @@ export default function Attendance() {
   return (
     <AppLayout>
       <PageHeader
-        title="ระบบเช็คชื่อและการเข้าร่วม"
+        title="เช็คชื่อนมัสการ"
         description="บันทึกการเข้าร่วมนมัสการ พันธกิจ สแกน QR และติดตามสมาชิกที่ขาดต่อเนื่อง"
         secondaryActions={[
           {
