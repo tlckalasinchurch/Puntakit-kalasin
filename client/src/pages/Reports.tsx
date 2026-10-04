@@ -156,9 +156,11 @@ export default function Reports() {
             <p className="type-caption mt-2 text-[var(--color-body-muted)]">
               ทั้งหมด {summary.members.total} คน
             </p>
-            <p className="type-caption text-[var(--color-body-muted)]">
-              เข้าร่วมใหม่ในช่วงนี้ {summary.members.newInRange} คน
-            </p>
+            {(startDate || endDate) && (
+              <p className="type-caption text-[var(--color-body-muted)]">
+                เข้าร่วมใหม่ในช่วงนี้ {summary.members.newInRange} คน
+              </p>
+            )}
           </div>
           <div className="card-surface p-4">
             <h2 className="type-caption-strong flex items-center gap-2 text-[var(--color-ink)]">

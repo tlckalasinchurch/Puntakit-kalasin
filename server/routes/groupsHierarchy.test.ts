@@ -123,6 +123,11 @@ describe("Groups org hierarchy (real PGlite Postgres)", () => {
     const ok = await call("PUT", `/api/groups/${careId}`, { leaderMemberId: member.id });
     expect(ok.status).toBe(200);
     expect((await json(ok)).data.leaderMemberId).toBe(member.id);
+
+    // The list shows the chosen member's name, so a card can print the leader.
+    const list = await json(await call("GET", `/api/groups?orgLevel=care`));
+    const row = list.data.find((g: { id: string }) => g.id === careId);
+    expect(row.leaderMemberName).toBe("ผู้นำทดสอบ");
   });
 
   it("refuses to delete a body that still has a care group, then allows it once the care group is gone (409 -> 200)", async () => {
