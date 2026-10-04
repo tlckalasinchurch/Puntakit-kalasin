@@ -33,6 +33,8 @@ export function GlobalSearch({
 
   // Cmd/Ctrl+K focuses the nearest search — desktop users expect it, and the
   // hint is only advertised where the accelerator can work (physical keyboard).
+  // Instances hidden by responsive classes (topbar below sm) must not steal
+  // focus from the visible one, so hidden inputs opt out here.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -42,9 +44,10 @@ export function GlobalSearch({
           target instanceof HTMLTextAreaElement ||
           target?.isContentEditable;
         if (typing) return;
+        if (!inputRef.current || inputRef.current.offsetParent === null) return;
         event.preventDefault();
-        inputRef.current?.focus();
-        inputRef.current?.select();
+        inputRef.current.focus();
+        inputRef.current.select();
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -64,6 +67,14 @@ export function GlobalSearch({
         role="search"
         aria-label={LABEL}
         onSubmit={handleSubmit}
+        // Escape lives on the form, not the input: ui/Input wraps onKeyDown in
+        // the CJK IME-composition guard, and this handler must not replace it.
+        onKeyDown={event => {
+          if (event.key === "Escape" && query) {
+            event.stopPropagation();
+            setQuery("");
+          }
+        }}
         className="flex w-full items-center gap-2"
       >
         <div className="relative min-w-0 flex-1">
@@ -80,12 +91,6 @@ export function GlobalSearch({
             spellCheck={false}
             value={query}
             onChange={event => setQuery(event.target.value)}
-            onKeyDown={event => {
-              if (event.key === "Escape" && query) {
-                event.stopPropagation();
-                setQuery("");
-              }
-            }}
             placeholder={PLACEHOLDER}
             aria-label={LABEL}
             aria-describedby={hintId}
