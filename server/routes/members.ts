@@ -1,7 +1,8 @@
 import { Router, type Request } from "express";
-import { and, asc, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { and, asc, count, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { getDb } from "../db/client.js";
-import { members, type Member, type UserRole } from "../../shared/schema.js";
+import { groupMembers, members, type Member, type UserRole } from "../../shared/schema.js";
 import {
   checkDuplicateMemberSchema,
   memberInputSchema,
@@ -14,6 +15,8 @@ import {
 } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
+import { runAtomically } from "../lib/atomicWrites.js";
+import { careGroupsOf, careMembershipStatements, requireCareGroup } from "../lib/careMembership.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 
 export const membersRouter = Router();
@@ -67,7 +70,7 @@ membersRouter.get("/", async (req, res, next) => {
       );
     }
 
-    const { page, limit, search, area, group, status, membershipStatus, sortBy, sortOrder, includeDeleted } =
+    const { page, limit, search, area, group, careGroupId, status, membershipStatus, sortBy, sortOrder, includeDeleted } =
       parsed.data;
     const offset = (page - 1) * limit;
 
@@ -85,6 +88,17 @@ membersRouter.get("/", async (req, res, next) => {
     }
     if (group && group !== "ทั้งหมด") {
       conditions.push(eq(members.group, group));
+    }
+    if (careGroupId) {
+      conditions.push(
+        inArray(
+          members.id,
+          db
+            .select({ id: groupMembers.memberId })
+            .from(groupMembers)
+            .where(and(eq(groupMembers.groupId, careGroupId), eq(groupMembers.status, "active")))
+        )
+      );
     }
     if (status) {
       conditions.push(eq(members.status, status));
@@ -130,7 +144,11 @@ membersRouter.get("/", async (req, res, next) => {
       .orderBy(orderClause);
 
     // Apply data masking based on role
-    const maskedRows = rows.map((m) => maskSensitiveData(m, req.user!.role, req.user!.id));
+    const careOf = await careGroupsOf(db, rows.map((m) => m.id));
+    const maskedRows = rows.map((m) => ({
+      ...maskSensitiveData(m, req.user!.role, req.user!.id),
+      careGroup: careOf.get(m.id) ?? null,
+    }));
 
     res.json({
       success: true,
@@ -287,9 +305,10 @@ membersRouter.get("/:id", async (req, res, next) => {
       throw new NotFoundError("ไม่พบข้อมูลสมาชิกที่ต้องการ");
     }
 
+    const careOf = await careGroupsOf(db, [row.id]);
     res.json({
       success: true,
-      data: maskSensitiveData(row, req.user!.role, req.user!.id),
+      data: { ...maskSensitiveData(row, req.user!.role, req.user!.id), careGroup: careOf.get(row.id) ?? null },
     });
   } catch (err) {
     next(err);
@@ -330,30 +349,35 @@ membersRouter.post(
         }
       }
 
-      const [created] = await db
-        .insert(members)
-        .values({
-          ...parsed.data,
-          nickname: parsed.data.nickname || null,
-          avatarUrl: parsed.data.avatarUrl || null,
-          gender: parsed.data.gender || null,
-          birthDate: parsed.data.birthDate || null,
-          phone: parsed.data.phone || null,
-          email: parsed.data.email || null,
-          lineId: parsed.data.lineId || null,
-          address: parsed.data.address || null,
-          area: parsed.data.area || null,
-          group: parsed.data.group || null,
-          assignedLeaderId: parsed.data.assignedLeaderId || null,
-          emergencyContactName: parsed.data.emergencyContactName || null,
-          emergencyContactPhone: parsed.data.emergencyContactPhone || null,
-          emergencyContactRelation: parsed.data.emergencyContactRelation || null,
-          consentDate: parsed.data.consentGiven ? new Date() : null,
-          notes: parsed.data.notes || null,
-          createdById: req.user!.id,
-          updatedById: req.user!.id,
-        })
-        .returning();
+      const { careGroupId, ...input } = parsed.data;
+      const care = careGroupId ? await requireCareGroup(db, careGroupId) : null;
+      const newId = randomUUID();
+      const values = {
+        ...input,
+        id: newId,
+        nickname: input.nickname || null,
+        avatarUrl: input.avatarUrl || null,
+        gender: input.gender || null,
+        birthDate: input.birthDate || null,
+        phone: input.phone || null,
+        email: input.email || null,
+        lineId: input.lineId || null,
+        address: input.address || null,
+        area: input.area || null,
+        group: care ? care.name : input.group || null,
+        assignedLeaderId: input.assignedLeaderId || null,
+        emergencyContactName: input.emergencyContactName || null,
+        emergencyContactPhone: input.emergencyContactPhone || null,
+        emergencyContactRelation: input.emergencyContactRelation || null,
+        consentDate: input.consentGiven ? new Date() : null,
+        notes: input.notes || null,
+        createdById: req.user!.id,
+        updatedById: req.user!.id,
+      };
+      // Member row and care-group membership are written as one unit, so a
+      // new person is never left without the care group that was chosen.
+      await runAtomically((tx) => [tx.insert(members).values(values), ...(care ? careMembershipStatements(tx, newId, care) : [])]);
+      const [created] = await db.select().from(members).where(eq(members.id, newId)).limit(1);
 
       await logAudit({
         req,
@@ -419,15 +443,19 @@ membersRouter.put(
         }
       }
 
-      const [updated] = await db
-        .update(members)
-        .set({
-          ...parsed.data,
-          updatedById: req.user!.id,
-          updatedAt: new Date(),
-        })
-        .where(eq(members.id, req.params.id))
-        .returning();
+      const { careGroupId, ...input } = parsed.data;
+      const care = careGroupId ? await requireCareGroup(db, careGroupId) : null;
+      const changes = { ...input, updatedById: req.user!.id, updatedAt: new Date() };
+      if (careGroupId === undefined) {
+        await db.update(members).set(changes).where(eq(members.id, req.params.id));
+      } else {
+        // "" / null clears the care group; a uuid moves the member (one active care group at a time).
+        await runAtomically((tx) => [
+          tx.update(members).set(changes).where(eq(members.id, req.params.id)),
+          ...careMembershipStatements(tx, req.params.id, care),
+        ]);
+      }
+      const [updated] = await db.select().from(members).where(eq(members.id, req.params.id)).limit(1);
 
       await logAudit({
         req,
