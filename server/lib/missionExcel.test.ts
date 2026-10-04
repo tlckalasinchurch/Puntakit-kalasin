@@ -338,6 +338,17 @@ describe("value helpers", () => {
     expect(cellText(new Date("2020-01-02T03:04:05.000Z"))).toBe("2020-01-02T03:04:05.000Z");
   });
 
+  it("reads the visible text of rich text, hyperlink, formula and error cells (never \"[object Object]\")", () => {
+    expect(cellText({ richText: [{ text: "ปุก" }, { text: "กี้", font: { bold: true } }] })).toBe("ปุกกี้");
+    expect(cellText({ text: "ลิงก์", hyperlink: "https://example.com" })).toBe("ลิงก์");
+    expect(cellText({ formula: "A1+1", result: 5 })).toBe("5");
+    expect(cellText({ sharedFormula: "A1", result: "ผล" })).toBe("ผล");
+    expect(cellText({ error: "#N/A" })).toBe("#N/A");
+    expect(cellText({ richText: [] })).toBe("");
+    expect(cellText({ something: "else" })).toBe("");
+    expect(cellText({ richText: [{ text: "a" }] })).not.toContain("[object");
+  });
+
   it("gives the same column variant key for identical column maps", () => {
     const a = resolveHeader([HEADER_A], 0);
     const b = resolveHeader([HEADER_A], 0);

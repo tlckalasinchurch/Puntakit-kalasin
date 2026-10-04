@@ -75,7 +75,28 @@ export function normalizeHeaderText(value: unknown): string {
 export function cellText(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (value instanceof Date) return value.toISOString();
+  if (typeof value === "object") return objectCellText(value as Record<string, unknown>);
   return String(value);
+}
+
+/**
+ * ExcelJS hands back an object, not a string, for rich text, hyperlinks and
+ * formulas. `String(object)` is "[object Object]", which silently replaced a
+ * real nickname in a source workbook. Read the visible text instead:
+ *  - rich text   { richText: [{ text }] }   -> the runs joined
+ *  - hyperlink   { text, hyperlink }        -> the link text
+ *  - formula     { formula, result }        -> the cached result
+ *  - error       { error }                  -> the error code, e.g. "#N/A"
+ * Anything else yields "" rather than a misleading placeholder.
+ */
+function objectCellText(value: Record<string, unknown>): string {
+  if (Array.isArray(value.richText)) {
+    return value.richText.map((run) => (run && typeof run === "object" ? cellText((run as { text?: unknown }).text) : "")).join("");
+  }
+  if ("text" in value && value.text !== undefined) return cellText(value.text);
+  if ("result" in value) return cellText(value.result);
+  if (typeof value.error === "string") return value.error;
+  return "";
 }
 
 /**
