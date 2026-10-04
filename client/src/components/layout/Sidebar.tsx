@@ -7,6 +7,7 @@ import {
   HeartHandshake,
   Home as HomeIcon,
   Inbox as InboxIcon,
+  ListChecks,
   ListTodo,
   MapPin,
   Megaphone,
@@ -74,6 +75,7 @@ export const navGroups: NavGroup[] = [
   {
     name: "งานดูแล",
     items: [
+      { label: "เช็คชื่อแคร์", path: "/care", icon: ListChecks, roles: CREATE_ROLES },
       { label: "เช็คชื่อเข้าร่วม", path: "/attendance", icon: UserCheck },
       { label: "การติดตาม", path: "/follow-up", icon: ListTodo },
       { label: "การนมัสการ", path: "/events", icon: CalendarDays },

@@ -1,8 +1,8 @@
-import { BarChart3, Home as HomeIcon, Menu, UserCheck, Users, UsersRound } from "lucide-react";
+import { Home as HomeIcon, ListChecks, Menu, Users, UsersRound } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
-import { PRIVILEGED_ROLES, hasRole } from "@shared/roles";
+import { CREATE_ROLES, hasRole } from "@shared/roles";
 
 interface MobileBottomNavProps {
   onMenu: () => void;
@@ -11,23 +11,21 @@ interface MobileBottomNavProps {
 
 /**
  * Bottom navigation for phones (hidden from `lg`, where the sidebar is
- * always visible). It carries only the destinations used every week —
- * home, groups, members, and reports (or check-in for roles that cannot read
- * reports) — and a fifth button that opens the full menu. Everything else
- * stays in the drawer so this bar never grows past five targets.
+ * always visible). It carries only the destinations used every week: home,
+ * care-group check-in (for roles that can record attendance), members and
+ * groups, plus a button that opens the full menu. Reports and everything else
+ * stay in the drawer so this bar never grows past five targets.
  */
 export function MobileBottomNav({ onMenu, menuOpen }: MobileBottomNavProps) {
   const [location] = useLocation();
   const { user } = useAuth();
-  const canSeeReports = hasRole(user?.role, PRIVILEGED_ROLES);
+  const canCheckIn = hasRole(user?.role, CREATE_ROLES);
 
   const items = [
     { label: "หน้าหลัก", path: "/", icon: HomeIcon },
-    { label: "กลุ่ม", path: "/groups", icon: UsersRound },
+    ...(canCheckIn ? [{ label: "เช็คชื่อ", path: "/care", icon: ListChecks }] : []),
     { label: "สมาชิก", path: "/members", icon: Users },
-    canSeeReports
-      ? { label: "รายงาน", path: "/reports", icon: BarChart3 }
-      : { label: "เช็คชื่อ", path: "/attendance", icon: UserCheck },
+    { label: "กลุ่ม", path: "/groups", icon: UsersRound },
   ];
 
   const base =
