@@ -187,7 +187,8 @@ export default function Members() {
 
   // The home and top-bar search send people here as /members?search=…, so the
   // page must start from (and follow) that parameter.
-  const urlQuery = new URLSearchParams(useSearch()).get("search") ?? "";
+  const urlSearch = useSearch();
+  const urlQuery = new URLSearchParams(urlSearch).get("search") ?? "";
   const [query, setQuery] = useState(urlQuery);
   useEffect(() => setQuery(urlQuery), [urlQuery]);
   const [area, setArea] = useState("ทั้งหมด");
@@ -308,6 +309,25 @@ export default function Members() {
     setNameError(null);
     setFormOpen(true);
   };
+
+  // Deep links from the org chart: ?care=<id> filters the list, and
+  // ?new=1&care=<id> opens the create form with that care group chosen.
+  useEffect(() => {
+    const p = new URLSearchParams(urlSearch);
+    const care = p.get("care") ?? "";
+    if (!p.has("care") && !p.has("new")) return;
+    if (care) setCareFilter(care);
+    if (p.get("new") === "1" && canManage) {
+      setEditing(null);
+      setForm({ ...EMPTY_FORM, careGroupId: care });
+      setDuplicateWarning(null);
+      setFormError(null);
+      setNameError(null);
+      setFormOpen(true);
+    }
+    navigate("/members", { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlSearch]);
 
   const openEdit = (m: Member) => {
     setEditing(m);

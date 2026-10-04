@@ -39,7 +39,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { fetchAllMembers } from "@/lib/fetchAll";
 import { parseCareGroupDescription } from "@shared/orgView";
-import { useLocation } from "wouter";
+import { MemberPicker } from "@/components/MemberPicker";
+import { useLocation, useSearch } from "wouter";
 import type {
   GroupCategory,
   GroupMemberRole,
@@ -174,6 +175,8 @@ const EMPTY_FORM = {
   coLeaderId: "",
   orgLevel: "" as OrgLevel | "",
   parentGroupId: "",
+  leaderMemberId: "",
+  leaderMemberName: "",
   category: "cell" as GroupCategory,
   privacy: "public" as GroupPrivacy,
   status: "active" as GroupStatus,
@@ -399,6 +402,8 @@ export default function Groups() {
       coLeaderId: grp.coLeaderId || "",
       orgLevel: grp.orgLevel ?? "",
       parentGroupId: grp.parentGroupId ?? "",
+      leaderMemberId: grp.leaderMemberId ?? "",
+      leaderMemberName: "",
       category: grp.category,
       privacy: grp.privacy || "public",
       status: grp.status || "active",
@@ -413,7 +418,43 @@ export default function Groups() {
     setNameError(null);
     setFormError(null);
     setModalOpen(true);
+    if (grp.leaderMemberId) {
+      // The list only carries the id; fetch the name once so the picker can show it.
+      api
+        .get<{ name: string; nickname: string | null }>(`/api/members/${grp.leaderMemberId}`)
+        .then((m) => setForm((f) => (f.leaderMemberId === grp.leaderMemberId ? { ...f, leaderMemberName: m.nickname ? `${m.name} (${m.nickname})` : m.name } : f)))
+        .catch(() => {});
+    }
   };
+
+  // Deep links from the org chart: /groups?new=body, /groups?new=care&parent=<bodyId>
+  // open the create form prefilled; /groups?edit=<groupId> opens that group's edit form.
+  const urlSearch = useSearch();
+  useEffect(() => {
+    const params = new URLSearchParams(urlSearch);
+    const wantNew = params.get("new");
+    const wantEdit = params.get("edit");
+    if (wantNew === "body" || wantNew === "care") {
+      setEditingGroup(null);
+      setForm({
+        ...EMPTY_FORM,
+        orgLevel: wantNew,
+        category: wantNew === "body" ? "general" : "cell",
+        parentGroupId: wantNew === "care" ? (params.get("parent") ?? "") : "",
+      });
+      setNameError(null);
+      setFormError(null);
+      setModalOpen(true);
+      navigate("/groups", { replace: true });
+    } else if (wantEdit) {
+      const target = groupsList.find((g) => g.id === wantEdit) ?? bodies.find((g) => g.id === wantEdit);
+      if (target) {
+        openEditModal(target);
+        navigate("/groups", { replace: true });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlSearch, groupsList, bodies]);
 
   const canEditGroup = (grp: GroupItem) => {
     if (canManageAnyGroup) return true;
@@ -438,6 +479,7 @@ export default function Groups() {
         coLeaderId: form.coLeaderId ? form.coLeaderId : null,
         orgLevel: form.orgLevel || null,
         parentGroupId: form.orgLevel === "care" && form.parentGroupId ? form.parentGroupId : null,
+        leaderMemberId: form.orgLevel && form.leaderMemberId ? form.leaderMemberId : null,
         category: form.category,
         privacy: form.privacy,
         status: form.status,
@@ -1030,6 +1072,20 @@ export default function Groups() {
                     </select>
                   )}
                 </Field>
+              )}
+              {form.orgLevel && (
+                <div className="sm:col-span-2">
+                  <p className="type-caption-strong text-[var(--color-ink)]">
+                    {form.orgLevel === "body" ? "หัวหน้าบอดี้ (หนบ.)" : "หัวหน้าพันธกิจ (หนค.)"}
+                  </p>
+                  <div className="mt-1.5">
+                    <MemberPicker
+                      value={form.leaderMemberId}
+                      valueName={form.leaderMemberName}
+                      onChange={(id, name) => setForm({ ...form, leaderMemberId: id, leaderMemberName: name })}
+                    />
+                  </div>
+                </div>
               )}
               <Field label="ประเภทกลุ่ม">
                 {fieldProps => (

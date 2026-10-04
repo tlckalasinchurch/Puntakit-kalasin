@@ -142,6 +142,20 @@ describe("Org chart read API (real PGlite Postgres)", () => {
     expect(data.members[0]).not.toHaveProperty("notes");
   });
 
+  it("shows the care leader picked in the app (a real member) instead of the imported text", async () => {
+    const client = await import("../db/client.js");
+    const schema = await import("../../shared/schema.js");
+    const { eq } = await import("drizzle-orm");
+    const db = client.getDb();
+    const [leader] = await db.insert(schema.members).values({ name: "ผู้นำที่เลือกในแอป" }).returning();
+    await db.update(schema.groups).set({ leaderMemberId: leader.id }).where(eq(schema.groups.id, id(20)));
+    const overview = (await (await get("/overview")).json()) as { data: any };
+    const care = overview.data.bodies.flatMap((b: any) => b.careGroups).find((c: any) => c.id === id(20));
+    expect(care).toMatchObject({ careLeaderName: "ผู้นำที่เลือกในแอป", leaderMemberId: leader.id });
+    const roster = (await (await get(`/care-groups/${id(20)}/members`)).json()) as { data: any };
+    expect(roster.data.group.careLeaderName).toBe("ผู้นำที่เลือกในแอป");
+  });
+
   it("404 for an unknown care group, 400 for a malformed id", async () => {
     expect((await get(`/care-groups/${id(999)}/members`)).status).toBe(404);
     expect((await get(`/care-groups/not-an-id/members`)).status).toBe(400);

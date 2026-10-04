@@ -125,6 +125,14 @@ describe("Groups org hierarchy (real PGlite Postgres)", () => {
     expect((await json(ok)).data.leaderMemberId).toBe(member.id);
   });
 
+  it("refuses to delete a body that still has a care group, then allows it once the care group is gone (409 -> 200)", async () => {
+    const b = (await json(await call("POST", "/api/groups", { name: "บอดี้ลบ", orgLevel: "body" }))).data.id;
+    const c = (await json(await call("POST", "/api/groups", { name: "พันธกิจลบ", orgLevel: "care", parentGroupId: b }))).data.id;
+    expect((await call("DELETE", `/api/groups/${b}`)).status).toBe(409);
+    expect((await call("DELETE", `/api/groups/${c}`)).status).toBe(200);
+    expect((await call("DELETE", `/api/groups/${b}`)).status).toBe(200);
+  });
+
   it("allows moving a care group after its body is changed only once the care group is gone", async () => {
     expect((await call("DELETE", `/api/groups/${careId}`)).status).toBe(200);
     expect((await call("PUT", `/api/groups/${bodyId}`, { orgLevel: "care" })).status).toBe(200);
