@@ -6,6 +6,7 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  FormError,
   Modal,
   PageHeader,
   SectionHeader,
@@ -58,23 +59,27 @@ export default function Announcements() {
   const [editing, setEditing] = useState<Announcement | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Announcement | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const openCreate = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
+    setFormError(null);
     setFormOpen(true);
   };
 
   const openEdit = (a: Announcement) => {
     setEditing(a);
     setForm({ title: a.title, content: a.content, status: a.status });
+    setFormError(null);
     setFormOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     setSubmitting(true);
     try {
       if (editing) {
@@ -86,7 +91,10 @@ export default function Announcements() {
       }
       setFormOpen(false);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
+      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -204,6 +212,7 @@ export default function Announcements() {
         }
       >
         <form id="announcement-form" className="flex flex-col gap-5" onSubmit={handleSubmit}>
+          {formError && <FormError>{formError}</FormError>}
           <Field label="หัวข้อ" required>
             {props => (
               <input

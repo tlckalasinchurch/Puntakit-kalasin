@@ -8,6 +8,7 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  FormError,
   Modal,
   PageHeader,
   StatusChip,
@@ -52,6 +53,7 @@ export default function Ministries() {
   const [editing, setEditing] = useState<Ministry | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Ministry | null>(null);
   const [deleting, setDeleting] = useState(false);
   // Modal footer buttons submit the form by id.
@@ -60,17 +62,20 @@ export default function Ministries() {
   const openCreate = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
+    setFormError(null);
     setFormOpen(true);
   };
 
   const openEdit = (m: Ministry) => {
     setEditing(m);
     setForm({ name: m.name, description: m.description ?? "", leader: m.leader ?? "", status: m.status });
+    setFormError(null);
     setFormOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     setSubmitting(true);
     try {
       if (editing) {
@@ -82,7 +87,10 @@ export default function Ministries() {
       }
       setFormOpen(false);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
+      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -185,6 +193,7 @@ export default function Ministries() {
         }
       >
         <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {formError && <FormError>{formError}</FormError>}
           <Field label="ชื่อฝ่ายงาน" required>
             {(props) => (
               <input

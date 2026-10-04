@@ -73,3 +73,52 @@ describe("UX audit Batch A — accessibility foundations", () => {
     );
   });
 });
+
+describe("UX audit Batch B — form safety and feedback", () => {
+  const FORM_PAGES = [
+    "client/src/pages/Announcements.tsx",
+    "client/src/pages/Events.tsx",
+    "client/src/pages/Ministries.tsx",
+    "client/src/pages/Church.tsx",
+    "client/src/pages/Feed.tsx",
+    "client/src/pages/member/MemberProfile.tsx",
+    "client/src/components/PrayerRequestModal.tsx",
+  ] as const;
+
+  it("every form surfaces submission failure inline, not only as a toast", () => {
+    const offenders: string[] = [];
+    for (const rel of FORM_PAGES) {
+      const src = read(rel);
+      if (!src.includes("FormError")) offenders.push(rel);
+    }
+    // Inbox has two forms, each with its own error state.
+    const inbox = read("client/src/pages/Inbox.tsx");
+    expect(inbox).toMatch(/\{captureError && <FormError>/);
+    expect(inbox).toMatch(/\{publishError && <FormError>/);
+    expect(
+      offenders,
+      `render the shared <FormError> in the form body:\n${offenders.join("\n")}`
+    ).toEqual([]);
+  });
+
+  it("Feed and PrayerRequestModal validate required fields inline, not via toast", () => {
+    const feed = read("client/src/pages/Feed.tsx");
+    expect(feed).toMatch(/<Field label="หัวข้อ" required error=\{titleError/);
+    expect(feed).not.toMatch(/toast\.error\("กรุณากรอกหัวข้อ"\)/);
+
+    const prayer = read("client/src/components/PrayerRequestModal.tsx");
+    expect(prayer).toMatch(/error=\{titleError/);
+    expect(prayer).toMatch(/error=\{contentError/);
+    // The submit button stays enabled until the request starts; validation
+    // happens on submit with inline errors.
+    expect(prayer).toMatch(/disabled=\{submitting\}/);
+  });
+
+  it("removing a member from a group asks for confirmation", () => {
+    const src = read("client/src/pages/Groups.tsx");
+    // Two confirmations: delete group, and the previously unconfirmed member removal.
+    expect(src.match(/<ConfirmDialog/g)?.length).toBe(2);
+    expect(src).toMatch(/ยืนยันการนำออกจากกลุ่ม/);
+    expect(src).toMatch(/setRemoveTarget\(gm\)/);
+  });
+});

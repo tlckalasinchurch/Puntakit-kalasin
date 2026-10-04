@@ -6,6 +6,7 @@ import { FormSkeleton } from "@/components/LoadingStates";
 import {
   ErrorState,
   Field,
+  FormError,
   PageHeader,
 } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
@@ -39,6 +40,7 @@ export default function Church() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const load = () => {
     setIsLoading(true);
@@ -65,13 +67,17 @@ export default function Church() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     setSaving(true);
     try {
       const saved = await api.put<ChurchProfile>("/api/church-profile", form);
       setUpdatedAt(saved.updatedAt);
       toast.success("บันทึกข้อมูลคริสตจักรแล้ว");
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
+      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -91,6 +97,7 @@ export default function Church() {
           <ErrorState technical={error} onRetry={load} />
         ) : (
           <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+            {formError && <FormError>{formError}</FormError>}
             <Field label="ชื่อคริสตจักร" required>
               {(props) => (
                 <input

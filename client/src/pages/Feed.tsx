@@ -18,6 +18,7 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  FormError,
   Modal,
   PageHeader,
   SectionHeader,
@@ -141,6 +142,8 @@ export default function Feed() {
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [titleError, setTitleError] = useState<string | null>(null);
   const [transitioningId, setTransitioningId] = useState<string | null>(null);
 
   const canCreate = user && CREATE_ROLES.includes(user.role);
@@ -184,13 +187,17 @@ export default function Feed() {
   const openCreate = () => {
     setParticipantQuery("");
     setForm(EMPTY_FORM);
+    setFormError(null);
+    setTitleError(null);
     setFormOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+    setTitleError(null);
     if (!form.title.trim()) {
-      toast.error("กรุณากรอกหัวข้อ");
+      setTitleError("กรุณากรอกหัวข้อกิจกรรม");
       return;
     }
     setSubmitting(true);
@@ -209,7 +216,10 @@ export default function Feed() {
       setFormOpen(false);
       load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
+      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -443,6 +453,7 @@ export default function Feed() {
         }
       >
         <form id="feed-activity-form" className="flex flex-col gap-5" onSubmit={handleSubmit}>
+          {formError && <FormError>{formError}</FormError>}
           <Field label="ประเภทกิจกรรม" required>
             {(props) => (
               <select
@@ -460,7 +471,7 @@ export default function Feed() {
             )}
           </Field>
 
-          <Field label="หัวข้อ" required>
+          <Field label="หัวข้อ" required error={titleError ?? undefined}>
             {(props) => (
               <input
                 {...props}

@@ -6,6 +6,7 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  FormError,
   Modal,
   PageHeader,
   SectionHeader,
@@ -95,6 +96,7 @@ export default function Inbox() {
   const [rawMediaUrls, setRawMediaUrls] = useState<string[]>([]);
   const [submittedByLabel, setSubmittedByLabel] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
 
   const [publishTarget, setPublishTarget] = useState<SubmissionRow | null>(null);
   const [publishForm, setPublishForm] = useState({
@@ -103,6 +105,7 @@ export default function Inbox() {
     occurredAt: new Date().toISOString().slice(0, 16),
   });
   const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   const load = async () => {
     setIsLoading(true);
@@ -129,6 +132,7 @@ export default function Inbox() {
 
   const submitCapture = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCaptureError(null);
     setSubmitting(true);
     try {
       await api.post("/api/submissions", {
@@ -143,7 +147,10 @@ export default function Inbox() {
       setSubmittedByLabel("");
       load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
+      setCaptureError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -161,6 +168,7 @@ export default function Inbox() {
 
   const openPublish = (row: SubmissionRow) => {
     setPublishTarget(row);
+    setPublishError(null);
     setPublishForm({
       type: "house_mission",
       title: row.rawText ? row.rawText.slice(0, 80) : "",
@@ -171,6 +179,7 @@ export default function Inbox() {
   const submitPublish = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!publishTarget) return;
+    setPublishError(null);
     setPublishing(true);
     try {
       await api.post(`/api/submissions/${publishTarget.id}/publish`, {
@@ -183,7 +192,10 @@ export default function Inbox() {
       setPublishTarget(null);
       load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "เผยแพร่ไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "เผยแพร่ไม่สำเร็จ";
+      setPublishError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setPublishing(false);
     }
@@ -196,7 +208,14 @@ export default function Inbox() {
       <PageHeader
         title="ข้อมูลที่ส่งเข้ามา"
         description="สิ่งที่ยังไม่ได้เป็นข้อมูลทางการ — พิมพ์สิ่งที่ได้รับ (เช่นจาก LINE) แล้วตรวจสอบก่อนเผยแพร่"
-        primaryAction={{ label: "บันทึกข้อมูลนำเข้า", icon: Plus, onClick: () => setCaptureOpen(true) }}
+        primaryAction={{
+          label: "บันทึกข้อมูลนำเข้า",
+          icon: Plus,
+          onClick: () => {
+            setCaptureError(null);
+            setCaptureOpen(true);
+          },
+        }}
       />
 
       <div className="mb-5 w-full sm:w-56">
@@ -236,7 +255,14 @@ export default function Inbox() {
             icon={InboxIcon}
             title="ยังไม่มีข้อมูลนำเข้า"
             description="พิมพ์ข้อความหรือลิงก์รูปที่ได้รับจากทีมภาคสนาม เพื่อตรวจสอบก่อนเผยแพร่เป็นกิจกรรมพันธกิจ"
-            action={{ label: "บันทึกข้อมูลนำเข้า", icon: Plus, onClick: () => setCaptureOpen(true) }}
+            action={{
+              label: "บันทึกข้อมูลนำเข้า",
+              icon: Plus,
+              onClick: () => {
+                setCaptureError(null);
+                setCaptureOpen(true);
+              },
+            }}
           />
         ) : (
           <div className="space-y-3">
@@ -329,6 +355,7 @@ export default function Inbox() {
         }
       >
         <form id="inbox-capture-form" className="flex flex-col gap-5" onSubmit={submitCapture}>
+          {captureError && <FormError>{captureError}</FormError>}
           <Field label="ข้อความที่ได้รับ">
             {props => (
               <textarea
@@ -404,6 +431,7 @@ export default function Inbox() {
         }
       >
         <form id="inbox-publish-form" className="flex flex-col gap-5" onSubmit={submitPublish}>
+          {publishError && <FormError>{publishError}</FormError>}
           <Field label="ประเภทกิจกรรม" required>
             {props => (
               <select

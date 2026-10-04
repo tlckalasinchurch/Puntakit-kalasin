@@ -25,6 +25,7 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  FormError,
   StatusChip,
 } from "@/components/DesignSystem";
 import { subscribeToPushNotifications } from "@/lib/pwa";
@@ -58,6 +59,7 @@ export default function MemberProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Form states for profile
   const [nickname, setNickname] = useState("");
@@ -110,6 +112,7 @@ export default function MemberProfile() {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     setSaving(true);
     try {
       await api.put("/api/me/profile", {
@@ -126,7 +129,10 @@ export default function MemberProfile() {
       toast.success("บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว");
       fetchProfile();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกข้อมูลไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "บันทึกข้อมูลไม่สำเร็จ";
+      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -305,6 +311,7 @@ export default function MemberProfile() {
           </div>
 
           <form onSubmit={handleSaveProfile} className="mt-4 flex flex-col gap-3.5">
+            {formError && <FormError>{formError}</FormError>}
             <Field
               label="ชื่อเล่น"
               hint="ชื่อที่ให้ทีมศิษยาภิบาลเรียกคุณ"

@@ -6,6 +6,7 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  FormError,
   Modal,
   PageHeader,
   SectionHeader,
@@ -93,12 +94,14 @@ export default function Events() {
   const [editing, setEditing] = useState<Event | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Event | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const openCreate = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
+    setFormError(null);
     setFormOpen(true);
   };
 
@@ -112,11 +115,13 @@ export default function Events() {
       category: ev.category,
       status: ev.status,
     });
+    setFormError(null);
     setFormOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     setSubmitting(true);
     try {
       const payload = { ...form, eventDate: new Date(form.eventDate).toISOString() };
@@ -129,7 +134,10 @@ export default function Events() {
       }
       setFormOpen(false);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ");
+      const message =
+        err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
+      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -260,6 +268,7 @@ export default function Events() {
         }
       >
         <form id="event-form" className="grid grid-cols-1 gap-5 sm:grid-cols-2" onSubmit={handleSubmit}>
+          {formError && <FormError>{formError}</FormError>}
           <div className="sm:col-span-2">
             <Field label="ชื่อกิจกรรม" required>
               {props => (
