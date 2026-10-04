@@ -271,10 +271,18 @@ describe("UX audit Batch D — visual consistency and performance", () => {
     expect(read("client/src/index.css")).not.toMatch(/@import\s+url\("https:\/\/fonts/);
   });
 
-  it("Home hero is dimensioned and prioritised as the LCP candidate", () => {
+  it("Home ships no un-prioritised hero image as its LCP", () => {
+    // The 2026-10 audit flagged the hero PNG as an un-dimensioned LCP image;
+    // the home redesign since removed it entirely (search + care CTA lead the
+    // section now). If a hero image ever returns, it must be dimensioned and
+    // prioritised.
     const src = read("client/src/pages/Home.tsx");
-    expect(src).toMatch(/fetchPriority="high"/);
-    expect(src).toMatch(/width=\{1200\}/);
+    const heroImg = src.match(/<img[^>]*IDENTITY_IMAGE[^>]*>/);
+    if (heroImg) {
+      expect(heroImg[0]).toMatch(/fetchPriority="high"/);
+      expect(heroImg[0]).toMatch(/width=/);
+      expect(heroImg[0]).toMatch(/height=/);
+    }
   });
 
   it("Reports stats use th-TH number formatting", () => {

@@ -200,6 +200,9 @@ export default function Members() {
   const membershipStatus = searchParams.get("membershipStatus") ?? "ทั้งหมด";
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const selectedMemberId = searchParams.get("member");
+  // Still read raw for the org-chart deep links below: they are deliberately
+  // transient (?care=… / ?new=1 are consumed once and then stripped).
+  const urlSearch = useSearch();
 
   const updateParams = useCallback(
     (
