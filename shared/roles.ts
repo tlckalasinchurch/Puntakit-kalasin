@@ -70,3 +70,6 @@ export const GROUP_MANAGE_ANY_ROLES: readonly UserRole[] = [
 export function hasRole(role: UserRole | undefined, allowed: readonly UserRole[]): boolean {
   return role !== undefined && allowed.includes(role);
 }
+
+/** Manage user accounts: change a role, assign care groups (`/api/admin/users`). */
+export const SUPER_ADMIN_ROLES: readonly UserRole[] = ["super_admin"];
