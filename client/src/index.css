@@ -291,23 +291,6 @@
 }
 .blue-eyebrow {
   color: var(--color-body-muted);
-}
-.primary-action {
-  background: var(--color-primary);
-  color: var(--color-on-dark);
-  border-radius: var(--radius-pill);
-  min-height: 44px;
-  padding: 10px 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  transition: background-color 0.2s ease;
-}
-.primary-action:hover {
-  background: var(--color-primary-focus);
 }.card-surface {
   background: var(--color-canvas);
   border: 1px solid var(--color-hairline);
@@ -359,13 +342,13 @@
   color: var(--color-info-strong);
   background: var(--color-info-soft);
 }
-.mini-icon.green {
-  color: var(--color-success);
-  background: var(--color-success-soft);
-}
 .mini-icon.pink {
   color: var(--relationship-pink);
   background: var(--relationship-pink-soft);
+}
+.mini-icon.green {
+  color: var(--color-success);
+  background: var(--color-success-soft);
 }
 .mini-icon.purple {
   color: var(--care-purple);
@@ -384,10 +367,6 @@
   background: none;
   color: var(--navy);
   padding: 4px;
-}.primary-action:active,
-.blue-button:active,
-.nav-item:active {
-  transform: scale(0.97);
 }
 @keyframes grow {
   from {
@@ -414,7 +393,6 @@
   .hero-side-copy {
     right: 10px;
   }
-
 }
 @media (max-width: 900px) {
   .sidebar {
@@ -474,10 +452,6 @@
   .profile > svg {
     display: none;
   }
-  .avatar {
-    width: 32px;
-    height: 32px;
-  }
   .dashboard {
     padding: 18px 13px 35px;
   }
@@ -517,7 +491,6 @@
   .hero-side-copy strong {
     font-size: 13px;
   }
-
   .lower-grid {
     grid-template-columns: 1fr;
   }
@@ -673,6 +646,7 @@
   color: var(--color-body-muted);
   font-size: 11px;
   outline: none;
+}
 @keyframes fadein {
   from {
     opacity: 0;
@@ -820,8 +794,7 @@
   font-size: 12px;
   color: var(--muted);
   margin: 0 0 22px;
-}
-.ministry-grid,
+}.ministry-grid,
 .event-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -1172,6 +1145,7 @@
   background: color-mix(in srgb, var(--color-primary) 14%, transparent);
   pointer-events: none;
 }
+
 /* Shared dark palette.
    Graphite, not navy: the dark surfaces are steps of the same neutral family
    the light chrome uses, so the accent (--color-primary-on-dark) is the only
