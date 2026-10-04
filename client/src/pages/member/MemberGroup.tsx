@@ -50,11 +50,11 @@ export default function MemberGroup() {
       const res = await api.get<CareGroupInfo | null>("/api/me/group");
       setGroup(res);
       if (notify) {
-        toast.success("อัปเดตข้อมูลกลุ่มแคร์เรียบร้อยแล้ว");
+        toast.success("อัปเดตข้อมูลพันธกิจเรียบร้อยแล้ว");
       }
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "โหลดข้อมูลกลุ่มแคร์ไม่สำเร็จ"
+        err instanceof ApiError ? err.message : "โหลดข้อมูลพันธกิจไม่สำเร็จ"
       );
     } finally {
       setLoading(false);
@@ -83,10 +83,10 @@ export default function MemberGroup() {
         : "สมาชิก";
 
   return (
-    <MemberAppLayout title="กลุ่มแคร์ของฉัน">
+    <MemberAppLayout title="พันธกิจของฉัน">
       <header>
         <h1 className="type-lead font-semibold text-[var(--color-ink)]">
-          กลุ่มแคร์ของฉัน
+          พันธกิจของฉัน
         </h1>
         <p className="type-caption mt-1 text-[var(--color-body-muted)]">
           กลุ่มชีวิตที่คุณสังกัด วันนัดหมาย ผู้นำ และสมาชิกในกลุ่ม
@@ -114,7 +114,7 @@ export default function MemberGroup() {
           type="button"
           onClick={handleRefresh}
           disabled={refreshing}
-          aria-label="รีเฟรชข้อมูลกลุ่มแคร์"
+          aria-label="รีเฟรชข้อมูลพันธกิจ"
           aria-busy={refreshing}
           title="รีเฟรชข้อมูล"
           className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-on-dark)]/10 text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-on-dark)]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-on-dark)] disabled:opacity-50 motion-reduce:transition-none"
@@ -131,7 +131,7 @@ export default function MemberGroup() {
 
       {!loading && error && (
         <ErrorState
-          title="โหลดข้อมูลกลุ่มแคร์ไม่สำเร็จ"
+          title="โหลดข้อมูลพันธกิจไม่สำเร็จ"
           description="ระบบยังเชื่อมต่อข้อมูลกลุ่มของคุณไม่ได้ในขณะนี้ กรุณาลองอีกครั้ง"
           technical={error}
           retryLabel="ลองอีกครั้ง"
@@ -145,8 +145,8 @@ export default function MemberGroup() {
       {!loading && !error && !group && (
         <EmptyState
           icon={HeartHandshake}
-          title="คุณยังไม่ได้สังกัดกลุ่มแคร์"
-          description="การมีกลุ่มแคร์ช่วยให้คุณมีพี่น้องร่วมอธิษฐานและดูแลกัน หากต้องการเข้าร่วมกลุ่มแคร์ กรุณาติดต่อฝ่ายต้อนรับของคริสตจักร"
+          title="คุณยังไม่ได้สังกัดพันธกิจ"
+          description="การมีพันธกิจช่วยให้คุณมีพี่น้องร่วมอธิษฐานและดูแลกัน หากต้องการเข้าร่วมพันธกิจ กรุณาติดต่อฝ่ายต้อนรับของคริสตจักร"
           action={{
             label: "ติดต่อฝ่ายต้อนรับคริสตจักร",
             href: "tel:043811800",
@@ -158,7 +158,7 @@ export default function MemberGroup() {
         <>
           <section className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5">
             <span className="type-fine inline-flex items-center rounded-[var(--radius-xs)] bg-[var(--color-accent-soft)] px-2 py-1 font-semibold text-[var(--color-primary)]">
-              {group.category || "กลุ่มแคร์"}
+              {group.category || "พันธกิจ"}
             </span>
             <h2 className="type-body-strong mt-2 text-[var(--color-ink)]">
               {group.groupName}

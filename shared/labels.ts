@@ -24,14 +24,14 @@ export const MEMBERSHIP_STATUS_LABELS: Record<MembershipStatus, string> = {
  * Single source for every surface that renders a role name — the admin
  * Profile page and the Member PWA profile. The PWA once hardcoded a ternary
  * that dropped `admin`/`viewer` entirely and drifted on wording
- * ("ผู้นำกลุ่มแคร์" vs "หัวหน้ากลุ่มแคร์"); one shared map keeps role
+ * ("ผู้นำพันธกิจ" vs "หัวหน้าพันธกิจ"); one shared map keeps role
  * wording consistent everywhere.
  */
 export const ROLE_LABELS: Record<UserRole, string> = {
   super_admin: "ผู้ดูแลระบบสูงสุด",
   admin: "ผู้ดูแลระบบ",
-  ministry_leader: "ผู้นำพันธกิจ",
-  group_leader: "ผู้นำกลุ่มแคร์",
+  ministry_leader: "ผู้นำฝ่ายงาน",
+  group_leader: "ผู้นำพันธกิจ",
   staff: "เจ้าหน้าที่",
   member: "สมาชิก",
   viewer: "ผู้ชมข้อมูล",

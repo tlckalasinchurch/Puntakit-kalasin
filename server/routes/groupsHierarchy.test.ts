@@ -80,7 +80,7 @@ describe("Groups org hierarchy (real PGlite Postgres)", () => {
     const b = await call("POST", "/api/groups", { name: "บอดี้ทดสอบ", orgLevel: "body" });
     expect(b.status).toBe(201);
     bodyId = (await json(b)).data.id;
-    const c = await call("POST", "/api/groups", { name: "แคร์ทดสอบ", orgLevel: "care", parentGroupId: bodyId });
+    const c = await call("POST", "/api/groups", { name: "พันธกิจทดสอบ", orgLevel: "care", parentGroupId: bodyId });
     expect(c.status).toBe(201);
     const created = (await json(c)).data;
     careId = created.id;

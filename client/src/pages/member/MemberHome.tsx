@@ -292,7 +292,7 @@ export default function MemberHome() {
           </span>
           <span className="min-w-0">
             <span className="type-caption-strong block text-[var(--color-ink)]">
-              กลุ่มแคร์ของฉัน
+              พันธกิจของฉัน
             </span>
             <span className="type-fine block text-[var(--color-body-muted)]">
               นัดพบและเพื่อนในกลุ่ม
@@ -309,7 +309,7 @@ export default function MemberHome() {
         >
           <span className="min-w-0">
             <span className="type-fine block font-semibold text-[var(--color-primary)]">
-              กลุ่มแคร์ประจำตัว
+              พันธกิจประจำตัว
             </span>
             <span className="type-body-strong block truncate text-[var(--color-ink)]">
               {data.careGroup.name}
@@ -327,8 +327,8 @@ export default function MemberHome() {
       ) : (
         <EmptyState
           icon={UsersRound}
-          title="คุณยังไม่มีกลุ่มแคร์"
-          description="เมื่อคุณเข้าร่วมกลุ่มแคร์ วันนัดหมายและผู้นำกลุ่มจะแสดงไว้ที่นี่"
+          title="คุณยังไม่มีพันธกิจ"
+          description="เมื่อคุณเข้าร่วมพันธกิจ วันนัดหมายและผู้นำกลุ่มจะแสดงไว้ที่นี่"
           action={{
             label: "ติดต่อฝ่ายต้อนรับคริสตจักร",
             href: "tel:043811800",

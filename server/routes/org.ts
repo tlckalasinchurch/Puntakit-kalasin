@@ -94,7 +94,7 @@ orgRouter.get("/care-groups/:id/members", async (req, res, next) => {
       .from(groups)
       .where(and(eq(groups.id, id), eq(groups.orgLevel, "care"), isNull(groups.deletedAt)))
       .limit(1);
-    if (!care) throw new NotFoundError("ไม่พบแคร์ที่ระบุ");
+    if (!care) throw new NotFoundError("ไม่พบพันธกิจที่ระบุ");
     const [body] = care.parentGroupId
       ? await db.select({ name: groups.name }).from(groups).where(eq(groups.id, care.parentGroupId)).limit(1)
       : [];

@@ -24,7 +24,7 @@ export async function requireCareGroup(db: Database, careGroupId: string): Promi
     .from(groups)
     .where(and(eq(groups.id, careGroupId), eq(groups.orgLevel, "care"), isNull(groups.deletedAt)))
     .limit(1);
-  if (!row) throw new ValidationError("ไม่พบแคร์ที่เลือก", [{ field: "careGroupId", message: "ไม่พบแคร์ที่เลือก" }]);
+  if (!row) throw new ValidationError("ไม่พบพันธกิจที่เลือก", [{ field: "careGroupId", message: "ไม่พบพันธกิจที่เลือก" }]);
   return { id: row.id, name: row.name.trim() };
 }
 

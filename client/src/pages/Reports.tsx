@@ -29,7 +29,7 @@ interface ReportsSummary {
 const EXPORTS: { key: string; label: string }[] = [
   { key: "members", label: "สมาชิก" },
   { key: "attendance", label: "การเข้าร่วม" },
-  { key: "groups", label: "กลุ่มแคร์" },
+  { key: "groups", label: "พันธกิจ" },
   { key: "events", label: "กิจกรรม" },
 ];
 
@@ -79,11 +79,11 @@ export default function Reports() {
   if (!canView) {
     return (
       <AppLayout>
-        <PageHeader title="รายงาน" description="ภาพรวมสมาชิก การเข้าร่วม กลุ่มแคร์ และกิจกรรม" />
+        <PageHeader title="รายงาน" description="ภาพรวมสมาชิก การเข้าร่วม พันธกิจ และกิจกรรม" />
         <EmptyState
           icon={Lock}
           title="ไม่มีสิทธิ์เข้าถึง"
-          description="หน้านี้จำกัดเฉพาะผู้ดูแลระบบ เจ้าหน้าที่ และผู้นำพันธกิจ"
+          description="หน้านี้จำกัดเฉพาะผู้ดูแลระบบ เจ้าหน้าที่ และผู้นำฝ่ายงาน"
         />
       </AppLayout>
     );
@@ -93,7 +93,7 @@ export default function Reports() {
     <AppLayout>
       <PageHeader
         title="รายงาน"
-        description="ภาพรวมสมาชิก การเข้าร่วม กลุ่มแคร์ และกิจกรรม พร้อมส่งออกเป็น CSV"
+        description="ภาพรวมสมาชิก การเข้าร่วม พันธกิจ และกิจกรรม พร้อมส่งออกเป็น CSV"
         secondaryActions={[
           {
             label: "รีเฟรช",
@@ -162,7 +162,7 @@ export default function Reports() {
           </div>
           <div className="card-surface p-4">
             <h2 className="type-caption-strong flex items-center gap-2 text-[var(--color-ink)]">
-              <FileBarChart size={ICON_SIZE.sm} aria-hidden="true" /> กลุ่มแคร์
+              <FileBarChart size={ICON_SIZE.sm} aria-hidden="true" /> พันธกิจ
             </h2>
             <p className="type-caption mt-2 text-[var(--color-body-muted)]">
               ทั้งหมด {summary.groups.total} กลุ่ม

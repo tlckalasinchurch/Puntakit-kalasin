@@ -435,7 +435,7 @@ export default function Members() {
     <AppLayout>
       <PageHeader
         title="สมาชิก"
-        description="ค้นหา ดูแล และเชื่อมโยงสมาชิกกับกลุ่มแคร์ได้จากที่เดียว"
+        description="ค้นหา ดูแล และเชื่อมโยงสมาชิกกับพันธกิจได้จากที่เดียว"
         primaryAction={
           canCreate
             ? { label: "เพิ่มสมาชิก", icon: UserPlus, onClick: openCreate }
@@ -520,7 +520,7 @@ export default function Members() {
         {careOptions.length > 0 && (
           <div className="w-full sm:w-auto">
             <label htmlFor="members-care" className="type-caption-strong block text-[var(--color-ink)]">
-              แคร์
+              พันธกิจ
             </label>
             <select
               id="members-care"
@@ -528,7 +528,7 @@ export default function Members() {
               onChange={(e) => setCareFilter(e.target.value)}
               className={`${SELECT_CLASS} mt-1.5 sm:w-48`}
             >
-              <option value="">ทุกแคร์</option>
+              <option value="">ทุกพันธกิจ</option>
               {careOptions.map((b) => (
                 <optgroup key={b.body} label={b.body}>
                   {b.cares.map((c) => (
@@ -852,7 +852,7 @@ export default function Members() {
               )}
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="ชื่อเล่น" hint="ใช้เรียกในกลุ่มแคร์">
+              <Field label="ชื่อเล่น" hint="ใช้เรียกในพันธกิจ">
                 {fieldProps => (
                   <input
                     {...fieldProps}
@@ -1013,7 +1013,7 @@ export default function Members() {
                 )}
               </Field>
               {careOptions.length > 0 && (
-                <Field label="แคร์" hint="เลือกแคร์ที่สมาชิกเข้าร่วม ย้ายแคร์ได้ภายหลัง">
+                <Field label="พันธกิจ" hint="เลือกพันธกิจที่สมาชิกเข้าร่วม ย้ายพันธกิจได้ภายหลัง">
                   {fieldProps => (
                     <select
                       {...fieldProps}
@@ -1021,7 +1021,7 @@ export default function Members() {
                       value={form.careGroupId}
                       onChange={(e) => setForm({ ...form, careGroupId: e.target.value })}
                     >
-                      <option value="">ยังไม่ระบุแคร์</option>
+                      <option value="">ยังไม่ระบุพันธกิจ</option>
                       {careOptions.map((b) => (
                         <optgroup key={b.body} label={b.body}>
                           {b.cares.map((c) => (
@@ -1263,7 +1263,7 @@ export default function Members() {
                     </dd>
                   </div>
                   <div className="flex gap-2">
-                    <dt className="shrink-0">กลุ่มแคร์:</dt>
+                    <dt className="shrink-0">พันธกิจ:</dt>
                     <dd className="font-semibold text-[var(--color-ink)]">
                       {selectedMember.careGroup ? `${selectedMember.careGroup.name}${selectedMember.careGroup.bodyName ? ` · ${selectedMember.careGroup.bodyName}` : ""}` : selectedMember.group || "ยังไม่มีกลุ่ม"}
                     </dd>

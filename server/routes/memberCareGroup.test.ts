@@ -25,7 +25,7 @@ const dataset = {
     { id: id(1), level: 0, title: "ศบ.", name: "" },
     { id: id(10), level: 1, title: "หนบ. บอดี้หนึ่ง", name: "" },
   ],
-  care_groups: [care(20, "แคร์เอ", 10), care(21, "แคร์บี", 10)],
+  care_groups: [care(20, "พันธกิจเอ", 10), care(21, "พันธกิจบี", 10)],
   members: [],
 };
 
@@ -79,10 +79,10 @@ describe("member <-> care group membership (real PGlite Postgres)", () => {
     memberId = (await json(res)).data.id;
     expect(await memberships(memberId)).toEqual([{ g: id(20), s: "active", left: false }]);
     const detail = (await json(await call("GET", `/api/members/${memberId}`))).data;
-    expect(detail.group).toBe("แคร์เอ");
-    expect(detail.careGroup).toEqual({ id: id(20), name: "แคร์เอ", bodyName: "บอดี้หนึ่ง" });
+    expect(detail.group).toBe("พันธกิจเอ");
+    expect(detail.careGroup).toEqual({ id: id(20), name: "พันธกิจเอ", bodyName: "บอดี้หนึ่ง" });
     const list = (await json(await call("GET", "/api/members?search=ทด"))).data as any[];
-    expect(list[0].careGroup.name).toBe("แคร์เอ");
+    expect(list[0].careGroup.name).toBe("พันธกิจเอ");
   });
 
   it("rejects an unknown care group and a group that is not a care group, creating nothing", async () => {
@@ -100,7 +100,7 @@ describe("member <-> care group membership (real PGlite Postgres)", () => {
       { g: id(20), s: "inactive", left: true },
       { g: id(21), s: "active", left: false },
     ]);
-    expect((await json(await call("GET", `/api/members/${memberId}`))).data.group).toBe("แคร์บี");
+    expect((await json(await call("GET", `/api/members/${memberId}`))).data.group).toBe("พันธกิจบี");
   });
 
   it("moving back reactivates the old row instead of adding a second one", async () => {
@@ -118,11 +118,11 @@ describe("member <-> care group membership (real PGlite Postgres)", () => {
   });
 
   it("filters the member list by care group", async () => {
-    await call("POST", "/api/members", { name: "คนในแคร์บี", careGroupId: id(21) });
+    await call("POST", "/api/members", { name: "คนในพันธกิจบี", careGroupId: id(21) });
     const a = (await json(await call("GET", `/api/members?careGroupId=${id(20)}`))).data as any[];
     const b = (await json(await call("GET", `/api/members?careGroupId=${id(21)}`))).data as any[];
     expect(a.map((m) => m.id)).toEqual([memberId]);
-    expect(b.map((m) => m.name)).toEqual(["คนในแคร์บี"]);
+    expect(b.map((m) => m.name)).toEqual(["คนในพันธกิจบี"]);
   });
 
   it("clearing the care group ends the membership and the label", async () => {

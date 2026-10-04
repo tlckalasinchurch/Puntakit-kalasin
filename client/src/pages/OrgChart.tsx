@@ -9,7 +9,7 @@ import { api, ApiError } from "@/lib/api";
 import { PRIVILEGED_ROLES, hasRole } from "@shared/roles";
 
 /**
- * ผังองค์กร: ศบ. → บอดี้ → แคร์ → สมาชิก.
+ * ผังองค์กร: ศบ. → บอดี้ → พันธกิจ → สมาชิก.
  *
  * Reading order is the hierarchy itself. One selected body at a time keeps the
  * screen to three levels of information (leadership, bodies, care groups of
@@ -124,7 +124,7 @@ export default function OrgChart() {
   if (!canRead) {
     return (
       <AppLayout>
-        <PageHeader title="ผังองค์กร" description="ดูโครงสร้าง บอดี้ แคร์ และสมาชิก" />
+        <PageHeader title="ผังองค์กร" description="ดูโครงสร้าง บอดี้ พันธกิจ และสมาชิก" />
         <EmptyState icon={Lock} title="ไม่มีสิทธิ์เข้าถึง" description="หน้านี้จำกัดเฉพาะเจ้าหน้าที่และผู้ดูแลระบบ" />
       </AppLayout>
     );
@@ -134,7 +134,7 @@ export default function OrgChart() {
     <AppLayout>
       <PageHeader
         title="ผังองค์กร"
-        description="เลือกบอดี้เพื่อดูแคร์ แล้วเลือกแคร์เพื่อดูรายชื่อสมาชิก"
+        description="เลือกบอดี้เพื่อดูพันธกิจ แล้วเลือกพันธกิจเพื่อดูรายชื่อสมาชิก"
         secondaryActions={[
           { label: "จัดการกลุ่ม", href: "/groups" },
           { label: "จัดการสมาชิก", href: "/members" },
@@ -162,7 +162,7 @@ export default function OrgChart() {
             </div>
             <dl className="grid grid-cols-3 gap-6">
               <Stat value={data.totals.bodies} label="บอดี้" />
-              <Stat value={data.totals.careGroups} label="แคร์" />
+              <Stat value={data.totals.careGroups} label="พันธกิจ" />
               <Stat value={data.totals.members} label="สมาชิก" />
             </dl>
           </section>
@@ -203,7 +203,7 @@ export default function OrgChart() {
                         </span>
                       </span>
                       <DataBar value={b.memberCount} max={maxBody} label={`${b.name}: สมาชิก ${b.memberCount} คน`} />
-                      <span className="type-caption text-[var(--color-body-muted)]">{b.careGroupCount} แคร์</span>
+                      <span className="type-caption text-[var(--color-body-muted)]">{b.careGroupCount} พันธกิจ</span>
                     </button>
                   </li>
                 );
@@ -217,21 +217,21 @@ export default function OrgChart() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 id="org-care" className="type-body-strong text-[var(--color-ink)]">
-                    แคร์ใน{body.name}
+                    พันธกิจใน{body.name}
                   </h2>
                   <p className="type-caption text-[var(--color-body-muted)]">
-                    {body.careGroupCount} แคร์ · {th.format(body.memberCount)} สมาชิก
+                    {body.careGroupCount} พันธกิจ · {th.format(body.memberCount)} สมาชิก
                   </p>
                 </div>
                 {body.careGroups.length > 6 && (
                   <label className="relative block sm:w-72">
-                    <span className="sr-only">ค้นหาแคร์</span>
+                    <span className="sr-only">ค้นหาพันธกิจ</span>
                     <Search size={16} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-body-muted)]" />
                     <input
                       type="search"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder="ค้นหาแคร์ ชื่อ หรือ หนค."
+                      placeholder="ค้นหาพันธกิจ ชื่อ หรือ หนค."
                       className="min-h-11 w-full rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] pl-9 pr-3 text-sm text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
                     />
                   </label>
@@ -239,7 +239,7 @@ export default function OrgChart() {
               </div>
 
               {careGroups.length === 0 ? (
-                <EmptyState title={body.careGroups.length === 0 ? "บอดี้นี้ยังไม่มีแคร์" : "ไม่พบแคร์ที่ค้นหา"} description={body.careGroups.length === 0 ? "เพิ่มแคร์ใต้บอดี้นี้ได้ที่หน้ากลุ่ม" : "ลองใช้คำอื่น หรือล้างช่องค้นหา"} />
+                <EmptyState title={body.careGroups.length === 0 ? "บอดี้นี้ยังไม่มีพันธกิจ" : "ไม่พบพันธกิจที่ค้นหา"} description={body.careGroups.length === 0 ? "เพิ่มพันธกิจใต้บอดี้นี้ได้ที่หน้ากลุ่ม" : "ลองใช้คำอื่น หรือล้างช่องค้นหา"} />
               ) : (
                 <ul className="card-surface divide-y divide-[var(--color-hairline)] overflow-hidden p-0">
                   {careGroups.map((c) => (
@@ -281,18 +281,18 @@ export default function OrgChart() {
             <SheetDescription className="type-caption text-[var(--color-body-muted)]">
               {[detail?.group.bodyName, detail?.group.careLeaderName && `หนค. ${detail.group.careLeaderName}`, detail?.group.coordinatorName && `ผู้ประสานงาน ${detail.group.coordinatorName}`]
                 .filter(Boolean)
-                .join(" · ") || "รายชื่อสมาชิกในแคร์"}
+                .join(" · ") || "รายชื่อสมาชิกในพันธกิจ"}
             </SheetDescription>
           </SheetHeader>
           <div className="px-4 pb-6">
             {detailError ? (
-              <ErrorState title="โหลดรายชื่อไม่สำเร็จ" description="กรุณาลองเปิดแคร์นี้อีกครั้ง" technical={detailError} onRetry={() => open && setOpen({ ...open })} />
+              <ErrorState title="โหลดรายชื่อไม่สำเร็จ" description="กรุณาลองเปิดพันธกิจนี้อีกครั้ง" technical={detailError} onRetry={() => open && setOpen({ ...open })} />
             ) : !detail ? (
               <div role="status" aria-label="กำลังโหลดรายชื่อ">
                 <ListSkeleton count={5} />
               </div>
             ) : detail.members.length === 0 ? (
-              <EmptyState title="ยังไม่มีสมาชิกในแคร์นี้" description="เพิ่มสมาชิกได้ที่หน้ากลุ่ม" />
+              <EmptyState title="ยังไม่มีสมาชิกในพันธกิจนี้" description="เพิ่มสมาชิกได้ที่หน้ากลุ่ม" />
             ) : (
               <>
               {detail.members.some((m) => m.nameMissing) && (
