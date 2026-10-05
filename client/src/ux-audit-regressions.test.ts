@@ -60,7 +60,7 @@ describe("UX audit Batch A — accessibility foundations", () => {
 
   it("ActionButton and SectionHeader navigate internally through wouter Link", () => {
     const src = stripComments(read("client/src/components/DesignSystem.tsx"));
-    expect(src).toContain("from \"wouter\"");
+    expect(src).toContain('from "wouter"');
     expect(src).toMatch(/<Link\s+href=\{action\.href\}/);
     // Exactly one raw anchor may remain: the genuinely-external fallback.
     const rawAnchors = src.match(/<a\s+href=\{action\.href\}/g) ?? [];
@@ -127,7 +127,14 @@ describe("UX audit Batch C — navigation and data access", () => {
   it("Members keeps filters, page and the selected member in the URL", () => {
     const src = read("client/src/pages/Members.tsx");
     expect(src).toMatch(/useSearchParams\(\)/);
-    for (const key of ["q", "area", "status", "membershipStatus", "page", "member"]) {
+    for (const key of [
+      "q",
+      "area",
+      "status",
+      "membershipStatus",
+      "page",
+      "member",
+    ]) {
       expect(src).toMatch(new RegExp(`p\\.(?:set|delete)\\("${key}"`));
     }
     // Deep links fetch the member directly; a dead id cleans itself from the URL.
@@ -266,9 +273,13 @@ describe("UX audit Batch D — visual consistency and performance", () => {
 
   it("fonts load via preconnected head links, not a blocking CSS @import", () => {
     const html = read("client/index.html");
-    expect(html).toMatch(/rel="preconnect"\s+href="https:\/\/fonts\.gstatic\.com"/);
+    expect(html).toMatch(
+      /rel="preconnect"\s+href="https:\/\/fonts\.gstatic\.com"/
+    );
     expect(html).toMatch(/fonts\.googleapis\.com\/css2\?family=Prompt/);
-    expect(read("client/src/index.css")).not.toMatch(/@import\s+url\("https:\/\/fonts/);
+    expect(read("client/src/index.css")).not.toMatch(
+      /@import\s+url\("https:\/\/fonts/
+    );
   });
 
   it("Home ships no un-prioritised hero image as its LCP", () => {
@@ -287,7 +298,9 @@ describe("UX audit Batch D — visual consistency and performance", () => {
 
   it("Reports stats use th-TH number formatting", () => {
     const src = read("client/src/pages/Reports.tsx");
-    expect(src.match(/toLocaleString\("th-TH"/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(
+      src.match(/toLocaleString\("th-TH"/g)?.length
+    ).toBeGreaterThanOrEqual(5);
     expect(src).toMatch(/tabular-nums/);
   });
 });
@@ -360,7 +373,10 @@ describe("UX audit Batch F — pages added after the first audit", () => {
 
   it("every new page sets a per-route document title", () => {
     for (const rel of NEW_PAGES) {
-      expect(read(rel).includes("usePageTitle("), `${rel} misses usePageTitle`).toBe(true);
+      expect(
+        read(rel).includes("usePageTitle("),
+        `${rel} misses usePageTitle`
+      ).toBe(true);
     }
   });
 
@@ -420,9 +436,15 @@ describe("Audit 2026-10-04 — permissions, error states and mobile forms", () =
   it("admin-shell routes are gated by role sets from shared/roles.ts", () => {
     const app = read("client/src/App.tsx");
     expect(app).toMatch(/ADMIN_SHELL_ROLES/);
-    expect(app).toMatch(/<Route path="\/members">\s*<ProtectedRoute allow=\{ADMIN_SHELL_ROLES\}>/);
-    expect(app).toMatch(/<Route path="\/reports">\s*<ProtectedRoute allow=\{PRIVILEGED_ROLES\}>/);
-    expect(app).toMatch(/<Route path="\/import\/org">\s*<ProtectedRoute allow=\{ADMIN_ROLES\}>/);
+    expect(app).toMatch(
+      /<Route path="\/members">\s*<ProtectedRoute allow=\{ADMIN_SHELL_ROLES\}>/
+    );
+    expect(app).toMatch(
+      /<Route path="\/reports">\s*<ProtectedRoute allow=\{PRIVILEGED_ROLES\}>/
+    );
+    expect(app).toMatch(
+      /<Route path="\/import\/org">\s*<ProtectedRoute allow=\{ADMIN_ROLES\}>/
+    );
     // The member PWA stays open to every signed-in role.
     expect(app).toMatch(/<Route path="\/app">\s*<ProtectedRoute>/);
   });
@@ -436,7 +458,9 @@ describe("Audit 2026-10-04 — permissions, error states and mobile forms", () =
 
   it("an expired session on any API call re-syncs auth instead of looping on 'connection failed'", () => {
     expect(read("client/src/lib/api.ts")).toMatch(/UNAUTHORIZED_EVENT/);
-    expect(read("client/src/contexts/AuthContext.tsx")).toMatch(/useResyncOnUnauthorized\(retry\)/);
+    expect(read("client/src/contexts/AuthContext.tsx")).toMatch(
+      /useResyncOnUnauthorized\(retry\)/
+    );
   });
 
   it("ErrorBoundary hides the stack trace outside development", () => {
@@ -446,23 +470,47 @@ describe("Audit 2026-10-04 — permissions, error states and mobile forms", () =
   });
 
   it("form-level errors add the 'check the data' hint only for rejected input", () => {
-    for (const page of ["Announcements", "Events", "Ministries", "Church", "Inbox", "Members", "Groups", "Feed"]) {
+    for (const page of [
+      "Announcements",
+      "Events",
+      "Ministries",
+      "Church",
+      "Inbox",
+      "Members",
+      "Groups",
+      "Feed",
+    ]) {
       const src = read(`client/src/pages/${page}.tsx`);
-      expect(src, `${page}.tsx`).not.toMatch(/\$\{message\} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง/);
+      expect(src, `${page}.tsx`).not.toMatch(
+        /\$\{message\} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง/
+      );
       expect(src, `${page}.tsx`).toMatch(/withRecheckHint\(/);
     }
   });
 
   it("text fields are at least 16px on phones so iOS Safari does not zoom on focus", () => {
-    for (const page of ["Church", "Attendance", "Feed", "Events", "Announcements", "Ministries", "Reports", "Inbox"]) {
+    for (const page of [
+      "Church",
+      "Attendance",
+      "Feed",
+      "Events",
+      "Announcements",
+      "Ministries",
+      "Reports",
+      "Inbox",
+    ]) {
       const src = read(`client/src/pages/${page}.tsx`);
-      expect(src, `${page}.tsx`).toMatch(/min-h-11 w-full[^"]*text-base md:text-sm/);
+      expect(src, `${page}.tsx`).toMatch(
+        /min-h-11 w-full[^"]*text-base md:text-sm/
+      );
     }
   });
 
   it("the bottom-nav menu button lines up with its siblings", () => {
     const src = read("client/src/components/layout/MobileBottomNav.tsx");
-    expect(src).toMatch(/<span aria-hidden="true" className="flex size-9 items-center justify-center">\s*<Menu/);
+    expect(src).toMatch(
+      /<span aria-hidden="true" className="flex size-9 items-center justify-center">\s*<Menu/
+    );
   });
 
   it("index.css has a global :focus-visible fallback and no dangling design-doc reference", () => {
@@ -472,14 +520,22 @@ describe("Audit 2026-10-04 — permissions, error states and mobile forms", () =
   });
 
   it("brand-spec.md uses the same Sunken colour as index.css", () => {
-    const sunken = read("client/src/index.css").match(/--color-canvas-sunken:\s*(#[0-9a-f]{6})/i)?.[1];
+    const sunken = read("client/src/index.css").match(
+      /--color-canvas-sunken:\s*(#[0-9a-f]{6})/i
+    )?.[1];
     expect(sunken).toBeTruthy();
-    expect(read("brand-spec.md").toLowerCase()).toContain(sunken!.toLowerCase());
+    expect(read("brand-spec.md").toLowerCase()).toContain(
+      sunken!.toLowerCase()
+    );
   });
 
   it("a render error stays inside the page area so the shell keeps working", () => {
-    expect(read("client/src/components/layout/AppLayout.tsx")).toMatch(/<RouteErrorBoundary>\{children\}<\/RouteErrorBoundary>/);
-    expect(read("client/src/components/layout/MemberAppLayout.tsx")).toMatch(/<RouteErrorBoundary>\{children\}<\/RouteErrorBoundary>/);
+    expect(read("client/src/components/layout/AppLayout.tsx")).toMatch(
+      /<RouteErrorBoundary>\{children\}<\/RouteErrorBoundary>/
+    );
+    expect(read("client/src/components/layout/MemberAppLayout.tsx")).toMatch(
+      /<RouteErrorBoundary>\{children\}<\/RouteErrorBoundary>/
+    );
     const src = read("client/src/components/RouteErrorBoundary.tsx");
     expect(src).toMatch(/resetKey/);
     expect(src).toMatch(/import\.meta\.env\.DEV/);
@@ -487,7 +543,7 @@ describe("Audit 2026-10-04 — permissions, error states and mobile forms", () =
 
   it.each(["Announcements", "Events", "Ministries", "Church"])(
     "%s shows Thai field errors next to the control, not only a browser tooltip",
-    (page) => {
+    page => {
       const src = read(`client/src/pages/${page}.tsx`);
       expect(src).toMatch(/noValidate/);
       expect(src).toMatch(/requiredErrors\(form,/);
@@ -497,7 +553,74 @@ describe("Audit 2026-10-04 — permissions, error states and mobile forms", () =
   );
 
   it("quick follow-up buttons cannot be double-clicked", () => {
-    expect(read("client/src/pages/Members.tsx")).toMatch(/disabled=\{creatingFollowUp\}/);
-    expect(read("client/src/pages/Feed.tsx")).toMatch(/disabled=\{followUpActivityId !== null\}/);
+    expect(read("client/src/pages/Members.tsx")).toMatch(
+      /disabled=\{creatingFollowUp\}/
+    );
+    expect(read("client/src/pages/Feed.tsx")).toMatch(
+      /disabled=\{followUpActivityId !== null\}/
+    );
+  });
+});
+
+describe("UX audit P1 fixes — interaction race and accessibility guards", () => {
+  it("serializes attendance status mutations per member and ignores stale responses", () => {
+    const src = read("client/src/pages/Attendance.tsx");
+    expect(src).toMatch(/statusRequestRef/);
+    expect(src).toMatch(/pendingStatus/);
+    expect(src).toMatch(/disabled=\{pendingStatus\[m\.id\] !== undefined\}/);
+    expect(src).toMatch(
+      /statusRequestRef\.current\.get\(memberId\) !== requestId/
+    );
+    expect(src).toMatch(/attendanceRef\.current/);
+  });
+
+  it("guards attendance loaders and renders a retryable summary error", () => {
+    const src = read("client/src/pages/Attendance.tsx");
+    expect(src).toMatch(/liveRequestRef/);
+    expect(src).toMatch(/absenteesRequestRef/);
+    expect(src).toMatch(/summaryRequestRef/);
+    expect(src).toMatch(/summaryError/);
+    expect(src).toMatch(/title="โหลดสรุปการเข้าร่วมไม่สำเร็จ"/);
+  });
+
+  it("guards shared resource loads against stale responses and unmounts", () => {
+    const src = read("client/src/hooks/useResource.ts");
+    expect(src).toMatch(/requestSeq/);
+    expect(src).toMatch(/mounted/);
+    expect(src).toMatch(/requestId !== requestSeq\.current/);
+    expect(src).toMatch(
+      /mounted\.current && requestId === requestSeq\.current/
+    );
+  });
+
+  it("resets Inbox pagination and prevents duplicate row transitions", () => {
+    const src = read("client/src/pages/Inbox.tsx");
+    expect(src).toMatch(/setPage\(1\);\s*void load\(1\)/);
+    expect(src).toMatch(/transitioningIds/);
+    expect(src).toMatch(/transitioningRows/);
+    expect(src).toMatch(/disabled=\{transitioningRows\[row\.id\]\}/);
+  });
+
+  it("keeps the mobile sidebar inside a modal focus loop", () => {
+    const src = read("client/src/components/layout/Sidebar.tsx");
+    expect(src).toMatch(/event\.key !== "Tab"/);
+    expect(src).toMatch(/aria-modal=\{open \? "true" : undefined\}/);
+    expect(src).toMatch(/event\.shiftKey/);
+  });
+
+  it("uses accessible MemberPicker option state and announcements", () => {
+    const src = read("client/src/components/MemberPicker.tsx");
+    expect(src).toMatch(/aria-autocomplete="list"/);
+    expect(src).toMatch(/aria-selected=\{i === activeIndex\}/);
+    expect(src).toMatch(/role="status"[\s\S]*aria-live="polite"/);
+    expect(src).not.toMatch(/role="option"[\s\S]*?<button/);
+  });
+
+  it("clears PrayerRequestModal state on intentional close", () => {
+    const src = read("client/src/components/PrayerRequestModal.tsx");
+    expect(src).toMatch(/const resetForm = \(\) =>/);
+    expect(src).toMatch(/const handleClose = \(\) =>/);
+    expect(src).toMatch(/onClose=\{handleClose\}/);
+    expect(src).toMatch(/onClick=\{handleClose\}/);
   });
 });

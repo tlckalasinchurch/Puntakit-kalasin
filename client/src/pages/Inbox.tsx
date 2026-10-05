@@ -1,5 +1,12 @@
-import { useEffect, useState } from "react";
-import { CheckCircle2, Inbox as InboxIcon, Plus, Send, Sparkles, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  CheckCircle2,
+  Inbox as InboxIcon,
+  Plus,
+  Send,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
@@ -18,7 +25,10 @@ import { ListSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError, type ApiMeta, withRecheckHint } from "@/lib/api";
-import type { MissionActivityType, MissionSubmissionStatus } from "@shared/schema";
+import type {
+  MissionActivityType,
+  MissionSubmissionStatus,
+} from "@shared/schema";
 import { PRIVILEGED_ROLES as REVIEW_ROLES } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -80,7 +90,13 @@ const DASHED_BUTTON_CLASS =
   "inline-flex min-h-11 items-center justify-center gap-1.5 self-start rounded-[var(--radius-sm)] border border-dashed border-[var(--color-hairline)] px-3 text-sm font-semibold text-[var(--color-body-muted)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
 
 function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("th-TH", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function Inbox() {
@@ -95,6 +111,7 @@ export default function Inbox() {
   const [error, setError] = useState<string | null>(null);
   const [errorTechnical, setErrorTechnical] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const loadSeq = useRef(0);
 
   const [captureOpen, setCaptureOpen] = useState(false);
   const [rawText, setRawText] = useState("");
@@ -103,7 +120,9 @@ export default function Inbox() {
   const [submitting, setSubmitting] = useState(false);
   const [captureError, setCaptureError] = useState<string | null>(null);
 
-  const [publishTarget, setPublishTarget] = useState<SubmissionRow | null>(null);
+  const [publishTarget, setPublishTarget] = useState<SubmissionRow | null>(
+    null
+  );
   const [publishForm, setPublishForm] = useState({
     type: "house_mission" as MissionActivityType,
     title: "",
@@ -111,8 +130,13 @@ export default function Inbox() {
   });
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const transitioningIds = useRef(new Set<string>());
+  const [transitioningRows, setTransitioningRows] = useState<
+    Record<string, boolean>
+  >({});
 
   const load = async (pageToLoad: number = page) => {
+    const requestId = ++loadSeq.current;
     setIsLoading(true);
     setError(null);
     setErrorTechnical(null);
@@ -121,26 +145,39 @@ export default function Inbox() {
       if (statusFilter) params.set("status", statusFilter);
       params.set("page", String(pageToLoad));
       params.set("limit", "50");
-      const res = await api.getWithMeta<SubmissionRow[]>(`/api/submissions?${params.toString()}`);
+      const res = await api.getWithMeta<SubmissionRow[]>(
+        `/api/submissions?${params.toString()}`
+      );
+      if (requestId !== loadSeq.current) return;
       setItems(res.data || []);
       setMeta(res.meta ?? null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "โหลดข้อมูลที่ส่งเข้ามาไม่สำเร็จ");
-      setErrorTechnical(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
+      if (requestId !== loadSeq.current) return;
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "โหลดข้อมูลที่ส่งเข้ามาไม่สำเร็จ"
+      );
+      setErrorTechnical(
+        err instanceof ApiError
+          ? (err.serverMessage ?? err.message)
+          : String(err)
+      );
     } finally {
-      setIsLoading(false);
+      if (requestId === loadSeq.current) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    load(1);
+    setPage(1);
+    void load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
   const submitCapture = async (e: React.FormEvent) => {
     e.preventDefault();
     setCaptureError(null);
-    if (!rawText.trim() && !rawMediaUrls.some((u) => u.trim())) {
+    if (!rawText.trim() && !rawMediaUrls.some(u => u.trim())) {
       setCaptureError("กรุณากรอกข้อความหรือแนบลิงก์อย่างน้อยหนึ่งอย่าง");
       return;
     }
@@ -148,7 +185,7 @@ export default function Inbox() {
     try {
       await api.post("/api/submissions", {
         rawText: rawText || undefined,
-        rawMediaUrls: rawMediaUrls.filter((u) => u.trim()),
+        rawMediaUrls: rawMediaUrls.filter(u => u.trim()),
         submittedByLabel: submittedByLabel || undefined,
       });
       toast.success("บันทึกข้อมูลนำเข้าแล้ว");
@@ -158,8 +195,7 @@ export default function Inbox() {
       setSubmittedByLabel("");
       load();
     } catch (err) {
-      const message =
-        err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
+      const message = err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
       setCaptureError(withRecheckHint(message, err));
       toast.error(message);
     } finally {
@@ -167,13 +203,28 @@ export default function Inbox() {
     }
   };
 
-  const transition = async (row: SubmissionRow, status: MissionSubmissionStatus) => {
+  const transition = async (
+    row: SubmissionRow,
+    status: MissionSubmissionStatus
+  ) => {
+    if (transitioningIds.current.has(row.id)) return;
+    transitioningIds.current.add(row.id);
+    setTransitioningRows(prev => ({ ...prev, [row.id]: true }));
     try {
       await api.put(`/api/submissions/${row.id}/status`, { status });
       toast.success(`เปลี่ยนสถานะเป็น "${STATUS_LABELS[status]}" แล้ว`);
-      load();
+      await load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "เปลี่ยนสถานะไม่สำเร็จ");
+      toast.error(
+        err instanceof ApiError ? err.message : "เปลี่ยนสถานะไม่สำเร็จ"
+      );
+    } finally {
+      transitioningIds.current.delete(row.id);
+      setTransitioningRows(prev => {
+        const next = { ...prev };
+        delete next[row.id];
+        return next;
+      });
     }
   };
 
@@ -212,7 +263,10 @@ export default function Inbox() {
     }
   };
 
-  const countLabel = !isLoading && !error ? `${items.length.toLocaleString("th-TH")} รายการ` : undefined;
+  const countLabel =
+    !isLoading && !error
+      ? `${items.length.toLocaleString("th-TH")} รายการ`
+      : undefined;
 
   return (
     <AppLayout>
@@ -250,7 +304,11 @@ export default function Inbox() {
       </div>
 
       <section aria-labelledby="inbox-heading">
-        <SectionHeader id="inbox-heading" title="ข้อมูลนำเข้าทั้งหมด" description={countLabel} />
+        <SectionHeader
+          id="inbox-heading"
+          title="ข้อมูลนำเข้าทั้งหมด"
+          description={countLabel}
+        />
 
         {isLoading ? (
           <ListSkeleton count={4} />
@@ -284,21 +342,36 @@ export default function Inbox() {
                 className="rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4"
               >
                 <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-                  <StatusChip tone={STATUS_TONE[row.status]}>{STATUS_LABELS[row.status]}</StatusChip>
-                  <span className="type-fine text-[var(--color-body-muted)]">{formatDateTime(row.createdAt)}</span>
+                    <StatusChip tone={STATUS_TONE[row.status]}>
+                      {STATUS_LABELS[row.status]}
+                    </StatusChip>
+                    <span className="type-fine text-[var(--color-body-muted)]">
+                      {formatDateTime(row.createdAt)}
+                    </span>
                 </div>
                 <p className="type-caption whitespace-pre-line text-[var(--color-text-secondary)]">
                   {row.rawText || "(ไม่มีข้อความ)"}
                 </p>
                 {row.submittedByLabel && (
-                  <p className="type-fine mt-1 text-[var(--color-body-muted)]">จาก: {row.submittedByLabel}</p>
+                    <p className="type-fine mt-1 text-[var(--color-body-muted)]">
+                      จาก: {row.submittedByLabel}
+                    </p>
                 )}
 
                 {isReviewer && (
                   <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--color-divider)] pt-3">
                     {row.status === "new" && (
-                      <button type="button" className={ROW_BUTTON_CLASS} onClick={() => transition(row, "reviewing")}>
-                        <Send size={ICON_SIZE.sm} aria-hidden="true" /> เริ่มตรวจสอบ
+                        <button
+                          type="button"
+                          className={ROW_BUTTON_CLASS}
+                          onClick={() => void transition(row, "reviewing")}
+                          disabled={transitioningRows[row.id]}
+                          aria-busy={transitioningRows[row.id] || undefined}
+                        >
+                          <Send size={ICON_SIZE.sm} aria-hidden="true" />{" "}
+                          {transitioningRows[row.id]
+                            ? "กำลังบันทึก…"
+                            : "เริ่มตรวจสอบ"}
                       </button>
                     )}
                     {row.status === "reviewing" && (
@@ -306,42 +379,71 @@ export default function Inbox() {
                         <button
                           type="button"
                           className={ROW_PRIMARY_BUTTON_CLASS}
-                          onClick={() => transition(row, "approved")}
+                            onClick={() => void transition(row, "approved")}
+                            disabled={transitioningRows[row.id]}
+                            aria-busy={transitioningRows[row.id] || undefined}
                         >
-                          <CheckCircle2 size={ICON_SIZE.sm} aria-hidden="true" /> อนุมัติ
+                            <CheckCircle2
+                              size={ICON_SIZE.sm}
+                              aria-hidden="true"
+                            />{" "}
+                            {transitioningRows[row.id]
+                              ? "กำลังบันทึก…"
+                              : "อนุมัติ"}
                         </button>
                         <button
                           type="button"
                           className={ROW_BUTTON_CLASS}
-                          onClick={() => transition(row, "needs_info")}
+                            onClick={() => void transition(row, "needs_info")}
+                            disabled={transitioningRows[row.id]}
+                            aria-busy={transitioningRows[row.id] || undefined}
                         >
-                          ต้องการข้อมูลเพิ่ม
+                            {transitioningRows[row.id]
+                              ? "กำลังบันทึก…"
+                              : "ต้องการข้อมูลเพิ่ม"}
                         </button>
                         <button
                           type="button"
                           className={ROW_DANGER_BUTTON_CLASS}
-                          onClick={() => transition(row, "rejected")}
+                            onClick={() => void transition(row, "rejected")}
+                            disabled={transitioningRows[row.id]}
+                            aria-busy={transitioningRows[row.id] || undefined}
                         >
-                          <X size={ICON_SIZE.sm} aria-hidden="true" /> ปฏิเสธ
+                            <X size={ICON_SIZE.sm} aria-hidden="true" />{" "}
+                            {transitioningRows[row.id]
+                              ? "กำลังบันทึก…"
+                              : "ปฏิเสธ"}
                         </button>
                       </>
                     )}
                     {row.status === "needs_info" && (
-                      <button type="button" className={ROW_BUTTON_CLASS} onClick={() => transition(row, "reviewing")}>
-                        กลับไปตรวจสอบ
+                        <button
+                          type="button"
+                          className={ROW_BUTTON_CLASS}
+                          onClick={() => void transition(row, "reviewing")}
+                          disabled={transitioningRows[row.id]}
+                          aria-busy={transitioningRows[row.id] || undefined}
+                        >
+                          {transitioningRows[row.id]
+                            ? "กำลังบันทึก…"
+                            : "กลับไปตรวจสอบ"}
                       </button>
                     )}
-                    {row.status === "approved" && !row.publishedActivityId && (
+                      {row.status === "approved" &&
+                        !row.publishedActivityId && (
                       <button
                         type="button"
                         className={ROW_PRIMARY_BUTTON_CLASS}
                         onClick={() => openPublish(row)}
                       >
-                        <Sparkles size={ICON_SIZE.sm} aria-hidden="true" /> เผยแพร่เป็นกิจกรรม
+                            <Sparkles size={ICON_SIZE.sm} aria-hidden="true" />{" "}
+                            เผยแพร่เป็นกิจกรรม
                       </button>
                     )}
                     {row.publishedActivityId && (
-                      <StatusChip tone="success">เผยแพร่เป็นกิจกรรมแล้ว</StatusChip>
+                        <StatusChip tone="success">
+                          เผยแพร่เป็นกิจกรรมแล้ว
+                        </StatusChip>
                     )}
                   </div>
                 )}
@@ -368,16 +470,29 @@ export default function Inbox() {
         title="บันทึกข้อมูลนำเข้า"
         footer={
           <>
-            <button type="button" className={CANCEL_BUTTON_CLASS} onClick={() => setCaptureOpen(false)}>
+            <button
+              type="button"
+              className={CANCEL_BUTTON_CLASS}
+              onClick={() => setCaptureOpen(false)}
+            >
               ยกเลิก
             </button>
-            <button type="submit" form="inbox-capture-form" className={PRIMARY_BUTTON_CLASS} disabled={submitting}>
+            <button
+              type="submit"
+              form="inbox-capture-form"
+              className={PRIMARY_BUTTON_CLASS}
+              disabled={submitting}
+            >
               {submitting ? "กำลังบันทึก…" : "บันทึก"}
             </button>
           </>
         }
       >
-        <form id="inbox-capture-form" className="flex flex-col gap-5" onSubmit={submitCapture}>
+        <form
+          id="inbox-capture-form"
+          className="flex flex-col gap-5"
+          onSubmit={submitCapture}
+        >
           {captureError && <FormError>{captureError}</FormError>}
           <Field label="ข้อความที่ได้รับ">
             {props => (
@@ -403,7 +518,9 @@ export default function Inbox() {
             )}
           </Field>
           <fieldset className="flex min-w-0 flex-col gap-2">
-            <legend className="type-caption-strong text-[var(--color-ink)]">รูปภาพ (ลิงก์ URL)</legend>
+            <legend className="type-caption-strong text-[var(--color-ink)]">
+              รูปภาพ (ลิงก์ URL)
+            </legend>
             {rawMediaUrls.map((url, i) => (
               <div key={i} className="flex items-center gap-2">
                 <input
@@ -421,7 +538,9 @@ export default function Inbox() {
                   type="button"
                   aria-label={`ลบรูปภาพที่ ${i + 1}`}
                   className="inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-body-muted)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-                  onClick={() => setRawMediaUrls(rawMediaUrls.filter((_, idx) => idx !== i))}
+                  onClick={() =>
+                    setRawMediaUrls(rawMediaUrls.filter((_, idx) => idx !== i))
+                  }
                 >
                   <X size={ICON_SIZE.md} aria-hidden="true" />
                 </button>
@@ -444,16 +563,29 @@ export default function Inbox() {
         title="เผยแพร่เป็นกิจกรรมพันธกิจ"
         footer={
           <>
-            <button type="button" className={CANCEL_BUTTON_CLASS} onClick={() => setPublishTarget(null)}>
+            <button
+              type="button"
+              className={CANCEL_BUTTON_CLASS}
+              onClick={() => setPublishTarget(null)}
+            >
               ยกเลิก
             </button>
-            <button type="submit" form="inbox-publish-form" className={PRIMARY_BUTTON_CLASS} disabled={publishing}>
+            <button
+              type="submit"
+              form="inbox-publish-form"
+              className={PRIMARY_BUTTON_CLASS}
+              disabled={publishing}
+            >
               {publishing ? "กำลังเผยแพร่…" : "สร้างกิจกรรม (ฉบับร่าง)"}
             </button>
           </>
         }
       >
-        <form id="inbox-publish-form" className="flex flex-col gap-5" onSubmit={submitPublish}>
+        <form
+          id="inbox-publish-form"
+          className="flex flex-col gap-5"
+          onSubmit={submitPublish}
+        >
           {publishError && <FormError>{publishError}</FormError>}
           <Field label="ประเภทกิจกรรม" required>
             {props => (
@@ -461,7 +593,12 @@ export default function Inbox() {
                 {...props}
                 className={CONTROL_CLASS}
                 value={publishForm.type}
-                onChange={e => setPublishForm({ ...publishForm, type: e.target.value as MissionActivityType })}
+                onChange={e =>
+                  setPublishForm({
+                    ...publishForm,
+                    type: e.target.value as MissionActivityType,
+                  })
+                }
               >
                 {Object.entries(TYPE_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -478,7 +615,9 @@ export default function Inbox() {
                 className={CONTROL_CLASS}
                 required
                 value={publishForm.title}
-                onChange={e => setPublishForm({ ...publishForm, title: e.target.value })}
+                onChange={e =>
+                  setPublishForm({ ...publishForm, title: e.target.value })
+                }
               />
             )}
           </Field>
@@ -490,7 +629,9 @@ export default function Inbox() {
                 className={CONTROL_CLASS}
                 required
                 value={publishForm.occurredAt}
-                onChange={e => setPublishForm({ ...publishForm, occurredAt: e.target.value })}
+                onChange={e =>
+                  setPublishForm({ ...publishForm, occurredAt: e.target.value })
+                }
               />
             )}
           </Field>

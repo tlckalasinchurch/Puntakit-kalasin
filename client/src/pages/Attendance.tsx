@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   Check,
@@ -180,11 +180,16 @@ function MetricTile({
 export default function Attendance() {
   usePageTitle("ระบบเช็คชื่อและการเข้าร่วม");
   // Active Tab: "live" | "qr" | "absentees" | "reports"
-  const [activeTab, setActiveTab] = useState<"live" | "qr" | "absentees" | "reports">("live");
+  const [activeTab, setActiveTab] = useState<
+    "live" | "qr" | "absentees" | "reports"
+  >("live");
 
   // Selection parameters
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [selectedService, setSelectedService] = useState<ServiceType>("sunday_service");
+  const [selectedDate, setSelectedDate] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
+  const [selectedService, setSelectedService] =
+    useState<ServiceType>("sunday_service");
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
 
   // Data lists
@@ -192,8 +197,17 @@ export default function Attendance() {
   const [allMembers, setAllMembers] = useState<MemberItem[]>([]);
   // Active members of the chosen care group (by real membership, not by the
   // free-text `group` label, which can repeat across bodies). null = everyone.
-  const [groupMemberIds, setGroupMemberIds] = useState<Set<string> | null>(null);
-  const [currentAttendance, setCurrentAttendance] = useState<Record<string, AttendanceStatus>>({});
+  const [groupMemberIds, setGroupMemberIds] = useState<Set<string> | null>(
+    null
+  );
+  const [currentAttendance, setCurrentAttendance] = useState<
+    Record<string, AttendanceStatus>
+  >({});
+  const attendanceRef = useRef<Record<string, AttendanceStatus>>({});
+  const statusRequestRef = useRef(new Map<string, number>());
+  const [pendingStatus, setPendingStatus] = useState<Record<string, number>>(
+    {}
+  );
   const [loadingLive, setLoadingLive] = useState(false);
   const [liveError, setLiveError] = useState<string | null>(null);
   const [memberSearch, setMemberSearch] = useState("");
@@ -213,6 +227,10 @@ export default function Attendance() {
   // Reports summary
   const [summaryStats, setSummaryStats] = useState<any | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const liveRequestRef = useRef(0);
+  const absenteesRequestRef = useRef(0);
+  const summaryRequestRef = useRef(0);
 
   // Check URL query parameters for initial group
   useEffect(() => {
@@ -228,11 +246,13 @@ export default function Attendance() {
   useEffect(() => {
     api
       .get<GroupOption[]>("/api/groups")
-      .then((res) => setGroups(res || []))
+      .then(res => setGroups(res || []))
       .catch(() => {
         // The filter dropdown must not silently render empty on failure.
         setGroups([]);
-        toast.error("โหลดรายชื่อกลุ่มไม่สำเร็จ ตัวกรองกลุ่มยังใช้ไม่ได้ในตอนนี้");
+        toast.error(
+          "โหลดรายชื่อกลุ่มไม่สำเร็จ ตัวกรองกลุ่มยังใช้ไม่ได้ในตอนนี้"
+        );
       });
   }, []);
 
@@ -245,16 +265,23 @@ export default function Attendance() {
       groupId: selectedGroupId || null,
     });
 
-    QRCode.toDataURL(sessionPayload, { width: 280, margin: 2, color: { dark: "#272729", light: "#ffffff" } })
+    QRCode.toDataURL(sessionPayload, {
+      width: 280,
+      margin: 2,
+      color: { dark: "#272729", light: "#ffffff" },
+    })
       .then(setSessionQrDataUrl)
       .catch(() => {
         setSessionQrDataUrl("");
-        toast.error("สร้าง QR Code ของรอบนี้ไม่สำเร็จ ลองเปลี่ยนตัวเลือกเพื่อสร้างใหม่");
+        toast.error(
+          "สร้าง QR Code ของรอบนี้ไม่สำเร็จ ลองเปลี่ยนตัวเลือกเพื่อสร้างใหม่"
+        );
       });
   }, [selectedService, selectedDate, selectedGroupId]);
 
   // Load Live Check-in Roster
   const loadLiveRoster = useCallback(async () => {
+    const requestId = ++liveRequestRef.current;
     setLoadingLive(true);
     setLiveError(null);
     try {
@@ -264,11 +291,21 @@ export default function Attendance() {
       // Pinned by server/routes/members.test.ts (list contract) and
       // client/src/members-list-contract.test.ts.
       const members = await fetchAllMembers<MemberItem>();
+      if (requestId !== liveRequestRef.current) return;
       setAllMembers(members ?? []);
 
       if (selectedGroupId) {
-        const memberships = await api.get<{ memberId: string; status: string }[]>(`/api/groups/${selectedGroupId}/members`);
-        setGroupMemberIds(new Set((memberships ?? []).filter((x) => x.status === "active").map((x) => x.memberId)));
+        const memberships = await api.get<
+          { memberId: string; status: string }[]
+        >(`/api/groups/${selectedGroupId}/members`);
+        if (requestId !== liveRequestRef.current) return;
+        setGroupMemberIds(
+          new Set(
+            (memberships ?? [])
+              .filter(x => x.status === "active")
+              .map(x => x.memberId)
+          )
+        );
       } else {
         setGroupMemberIds(null);
       }
@@ -281,17 +318,24 @@ export default function Attendance() {
       });
       if (selectedGroupId) attParams.set("groupId", selectedGroupId);
 
-      const attRes = await fetchAllPages<AttendanceRecordItem>(`/api/attendance?${attParams.toString()}`);
+      const attRes = await fetchAllPages<AttendanceRecordItem>(
+        `/api/attendance?${attParams.toString()}`
+      );
+      if (requestId !== liveRequestRef.current) return;
       const map: Record<string, AttendanceStatus> = {};
-      (attRes || []).forEach((r) => {
+      (attRes || []).forEach(r => {
         map[r.memberId] = r.status;
       });
+      attendanceRef.current = map;
       setCurrentAttendance(map);
     } catch (err) {
-      setLiveError(err instanceof ApiError ? err.message : "โหลดข้อมูลไม่สำเร็จ");
+      if (requestId !== liveRequestRef.current) return;
+      setLiveError(
+        err instanceof ApiError ? err.message : "โหลดข้อมูลไม่สำเร็จ"
+      );
       toast.error("โหลดข้อมูลเช็คชื่อไม่สำเร็จ");
     } finally {
-      setLoadingLive(false);
+      if (requestId === liveRequestRef.current) setLoadingLive(false);
     }
   }, [selectedDate, selectedService, selectedGroupId]);
 
@@ -303,6 +347,7 @@ export default function Attendance() {
 
   // Load Absentees
   const loadAbsentees = useCallback(async () => {
+    const requestId = ++absenteesRequestRef.current;
     setLoadingAbsentees(true);
     setAbsenteeError(null);
     try {
@@ -312,13 +357,19 @@ export default function Attendance() {
       });
       if (selectedGroupId) params.set("groupId", selectedGroupId);
 
-      const res = await api.get<AbsenteeItem[]>(`/api/attendance/absentees?${params.toString()}`);
+      const res = await api.get<AbsenteeItem[]>(
+        `/api/attendance/absentees?${params.toString()}`
+      );
+      if (requestId !== absenteesRequestRef.current) return;
       setAbsentees(res || []);
     } catch (err) {
-      setAbsenteeError(err instanceof ApiError ? err.message : "โหลดข้อมูลไม่สำเร็จ");
+      if (requestId !== absenteesRequestRef.current) return;
+      setAbsenteeError(
+        err instanceof ApiError ? err.message : "โหลดข้อมูลไม่สำเร็จ"
+      );
       toast.error("โหลดข้อมูลสมาชิกขาดต่อเนื่องไม่สำเร็จ");
     } finally {
-      setLoadingAbsentees(false);
+      if (requestId === absenteesRequestRef.current) setLoadingAbsentees(false);
     }
   }, [absenteeThreshold, selectedService, selectedGroupId]);
 
@@ -330,14 +381,20 @@ export default function Attendance() {
 
   // Load Summary
   const loadSummary = useCallback(async () => {
+    const requestId = ++summaryRequestRef.current;
     setLoadingSummary(true);
+    setSummaryError(null);
     try {
       const res = await api.get("/api/attendance/summary");
+      if (requestId !== summaryRequestRef.current) return;
       setSummaryStats(res);
-    } catch {
-      // ignore
+    } catch (err) {
+      if (requestId !== summaryRequestRef.current) return;
+      setSummaryError(
+        err instanceof ApiError ? err.message : "โหลดสรุปการเข้าร่วมไม่สำเร็จ"
+      );
     } finally {
-      setLoadingSummary(false);
+      if (requestId === summaryRequestRef.current) setLoadingSummary(false);
     }
   }, []);
 
@@ -348,12 +405,17 @@ export default function Attendance() {
   }, [activeTab, loadSummary]);
 
   // Quick Check-in single member
-  const handleSetStatus = async (memberId: string, status: AttendanceStatus) => {
-    let previous: AttendanceStatus | undefined;
-    setCurrentAttendance((prev) => {
-      previous = prev[memberId];
-      return { ...prev, [memberId]: status };
-    });
+  const handleSetStatus = async (
+    memberId: string,
+    status: AttendanceStatus
+  ) => {
+    const requestId = (statusRequestRef.current.get(memberId) ?? 0) + 1;
+    statusRequestRef.current.set(memberId, requestId);
+    const previous = attendanceRef.current[memberId];
+    const optimistic = { ...attendanceRef.current, [memberId]: status };
+    attendanceRef.current = optimistic;
+    setCurrentAttendance(optimistic);
+    setPendingStatus(prev => ({ ...prev, [memberId]: requestId }));
     try {
       await api.post("/api/attendance/check-in", {
         date: selectedDate,
@@ -364,15 +426,26 @@ export default function Attendance() {
         checkInMethod: "manual",
       });
     } catch (err) {
+      if (statusRequestRef.current.get(memberId) !== requestId) return;
       // Put the roster back to what the server still holds, so the screen
       // never shows "present" for a save that failed.
-      setCurrentAttendance((prev) => {
-        const next = { ...prev };
+      const next = { ...attendanceRef.current };
         if (previous === undefined) delete next[memberId];
         else next[memberId] = previous;
+      attendanceRef.current = next;
+      setCurrentAttendance(next);
+      toast.error(
+        err instanceof ApiError ? err.message : "บันทึกการเช็คชื่อไม่สำเร็จ"
+      );
+    } finally {
+      if (statusRequestRef.current.get(memberId) === requestId) {
+        statusRequestRef.current.delete(memberId);
+        setPendingStatus(prev => {
+          const next = { ...prev };
+          delete next[memberId];
         return next;
       });
-      toast.error(err instanceof ApiError ? err.message : "บันทึกการเช็คชื่อไม่สำเร็จ");
+      }
     }
   };
 
@@ -383,17 +456,20 @@ export default function Attendance() {
 
     setScanning(true);
     try {
-      const res = await api.post<{ member: any; attendance: any }>("/api/attendance/qr-scan", {
+      const res = await api.post<{ member: any; attendance: any }>(
+        "/api/attendance/qr-scan",
+        {
         token: qrInputToken.trim(),
         serviceType: selectedService,
         groupId: selectedGroupId || null,
         date: selectedDate,
-      });
+        }
+      );
 
       setLastScannedMember(res.member);
       toast.success(`เช็คชื่อสำเร็จ: ${res.member.name}`);
       setQrInputToken("");
-      setCurrentAttendance((prev) => ({ ...prev, [res.member.id]: "present" }));
+      setCurrentAttendance(prev => ({ ...prev, [res.member.id]: "present" }));
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "รหัส QR ไม่ถูกต้อง");
     } finally {
@@ -406,8 +482,8 @@ export default function Attendance() {
     try {
       await api.put(`/api/members/${memberId}`, { status: "ต้องติดตาม" });
       toast.success("อัปเดตสถานะเป็น 'ต้องติดตาม' เรียบร้อยแล้ว");
-      setAbsentees((prev) =>
-        prev.map((m) => (m.id === memberId ? { ...m, status: "ต้องติดตาม" } : m))
+      setAbsentees(prev =>
+        prev.map(m => (m.id === memberId ? { ...m, status: "ต้องติดตาม" } : m))
       );
     } catch {
       toast.error("อัปเดตสถานะไม่สำเร็จ");
@@ -420,7 +496,7 @@ export default function Attendance() {
   };
 
   // Filter members list for live roster
-  const filteredMembers = allMembers.filter((m) => {
+  const filteredMembers = allMembers.filter(m => {
     if (groupMemberIds && !groupMemberIds.has(m.id)) return false;
     if (!memberSearch.trim()) return true;
     const q = memberSearch.toLowerCase();
@@ -432,10 +508,18 @@ export default function Attendance() {
   });
 
   // Calculate live counts
-  const presentCount = Object.values(currentAttendance).filter((s) => s === "present").length;
-  const onlineCount = Object.values(currentAttendance).filter((s) => s === "online").length;
-  const leaveCount = Object.values(currentAttendance).filter((s) => s === "leave").length;
-  const absentCount = Object.values(currentAttendance).filter((s) => s === "absent").length;
+  const presentCount = Object.values(currentAttendance).filter(
+    s => s === "present"
+  ).length;
+  const onlineCount = Object.values(currentAttendance).filter(
+    s => s === "online"
+  ).length;
+  const leaveCount = Object.values(currentAttendance).filter(
+    s => s === "leave"
+  ).length;
+  const absentCount = Object.values(currentAttendance).filter(
+    s => s === "absent"
+  ).length;
 
   const refreshActiveTab = () => {
     if (activeTab === "live") loadLiveRoster();
@@ -492,14 +576,14 @@ export default function Attendance() {
         <div className="flex flex-wrap items-end gap-4">
           <div className="min-w-[200px] flex-1 sm:max-w-[240px]">
             <Field label="วันที่รอบการนมัสการ">
-              {(props) => (
+              {props => (
                 <input
                   id={props.id}
                   aria-describedby={props["aria-describedby"]}
                   aria-invalid={props["aria-invalid"]}
                   type="date"
                   value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  onChange={e => setSelectedDate(e.target.value)}
                   className={CONTROL_CLASS}
                 />
               )}
@@ -508,13 +592,15 @@ export default function Attendance() {
 
           <div className="min-w-[220px] flex-1 sm:max-w-[280px]">
             <Field label="ประเภทการนมัสการ/กิจกรรม">
-              {(props) => (
+              {props => (
                 <select
                   id={props.id}
                   aria-describedby={props["aria-describedby"]}
                   aria-invalid={props["aria-invalid"]}
                   value={selectedService}
-                  onChange={(e) => setSelectedService(e.target.value as ServiceType)}
+                  onChange={e =>
+                    setSelectedService(e.target.value as ServiceType)
+                  }
                   className={CONTROL_CLASS}
                 >
                   <option value="sunday_service">นมัสการวันอาทิตย์</option>
@@ -530,17 +616,17 @@ export default function Attendance() {
           {selectedService === "care_group" && (
             <div className="min-w-[200px] flex-1 sm:max-w-[240px]">
               <Field label="เลือกพันธกิจ">
-                {(props) => (
+                {props => (
                   <select
                     id={props.id}
                     aria-describedby={props["aria-describedby"]}
                     aria-invalid={props["aria-invalid"]}
                     value={selectedGroupId}
-                    onChange={(e) => setSelectedGroupId(e.target.value)}
+                    onChange={e => setSelectedGroupId(e.target.value)}
                     className={CONTROL_CLASS}
                   >
                     <option value="">-- ทุกพันธกิจ --</option>
-                    {groups.map((g) => (
+                    {groups.map(g => (
                       <option key={g.id} value={g.id}>
                         {g.name}
                       </option>
@@ -592,7 +678,7 @@ export default function Attendance() {
                 aria-label="ค้นหาสมาชิกเพื่อเช็คชื่อ"
                 placeholder="ค้นหาชื่อสมาชิกเพื่อเช็คชื่อ..."
                 value={memberSearch}
-                onChange={(e) => setMemberSearch(e.target.value)}
+                onChange={e => setMemberSearch(e.target.value)}
                 className={`${CONTROL_CLASS} rounded-[var(--radius-pill)] pl-10 pr-12`}
               />
               {memberSearch && (
@@ -606,7 +692,10 @@ export default function Attendance() {
                 </button>
               )}
             </div>
-            <p role="status" className="type-caption text-[var(--color-body-muted)]">
+            <p
+              role="status"
+              className="type-caption text-[var(--color-body-muted)]"
+            >
               แสดงสมาชิก {filteredMembers.length} คน
             </p>
           </div>
@@ -634,7 +723,7 @@ export default function Attendance() {
             />
           ) : (
             <ul className="divide-y divide-[var(--color-divider)]">
-              {filteredMembers.map((m) => {
+              {filteredMembers.map(m => {
                 const st = currentAttendance[m.id];
                 return (
                   <li
@@ -666,13 +755,14 @@ export default function Attendance() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 md:flex md:shrink-0 md:flex-nowrap">
-                      {STATUS_OPTIONS.map((opt) => (
+                      {STATUS_OPTIONS.map(opt => (
                         <button
                           key={opt.value}
                           type="button"
                           aria-pressed={st === opt.value}
                           aria-label={`${opt.label}: ${m.name}`}
                           onClick={() => handleSetStatus(m.id, opt.value)}
+                          disabled={pendingStatus[m.id] !== undefined}
                           className={`inline-flex min-h-11 items-center justify-center rounded-[var(--radius-sm)] border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] ${
                             st === opt.value ? opt.active : opt.idle
                           }`}
@@ -703,7 +793,8 @@ export default function Attendance() {
               เจ้าหน้าที่สแกน QR Code สมาชิก
             </h2>
             <p className="type-caption mt-1 text-[var(--color-body-muted)]">
-              นำเครื่องสแกนบาร์โค้ด หรือกล้องมือถือสแกน Personal QR Code ของสมาชิกเพื่อบันทึกทันที
+              นำเครื่องสแกนบาร์โค้ด หรือกล้องมือถือสแกน Personal QR Code
+              ของสมาชิกเพื่อบันทึกทันที
             </p>
 
             <form onSubmit={handleScanSubmit} className="mt-4">
@@ -711,7 +802,7 @@ export default function Attendance() {
                 label="รหัส QR / รหัสสมาชิก"
                 hint="สแกนบาร์โค้ดหรือพิมพ์รหัส แล้วกดยืนยันการเช็คชื่อ"
               >
-                {(props) => (
+                {props => (
                   <input
                     id={props.id}
                     aria-describedby={props["aria-describedby"]}
@@ -723,7 +814,7 @@ export default function Attendance() {
                     autoFocus
                     placeholder="เช่น PK-MEM-123"
                     value={qrInputToken}
-                    onChange={(e) => setQrInputToken(e.target.value)}
+                    onChange={e => setQrInputToken(e.target.value)}
                     className={`${CONTROL_CLASS} border-2 border-[var(--color-primary)]`}
                   />
                 )}
@@ -757,7 +848,9 @@ export default function Attendance() {
                   </p>
                   <p className="type-body-strong truncate text-[var(--color-ink)]">
                     {lastScannedMember.name}{" "}
-                    {lastScannedMember.nickname ? `(${lastScannedMember.nickname})` : ""}
+                    {lastScannedMember.nickname
+                      ? `(${lastScannedMember.nickname})`
+                      : ""}
                   </p>
                   <p className="type-fine text-[var(--color-body-muted)]">
                     เบอร์: {lastScannedMember.phone || "-"} • บันทึกแล้วในรอบ:{" "}
@@ -774,7 +867,8 @@ export default function Attendance() {
               ป้าย QR Code ประจำรอบนมัสการ
             </h2>
             <p className="type-caption mt-1 text-[var(--color-body-muted)]">
-              แสดงหน้าจอนี้ที่ประตูคริสตจักร เพื่อให้สมาชิกสแกน Check-in ด้วยสมาร์ตโฟนของตนเอง
+              แสดงหน้าจอนี้ที่ประตูคริสตจักร เพื่อให้สมาชิกสแกน Check-in
+              ด้วยสมาร์ตโฟนของตนเอง
             </p>
 
             <div className="mt-4 inline-block rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-3 shadow-[var(--shadow)]">
@@ -791,7 +885,9 @@ export default function Attendance() {
 
             <div className="type-caption mt-3 text-[var(--color-text-secondary)]">
               <strong>{SERVICE_TYPE_LABELS[selectedService]}</strong>
-              <div>วันที่ {new Date(selectedDate).toLocaleDateString("th-TH")}</div>
+              <div>
+                วันที่ {new Date(selectedDate).toLocaleDateString("th-TH")}
+              </div>
             </div>
           </section>
         </div>
@@ -811,19 +907,20 @@ export default function Attendance() {
                 สมาชิกที่ขาดการเข้าร่วมต่อเนื่อง
               </h2>
               <p className="type-caption mt-1 text-[var(--color-body-muted)]">
-                ระบบตรวจจับสมาชิกที่ขาดติดต่อกันเกินเกณฑ์ เพื่อให้ศิษยาภิบาลและผู้นำพันธกิจติดตามเยี่ยมนมัสการ
+                ระบบตรวจจับสมาชิกที่ขาดติดต่อกันเกินเกณฑ์
+                เพื่อให้ศิษยาภิบาลและผู้นำพันธกิจติดตามเยี่ยมนมัสการ
               </p>
             </div>
 
             <div className="min-w-[200px] shrink-0">
               <Field label="เกณฑ์การขาด">
-                {(props) => (
+                {props => (
                   <select
                     id={props.id}
                     aria-describedby={props["aria-describedby"]}
                     aria-invalid={props["aria-invalid"]}
                     value={absenteeThreshold}
-                    onChange={(e) => setAbsenteeThreshold(Number(e.target.value))}
+                    onChange={e => setAbsenteeThreshold(Number(e.target.value))}
                     className={CONTROL_CLASS}
                   >
                     <option value={2}>ขาด 2 สัปดาห์ขึ้นไป</option>
@@ -838,7 +935,11 @@ export default function Attendance() {
           {loadingAbsentees ? (
             <TableSkeleton rows={5} />
           ) : absenteeError ? (
-            <ErrorState inset technical={absenteeError} onRetry={loadAbsentees} />
+            <ErrorState
+              inset
+              technical={absenteeError}
+              onRetry={loadAbsentees}
+            />
           ) : absentees.length === 0 ? (
             <EmptyState
               inset
@@ -848,7 +949,7 @@ export default function Attendance() {
             />
           ) : (
             <ul className="divide-y divide-[var(--color-divider)]">
-              {absentees.map((m) => (
+              {absentees.map(m => (
                 <li
                   key={m.id}
                   className="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between md:gap-4"
@@ -861,7 +962,9 @@ export default function Attendance() {
                       {m.name.slice(0, 1)}
                     </span>
                     <div className="min-w-0">
-                      <p className="type-caption-strong text-[var(--color-ink)]">{m.name}</p>
+                      <p className="type-caption-strong text-[var(--color-ink)]">
+                        {m.name}
+                      </p>
                       {m.nickname && (
                         <p className="type-fine text-[var(--color-body-muted)]">
                           ชื่อเล่น: {m.nickname}
@@ -873,7 +976,9 @@ export default function Attendance() {
                       <p className="type-fine text-[var(--color-body-muted)]">
                         มาล่าสุด:{" "}
                         {m.lastAttendedDate
-                          ? new Date(m.lastAttendedDate).toLocaleDateString("th-TH")
+                          ? new Date(m.lastAttendedDate).toLocaleDateString(
+                              "th-TH"
+                            )
                           : "ไม่เคยมีบันทึก"}
                       </p>
                     </div>
@@ -883,7 +988,9 @@ export default function Attendance() {
                     <StatusChip tone="warning">
                       ขาด {m.consecutiveAbsenceCount} สัปดาห์
                     </StatusChip>
-                    <StatusChip tone={m.status === "ต้องติดตาม" ? "warning" : "success"}>
+                    <StatusChip
+                      tone={m.status === "ต้องติดตาม" ? "warning" : "success"}
+                    >
                       {m.status}
                     </StatusChip>
 
@@ -929,10 +1036,17 @@ export default function Attendance() {
           {/* Metric cards */}
           {loadingSummary ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {[0, 1, 2, 3].map((i) => (
+              {[0, 1, 2, 3].map(i => (
                 <Skeleton key={i} className="h-24 rounded-[var(--radius-md)]" />
               ))}
             </div>
+          ) : summaryError ? (
+            <ErrorState
+              title="โหลดสรุปการเข้าร่วมไม่สำเร็จ"
+              description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+              technical={summaryError}
+              onRetry={() => void loadSummary()}
+            />
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4">
@@ -1033,7 +1147,8 @@ export default function Attendance() {
                   >
                     <div className="min-w-0">
                       <p className="type-caption-strong text-[var(--color-ink)]">
-                        {SERVICE_TYPE_LABELS[tr.serviceType as ServiceType] || tr.serviceType}
+                        {SERVICE_TYPE_LABELS[tr.serviceType as ServiceType] ||
+                          tr.serviceType}
                       </p>
                       <p className="type-fine text-[var(--color-body-muted)]">
                         วันที่ {new Date(tr.date).toLocaleDateString("th-TH")}
