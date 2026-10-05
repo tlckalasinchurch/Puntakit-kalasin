@@ -124,4 +124,16 @@ describe("care roster (real PGlite Postgres)", () => {
     const { data } = (await (await roster("2026-10-14")).json()) as { data: any };
     expect(data.members.map((m: any) => m.nickname)).not.toContain("ค้อน");
   });
+
+  it("lets a group_leader open the roster and save a check-in for the group", async () => {
+    // Last on purpose: it adds a meeting day that earlier tests count.
+    const res = await fetch(`${baseUrl}/api/attendance/bulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: leaderCookie },
+      body: JSON.stringify({ date: "2026-11-04", serviceType: "care_group", groupId: id(20), records: [{ memberId: id(101), status: "present" }] }),
+    });
+    expect(res.status).toBe(200);
+    const { data } = (await (await roster("2026-11-04", leaderCookie)).json()) as { data: any };
+    expect(data.members.find((m: any) => m.nickname === "ก้อง")?.status).toBe("present");
+  });
 });

@@ -5,11 +5,7 @@ import { groupMembers, groups, members } from "../../shared/schema.js";
 import { PRIVILEGED_ROLES } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { NotFoundError, ValidationError } from "../lib/errors.js";
-import {
-  HEAD_ROLE,
-  parseCareGroupDescription,
-  parseMemberNotes,
-} from "../../shared/orgView.js";
+import { HEAD_ROLE, parseCareGroupDescription, parseMemberNotes } from "../../shared/orgView.js";
 
 /**
  * Read-only org chart: ศบ. -> body -> care group -> member.
@@ -36,9 +32,7 @@ export async function loadOrgOverview() {
     .from(groups)
     .leftJoin(members, eq(groups.leaderMemberId, members.id))
     .leftJoin(groupMembers, eq(groups.id, groupMembers.groupId))
-    .where(
-      and(isNull(groups.deletedAt), inArray(groups.orgLevel, ["body", "care"]))
-    )
+    .where(and(isNull(groups.deletedAt), inArray(groups.orgLevel, ["body", "care"])))
     .groupBy(groups.id, members.id)
     .orderBy(asc(groups.name));
 
@@ -48,7 +42,7 @@ export async function loadOrgOverview() {
     .where(and(eq(members.role, HEAD_ROLE), isNull(members.deletedAt)))
     .limit(1);
 
-  const cares = rows.filter(r => r.orgLevel === "care");
+  const cares = rows.filter((r) => r.orgLevel === "care");
   const toCareSummary = (c: (typeof cares)[number]) => ({
     id: c.id,
     name: c.name.trim(),
@@ -61,11 +55,9 @@ export async function loadOrgOverview() {
     leaderMemberId: c.leaderMemberId,
   });
   const bodies = rows
-    .filter(r => r.orgLevel === "body")
-    .map(b => {
-      const children = cares
-        .filter(c => c.parentGroupId === b.id)
-        .map(toCareSummary);
+    .filter((r) => r.orgLevel === "body")
+    .map((b) => {
+      const children = cares.filter((c) => c.parentGroupId === b.id).map(toCareSummary);
       return {
         id: b.id,
         name: b.name,
@@ -76,22 +68,15 @@ export async function loadOrgOverview() {
         careGroups: children,
       };
     });
-  bodies.sort(
-    (a, b) =>
-      b.memberCount - a.memberCount || a.name.localeCompare(b.name, "th")
-  );
-  const unassigned = cares.filter(
-    c => !c.parentGroupId || !bodies.some(b => b.id === c.parentGroupId)
-  );
+  bodies.sort((a, b) => b.memberCount - a.memberCount || a.name.localeCompare(b.name, "th"));
+  const unassigned = cares.filter((c) => !c.parentGroupId || !bodies.some((b) => b.id === c.parentGroupId));
 
   return {
     head: head ?? null,
     totals: {
       bodies: bodies.length,
       careGroups: cares.length,
-      members:
-        bodies.reduce((n, b) => n + b.memberCount, 0) +
-        unassigned.reduce((n, c) => n + c.memberCount, 0),
+      members: bodies.reduce((n, b) => n + b.memberCount, 0) + unassigned.reduce((n, c) => n + c.memberCount, 0),
     },
     bodies,
     unassignedCareGroups: unassigned.length,
@@ -112,36 +97,19 @@ orgRouter.get("/overview", async (_req, res, next) => {
 orgRouter.get("/care-groups/:id/members", async (req, res, next) => {
   try {
     const id = req.params.id;
-    if (!/^[0-9a-f-]{36}$/i.test(id))
-      throw new ValidationError("รหัสกลุ่มไม่ถูกต้อง", [
-        { field: "id", message: "uuid" },
-      ]);
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ValidationError("รหัสกลุ่มไม่ถูกต้อง", [{ field: "id", message: "uuid" }]);
     const db = getDb();
     const [care] = await db
       .select()
       .from(groups)
-      .where(
-        and(
-          eq(groups.id, id),
-          eq(groups.orgLevel, "care"),
-          isNull(groups.deletedAt)
-        )
-      )
+      .where(and(eq(groups.id, id), eq(groups.orgLevel, "care"), isNull(groups.deletedAt)))
       .limit(1);
     if (!care) throw new NotFoundError("ไม่พบพันธกิจที่ระบุ");
     const [body] = care.parentGroupId
-      ? await db
-          .select({ name: groups.name })
-          .from(groups)
-          .where(eq(groups.id, care.parentGroupId))
-          .limit(1)
+      ? await db.select({ name: groups.name }).from(groups).where(eq(groups.id, care.parentGroupId)).limit(1)
       : [];
     const [leader] = care.leaderMemberId
-      ? await db
-          .select({ name: members.name })
-          .from(members)
-          .where(eq(members.id, care.leaderMemberId))
-          .limit(1)
+      ? await db.select({ name: members.name }).from(members).where(eq(members.id, care.leaderMemberId)).limit(1)
       : [];
 
     const rows = await db
@@ -154,13 +122,7 @@ orgRouter.get("/care-groups/:id/members", async (req, res, next) => {
       })
       .from(groupMembers)
       .innerJoin(members, eq(groupMembers.memberId, members.id))
-      .where(
-        and(
-          eq(groupMembers.groupId, id),
-          eq(groupMembers.status, "active"),
-          isNull(members.deletedAt)
-        )
-      )
+      .where(and(eq(groupMembers.groupId, id), eq(groupMembers.status, "active"), isNull(members.deletedAt)))
       .orderBy(asc(members.name));
 
     res.json({
@@ -175,7 +137,7 @@ orgRouter.get("/care-groups/:id/members", async (req, res, next) => {
           ...parseCareGroupDescription(care.description),
           ...(leader ? { careLeaderName: leader.name } : {}),
         },
-        members: rows.map(m => {
+        members: rows.map((m) => {
           const { notes, ...rest } = m;
           return { ...rest, ...parseMemberNotes(notes) };
         }),

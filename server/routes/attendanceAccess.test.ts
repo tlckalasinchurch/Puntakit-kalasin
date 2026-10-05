@@ -65,11 +65,31 @@ describe("/api/attendance access", () => {
 
   const checkIn = () => ({ memberId, serviceType: "sunday_service", status: "present", date: "2026-10-04" });
 
+  it("answers 401 to an anonymous caller on every attendance route", async () => {
+    for (const [method, url] of [["GET", "/"], ["GET", "/export"], ["GET", "/absentees"], ["GET", "/summary"], ["POST", "/check-in"], ["POST", "/bulk"], ["POST", "/qr-scan"]] as const) {
+      const res = await fetch(`${baseUrl}/api/attendance${url}`, { method, headers: { "Content-Type": "application/json" }, body: method === "POST" ? "{}" : undefined });
+      expect(res.status, `${method} ${url}`).toBe(401);
+    }
+  });
+
+  it("lets privileged roles read, write and export", async () => {
+    for (const role of ["admin", "staff"]) {
+      expect((await call(role, "GET", "/")).status).toBe(200);
+      expect((await call(role, "GET", "/summary")).status).toBe(200);
+      // 201 for a new record, 200 when the same member and day are marked again.
+      expect([200, 201]).toContain((await call(role, "POST", "/check-in", checkIn())).status);
+      expect((await call(role, "GET", "/export")).status).toBe(200);
+    }
+  });
+
   it("blocks a member-role account from every attendance route", async () => {
     expect((await call("member", "GET", "/")).status).toBe(403);
     expect((await call("member", "GET", "/export")).status).toBe(403);
     expect((await call("member", "GET", "/absentees")).status).toBe(403);
+    expect((await call("member", "GET", "/summary")).status).toBe(403);
     expect((await call("member", "POST", "/check-in", checkIn())).status).toBe(403);
+    expect((await call("member", "POST", "/bulk", { date: "2026-10-04", serviceType: "care_group", records: [{ memberId, status: "present" }] })).status).toBe(403);
+    expect((await call("member", "POST", "/qr-scan", { token: memberId })).status).toBe(403);
   });
 
   it("lets a viewer read but not write", async () => {
@@ -78,7 +98,7 @@ describe("/api/attendance access", () => {
   });
 
   it("lets a group_leader write a check-in", async () => {
-    expect((await call("group_leader", "POST", "/check-in", checkIn())).status).toBe(201);
+    expect([200, 201]).toContain((await call("group_leader", "POST", "/check-in", checkIn())).status);
   });
 
   it("restricts the CSV export (phone numbers) to contact roles", async () => {

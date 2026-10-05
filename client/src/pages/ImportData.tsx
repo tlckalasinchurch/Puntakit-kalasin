@@ -272,11 +272,17 @@ export default function ImportData() {
   );
 }
 
-function postRaw(file: File): Promise<{ batch: BatchRow; counts: BatchReport["counts"] }> {
-  return api.postBody("/api/import/upload", file, {
-    "Content-Type": "application/octet-stream",
-    [IMPORT_UPLOAD_FILENAME_HEADER]: encodeURIComponent(file.name),
-  });
+async function postRaw(file: File): Promise<{ batch: BatchRow; counts: BatchReport["counts"] }> {
+  try {
+    return await api.postBody("/api/import/upload", file, {
+      "Content-Type": "application/octet-stream",
+      [IMPORT_UPLOAD_FILENAME_HEADER]: encodeURIComponent(file.name),
+    });
+  } catch (err) {
+    // Keep the server's own sentence for modelled import errors (for example "already imported").
+    if (err instanceof ApiError && err.serverMessage) throw new Error(err.serverMessage);
+    throw err;
+  }
 }
 
 const ISSUE_LABELS: Record<string, string> = {

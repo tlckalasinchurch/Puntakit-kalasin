@@ -435,8 +435,8 @@ export default function Attendance() {
       // Put the roster back to what the server still holds, so the screen
       // never shows "present" for a save that failed.
       const next = { ...attendanceRef.current };
-      if (previous === undefined) delete next[memberId];
-      else next[memberId] = previous;
+        if (previous === undefined) delete next[memberId];
+        else next[memberId] = previous;
       attendanceRef.current = next;
       setCurrentAttendance(next);
       toast.error(
@@ -448,8 +448,8 @@ export default function Attendance() {
         setPendingStatus(prev => {
           const next = { ...prev };
           delete next[memberId];
-          return next;
-        });
+        return next;
+      });
       }
     }
   };
@@ -464,10 +464,10 @@ export default function Attendance() {
       const res = await api.post<{ member: any; attendance: any }>(
         "/api/attendance/qr-scan",
         {
-          token: qrInputToken.trim(),
-          serviceType: selectedService,
-          groupId: selectedGroupId || null,
-          date: selectedDate,
+        token: qrInputToken.trim(),
+        serviceType: selectedService,
+        groupId: selectedGroupId || null,
+        date: selectedDate,
         }
       );
 
@@ -1119,26 +1119,26 @@ export default function Attendance() {
               </div>
 
               {canExport && (
-                <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4">
-                  <span
-                    aria-hidden="true"
-                    className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-canvas-soft)] text-[var(--color-text-secondary)]"
+              <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4">
+                <span
+                  aria-hidden="true"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-canvas-soft)] text-[var(--color-text-secondary)]"
+                >
+                  <Download size={ICON_SIZE.md} aria-hidden="true" />
+                </span>
+                <div>
+                  <p className="type-fine text-[var(--color-body-muted)]">
+                    ส่งออกข้อมูลล่าสุด
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleExportCsv}
+                    className="type-caption-strong min-h-11 text-[var(--color-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
                   >
-                    <Download size={ICON_SIZE.md} aria-hidden="true" />
-                  </span>
-                  <div>
-                    <p className="type-fine text-[var(--color-body-muted)]">
-                      ส่งออกข้อมูลล่าสุด
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleExportCsv}
-                      className="type-caption-strong min-h-11 text-[var(--color-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-                    >
-                      ดาวน์โหลด CSV
-                    </button>
-                  </div>
+                    ดาวน์โหลด CSV
+                  </button>
                 </div>
+              </div>
               )}
             </div>
           )}
