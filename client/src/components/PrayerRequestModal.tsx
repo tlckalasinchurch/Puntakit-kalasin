@@ -27,7 +27,11 @@ const CONTROL_CLASS =
 const SUBMIT_BUTTON_CLASS =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
 
-export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestModalProps) {
+export function PrayerRequestModal({
+  open,
+  onClose,
+  onSuccess,
+}: PrayerRequestModalProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [category, setCategory] = useState<PrayerCategory>("spiritual");
@@ -39,6 +43,22 @@ export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestMo
   // The submit button lives in the Modal footer (outside the <form>), so it
   // submits the form by id. Strip React's colons to keep the id selector-safe.
   const formId = `prayer-request-${useId().replace(/:/g, "")}`;
+
+  const resetForm = () => {
+    setTitle("");
+    setContent("");
+    setCategory("spiritual");
+    setIsConfidential(false);
+    setFormError(null);
+    setTitleError(null);
+    setContentError(null);
+  };
+
+  const handleClose = () => {
+    if (submitting) return;
+    resetForm();
+    onClose();
+  };
 
   // Stale field errors must not greet the user the next time they open the form.
   useEffect(() => {
@@ -71,7 +91,9 @@ export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestMo
         isConfidential,
       });
 
-      toast.success("ส่งคำขออธิษฐานเรียบร้อยแล้ว ทีมศิษยาภิบาลจะร่วมอธิษฐานเผื่อท่าน");
+      toast.success(
+        "ส่งคำขออธิษฐานเรียบร้อยแล้ว ทีมศิษยาภิบาลจะร่วมอธิษฐานเผื่อท่าน"
+      );
       setTitle("");
       setContent("");
       setIsConfidential(false);
@@ -90,7 +112,7 @@ export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestMo
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       title="ส่งคำขออธิษฐาน"
       description="พระเจ้าทรงฟังและตอบคำอธิษฐานของท่าน"
       footer={
@@ -98,7 +120,7 @@ export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestMo
           <button
             type="button"
             className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={submitting}
           >
             ยกเลิก
@@ -119,11 +141,13 @@ export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestMo
         {formError && <FormError>{formError}</FormError>}
         <div className="flex items-center gap-2 text-[var(--color-primary)]">
           <HeartHandshake size={ICON_SIZE.md} aria-hidden="true" />
-          <span className="type-caption-strong">แบ่งปันคำอธิษฐานกับทีมศิษยาภิบาล</span>
+          <span className="type-caption-strong">
+            แบ่งปันคำอธิษฐานกับทีมศิษยาภิบาล
+          </span>
         </div>
 
         <Field label="หัวข้อคำอธิษฐาน" required error={titleError ?? undefined}>
-          {(props) => (
+          {props => (
             <input
               id={props.id}
               aria-describedby={props["aria-describedby"]}
@@ -132,20 +156,20 @@ export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestMo
               required
               placeholder="เช่น ขอการทรงรักษาโรค, ขอสติปัญญาในการสอบ"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={e => setTitle(e.target.value)}
               className={CONTROL_CLASS}
             />
           )}
         </Field>
 
         <Field label="หมวดหมู่">
-          {(props) => (
+          {props => (
             <select
               id={props.id}
               aria-describedby={props["aria-describedby"]}
               aria-invalid={props["aria-invalid"]}
               value={category}
-              onChange={(e) => setCategory(e.target.value as PrayerCategory)}
+              onChange={e => setCategory(e.target.value as PrayerCategory)}
               className={CONTROL_CLASS}
             >
               {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
@@ -158,7 +182,7 @@ export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestMo
         </Field>
 
         <Field label="รายละเอียด" required error={contentError ?? undefined}>
-          {(props) => (
+          {props => (
             <textarea
               id={props.id}
               aria-describedby={props["aria-describedby"]}
@@ -167,7 +191,7 @@ export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestMo
               required
               placeholder="แบ่งปันรายละเอียดหรือสิ่งที่ท่านต้องการให้อธิษฐานเผื่อ..."
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={e => setContent(e.target.value)}
               className={CONTROL_CLASS}
             />
           )}
@@ -177,16 +201,21 @@ export function PrayerRequestModal({ open, onClose, onSuccess }: PrayerRequestMo
           <input
             type="checkbox"
             checked={isConfidential}
-            onChange={(e) => setIsConfidential(e.target.checked)}
+            onChange={e => setIsConfidential(e.target.checked)}
             className="mt-0.5 size-5 accent-[var(--color-primary)]"
           />
           <span className="min-w-0">
             <span className="type-caption-strong flex items-center gap-1.5 text-[var(--color-ink)]">
-              <Lock size={ICON_SIZE.xs} aria-hidden="true" className="text-[var(--color-warning)]" />
+              <Lock
+                size={ICON_SIZE.xs}
+                aria-hidden="true"
+                className="text-[var(--color-warning)]"
+              />
               เป็นความลับเฉพาะศิษยาภิบาล
             </span>
             <span className="type-fine mt-0.5 block text-[var(--color-body-muted)]">
-              หากเปิดตัวเลือกนี้ เฉพาะศิษยาภิบาลเท่านั้นที่จะเห็นคำขอนี้ (ไม่ประกาศในทีมอธิษฐานทั่วไป)
+              หากเปิดตัวเลือกนี้ เฉพาะศิษยาภิบาลเท่านั้นที่จะเห็นคำขอนี้
+              (ไม่ประกาศในทีมอธิษฐานทั่วไป)
             </span>
           </span>
         </label>

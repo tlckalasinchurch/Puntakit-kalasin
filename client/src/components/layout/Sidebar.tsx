@@ -68,7 +68,12 @@ export const navGroups: NavGroup[] = [
     name: "หลัก",
     items: [
       { label: "หน้าหลัก", path: "/", icon: HomeIcon },
-      { label: "ผังองค์กร", path: "/org", icon: Network, roles: PRIVILEGED_ROLES },
+      {
+        label: "ผังองค์กร",
+        path: "/org",
+        icon: Network,
+        roles: PRIVILEGED_ROLES,
+      },
       { label: "สมาชิก", path: "/members", icon: Users },
       { label: "พันธกิจ", path: "/groups", icon: UsersRound },
     ],
@@ -76,7 +81,12 @@ export const navGroups: NavGroup[] = [
   {
     name: "งานดูแล",
     items: [
-      { label: "เช็คชื่อพันธกิจ", path: "/care", icon: ListChecks, roles: CREATE_ROLES },
+      {
+        label: "เช็คชื่อพันธกิจ",
+        path: "/care",
+        icon: ListChecks,
+        roles: CREATE_ROLES,
+      },
       { label: "เช็คชื่อนมัสการ", path: "/attendance", icon: UserCheck },
       { label: "การติดตาม", path: "/follow-up", icon: ListTodo },
       { label: "การนมัสการ", path: "/events", icon: CalendarDays },
@@ -145,7 +155,37 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const drawer = drawerRef.current;
+      if (!drawer) return;
+      const focusables = Array.from(
+        drawer.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter(element => element.offsetParent !== null);
+      if (focusables.length === 0) {
+        event.preventDefault();
+        drawer.focus();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (!active || !drawer.contains(active)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     const previousOverflow = document.body.style.overflow;
@@ -189,6 +229,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           open ? "translate-x-0" : "-translate-x-full"
         }`}
         aria-label="เมนูหลัก"
+        role={open ? "dialog" : undefined}
+        aria-modal={open ? "true" : undefined}
       >
         <div className="flex items-center justify-between border-b border-[var(--color-on-dark-hairline)] px-5 py-4">
           <Logo />
