@@ -180,3 +180,30 @@ export function withRecheckHint(message: string, err: unknown): string {
   const status = err instanceof ApiError ? err.status : 0;
   return status === 400 || status === 422 ? `${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง` : message;
 }
+
+/**
+ * Per-field messages from a rejected request (`ApiError.details`), keyed by the
+ * top-level field name, so a form can show each one next to its control.
+ */
+export function fieldErrorsFrom(err: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!(err instanceof ApiError)) return out;
+  for (const d of err.details ?? []) {
+    const key = d.field?.split(".")[0];
+    if (key && !out[key]) out[key] = d.message;
+  }
+  return out;
+}
+
+/** Client-side "required" check that trims, so a field of spaces counts as empty. */
+export function requiredErrors<T extends object>(
+  values: T,
+  rules: Partial<Record<keyof T & string, string>>
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, message] of Object.entries(rules) as Array<[string, string]>) {
+    const value = (values as Record<string, unknown>)[key];
+    if (value === undefined || value === null || String(value).trim() === "") out[key] = message;
+  }
+  return out;
+}

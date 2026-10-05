@@ -278,6 +278,7 @@ export default function Members() {
 
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [creatingFollowUp, setCreatingFollowUp] = useState(false);
 
   useEffect(() => {
     if (selectedMember) {
@@ -504,7 +505,8 @@ export default function Members() {
   };
 
   const handleCreateFollowUp = async () => {
-    if (!selectedMember) return;
+    if (!selectedMember || creatingFollowUp) return;
+    setCreatingFollowUp(true);
     try {
       await api.post("/api/follow-ups", {
         title: `ติดตาม: ${selectedMember.name}`,
@@ -515,6 +517,8 @@ export default function Members() {
       toast.error(
         err instanceof ApiError ? err.message : "สร้างรายการติดตามไม่สำเร็จ"
       );
+    } finally {
+      setCreatingFollowUp(false);
     }
   };
 
@@ -1246,10 +1250,11 @@ export default function Members() {
             <button
               type="button"
               onClick={handleCreateFollowUp}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+              disabled={creatingFollowUp}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
             >
               <Plus size={ICON_SIZE.sm} aria-hidden="true" />
-              สร้างรายการติดตาม
+              {creatingFollowUp ? "กำลังสร้าง…" : "สร้างรายการติดตาม"}
             </button>
             {canManage && (
               <button

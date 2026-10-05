@@ -16,7 +16,7 @@ import { ListSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useResource } from "@/hooks/useResource";
-import { ApiError, withRecheckHint } from "@/lib/api";
+import { ApiError, withRecheckHint, fieldErrorsFrom, requiredErrors } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -62,6 +62,7 @@ export default function Announcements() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<Announcement | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -69,6 +70,7 @@ export default function Announcements() {
     setEditing(null);
     setForm(EMPTY_FORM);
     setFormError(null);
+    setFieldErrors({});
     setFormOpen(true);
   };
 
@@ -76,12 +78,19 @@ export default function Announcements() {
     setEditing(a);
     setForm({ title: a.title, content: a.content, status: a.status });
     setFormError(null);
+    setFieldErrors({});
     setFormOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+    setFieldErrors({});
+    const missing = requiredErrors(form, { title: "กรุณากรอกหัวข้อ", content: "กรุณากรอกเนื้อหา" });
+    if (Object.keys(missing).length > 0) {
+      setFieldErrors(missing);
+      return;
+    }
     setSubmitting(true);
     try {
       if (editing) {
@@ -96,6 +105,7 @@ export default function Announcements() {
       const message =
         err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
       setFormError(withRecheckHint(message, err));
+      setFieldErrors(fieldErrorsFrom(err));
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -213,9 +223,9 @@ export default function Announcements() {
           </>
         }
       >
-        <form id="announcement-form" className="flex flex-col gap-5" onSubmit={handleSubmit}>
+        <form id="announcement-form" className="flex flex-col gap-5" noValidate onSubmit={handleSubmit}>
           {formError && <FormError>{formError}</FormError>}
-          <Field label="หัวข้อ" required>
+          <Field label="หัวข้อ" required error={fieldErrors.title}>
             {props => (
               <input
                 {...props}
@@ -226,7 +236,7 @@ export default function Announcements() {
               />
             )}
           </Field>
-          <Field label="เนื้อหา" required>
+          <Field label="เนื้อหา" required error={fieldErrors.content}>
             {props => (
               <textarea
                 {...props}

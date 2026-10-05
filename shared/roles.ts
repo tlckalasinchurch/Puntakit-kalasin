@@ -54,6 +54,13 @@ export const ADMIN_ROLES: readonly UserRole[] = ["super_admin", "admin"];
 export const MEMBER_CREATE_ROLES: readonly UserRole[] = ["super_admin", "admin", "staff"];
 
 /**
+ * Roles that receive unmasked member contacts from `GET /api/members` and may
+ * therefore search by phone or email. Every other role gets masked contacts and
+ * name-only search (`maskSensitiveData`, `server/routes/members.ts`).
+ */
+export const MEMBER_CONTACT_ROLES: readonly UserRole[] = ["super_admin", "admin", "staff"];
+
+/**
  * Edit member records and export the member CSV
  * (`PUT /api/members/:id`, `GET /api/members/export/csv`). Staff-level roles
  * that can care for a record, but not create or delete one.

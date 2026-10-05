@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MobileBottomNav } from "./MobileBottomNav";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 
@@ -33,7 +34,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
         <main id="app-main" className="w-full flex-1">
           <div className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-8">
-            {children}
+            <RouteErrorBoundary>{children}</RouteErrorBoundary>
           </div>
         </main>
       </div>

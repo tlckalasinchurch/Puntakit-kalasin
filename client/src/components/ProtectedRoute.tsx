@@ -2,6 +2,9 @@ import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { MemberAppLayout } from "@/components/layout/MemberAppLayout";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { EmptyState, ErrorState } from "@/components/DesignSystem";
 import { Button } from "@/components/ui/button";
 import { Lock, LogOut } from "lucide-react";
@@ -21,7 +24,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, allow }: ProtectedRouteProps) {
   const { user, isLoading, error, retry, logout } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const denied = Boolean(user && allow && !hasRole(user.role, allow));
   // A member-role account has its own app: send it there, not to a dead end.
   const sendToMemberApp = denied && user?.role === "member";
@@ -115,5 +118,11 @@ export function ProtectedRoute({ children, allow }: ProtectedRouteProps) {
     );
   }
 
-  return <>{children}</>;
+  // A page that throws while rendering must not blank the whole app: the
+  // message appears inside the same shell the page would have used.
+  const inMemberApp = location === "/app" || location.startsWith("/app/");
+  const wrap = (content: React.ReactNode) =>
+    inMemberApp ? <MemberAppLayout>{content}</MemberAppLayout> : <AppLayout>{content}</AppLayout>;
+
+  return <RouteErrorBoundary wrap={wrap}>{children}</RouteErrorBoundary>;
 }

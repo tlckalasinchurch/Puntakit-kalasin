@@ -17,7 +17,7 @@ import { CardGridSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useResource } from "@/hooks/useResource";
-import { ApiError, withRecheckHint } from "@/lib/api";
+import { ApiError, withRecheckHint, fieldErrorsFrom, requiredErrors } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -97,6 +97,7 @@ export default function Events() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<Event | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -104,6 +105,7 @@ export default function Events() {
     setEditing(null);
     setForm(EMPTY_FORM);
     setFormError(null);
+    setFieldErrors({});
     setFormOpen(true);
   };
 
@@ -118,12 +120,19 @@ export default function Events() {
       status: ev.status,
     });
     setFormError(null);
+    setFieldErrors({});
     setFormOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+    setFieldErrors({});
+    const missing = requiredErrors(form, { title: "กรุณากรอกชื่อกิจกรรม", eventDate: "กรุณาเลือกวันและเวลา" });
+    if (Object.keys(missing).length > 0) {
+      setFieldErrors(missing);
+      return;
+    }
     setSubmitting(true);
     try {
       const payload = { ...form, eventDate: new Date(form.eventDate).toISOString() };
@@ -139,6 +148,7 @@ export default function Events() {
       const message =
         err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
       setFormError(withRecheckHint(message, err));
+      setFieldErrors(fieldErrorsFrom(err));
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -269,10 +279,10 @@ export default function Events() {
           </>
         }
       >
-        <form id="event-form" className="grid grid-cols-1 gap-5 sm:grid-cols-2" onSubmit={handleSubmit}>
+        <form id="event-form" className="grid grid-cols-1 gap-5 sm:grid-cols-2" noValidate onSubmit={handleSubmit}>
           {formError && <FormError>{formError}</FormError>}
           <div className="sm:col-span-2">
-            <Field label="ชื่อกิจกรรม" required>
+            <Field label="ชื่อกิจกรรม" required error={fieldErrors.title}>
               {props => (
                 <input
                   {...props}
@@ -284,7 +294,7 @@ export default function Events() {
               )}
             </Field>
           </div>
-          <Field label="วันเวลา" required>
+          <Field label="วันเวลา" required error={fieldErrors.eventDate}>
             {props => (
               <input
                 {...props}

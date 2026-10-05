@@ -4,6 +4,7 @@ import { getDb } from "../db/client.js";
 import { events } from "../../shared/schema.js";
 import { eventInputSchema } from "../../shared/validation.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
+import { sendValidationError } from "../lib/errors.js";
 
 export const eventsRouter = Router();
 
@@ -28,7 +29,7 @@ eventsRouter.get("/:id", async (req, res) => {
 eventsRouter.post("/", requireAdmin, async (req, res) => {
   const parsed = eventInputSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ success: false, error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" });
+    sendValidationError(res, parsed.error.issues);
     return;
   }
   const db = getDb();
@@ -39,7 +40,7 @@ eventsRouter.post("/", requireAdmin, async (req, res) => {
 eventsRouter.put("/:id", requireAdmin, async (req, res) => {
   const parsed = eventInputSchema.partial().safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ success: false, error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" });
+    sendValidationError(res, parsed.error.issues);
     return;
   }
   const db = getDb();

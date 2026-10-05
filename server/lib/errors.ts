@@ -1,3 +1,5 @@
+import type { Response } from "express";
+
 export type ErrorCode =
   | "VALIDATION_ERROR"
   | "UNAUTHORIZED"
@@ -89,4 +91,24 @@ export class RateLimitError extends AppError {
   constructor(message: string = "มีการร้องขอมากเกินไป กรุณารอสักครู่แล้วลองใหม่") {
     super(message, 429, "RATE_LIMIT_EXCEEDED");
   }
+}
+
+/**
+ * Sends a 400 in the same envelope the central error handler produces
+ * (`error: { code, message, details }`) for routes that answer directly instead
+ * of throwing. A bare string here made the browser fall back to a generic
+ * message and lose the per-field detail the form needs.
+ */
+export function sendValidationError(
+  res: Response,
+  issues: ReadonlyArray<{ path: ReadonlyArray<PropertyKey>; message: string }>
+): void {
+  res.status(400).json({
+    success: false,
+    error: {
+      code: "VALIDATION_ERROR",
+      message: issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง",
+      details: issues.map((i) => ({ field: i.path.join("."), message: i.message })),
+    },
+  });
 }

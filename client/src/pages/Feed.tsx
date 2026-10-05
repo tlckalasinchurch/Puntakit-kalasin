@@ -114,7 +114,7 @@ const ROW_BUTTON_CLASS =
 const ROW_PRIMARY_BUTTON_CLASS =
   "inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-2 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
 const DASHED_BUTTON_CLASS =
-  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-dashed border-[var(--color-hairline)] px-3 text-sm font-semibold text-[var(--color-body-muted)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-dashed border-[var(--color-hairline)] px-3 text-sm font-semibold text-[var(--color-body-muted)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("th-TH", {
@@ -153,6 +153,7 @@ export default function Feed() {
   const [formError, setFormError] = useState<string | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
   const [transitioningId, setTransitioningId] = useState<string | null>(null);
+  const [followUpActivityId, setFollowUpActivityId] = useState<string | null>(null);
 
   const canCreate = user && CREATE_ROLES.includes(user.role);
 
@@ -265,6 +266,8 @@ export default function Feed() {
   };
 
   const createFollowUp = async (activity: FeedActivity) => {
+    if (followUpActivityId) return;
+    setFollowUpActivityId(activity.id);
     try {
       await api.post("/api/follow-ups", {
         title: `ติดตามหลัง: ${activity.title}`,
@@ -274,6 +277,8 @@ export default function Feed() {
       toast.success("สร้างรายการติดตามแล้ว");
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "สร้างรายการติดตามไม่สำเร็จ");
+    } finally {
+      setFollowUpActivityId(null);
     }
   };
 
@@ -452,6 +457,7 @@ export default function Feed() {
                         type="button"
                         className={`${DASHED_BUTTON_CLASS} mt-2 w-full`}
                         onClick={() => createFollowUp(activity)}
+                        disabled={followUpActivityId !== null}
                       >
                         <ListTodo size={ICON_SIZE.sm} aria-hidden="true" /> สร้างรายการติดตามจากกิจกรรมนี้
                       </button>

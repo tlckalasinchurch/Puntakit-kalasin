@@ -49,7 +49,7 @@ class ErrorBoundary extends Component<Props, State> {
             </p>
 
             {import.meta.env.DEV && (
-              <div className="mb-6 w-full overflow-auto rounded bg-muted p-4">
+              <div className="mb-6 w-full overflow-auto rounded bg-[var(--color-canvas-soft)] p-4">
                 <pre className="type-fine whitespace-break-spaces text-[var(--color-ink)]">
                   {this.state.error?.stack}
                 </pre>

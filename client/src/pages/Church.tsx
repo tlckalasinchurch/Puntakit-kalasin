@@ -11,7 +11,7 @@ import {
 } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
-import { api, ApiError, withRecheckHint } from "@/lib/api";
+import { api, ApiError, withRecheckHint, fieldErrorsFrom, requiredErrors } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -43,6 +43,7 @@ export default function Church() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const load = () => {
     setIsLoading(true);
@@ -70,6 +71,12 @@ export default function Church() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+    setFieldErrors({});
+    const missing = requiredErrors(form, { name: "กรุณากรอกชื่อคริสตจักร" });
+    if (Object.keys(missing).length > 0) {
+      setFieldErrors(missing);
+      return;
+    }
     setSaving(true);
     try {
       const saved = await api.put<ChurchProfile>("/api/church-profile", form);
@@ -79,6 +86,7 @@ export default function Church() {
       const message =
         err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
       setFormError(withRecheckHint(message, err));
+      setFieldErrors(fieldErrorsFrom(err));
       toast.error(message);
     } finally {
       setSaving(false);
@@ -98,9 +106,9 @@ export default function Church() {
         ) : error ? (
           <ErrorState description={error ?? undefined} onRetry={load} />
         ) : (
-          <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+          <form className="flex flex-col gap-5" noValidate onSubmit={handleSubmit}>
             {formError && <FormError>{formError}</FormError>}
-            <Field label="ชื่อคริสตจักร" required>
+            <Field label="ชื่อคริสตจักร" required error={fieldErrors.name}>
               {(props) => (
                 <input
                   id={props.id}
@@ -116,7 +124,7 @@ export default function Church() {
             </Field>
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <Field label="เบอร์โทรศัพท์">
+              <Field label="เบอร์โทรศัพท์" error={fieldErrors.phone}>
                 {(props) => (
                   <input
                     id={props.id}
@@ -130,7 +138,7 @@ export default function Church() {
                   />
                 )}
               </Field>
-              <Field label="อีเมล">
+              <Field label="อีเมล" error={fieldErrors.email}>
                 {(props) => (
                   <input
                     id={props.id}

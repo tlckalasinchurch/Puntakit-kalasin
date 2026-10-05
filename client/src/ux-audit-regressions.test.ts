@@ -476,4 +476,28 @@ describe("Audit 2026-10-04 — permissions, error states and mobile forms", () =
     expect(sunken).toBeTruthy();
     expect(read("brand-spec.md").toLowerCase()).toContain(sunken!.toLowerCase());
   });
+
+  it("a render error stays inside the page area so the shell keeps working", () => {
+    expect(read("client/src/components/layout/AppLayout.tsx")).toMatch(/<RouteErrorBoundary>\{children\}<\/RouteErrorBoundary>/);
+    expect(read("client/src/components/layout/MemberAppLayout.tsx")).toMatch(/<RouteErrorBoundary>\{children\}<\/RouteErrorBoundary>/);
+    const src = read("client/src/components/RouteErrorBoundary.tsx");
+    expect(src).toMatch(/resetKey/);
+    expect(src).toMatch(/import\.meta\.env\.DEV/);
+  });
+
+  it.each(["Announcements", "Events", "Ministries", "Church"])(
+    "%s shows Thai field errors next to the control, not only a browser tooltip",
+    (page) => {
+      const src = read(`client/src/pages/${page}.tsx`);
+      expect(src).toMatch(/noValidate/);
+      expect(src).toMatch(/requiredErrors\(form,/);
+      expect(src).toMatch(/fieldErrorsFrom\(err\)/);
+      expect(src).toMatch(/error=\{fieldErrors\./);
+    }
+  );
+
+  it("quick follow-up buttons cannot be double-clicked", () => {
+    expect(read("client/src/pages/Members.tsx")).toMatch(/disabled=\{creatingFollowUp\}/);
+    expect(read("client/src/pages/Feed.tsx")).toMatch(/disabled=\{followUpActivityId !== null\}/);
+  });
 });
