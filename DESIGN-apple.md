@@ -273,6 +273,9 @@ components:
     padding: 64px
 ---
 
+> **REFERENCE ONLY.** This file analyses another product (blue identity, SF Pro). It is not the Puntakit design system. The source of truth is `client/src/index.css`; see `brand-spec.md` and `design.md`. Do not copy its colours or fonts into Puntakit code.
+
+
 ## Overview
 
 Apple's web presence is a masterclass in **reverent product photography framed by near-invisible UI**. Every page is a stack of edge-to-edge product "tiles" — alternating light and dark canvases, each centered on a hero headline, a one-line tagline, two tiny blue pill CTAs, and an impossibly crisp product render. Nothing competes with the product. Typography is confident but quiet; color is either pure white, an off-white parchment, or a near-black tile; interactive elements are a single, quiet blue.

@@ -23,6 +23,19 @@ export const PRIVILEGED_ROLES: readonly UserRole[] = [
   "ministry_leader",
 ];
 
+/**
+ * Every role that may open the admin shell (`AppLayout`). A `member` belongs to
+ * the member PWA under `/app/*` and is sent there instead.
+ */
+export const ADMIN_SHELL_ROLES: readonly UserRole[] = [
+  "super_admin",
+  "admin",
+  "ministry_leader",
+  "group_leader",
+  "staff",
+  "viewer",
+];
+
 /** Create mission activity, mission submissions and follow-ups. */
 export const CREATE_ROLES: readonly UserRole[] = [...PRIVILEGED_ROLES, "group_leader"];
 
@@ -39,6 +52,13 @@ export const ADMIN_ROLES: readonly UserRole[] = ["super_admin", "admin"];
 
 /** Create a member record (`POST /api/members`). */
 export const MEMBER_CREATE_ROLES: readonly UserRole[] = ["super_admin", "admin", "staff"];
+
+/**
+ * Roles that receive unmasked member contacts from `GET /api/members` and may
+ * therefore search by phone or email. Every other role gets masked contacts and
+ * name-only search (`maskSensitiveData`, `server/routes/members.ts`).
+ */
+export const MEMBER_CONTACT_ROLES: readonly UserRole[] = ["super_admin", "admin", "staff"];
 
 /**
  * Edit member records and export the member CSV

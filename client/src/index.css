@@ -8,7 +8,7 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 
-  /* Puntakit Design System V2 brand tokens (source of truth: PUNTAKIT_DESIGN_SYSTEM_V2.md) */
+  /* Puntakit Design System V2 brand tokens (source of truth: this file; brand-spec.md and design.md are derived from it) */
   --color-primary: #315c2b;
   --color-primary-focus: #3f7337;
   --color-primary-on-dark: #7faf72;
@@ -131,7 +131,7 @@
   --color-ring: var(--ring);
 }
 
-/* V2 type scale (PUNTAKIT_DESIGN_SYSTEM_V2.md §3). In the components layer so utilities can compose. */
+/* V2 type scale (design.md §3). In the components layer so utilities can compose. */
 @layer components {
   .type-hero { font-size: 56px; font-weight: 600; line-height: 1.07; }
   .type-display-lg { font-size: 40px; font-weight: 600; line-height: 1.1; }
@@ -163,6 +163,12 @@
     /* Native controls (date pickers, selects, scrollbars) must match the theme
        instead of rendering a white control on a graphite surface. */
     color-scheme: light;
+  }
+  /* Fallback keyboard focus ring (design.md §8.3). Components that draw their
+     own ring set `focus-visible:outline-none`, which wins over this rule. */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-primary-focus);
+    outline-offset: 2px;
   }
   body {
     margin: 0;

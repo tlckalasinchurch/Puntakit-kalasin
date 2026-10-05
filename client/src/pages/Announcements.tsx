@@ -16,7 +16,7 @@ import { ListSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useResource } from "@/hooks/useResource";
-import { ApiError } from "@/lib/api";
+import { ApiError, withRecheckHint, fieldErrorsFrom, requiredErrors } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -34,7 +34,7 @@ interface Announcement {
 const EMPTY_FORM = { title: "", content: "", status: "draft" as Announcement["status"] };
 
 const CONTROL_CLASS =
-  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 py-2 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 py-2 text-base md:text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
 const PRIMARY_BUTTON_CLASS =
   "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
 const CANCEL_BUTTON_CLASS =
@@ -62,6 +62,7 @@ export default function Announcements() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<Announcement | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -69,6 +70,7 @@ export default function Announcements() {
     setEditing(null);
     setForm(EMPTY_FORM);
     setFormError(null);
+    setFieldErrors({});
     setFormOpen(true);
   };
 
@@ -76,12 +78,19 @@ export default function Announcements() {
     setEditing(a);
     setForm({ title: a.title, content: a.content, status: a.status });
     setFormError(null);
+    setFieldErrors({});
     setFormOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+    setFieldErrors({});
+    const missing = requiredErrors(form, { title: "กรุณากรอกหัวข้อ", content: "กรุณากรอกเนื้อหา" });
+    if (Object.keys(missing).length > 0) {
+      setFieldErrors(missing);
+      return;
+    }
     setSubmitting(true);
     try {
       if (editing) {
@@ -95,7 +104,8 @@ export default function Announcements() {
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
-      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      setFormError(withRecheckHint(message, err));
+      setFieldErrors(fieldErrorsFrom(err));
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -213,9 +223,9 @@ export default function Announcements() {
           </>
         }
       >
-        <form id="announcement-form" className="flex flex-col gap-5" onSubmit={handleSubmit}>
+        <form id="announcement-form" className="flex flex-col gap-5" noValidate onSubmit={handleSubmit}>
           {formError && <FormError>{formError}</FormError>}
-          <Field label="หัวข้อ" required>
+          <Field label="หัวข้อ" required error={fieldErrors.title}>
             {props => (
               <input
                 {...props}
@@ -226,7 +236,7 @@ export default function Announcements() {
               />
             )}
           </Field>
-          <Field label="เนื้อหา" required>
+          <Field label="เนื้อหา" required error={fieldErrors.content}>
             {props => (
               <textarea
                 {...props}

@@ -35,7 +35,7 @@ import {
 } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, withRecheckHint } from "@/lib/api";
 import { fetchAllMembers } from "@/lib/fetchAll";
 import { parseCareGroupDescription } from "@shared/orgView";
 import { MemberPicker } from "@/components/MemberPicker";
@@ -512,7 +512,7 @@ export default function Groups() {
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "บันทึกข้อมูลไม่สำเร็จ";
-      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      setFormError(withRecheckHint(message, err));
       toast.error(message);
     } finally {
       setSaving(false);

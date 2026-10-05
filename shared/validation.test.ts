@@ -9,6 +9,7 @@ import {
   memberInputSchema,
   memberQuerySchema,
   ministryInputSchema,
+  missionSubmissionInputSchema,
   registerInputSchema,
 } from "./validation.js";
 
@@ -155,5 +156,38 @@ describe("auth schemas", () => {
   it("requires email and password on login", () => {
     expect(loginInputSchema.safeParse({ email: "a@b.com", password: "" }).success).toBe(false);
     expect(loginInputSchema.safeParse({ email: "a@b.com", password: "x" }).success).toBe(true);
+  });
+});
+
+describe("phone fields", () => {
+  it.each(["081-234-5678", "+66 81 234 5678", "043 811 800", "(043) 811800", ""])("accepts %j", (phone) => {
+    expect(memberInputSchema.safeParse({ name: "สมชาย", phone }).success).toBe(true);
+  });
+
+  it.each(["abc", "081-234-ABCD", "0812345678x"])("rejects %j on members and the church profile", (phone) => {
+    expect(memberInputSchema.safeParse({ name: "สมชาย", phone }).success).toBe(false);
+    expect(churchProfileInputSchema.safeParse({ name: "คริสตจักร", phone }).success).toBe(false);
+  });
+});
+
+describe("missionSubmissionInputSchema", () => {
+  it("rejects a submission with no text and no link", () => {
+    expect(missionSubmissionInputSchema.safeParse({}).success).toBe(false);
+    expect(missionSubmissionInputSchema.safeParse({ rawText: "   ", submittedByLabel: "ผู้ส่ง" }).success).toBe(false);
+  });
+
+  it("accepts text alone or a link alone", () => {
+    expect(missionSubmissionInputSchema.safeParse({ rawText: "เยี่ยมสมาชิก" }).success).toBe(true);
+    expect(
+      missionSubmissionInputSchema.safeParse({ rawMediaUrls: ["https://example.com/a.jpg"] }).success
+    ).toBe(true);
+  });
+});
+
+describe("ministryInputSchema wording", () => {
+  it("names the ministry team (ฝ่ายงาน), not the care group (พันธกิจ)", () => {
+    const result = ministryInputSchema.safeParse({ name: "  " });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues[0].message).toBe("กรุณากรอกชื่อฝ่ายงาน");
   });
 });

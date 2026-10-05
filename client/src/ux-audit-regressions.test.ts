@@ -415,3 +415,89 @@ describe("UX audit Batch F — pages added after the first audit", () => {
     expect(src).not.toMatch(/hover:bg-white\/10/);
   });
 });
+
+describe("Audit 2026-10-04 — permissions, error states and mobile forms", () => {
+  it("admin-shell routes are gated by role sets from shared/roles.ts", () => {
+    const app = read("client/src/App.tsx");
+    expect(app).toMatch(/ADMIN_SHELL_ROLES/);
+    expect(app).toMatch(/<Route path="\/members">\s*<ProtectedRoute allow=\{ADMIN_SHELL_ROLES\}>/);
+    expect(app).toMatch(/<Route path="\/reports">\s*<ProtectedRoute allow=\{PRIVILEGED_ROLES\}>/);
+    expect(app).toMatch(/<Route path="\/import\/org">\s*<ProtectedRoute allow=\{ADMIN_ROLES\}>/);
+    // The member PWA stays open to every signed-in role.
+    expect(app).toMatch(/<Route path="\/app">\s*<ProtectedRoute>/);
+  });
+
+  it("ProtectedRoute sends member accounts to /app and shows a Thai denial for others", () => {
+    const src = read("client/src/components/ProtectedRoute.tsx");
+    expect(src).toMatch(/navigate\("\/app"\)/);
+    expect(src).toMatch(/data-testid="route-denied"/);
+    expect(src).toContain("คุณไม่มีสิทธิ์เปิดหน้านี้");
+  });
+
+  it("an expired session on any API call re-syncs auth instead of looping on 'connection failed'", () => {
+    expect(read("client/src/lib/api.ts")).toMatch(/UNAUTHORIZED_EVENT/);
+    expect(read("client/src/contexts/AuthContext.tsx")).toMatch(/useResyncOnUnauthorized\(retry\)/);
+  });
+
+  it("ErrorBoundary hides the stack trace outside development", () => {
+    const src = read("client/src/components/ErrorBoundary.tsx");
+    expect(src).toMatch(/import\.meta\.env\.DEV\s*&&/);
+    expect(src).toContain("กลับหน้าหลัก");
+  });
+
+  it("form-level errors add the 'check the data' hint only for rejected input", () => {
+    for (const page of ["Announcements", "Events", "Ministries", "Church", "Inbox", "Members", "Groups", "Feed"]) {
+      const src = read(`client/src/pages/${page}.tsx`);
+      expect(src, `${page}.tsx`).not.toMatch(/\$\{message\} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง/);
+      expect(src, `${page}.tsx`).toMatch(/withRecheckHint\(/);
+    }
+  });
+
+  it("text fields are at least 16px on phones so iOS Safari does not zoom on focus", () => {
+    for (const page of ["Church", "Attendance", "Feed", "Events", "Announcements", "Ministries", "Reports", "Inbox"]) {
+      const src = read(`client/src/pages/${page}.tsx`);
+      expect(src, `${page}.tsx`).toMatch(/min-h-11 w-full[^"]*text-base md:text-sm/);
+    }
+  });
+
+  it("the bottom-nav menu button lines up with its siblings", () => {
+    const src = read("client/src/components/layout/MobileBottomNav.tsx");
+    expect(src).toMatch(/<span aria-hidden="true" className="flex size-9 items-center justify-center">\s*<Menu/);
+  });
+
+  it("index.css has a global :focus-visible fallback and no dangling design-doc reference", () => {
+    const css = read("client/src/index.css");
+    expect(css).toMatch(/:where\([^)]*\):focus-visible/);
+    expect(css).not.toContain("PUNTAKIT_DESIGN_SYSTEM_V2.md");
+  });
+
+  it("brand-spec.md uses the same Sunken colour as index.css", () => {
+    const sunken = read("client/src/index.css").match(/--color-canvas-sunken:\s*(#[0-9a-f]{6})/i)?.[1];
+    expect(sunken).toBeTruthy();
+    expect(read("brand-spec.md").toLowerCase()).toContain(sunken!.toLowerCase());
+  });
+
+  it("a render error stays inside the page area so the shell keeps working", () => {
+    expect(read("client/src/components/layout/AppLayout.tsx")).toMatch(/<RouteErrorBoundary>\{children\}<\/RouteErrorBoundary>/);
+    expect(read("client/src/components/layout/MemberAppLayout.tsx")).toMatch(/<RouteErrorBoundary>\{children\}<\/RouteErrorBoundary>/);
+    const src = read("client/src/components/RouteErrorBoundary.tsx");
+    expect(src).toMatch(/resetKey/);
+    expect(src).toMatch(/import\.meta\.env\.DEV/);
+  });
+
+  it.each(["Announcements", "Events", "Ministries", "Church"])(
+    "%s shows Thai field errors next to the control, not only a browser tooltip",
+    (page) => {
+      const src = read(`client/src/pages/${page}.tsx`);
+      expect(src).toMatch(/noValidate/);
+      expect(src).toMatch(/requiredErrors\(form,/);
+      expect(src).toMatch(/fieldErrorsFrom\(err\)/);
+      expect(src).toMatch(/error=\{fieldErrors\./);
+    }
+  );
+
+  it("quick follow-up buttons cannot be double-clicked", () => {
+    expect(read("client/src/pages/Members.tsx")).toMatch(/disabled=\{creatingFollowUp\}/);
+    expect(read("client/src/pages/Feed.tsx")).toMatch(/disabled=\{followUpActivityId !== null\}/);
+  });
+});

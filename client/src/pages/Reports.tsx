@@ -55,7 +55,11 @@ export default function Reports() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const rangeError =
+    startDate && endDate && startDate > endDate ? "วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น" : undefined;
+
   const loadSummary = useCallback(async () => {
+    if (rangeError) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -67,13 +71,14 @@ export default function Reports() {
     } finally {
       setIsLoading(false);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, rangeError]);
 
   useEffect(() => {
     if (canView) loadSummary();
   }, [canView, loadSummary]);
 
   const handleExport = (reportKey: string) => {
+    if (rangeError) return;
     const query = buildQuery(startDate, endDate);
     window.open(`/api/reports/export/${reportKey}.csv${query ? `?${query}` : ""}`, "_blank");
   };
@@ -117,11 +122,11 @@ export default function Reports() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-sm text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                className="min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-base md:text-sm text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
               />
             )}
           </Field>
-          <Field label="วันที่สิ้นสุด" hint="เว้นว่างไว้เพื่อดูข้อมูลทั้งหมด">
+          <Field label="วันที่สิ้นสุด" hint="เว้นว่างไว้เพื่อดูข้อมูลทั้งหมด" error={rangeError}>
             {(props) => (
               <input
                 id={props.id}
@@ -130,7 +135,7 @@ export default function Reports() {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-sm text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                className="min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-base md:text-sm text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
               />
             )}
           </Field>

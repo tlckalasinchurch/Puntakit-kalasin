@@ -16,7 +16,7 @@ import {
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useResource } from "@/hooks/useResource";
-import { ApiError } from "@/lib/api";
+import { ApiError, withRecheckHint, fieldErrorsFrom, requiredErrors } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -33,7 +33,7 @@ interface Ministry {
 const EMPTY_FORM = { name: "", description: "", leader: "", status: "active" as Ministry["status"] };
 
 const CONTROL_CLASS =
-  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+  "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-base md:text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
 
 const PRIMARY_BUTTON_CLASS =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
@@ -56,6 +56,7 @@ export default function Ministries() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<Ministry | null>(null);
   const [deleting, setDeleting] = useState(false);
   // Modal footer buttons submit the form by id.
@@ -65,6 +66,7 @@ export default function Ministries() {
     setEditing(null);
     setForm(EMPTY_FORM);
     setFormError(null);
+    setFieldErrors({});
     setFormOpen(true);
   };
 
@@ -72,12 +74,19 @@ export default function Ministries() {
     setEditing(m);
     setForm({ name: m.name, description: m.description ?? "", leader: m.leader ?? "", status: m.status });
     setFormError(null);
+    setFieldErrors({});
     setFormOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+    setFieldErrors({});
+    const missing = requiredErrors(form, { name: "กรุณากรอกชื่อฝ่ายงาน" });
+    if (Object.keys(missing).length > 0) {
+      setFieldErrors(missing);
+      return;
+    }
     setSubmitting(true);
     try {
       if (editing) {
@@ -91,7 +100,8 @@ export default function Ministries() {
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ";
-      setFormError(`${message} กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง`);
+      setFormError(withRecheckHint(message, err));
+      setFieldErrors(fieldErrorsFrom(err));
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -194,9 +204,9 @@ export default function Ministries() {
           </>
         }
       >
-        <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form id={formId} noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
           {formError && <FormError>{formError}</FormError>}
-          <Field label="ชื่อฝ่ายงาน" required>
+          <Field label="ชื่อฝ่ายงาน" required error={fieldErrors.name}>
             {(props) => (
               <input
                 id={props.id}

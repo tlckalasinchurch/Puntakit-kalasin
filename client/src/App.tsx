@@ -5,6 +5,7 @@ import { ClerkProvider } from "@clerk/react";
 import { clerkThTH } from "./lib/clerkLocalization";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ADMIN_ROLES, ADMIN_SHELL_ROLES, PRIVILEGED_ROLES } from "@shared/roles";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -119,112 +120,112 @@ function Router() {
       </Route>
 
       <Route path="/">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <Home />
         </ProtectedRoute>
       </Route>
       <Route path="/feed">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <Feed />
         </ProtectedRoute>
       </Route>
       <Route path="/follow-up">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <FollowUps />
         </ProtectedRoute>
       </Route>
       <Route path="/inbox">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <Inbox />
         </ProtectedRoute>
       </Route>
       <Route path="/import">
-        <ProtectedRoute>
+        <ProtectedRoute allow={PRIVILEGED_ROLES}>
           <ImportData />
         </ProtectedRoute>
       </Route>
       <Route path="/care">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <CareToday />
         </ProtectedRoute>
       </Route>
       <Route path="/org">
-        <ProtectedRoute>
+        <ProtectedRoute allow={PRIVILEGED_ROLES}>
           <OrgChart />
         </ProtectedRoute>
       </Route>
       <Route path="/import/org">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_ROLES}>
           <ImportOrgData />
         </ProtectedRoute>
       </Route>
       <Route path="/import/duplicates">
-        <ProtectedRoute>
+        <ProtectedRoute allow={PRIVILEGED_ROLES}>
           <ImportDuplicates />
         </ProtectedRoute>
       </Route>
       <Route path="/members">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <Members />
         </ProtectedRoute>
       </Route>
       <Route path="/groups">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <Groups />
         </ProtectedRoute>
       </Route>
       <Route path="/map">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <MapPage />
         </ProtectedRoute>
       </Route>
       <Route path="/attendance">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <Attendance />
         </ProtectedRoute>
       </Route>
       <Route path="/profile">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <Profile />
         </ProtectedRoute>
       </Route>
       <Route path="/announcements">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <Announcements />
         </ProtectedRoute>
       </Route>
       <Route path="/events">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <Events />
         </ProtectedRoute>
       </Route>
       <Route path="/worship">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <Events />
         </ProtectedRoute>
       </Route>
       <Route path="/church">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <Church />
         </ProtectedRoute>
       </Route>
       <Route path="/ministries">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <Ministries />
         </ProtectedRoute>
       </Route>
       <Route path="/reports">
-        <ProtectedRoute>
+        <ProtectedRoute allow={PRIVILEGED_ROLES}>
           <Reports />
         </ProtectedRoute>
       </Route>
       <Route path="/media">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <ComingSoon />
         </ProtectedRoute>
       </Route>
       <Route path="/settings">
-        <ProtectedRoute>
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <ComingSoon />
         </ProtectedRoute>
       </Route>

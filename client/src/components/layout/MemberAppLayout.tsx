@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { Link, useLocation } from "wouter";
 import {
   CalendarDays,
@@ -114,7 +115,7 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
 
       {/* Main content — bottom padding clears the fixed nav + safe area. */}
       <main id="member-app-main" className="flex flex-1 flex-col gap-3.5 px-4 pb-[88px] pt-4">
-        {children}
+        <RouteErrorBoundary>{children}</RouteErrorBoundary>
       </main>
 
       {/* Bottom navigation — 5 real links, >= 44px tall each. */}

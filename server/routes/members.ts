@@ -10,6 +10,7 @@ import {
 } from "../../shared/validation.js";
 import {
   ADMIN_ROLES,
+  MEMBER_CONTACT_ROLES,
   MEMBER_CREATE_ROLES,
   MEMBER_UPDATE_ROLES,
 } from "../../shared/roles.js";
@@ -22,6 +23,27 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from ".
 export const membersRouter = Router();
 
 membersRouter.use(requireAuth);
+
+/**
+ * Masks a phone number whatever its format: keeps the first three and last
+ * three digits. The earlier regex only matched an unbroken run of 9-10 digits,
+ * so "081-234-5678" and "+66 81 234 5678" came back unmasked. A value with too
+ * few digits to mask safely (or none, such as "abc") is hidden entirely.
+ */
+export function maskPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 7) return "xxx";
+  return `${digits.slice(0, 3)}-xxx-${digits.slice(-3)}`;
+}
+
+/** Keeps the first two characters of the name part (one when it has two or fewer). */
+export function maskEmail(email: string): string {
+  const at = email.lastIndexOf("@");
+  if (at < 1) return "***";
+  const local = email.slice(0, at);
+  const keep = local.length > 2 ? 2 : 1;
+  return `${local.slice(0, keep)}***${email.slice(at)}`;
+}
 
 /**
  * Applies the role-based field mask to a member row.
@@ -43,8 +65,8 @@ export function maskSensitiveData(member: Member, userRole: UserRole, userId: st
 
   return {
     ...member,
-    phone: member.phone ? member.phone.replace(/(\d{3})\d{3,4}(\d{3})/, "$1-xxx-$2") : null,
-    email: member.email ? member.email.replace(/(.{2})(.*)(?=@)/, "$1***") : null,
+    phone: member.phone ? maskPhone(member.phone) : null,
+    email: member.email ? maskEmail(member.email) : null,
     // LINE ID is a personal contact handle: it identifies a real person on a
     // third-party network and is not needed to care for them, so it is masked
     // alongside the phone number and email. Leaving it in place meant the
@@ -109,12 +131,17 @@ membersRouter.get("/", async (req, res, next) => {
 
     if (search) {
       const searchPattern = `%${search}%`;
+      // Searching by phone or email matches the unmasked value. For a role that
+      // only receives masked contacts that would be a lookup oracle ("whose
+      // number is 081-234-5678?"), so those roles search names only.
+      const canSearchContacts = MEMBER_CONTACT_ROLES.includes(req.user!.role);
       conditions.push(
         or(
           ilike(members.name, searchPattern),
           ilike(members.nickname, searchPattern),
-          ilike(members.phone, searchPattern),
-          ilike(members.email, searchPattern)
+          ...(canSearchContacts
+            ? [ilike(members.phone, searchPattern), ilike(members.email, searchPattern)]
+            : [])
         )
       );
     }
@@ -166,7 +193,7 @@ membersRouter.get("/", async (req, res, next) => {
 });
 
 // 2. GET /check-duplicate - Check if phone or email exists
-membersRouter.get("/check-duplicate", async (req, res, next) => {
+membersRouter.get("/check-duplicate", requireRole(...MEMBER_UPDATE_ROLES), async (req, res, next) => {
   try {
     const parsed = checkDuplicateMemberSchema.safeParse(req.query);
     if (!parsed.success) {
