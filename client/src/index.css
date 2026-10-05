@@ -66,6 +66,8 @@
   --popover-foreground: var(--color-ink);
   --primary: var(--color-primary);
   --primary-foreground: var(--color-on-dark);
+  /* Text on a --color-primary fill. Dark mode lightens the fill, so the text darkens (>= 4.5:1). */
+  --color-on-primary: var(--color-on-dark);
   --secondary: var(--color-canvas-soft);
   --secondary-foreground: var(--color-ink);
   --muted: var(--color-canvas-soft);
@@ -1133,6 +1135,7 @@
   --color-text-tertiary: rgba(255, 255, 255, 0.64);
   --color-text-quaternary: rgba(255, 255, 255, 0.48);
   --color-primary: #7faf72;
+  --color-on-primary: #1d1d1f;
   --color-primary-focus: #7faf72;
   --color-accent-soft: rgba(127, 175, 114, 0.16);
   --color-info-soft: rgba(47, 111, 204, 0.24);
@@ -1213,7 +1216,7 @@
   .clay-screen { background: var(--clay-ground); border-radius: var(--radius-lg); padding: 20px 16px 24px; display: flex; flex-direction: column; gap: 18px; }
   .clay-card { background: var(--clay-surface); border-radius: var(--radius-lg); box-shadow: var(--clay-puff); padding: 18px; }
   .clay-card-soft { background: var(--clay-surface); border-radius: var(--radius-md); box-shadow: var(--clay-puff-sm); padding: 14px; }
-  .clay-btn { min-height: 56px; border-radius: var(--radius-pill); padding-inline: 26px; font-weight: 700; font-size: 17px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: var(--color-primary); color: var(--color-on-dark); box-shadow: 6px 8px 16px var(--clay-shadow-dark), -4px -4px 12px var(--clay-shadow-light), inset 2px 2px 5px hsl(0 0% 100% / 0.3), inset -3px -4px 8px hsl(0 0% 0% / 0.22); transition: box-shadow 0.15s, transform 0.15s; }
+  .clay-btn { min-height: 56px; border-radius: var(--radius-pill); padding-inline: 26px; font-weight: 700; font-size: 17px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: var(--color-primary); color: var(--color-on-primary); box-shadow: 6px 8px 16px var(--clay-shadow-dark), -4px -4px 12px var(--clay-shadow-light), inset 2px 2px 5px hsl(0 0% 100% / 0.3), inset -3px -4px 8px hsl(0 0% 0% / 0.22); transition: box-shadow 0.15s, transform 0.15s; }
   .clay-btn:active:not(:disabled) { box-shadow: inset 4px 5px 10px hsl(0 0% 0% / 0.35); transform: translateY(1px); }
   .clay-btn:disabled { opacity: 0.55; }
   .clay-chip { min-height: 44px; border-radius: var(--radius-pill); padding-inline: 16px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; background: var(--clay-surface); color: var(--color-ink); box-shadow: var(--clay-puff-sm); }
@@ -1221,7 +1224,7 @@
   .clay-tile { width: 100%; min-height: 64px; text-align: left; border-radius: var(--radius-md); padding: 10px 16px; display: flex; align-items: center; gap: 14px; background: var(--clay-surface); color: var(--color-ink); box-shadow: var(--clay-puff-sm); transition: box-shadow 0.15s, background 0.15s; }
   .clay-tile[aria-pressed="true"] { background: var(--clay-mint); color: var(--clay-mint-ink); box-shadow: var(--clay-press); }
   .clay-tick { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--clay-sunk); box-shadow: var(--clay-press); color: transparent; }
-  .clay-tile[aria-pressed="true"] .clay-tick { background: var(--color-primary); color: var(--color-on-dark); box-shadow: var(--clay-puff-sm); }
+  .clay-tile[aria-pressed="true"] .clay-tick { background: var(--color-primary); color: var(--color-on-primary); box-shadow: var(--clay-puff-sm); }
   .clay-progress { height: 16px; border-radius: var(--radius-pill); background: var(--clay-sunk); box-shadow: var(--clay-press); overflow: hidden; }
   .clay-progress > i { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--color-primary); transition: width 0.25s; }
   .clay-badge { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; flex: none; font-weight: 700; background: var(--clay-mint); color: var(--clay-mint-ink); box-shadow: var(--clay-puff-sm); }

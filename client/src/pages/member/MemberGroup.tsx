@@ -40,7 +40,7 @@ interface CareGroupInfo {
 }
 
 export default function MemberGroup() {
-  usePageTitle("กลุ่มแคร์ของฉัน");
+  usePageTitle("พันธกิจของฉัน");
   const [group, setGroup] = useState<CareGroupInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

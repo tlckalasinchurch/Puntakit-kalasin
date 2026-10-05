@@ -32,6 +32,8 @@ import { api, ApiError } from "@/lib/api";
 import { fetchAllMembers, fetchAllPages } from "@/lib/fetchAll";
 import type { AttendanceStatus, ServiceType } from "@shared/schema";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useAuth } from "@/contexts/AuthContext";
+import { MEMBER_CONTACT_ROLES, hasRole } from "@shared/roles";
 
 interface MemberItem {
   id: string;
@@ -91,7 +93,7 @@ const CONTROL_CLASS =
   "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-base md:text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
 
 const PRIMARY_BUTTON_CLASS =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
 
 const SECONDARY_BUTTON_CLASS =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
@@ -179,6 +181,9 @@ function MetricTile({
 
 export default function Attendance() {
   usePageTitle("ระบบเช็คชื่อและการเข้าร่วม");
+  const { user } = useAuth();
+  // The CSV carries phone numbers; the server limits it to the same roles that see contacts.
+  const canExport = hasRole(user?.role, MEMBER_CONTACT_ROLES);
   // Active Tab: "live" | "qr" | "absentees" | "reports"
   const [activeTab, setActiveTab] = useState<
     "live" | "qr" | "absentees" | "reports"
@@ -430,8 +435,8 @@ export default function Attendance() {
       // Put the roster back to what the server still holds, so the screen
       // never shows "present" for a save that failed.
       const next = { ...attendanceRef.current };
-        if (previous === undefined) delete next[memberId];
-        else next[memberId] = previous;
+      if (previous === undefined) delete next[memberId];
+      else next[memberId] = previous;
       attendanceRef.current = next;
       setCurrentAttendance(next);
       toast.error(
@@ -443,8 +448,8 @@ export default function Attendance() {
         setPendingStatus(prev => {
           const next = { ...prev };
           delete next[memberId];
-        return next;
-      });
+          return next;
+        });
       }
     }
   };
@@ -459,10 +464,10 @@ export default function Attendance() {
       const res = await api.post<{ member: any; attendance: any }>(
         "/api/attendance/qr-scan",
         {
-        token: qrInputToken.trim(),
-        serviceType: selectedService,
-        groupId: selectedGroupId || null,
-        date: selectedDate,
+          token: qrInputToken.trim(),
+          serviceType: selectedService,
+          groupId: selectedGroupId || null,
+          date: selectedDate,
         }
       );
 
@@ -532,13 +537,17 @@ export default function Attendance() {
       <PageHeader
         title="เช็คชื่อนมัสการ"
         description="บันทึกการเข้าร่วมนมัสการ พันธกิจ สแกน QR และติดตามสมาชิกที่ขาดต่อเนื่อง"
-        secondaryActions={[
-          {
-            label: "ดาวน์โหลดรายงาน CSV",
-            icon: Download,
-            onClick: handleExportCsv,
-          },
-        ]}
+        secondaryActions={
+          canExport
+            ? [
+                {
+                  label: "ดาวน์โหลดรายงาน CSV",
+                  icon: Download,
+                  onClick: handleExportCsv,
+                },
+              ]
+            : []
+        }
       />
 
       {/* Tabs Navigation — same four tabs, same state keys as before */}
@@ -560,7 +569,7 @@ export default function Attendance() {
               onClick={() => setActiveTab(value)}
               className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] ${
                 isActive
-                  ? "border-transparent bg-[var(--color-primary)] text-[var(--color-on-dark)]"
+                  ? "border-transparent bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                   : "border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-ink)] hover:bg-[var(--color-canvas-soft)]"
               }`}
             >
@@ -1109,26 +1118,28 @@ export default function Attendance() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4">
-                <span
-                  aria-hidden="true"
-                  className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-canvas-soft)] text-[var(--color-text-secondary)]"
-                >
-                  <Download size={ICON_SIZE.md} aria-hidden="true" />
-                </span>
-                <div>
-                  <p className="type-fine text-[var(--color-body-muted)]">
-                    ส่งออกข้อมูลล่าสุด
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleExportCsv}
-                    className="type-caption-strong min-h-11 text-[var(--color-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+              {canExport && (
+                <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4">
+                  <span
+                    aria-hidden="true"
+                    className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-canvas-soft)] text-[var(--color-text-secondary)]"
                   >
-                    ดาวน์โหลด CSV
-                  </button>
+                    <Download size={ICON_SIZE.md} aria-hidden="true" />
+                  </span>
+                  <div>
+                    <p className="type-fine text-[var(--color-body-muted)]">
+                      ส่งออกข้อมูลล่าสุด
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleExportCsv}
+                      className="type-caption-strong min-h-11 text-[var(--color-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                    >
+                      ดาวน์โหลด CSV
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 

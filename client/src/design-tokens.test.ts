@@ -172,3 +172,37 @@ describe("design token source of truth", () => {
     expect(tokens.get("--color-canvas-sunken")).toBe("#f2f2f4");
   });
 });
+
+describe("text on a primary fill", () => {
+  /** WCAG relative luminance of a #rrggbb colour. */
+  const luminance = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const ratio = (a: string, b: string) => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+
+  it("keeps --color-on-primary readable on --color-primary in light and dark mode", () => {
+    const dark = css.slice(css.indexOf("\n.dark {"));
+    const darkPrimary = dark.match(/--color-primary:\s*(#[0-9a-f]{6})/i)![1];
+    const darkOnPrimary = dark.match(/--color-on-primary:\s*(#[0-9a-f]{6})/i)![1];
+    // Light mode: --color-on-primary falls back to --color-on-dark (#ffffff).
+    expect(tokens.get("--color-on-primary")).toBe("var(--color-on-dark)");
+    expect(ratio("#ffffff", tokens.get("--color-primary")!)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(darkOnPrimary, darkPrimary)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("no page sets white text on a primary fill", () => {
+    const offenders = walk(path.join(REPO_ROOT, "client", "src")).filter((f) => {
+      if (!f.endsWith(".tsx") || f.endsWith("Logo.tsx")) return false;
+      const src = readFileSync(f, "utf8");
+      return /["'`][^"'`\n]*bg-\[var\(--color-primary\)\][^"'`\n]*text-\[var\(--color-on-dark\)\]/.test(src);
+    });
+    expect(offenders.map((f) => path.relative(REPO_ROOT, f))).toEqual([]);
+  });
+});

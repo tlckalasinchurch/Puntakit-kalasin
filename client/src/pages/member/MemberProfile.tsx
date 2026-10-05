@@ -10,7 +10,6 @@ import {
   Bell,
   LogOut,
   Save,
-  KeyRound,
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -50,7 +49,7 @@ interface MemberProfileData {
 
 /** Token-based form control, 44px tall. */
 const inputBase =
-  "type-caption min-h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-ink)] placeholder:text-[var(--color-text-quaternary)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-focus)]";
+  "min-h-11 w-full rounded-[var(--radius-md)] text-base border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-ink)] placeholder:text-[var(--color-text-quaternary)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-focus)]";
 
 export default function MemberProfile() {
   usePageTitle("โปรไฟล์และข้อมูลส่วนตัว");
@@ -74,11 +73,6 @@ export default function MemberProfile() {
   const [consentGiven, setConsentGiven] = useState(true);
 
   // Form states for password change
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [changingPassword, setChangingPassword] = useState(false);
-  const [showPasswordSection, setShowPasswordSection] = useState(false);
 
   // Push notification state
   const [subscribingPush, setSubscribingPush] = useState(false);
@@ -138,14 +132,6 @@ export default function MemberProfile() {
     } finally {
       setSaving(false);
     }
-  };
-
-  // Password management moved to Clerk (the legacy /api/auth/change-password
-  // endpoint was removed). Members manage their password from the Clerk
-  // account button in the top bar.
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.info("กรุณาจัดการรหัสผ่านจากปุ่มบัญชีมุมขวาบน (Clerk)");
   };
 
   const handleSubscribePush = async () => {
@@ -460,7 +446,7 @@ export default function MemberProfile() {
             <button
               type="submit"
               disabled={saving}
-              className="type-caption-strong mt-1 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-primary)] px-4 text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50 motion-reduce:transition-none"
+              className="type-caption-strong mt-1 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-primary)] px-4 text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50 motion-reduce:transition-none"
             >
               {saving ? (
                 <>
@@ -501,7 +487,7 @@ export default function MemberProfile() {
             type="button"
             onClick={handleSubscribePush}
             disabled={subscribingPush}
-            className="type-caption-strong inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] px-4 text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50 motion-reduce:transition-none"
+            className="type-caption-strong inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] px-4 text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50 motion-reduce:transition-none"
           >
             <Bell size={ICON_SIZE.sm} aria-hidden="true" />
             <span>
@@ -520,90 +506,6 @@ export default function MemberProfile() {
             {testingPush ? "กำลังส่ง…" : "ทดสอบการแจ้งเตือน"}
           </button>
         </div>
-      </section>
-
-      {/* Security */}
-      <section className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="type-body-strong flex items-center gap-2 text-[var(--color-ink)]">
-            <KeyRound
-              size={ICON_SIZE.sm}
-              aria-hidden="true"
-              className="text-[var(--color-primary)]"
-            />
-            ความปลอดภัยและรหัสผ่าน
-          </h2>
-          <button
-            type="button"
-            onClick={() => setShowPasswordSection(!showPasswordSection)}
-            aria-expanded={showPasswordSection}
-            aria-controls="password-section"
-            className="type-caption-strong inline-flex min-h-11 shrink-0 items-center rounded-[var(--radius-sm)] px-2 text-[var(--color-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-          >
-            {showPasswordSection ? "ยกเลิก" : "เปลี่ยนรหัสผ่าน"}
-          </button>
-        </div>
-
-        {showPasswordSection && (
-          <form
-            id="password-section"
-            onSubmit={handleChangePassword}
-            className="mt-3 flex flex-col gap-3 border-t border-[var(--color-divider)] pt-3"
-          >
-            <Field label="รหัสผ่านปัจจุบัน">
-              {fieldProps => (
-                <input
-                  {...fieldProps}
-                  type="password"
-                  value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  required
-                  placeholder="รหัสผ่านเดิมของคุณ"
-                  className={`${inputBase} px-3.5 py-2.5`}
-                />
-              )}
-            </Field>
-
-            <Field
-              label="รหัสผ่านใหม่"
-              help="อย่างน้อย 8 ตัวอักษร"
-            >
-              {fieldProps => (
-                <input
-                  {...fieldProps}
-                  type="password"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  required
-                  placeholder="รหัสผ่านใหม่"
-                  className={`${inputBase} px-3.5 py-2.5`}
-                />
-              )}
-            </Field>
-
-            <Field label="ยืนยันรหัสผ่านใหม่">
-              {fieldProps => (
-                <input
-                  {...fieldProps}
-                  type="password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  required
-                  placeholder="พิมพ์รหัสผ่านใหม่อีกครั้ง"
-                  className={`${inputBase} px-3.5 py-2.5`}
-                />
-              )}
-            </Field>
-
-            <button
-              type="submit"
-              disabled={changingPassword}
-              className="type-caption-strong inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-dark-surface)] px-4 text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-dark-surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50 motion-reduce:transition-none"
-            >
-              {changingPassword ? "กำลังเปลี่ยนรหัสผ่าน…" : "บันทึกรหัสผ่านใหม่"}
-            </button>
-          </form>
-        )}
       </section>
 
       {/* Privacy & legal */}

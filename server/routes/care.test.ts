@@ -32,6 +32,7 @@ describe("care roster (real PGlite Postgres)", () => {
   let baseUrl: string;
   let adminCookie: string;
   let memberCookie: string;
+  let leaderCookie: string;
 
   beforeAll(async () => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "puntakit-care-"));
@@ -54,6 +55,8 @@ describe("care roster (real PGlite Postgres)", () => {
     });
     const [admin] = await db.insert(schema.users).values({ email: "a@care2.local", passwordHash: "x", name: "A", role: "admin" }).returning();
     const [viewer] = await db.insert(schema.users).values({ email: "v@care2.local", passwordHash: "x", name: "V", role: "member" }).returning();
+    const [leader] = await db.insert(schema.users).values({ email: "l@care2.local", passwordHash: "x", name: "L", role: "group_leader" }).returning();
+    leaderCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: leader.id, email: leader.email, role: "group_leader" })}`;
     adminCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: admin.id, email: admin.email, role: "admin" })}`;
     memberCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: viewer.id, email: viewer.email, role: "member" })}`;
   }, 120_000);
@@ -76,6 +79,15 @@ describe("care roster (real PGlite Postgres)", () => {
     expect((await roster("2026-10-07", memberCookie)).status).toBe(403);
     expect((await fetch(`${baseUrl}/api/care/groups/${id(999)}/roster`, { headers: { Cookie: adminCookie } })).status).toBe(404);
     expect((await fetch(`${baseUrl}/api/care/groups/nope/roster`, { headers: { Cookie: adminCookie } })).status).toBe(400);
+  });
+
+  it("lets a group_leader load the care-group picker that /api/org/overview refuses them", async () => {
+    const picker = await fetch(`${baseUrl}/api/care/groups`, { headers: { Cookie: leaderCookie } });
+    expect(picker.status).toBe(200);
+    const { data } = (await picker.json()) as { data: { bodies: Array<{ careGroups: unknown[] }> } };
+    expect(data.bodies.flatMap((b) => b.careGroups).length).toBeGreaterThan(0);
+    expect((await fetch(`${baseUrl}/api/org/overview`, { headers: { Cookie: leaderCookie } })).status).toBe(403);
+    expect((await fetch(`${baseUrl}/api/care/groups`, { headers: { Cookie: memberCookie } })).status).toBe(403);
   });
 
   it("lists the active members with no marks and no misses before any meeting", async () => {

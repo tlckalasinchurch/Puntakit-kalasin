@@ -11,6 +11,7 @@ import {
   ministryInputSchema,
   missionSubmissionInputSchema,
   registerInputSchema,
+  groupInputSchema,
 } from "./validation.js";
 
 describe("memberInputSchema", () => {
@@ -189,5 +190,26 @@ describe("ministryInputSchema wording", () => {
     const result = ministryInputSchema.safeParse({ name: "  " });
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error.issues[0].message).toBe("กรุณากรอกชื่อฝ่ายงาน");
+  });
+});
+
+describe("groupInputSchema coordinates", () => {
+  const parse = (latitude: string, longitude: string) =>
+    groupInputSchema.safeParse({ name: "พันธกิจเอ", latitude, longitude });
+
+  it("accepts empty values and decimal degrees", () => {
+    expect(parse("", "").success).toBe(true);
+    expect(parse("16.4322", "103.5061").success).toBe(true);
+    expect(parse("-16.5", "-103").success).toBe(true);
+  });
+
+  it.each([
+    ["91", "103"],
+    ["16", "181"],
+    ["abc", "103"],
+    ["16,43", "103"],
+    ["16", "1e2"],
+  ])("rejects latitude %s / longitude %s", (lat, lng) => {
+    expect(parse(lat, lng).success).toBe(false);
   });
 });

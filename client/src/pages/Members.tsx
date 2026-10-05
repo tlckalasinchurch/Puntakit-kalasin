@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import {
   ChevronLeft,
@@ -32,6 +32,7 @@ import {
 } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { api, ApiError, type ApiMeta, withRecheckHint } from "@/lib/api";
 import type { Gender, MembershipStatus } from "@shared/schema";
 import { MEMBERSHIP_STATUS_LABELS } from "@shared/labels";
@@ -314,8 +315,13 @@ export default function Members() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMemberId]);
 
+  // Typing fires a query change per keystroke; only the settled value hits the API,
+  // and a slower earlier response never overwrites a newer one.
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const loadSeq = useRef(0);
   const loadMembers = useCallback(
     async (pageToLoad: number = 1) => {
+      const seq = ++loadSeq.current;
       setIsLoading(true);
       setError(null);
       setErrorTechnical(null);
@@ -323,16 +329,18 @@ export default function Members() {
         const params = new URLSearchParams();
         params.set("page", String(pageToLoad));
         params.set("limit", "15");
-        if (query.trim()) params.set("search", query.trim());
+        if (debouncedQuery.trim()) params.set("search", debouncedQuery.trim());
         if (area !== "ทั้งหมด") params.set("area", area);
         if (careFilter) params.set("careGroupId", careFilter);
         if (status !== "ทั้งหมด") params.set("status", status);
         if (membershipStatus !== "ทั้งหมด") params.set("membershipStatus", membershipStatus);
 
         const res = await api.getWithMeta<Member[]>(`/api/members?${params.toString()}`);
+        if (seq !== loadSeq.current) return;
         setMembers(res.data || []);
         if (res.meta) setMeta(res.meta);
       } catch (err) {
+        if (seq !== loadSeq.current) return;
         setError(
           err instanceof ApiError
             ? err.message
@@ -342,10 +350,10 @@ export default function Members() {
           err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err)
         );
       } finally {
-        setIsLoading(false);
+        if (seq === loadSeq.current) setIsLoading(false);
       }
     },
-    [query, area, status, membershipStatus, careFilter]
+    [debouncedQuery, area, status, membershipStatus, careFilter]
   );
 
   useEffect(() => {
@@ -530,13 +538,15 @@ export default function Members() {
     query.trim() !== "" ||
     area !== "ทั้งหมด" ||
     status !== "ทั้งหมด" ||
-    membershipStatus !== "ทั้งหมด";
+    membershipStatus !== "ทั้งหมด" ||
+    careFilter !== "";
 
   const resetFilters = () => {
     setQuery("");
     setArea("ทั้งหมด");
     setStatus("ทั้งหมด");
     setMembershipStatus("ทั้งหมด");
+    setCareFilter("");
   };
 
   return (
@@ -919,7 +929,7 @@ export default function Members() {
               type="submit"
               form="member-form"
               disabled={submitting}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
             >
               {submitting
                 ? "กำลังบันทึก…"
@@ -1264,7 +1274,7 @@ export default function Members() {
                   closeMember();
                   if (target) openEdit(target);
                 }}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
               >
                 <Pencil size={ICON_SIZE.sm} aria-hidden="true" />
                 แก้ไขข้อมูล

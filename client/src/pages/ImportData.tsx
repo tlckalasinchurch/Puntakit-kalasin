@@ -58,7 +58,7 @@ interface PreCheckResult {
 const CONTROL_BUTTON =
   "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
 const PRIMARY_BUTTON =
-  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("th-TH", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -272,21 +272,11 @@ export default function ImportData() {
   );
 }
 
-async function postRaw(file: File): Promise<{ batch: BatchRow; counts: BatchReport["counts"] }> {
-  const res = await fetch("/api/import/upload", {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/octet-stream",
-      [IMPORT_UPLOAD_FILENAME_HEADER]: encodeURIComponent(file.name),
-    },
-    body: file,
+function postRaw(file: File): Promise<{ batch: BatchRow; counts: BatchReport["counts"] }> {
+  return api.postBody("/api/import/upload", file, {
+    "Content-Type": "application/octet-stream",
+    [IMPORT_UPLOAD_FILENAME_HEADER]: encodeURIComponent(file.name),
   });
-  const body = (await res.json().catch(() => null)) as { success?: boolean; data?: { batch: BatchRow; counts: BatchReport["counts"] }; error?: { message?: string } } | null;
-  if (!res.ok || !body?.success || !body.data) {
-    throw new Error(body?.error?.message ?? "นำเข้าไฟล์ไม่สำเร็จ");
-  }
-  return body.data;
 }
 
 const ISSUE_LABELS: Record<string, string> = {

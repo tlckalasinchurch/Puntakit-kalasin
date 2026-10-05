@@ -17,14 +17,23 @@ import {
   consecutiveAbsenceQuerySchema,
   qrCheckInSchema,
 } from "../../shared/validation.js";
-import { ADMIN_ROLES } from "../../shared/roles.js";
+import {
+  ADMIN_ROLES,
+  ADMIN_SHELL_ROLES,
+  CREATE_ROLES,
+  MEMBER_CONTACT_ROLES,
+  hasRole,
+} from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 
 export const attendanceRouter = Router();
 
-attendanceRouter.use(requireAuth);
+// Attendance rows carry member contacts. A `member` (member PWA) never reads or
+// writes them here; writes are limited to CREATE_ROLES and contacts to
+// MEMBER_CONTACT_ROLES, the same sets the members routes use.
+attendanceRouter.use(requireAuth, requireRole(...ADMIN_SHELL_ROLES));
 
 // 1. GET / - List attendance records with filtering and pagination
 attendanceRouter.get("/", async (req, res, next) => {
@@ -102,9 +111,10 @@ attendanceRouter.get("/", async (req, res, next) => {
       .limit(limit)
       .offset(offset);
 
+    const canSeeContact = hasRole(req.user!.role, MEMBER_CONTACT_ROLES);
     res.json({
       success: true,
-      data: rows,
+      data: canSeeContact ? rows : rows.map((r) => ({ ...r, memberPhone: null })),
       meta: {
         page,
         limit,
@@ -118,7 +128,7 @@ attendanceRouter.get("/", async (req, res, next) => {
 });
 
 // 2. POST /check-in - Single member check-in (Manual or Staff scanner)
-attendanceRouter.post("/check-in", async (req, res, next) => {
+attendanceRouter.post("/check-in", requireRole(...CREATE_ROLES), async (req, res, next) => {
   try {
     const parsed = attendanceInputSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -228,7 +238,7 @@ attendanceRouter.post("/check-in", async (req, res, next) => {
 });
 
 // 3. POST /bulk - Bulk check-in for group or service session
-attendanceRouter.post("/bulk", async (req, res, next) => {
+attendanceRouter.post("/bulk", requireRole(...CREATE_ROLES), async (req, res, next) => {
   try {
     const parsed = bulkAttendanceInputSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -318,7 +328,7 @@ attendanceRouter.post("/bulk", async (req, res, next) => {
 });
 
 // 4. POST /qr-scan - Process QR check-in
-attendanceRouter.post("/qr-scan", async (req, res, next) => {
+attendanceRouter.post("/qr-scan", requireRole(...CREATE_ROLES), async (req, res, next) => {
   try {
     const parsed = qrCheckInSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -432,7 +442,7 @@ attendanceRouter.post("/qr-scan", async (req, res, next) => {
       success: true,
       data: {
         attendance: record,
-        member,
+        member: hasRole(req.user!.role, MEMBER_CONTACT_ROLES) ? member : { ...member, phone: null },
       },
       message: `เช็คชื่อสำเร็จ: ${member.name}`,
     });
@@ -561,9 +571,10 @@ attendanceRouter.get("/absentees", async (req, res, next) => {
       }
     }
 
+    const canSeeContact = hasRole(req.user!.role, MEMBER_CONTACT_ROLES);
     res.json({
       success: true,
-      data: absentees,
+      data: canSeeContact ? absentees : absentees.map((a) => ({ ...a, phone: null })),
       meta: {
         threshold,
         serviceType,
@@ -641,7 +652,7 @@ attendanceRouter.get("/summary", async (_req, res, next) => {
 });
 
 // 7. GET /export - Export attendance records as UTF-8 CSV
-attendanceRouter.get("/export", async (req, res, next) => {
+attendanceRouter.get("/export", requireRole(...MEMBER_CONTACT_ROLES), async (req, res, next) => {
   try {
     const db = getDb();
     const rows = await db

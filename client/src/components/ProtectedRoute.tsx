@@ -76,7 +76,7 @@ export function ProtectedRoute({ children, allow }: ProtectedRouteProps) {
         <h1 className="type-display-md text-[var(--color-ink)]">เข้าสู่ระบบไม่สำเร็จ</h1>
         <ErrorState
           title="ไม่สามารถโหลดข้อมูลบัญชีของคุณได้"
-          description="คุณล็อกอินเรียบร้อยแล้ว แต่ระบบยังเชื่อมต่อข้อมูลบัญชีไม่ได้ กรุณาลองอีกครั้ง หรือแจ้งผู้ดูแลระบบหากยังพั้งอยู่"
+          description="คุณล็อกอินเรียบร้อยแล้ว แต่ระบบยังเชื่อมต่อข้อมูลบัญชีไม่ได้ กรุณาลองอีกครั้ง หรือแจ้งผู้ดูแลระบบหากยังใช้งานไม่ได้"
           technical={error.serverMessage ?? `รหัสข้อผิดพลาด: ${error.status || "เครือข่าย"}`}
           onRetry={retry}
           retryLabel="ลองอีกครั้ง"
