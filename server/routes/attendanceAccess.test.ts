@@ -52,6 +52,7 @@ describe("/api/attendance access", () => {
       if (role === "group_leader") {
         const [g] = await db.insert(schema.groups).values({ name: "กลุ่มของผู้นำทดสอบ", leaderId: u.id }).returning();
         ownGroupId = g.id;
+        await db.insert(schema.groupMembers).values({ groupId: g.id, memberId, role: "member", status: "active" });
       }
     }
   }, 120_000);

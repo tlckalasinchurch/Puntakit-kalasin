@@ -89,3 +89,32 @@ export async function assertGroupWriteAccess(
     throw new ForbiddenError("คุณไม่มีสิทธิ์บันทึกการเช็คชื่อของกลุ่มนี้");
   }
 }
+
+/**
+ * Member <-> group integrity for attendance writes that name a group: every
+ * member must be an ACTIVE member of that group (group_members.status =
+ * active, member not deleted). One failing member rejects the whole request
+ * (403), so a bulk save never writes part of its rows.
+ */
+export async function assertMembersActiveInGroup(groupId: string, memberIds: string[]): Promise<void> {
+  const wanted = Array.from(new Set(memberIds));
+  if (wanted.length === 0) return;
+
+  const db = getDb();
+  const found = await db
+    .select({ id: groupMembers.memberId })
+    .from(groupMembers)
+    .innerJoin(members, eq(groupMembers.memberId, members.id))
+    .where(
+      and(
+        eq(groupMembers.groupId, groupId),
+        eq(groupMembers.status, "active"),
+        isNull(members.deletedAt),
+        inArray(groupMembers.memberId, wanted)
+      )
+    );
+
+  if (found.length < wanted.length) {
+    throw new ForbiddenError("สมาชิกที่เลือกไม่ได้เป็นสมาชิกที่ใช้งานอยู่ของกลุ่มนี้");
+  }
+}

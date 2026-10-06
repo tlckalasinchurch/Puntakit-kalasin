@@ -85,6 +85,9 @@ describe("attendance group ownership", () => {
     await mkMember("b1");
     await mkMember("b2");
     await mkMember("loose", { assignedLeaderId: u.admin });
+    // Integrity fixtures: an active-looking member that was deleted, and one whose membership is inactive.
+    await mkMember("delA", { deletedAt: new Date() });
+    await mkMember("inactA");
 
     const link = (group: string, member: string, role: "member" | "leader" | "assistant_leader", status: "active" | "inactive" = "active") =>
       db.insert(schema.groupMembers).values({ groupId: g[group], memberId: m[member], role, status });
@@ -96,6 +99,10 @@ describe("attendance group ownership", () => {
     await link("A", "a2", "member");
     await link("B", "b1", "member");
     await link("B", "b2", "member");
+    await link("A", "delA", "member");
+    await link("A", "inactA", "member", "inactive");
+    // a1 is also an active member of the other owned groups, so ownership tests can write for it there.
+    for (const group of ["B", "C", "D", "E"]) await link(group, "a1", "member");
 
     // Attendance: a1 and b1 attended; a2, b2 and loose did not.
     const rec = (group: string | null, member: string, date: string, serviceType: "care_group" | "sunday_service", notes: string | null) =>
@@ -190,6 +197,62 @@ describe("attendance group ownership", () => {
       expect((await call(null, "POST", "/api/attendance/check-in", {})).status).toBe(401);
       expect((await checkIn("member", g.A)).status).toBe(403);
       expect((await checkIn("viewer", g.A)).status).toBe(403);
+    });
+  });
+
+  describe("write: member must be an active member of the group", () => {
+    const bulk = (who: string, groupId: string, memberIds: string[], date = "2026-09-20") =>
+      call(who, "POST", "/api/attendance/bulk", { date, serviceType: "care_group", groupId, records: memberIds.map((memberId) => ({ memberId, status: "present" })) });
+    const qr = (who: string, groupId: string, memberId: string) => call(who, "POST", "/api/attendance/qr-scan", { token: memberId, serviceType: "care_group", groupId, date: "2026-09-20" });
+    const savedCount = async (groupId: string) =>
+      ((await (await call("admin", "GET", `/api/attendance?groupId=${groupId}&startDate=2026-09-20&endDate=2026-09-20`)).json()) as Rows).data.length;
+
+    it("allows the owner of group A to write a member of group A on every route", async () => {
+      expect([200, 201]).toContain((await checkIn("leaderA", g.A, { memberId: m.a1, date: "2026-09-20" })).status);
+      expect((await bulk("leaderA", g.A, [m.a1, m.a2])).status).toBe(200);
+      expect((await qr("leaderA", g.A, m.a2)).status).toBe(200);
+    });
+
+    it("denies the owner of group A a member that belongs only to group B (403) on every route", async () => {
+      expect((await checkIn("leaderA", g.A, { memberId: m.b1, date: "2026-09-20" })).status).toBe(403);
+      expect((await bulk("leaderA", g.A, [m.b1])).status).toBe(403);
+      expect((await qr("leaderA", g.A, m.b1)).status).toBe(403);
+    });
+
+    it("rejects a bulk save that holds one outside member, and writes none of its rows", async () => {
+      const before = await savedCount(g.A);
+      expect((await bulk("leaderA", g.A, [m.a1, m.a2, m.b2], "2026-09-20")).status).toBe(403);
+      expect(await savedCount(g.A)).toBe(before);
+    });
+
+    it("denies a deleted member", async () => {
+      expect((await checkIn("leaderA", g.A, { memberId: m.delA, date: "2026-09-20" })).status).toBe(404);
+      expect((await qr("leaderA", g.A, m.delA)).status).toBe(404);
+      expect((await bulk("leaderA", g.A, [m.delA])).status).toBe(403);
+    });
+
+    it("denies a member whose group membership is inactive (403) on every route", async () => {
+      expect((await checkIn("leaderA", g.A, { memberId: m.inactA, date: "2026-09-20" })).status).toBe(403);
+      expect((await bulk("leaderA", g.A, [m.inactA])).status).toBe(403);
+      expect((await qr("leaderA", g.A, m.inactA)).status).toBe(403);
+    });
+
+    it("denies a write to a deleted group, even for admin (404)", async () => {
+      expect((await checkIn("admin", g.H, { memberId: m.a1, date: "2026-09-20" })).status).toBe(404);
+      expect((await bulk("admin", g.H, [m.a1])).status).toBe(404);
+    });
+
+    it("applies the same member/group check to admin and staff, and still allows their own valid writes", async () => {
+      for (const who of ["admin", "staff"]) {
+        expect((await checkIn(who, g.A, { memberId: m.b1, date: "2026-09-20" })).status, who).toBe(403);
+        expect([200, 201], who).toContain((await checkIn(who, g.A, { memberId: m.a1, date: "2026-09-20" })).status);
+      }
+    });
+
+    it("keeps a write with no group id free of the member/group check for admin and staff", async () => {
+      for (const who of ["admin", "staff"]) {
+        expect([200, 201], who).toContain((await checkIn(who, undefined, { memberId: m.b2, serviceType: "sunday_service", date: "2026-09-20" })).status);
+      }
     });
   });
 

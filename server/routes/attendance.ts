@@ -28,7 +28,12 @@ import {
 } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
-import { assertGroupExists, assertGroupWriteAccess, resolveGroupScope } from "../lib/groupAccess.js";
+import {
+  assertGroupExists,
+  assertGroupWriteAccess,
+  assertMembersActiveInGroup,
+  resolveGroupScope,
+} from "../lib/groupAccess.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 
 export const attendanceRouter = Router();
@@ -184,6 +189,7 @@ attendanceRouter.post("/check-in", requireRole(...CREATE_ROLES), async (req, res
     if (!member) {
       throw new NotFoundError("ไม่พบข้อมูลสมาชิกในระบบ");
     }
+    if (groupId) await assertMembersActiveInGroup(groupId, [memberId]);
 
     // Set date boundaries to match same calendar day
     const checkDate = new Date(date);
@@ -283,6 +289,13 @@ attendanceRouter.post("/bulk", requireRole(...CREATE_ROLES), async (req, res, ne
 
     const { date, serviceType, groupId, eventId, records } = parsed.data;
     await assertGroupWriteAccess(req.user!, groupId);
+    // All-or-nothing: one member outside the group rejects the whole save.
+    if (groupId) {
+      await assertMembersActiveInGroup(
+        groupId,
+        records.map((r) => r.memberId)
+      );
+    }
     const db = getDb();
     const checkDate = new Date(date);
     const dayStart = new Date(checkDate);
@@ -409,6 +422,7 @@ attendanceRouter.post("/qr-scan", requireRole(...CREATE_ROLES), async (req, res,
     if (!member) {
       throw new NotFoundError("ไม่พบข้อมูลสมาชิกจากรหัส QR ที่สแกน");
     }
+    if (groupId) await assertMembersActiveInGroup(groupId, [member.id]);
 
     const checkDate = date ? new Date(date) : new Date();
     const dayStart = new Date(checkDate);
