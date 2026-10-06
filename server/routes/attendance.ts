@@ -3,6 +3,7 @@ import { and, desc, eq, gte, ilike, inArray, isNull, lte, or, sql } from "drizzl
 import { getDb } from "../db/client.js";
 import {
   attendanceRecords,
+  groupMembers,
   groups,
   members,
   users,
@@ -22,10 +23,17 @@ import {
   ADMIN_SHELL_ROLES,
   CREATE_ROLES,
   MEMBER_CONTACT_ROLES,
+  PRIVILEGED_ROLES,
   hasRole,
 } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
+import {
+  assertGroupExists,
+  assertGroupWriteAccess,
+  assertMembersInLedGroup,
+  resolveGroupScope,
+} from "../lib/groupAccess.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 
 export const attendanceRouter = Router();
@@ -33,6 +41,12 @@ export const attendanceRouter = Router();
 // Attendance rows carry member contacts. A `member` (member PWA) never reads or
 // writes them here; writes are limited to CREATE_ROLES and contacts to
 // MEMBER_CONTACT_ROLES, the same sets the members routes use.
+//
+// A `group_leader` is also scoped to the groups it leads (lib/groupAccess.ts):
+// it writes and reads attendance only for those groups. `notes` and the
+// assigned-leader email are care data: roles outside PRIVILEGED_ROLES that are
+// not scoped to the row's group (`viewer`) get them as null, and a
+// `group_leader` only ever receives rows of its own groups.
 attendanceRouter.use(requireAuth, requireRole(...ADMIN_SHELL_ROLES));
 
 // 1. GET / - List attendance records with filtering and pagination
@@ -50,6 +64,22 @@ attendanceRouter.get("/", async (req, res, next) => {
     const offset = (page - 1) * limit;
     const db = getDb();
     const conditions = [];
+
+    const scope = await resolveGroupScope(req.user!);
+    if (scope.kind === "led") {
+      if (groupId) {
+        await assertGroupExists(groupId);
+        if (!scope.ids.has(groupId)) throw new ForbiddenError("คุณไม่มีสิทธิ์ดูการเช็คชื่อของกลุ่มนี้");
+      }
+      if (scope.ids.size === 0) {
+        return res.json({
+          success: true,
+          data: [],
+          meta: { page, limit, total: 0, totalPages: 1 },
+        });
+      }
+      conditions.push(inArray(attendanceRecords.groupId, Array.from(scope.ids)));
+    }
 
     if (startDate) {
       conditions.push(gte(attendanceRecords.date, new Date(startDate)));
@@ -112,9 +142,16 @@ attendanceRouter.get("/", async (req, res, next) => {
       .offset(offset);
 
     const canSeeContact = hasRole(req.user!.role, MEMBER_CONTACT_ROLES);
+    // `notes` is care data: privileged roles and a group_leader (whose rows are
+    // already limited to its own groups) read it; a viewer does not.
+    const canSeeNotes = hasRole(req.user!.role, PRIVILEGED_ROLES) || req.user!.role === "group_leader";
     res.json({
       success: true,
-      data: canSeeContact ? rows : rows.map((r) => ({ ...r, memberPhone: null })),
+      data: rows.map((r) => ({
+        ...r,
+        memberPhone: canSeeContact ? r.memberPhone : null,
+        notes: canSeeNotes ? r.notes : null,
+      })),
       meta: {
         page,
         limit,
@@ -139,6 +176,7 @@ attendanceRouter.post("/check-in", requireRole(...CREATE_ROLES), async (req, res
     }
 
     const { date, serviceType, groupId, eventId, memberId, status, checkInMethod, notes } = parsed.data;
+    await assertGroupWriteAccess(req.user!, groupId);
     const db = getDb();
 
     // Verify member exists
@@ -151,6 +189,7 @@ attendanceRouter.post("/check-in", requireRole(...CREATE_ROLES), async (req, res
     if (!member) {
       throw new NotFoundError("ไม่พบข้อมูลสมาชิกในระบบ");
     }
+    if (groupId) await assertMembersInLedGroup(req.user!, groupId, [memberId]);
 
     // Set date boundaries to match same calendar day
     const checkDate = new Date(date);
@@ -249,6 +288,15 @@ attendanceRouter.post("/bulk", requireRole(...CREATE_ROLES), async (req, res, ne
     }
 
     const { date, serviceType, groupId, eventId, records } = parsed.data;
+    await assertGroupWriteAccess(req.user!, groupId);
+    // group_leader only, all-or-nothing: one member outside the group rejects the whole save.
+    if (groupId) {
+      await assertMembersInLedGroup(
+        req.user!,
+        groupId,
+        records.map((r) => r.memberId)
+      );
+    }
     const db = getDb();
     const checkDate = new Date(date);
     const dayStart = new Date(checkDate);
@@ -339,6 +387,7 @@ attendanceRouter.post("/qr-scan", requireRole(...CREATE_ROLES), async (req, res,
     }
 
     const { token, serviceType, groupId, eventId, date } = parsed.data;
+    await assertGroupWriteAccess(req.user!, groupId);
     const db = getDb();
 
     // Extract member ID from token (Supports formats: "PK-MEM-{uuid}" or raw "{uuid}")
@@ -374,6 +423,7 @@ attendanceRouter.post("/qr-scan", requireRole(...CREATE_ROLES), async (req, res,
     if (!member) {
       throw new NotFoundError("ไม่พบข้อมูลสมาชิกจากรหัส QR ที่สแกน");
     }
+    if (groupId) await assertMembersInLedGroup(req.user!, groupId, [member.id]);
 
     const checkDate = date ? new Date(date) : new Date();
     const dayStart = new Date(checkDate);
@@ -465,9 +515,31 @@ attendanceRouter.get("/absentees", async (req, res, next) => {
     const { threshold, serviceType, groupId } = parsed.data;
     const db = getDb();
 
+    // A group_leader sees only the groups it leads: the attendance dates and
+    // the member list are both limited to them. Other roles keep church-wide
+    // reach, so the member list is unchanged for them.
+    const scope = await resolveGroupScope(req.user!);
+    let scopedGroupIds: string[] | null = null;
+    if (scope.kind === "led") {
+      if (groupId) {
+        await assertGroupExists(groupId);
+        if (!scope.ids.has(groupId)) throw new ForbiddenError("คุณไม่มีสิทธิ์ดูการเช็คชื่อของกลุ่มนี้");
+      }
+      scopedGroupIds = groupId ? [groupId] : Array.from(scope.ids);
+      if (scopedGroupIds.length === 0) {
+        return res.json({
+          success: true,
+          data: [],
+          meta: { threshold, serviceType, recentRecordedDatesCount: 0 },
+        });
+      }
+    }
+
     // 1. Find the distinct recent N service dates for this service type
     const dateConditions = [eq(attendanceRecords.serviceType, serviceType)];
-    if (groupId) {
+    if (scopedGroupIds) {
+      dateConditions.push(inArray(attendanceRecords.groupId, scopedGroupIds));
+    } else if (groupId) {
       dateConditions.push(eq(attendanceRecords.groupId, groupId));
     }
 
@@ -496,7 +568,22 @@ attendanceRouter.get("/absentees", async (req, res, next) => {
       });
     }
 
-    // 2. Fetch all active members
+    // 2. Fetch active members (a group_leader: only active members of its groups)
+    const memberConditions = [
+      isNull(members.deletedAt),
+      inArray(members.membershipStatus, ["active", "candidate", "visitor"]),
+    ];
+    if (scopedGroupIds) {
+      memberConditions.push(
+        inArray(
+          members.id,
+          db
+            .select({ id: groupMembers.memberId })
+            .from(groupMembers)
+            .where(and(inArray(groupMembers.groupId, scopedGroupIds), eq(groupMembers.status, "active")))
+        )
+      );
+    }
     const activeMembers = await db
       .select({
         id: members.id,
@@ -513,12 +600,7 @@ attendanceRouter.get("/absentees", async (req, res, next) => {
       })
       .from(members)
       .leftJoin(users, eq(members.assignedLeaderId, users.id))
-      .where(
-        and(
-          isNull(members.deletedAt),
-          inArray(members.membershipStatus, ["active", "candidate", "visitor"])
-        )
-      );
+      .where(and(...memberConditions));
 
     // 3. Find attendance records for these members on those recent dates
     const memberAttendances = await db
@@ -531,7 +613,11 @@ attendanceRouter.get("/absentees", async (req, res, next) => {
       .where(
         and(
           eq(attendanceRecords.serviceType, serviceType),
-          groupId ? eq(attendanceRecords.groupId, groupId) : sql`1=1`,
+          scopedGroupIds
+            ? inArray(attendanceRecords.groupId, scopedGroupIds)
+            : groupId
+              ? eq(attendanceRecords.groupId, groupId)
+              : sql`1=1`,
           inArray(sql`DATE(${attendanceRecords.date})`, recentDates),
           inArray(attendanceRecords.status, ["present", "online"])
         )
@@ -544,37 +630,45 @@ attendanceRouter.get("/absentees", async (req, res, next) => {
     });
 
     // Members who did NOT attend any of the recent N dates
-    const absentees = [];
+    const missing = activeMembers.filter((m) => !attendedMembersMap.has(m.id));
 
-    for (const m of activeMembers) {
-      if (!attendedMembersMap.has(m.id)) {
-        // Find last attended date if any
-        const [lastRecord] = await db
-          .select({
-            date: attendanceRecords.date,
-          })
-          .from(attendanceRecords)
-          .where(
-            and(
-              eq(attendanceRecords.memberId, m.id),
-              inArray(attendanceRecords.status, ["present", "online"])
-            )
+    // Last attended date per absent member, in one query (any service, any group).
+    const lastAttended = new Map<string, Date>();
+    if (missing.length > 0) {
+      const lastRows = await db
+        .select({
+          memberId: attendanceRecords.memberId,
+          date: sql<Date>`max(${attendanceRecords.date})`,
+        })
+        .from(attendanceRecords)
+        .where(
+          and(
+            inArray(
+              attendanceRecords.memberId,
+              missing.map((m) => m.id)
+            ),
+            inArray(attendanceRecords.status, ["present", "online"])
           )
-          .orderBy(desc(attendanceRecords.date))
-          .limit(1);
-
-        absentees.push({
-          ...m,
-          consecutiveAbsenceCount: recentDates.length,
-          lastAttendedDate: lastRecord ? lastRecord.date : null,
-        });
-      }
+        )
+        .groupBy(attendanceRecords.memberId);
+      for (const r of lastRows) lastAttended.set(r.memberId, new Date(r.date));
     }
 
+    // Contacts: phone follows MEMBER_CONTACT_ROLES. The assigned leader's email
+    // is staff data: only PRIVILEGED_ROLES receive it.
     const canSeeContact = hasRole(req.user!.role, MEMBER_CONTACT_ROLES);
+    const canSeeLeaderEmail = hasRole(req.user!.role, PRIVILEGED_ROLES);
+    const absentees = missing.map((m) => ({
+      ...m,
+      phone: canSeeContact ? m.phone : null,
+      leaderEmail: canSeeLeaderEmail ? m.leaderEmail : null,
+      consecutiveAbsenceCount: recentDates.length,
+      lastAttendedDate: lastAttended.get(m.id) ?? null,
+    }));
+
     res.json({
       success: true,
-      data: canSeeContact ? absentees : absentees.map((a) => ({ ...a, phone: null })),
+      data: absentees,
       meta: {
         threshold,
         serviceType,

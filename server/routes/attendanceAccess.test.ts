@@ -24,6 +24,7 @@ describe("/api/attendance access", () => {
   let server: Server;
   let baseUrl: string;
   let memberId: string;
+  let ownGroupId: string;
   const cookies: Record<string, string> = {};
 
   beforeAll(async () => {
@@ -48,6 +49,11 @@ describe("/api/attendance access", () => {
     for (const role of ["admin", "staff", "group_leader", "viewer", "member"] as const) {
       const [u] = await db.insert(schema.users).values({ email: `${role}@att.local`, passwordHash: "x", name: role, role }).returning();
       cookies[role] = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: u.id, email: u.email, role })}`;
+      if (role === "group_leader") {
+        const [g] = await db.insert(schema.groups).values({ name: "กลุ่มของผู้นำทดสอบ", leaderId: u.id }).returning();
+        ownGroupId = g.id;
+        await db.insert(schema.groupMembers).values({ groupId: g.id, memberId, role: "member", status: "active" });
+      }
     }
   }, 120_000);
 
@@ -97,8 +103,9 @@ describe("/api/attendance access", () => {
     expect((await call("viewer", "POST", "/check-in", checkIn())).status).toBe(403);
   });
 
-  it("lets a group_leader write a check-in", async () => {
-    expect([200, 201]).toContain((await call("group_leader", "POST", "/check-in", checkIn())).status);
+  it("lets a group_leader write a check-in for a group it leads, and only with a group id", async () => {
+    expect([200, 201]).toContain((await call("group_leader", "POST", "/check-in", { ...checkIn(), serviceType: "care_group", groupId: ownGroupId })).status);
+    expect((await call("group_leader", "POST", "/check-in", checkIn())).status).toBe(403);
   });
 
   it("restricts the CSV export (phone numbers) to contact roles", async () => {
@@ -113,7 +120,10 @@ describe("/api/attendance access", () => {
     type Rows = { data: Array<{ memberPhone: string | null }> };
     const staff = (await (await call("staff", "GET", "/")).json()) as Rows;
     expect(staff.data[0]?.memberPhone).toBe("081-234-5678");
+    const viewer = (await (await call("viewer", "GET", "/")).json()) as Rows;
+    expect(viewer.data[0]?.memberPhone).toBeNull();
     const leader = (await (await call("group_leader", "GET", "/")).json()) as Rows;
+    expect(leader.data.length).toBeGreaterThan(0);
     expect(leader.data[0]?.memberPhone).toBeNull();
   });
 });

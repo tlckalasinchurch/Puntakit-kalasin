@@ -57,6 +57,9 @@ describe("care roster (real PGlite Postgres)", () => {
     const [viewer] = await db.insert(schema.users).values({ email: "v@care2.local", passwordHash: "x", name: "V", role: "member" }).returning();
     const [leader] = await db.insert(schema.users).values({ email: "l@care2.local", passwordHash: "x", name: "L", role: "group_leader" }).returning();
     leaderCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: leader.id, email: leader.email, role: "group_leader" })}`;
+    // The leader leads this care group (groups.leader_id). Ownership is what lets it save a check-in.
+    const { eq } = await import("drizzle-orm");
+    await db.update(schema.groups).set({ leaderId: leader.id }).where(eq(schema.groups.id, id(20)));
     adminCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: admin.id, email: admin.email, role: "admin" })}`;
     memberCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: viewer.id, email: viewer.email, role: "member" })}`;
   }, 120_000);

@@ -184,6 +184,9 @@ export default function Attendance() {
   const { user } = useAuth();
   // The CSV carries phone numbers; the server limits it to the same roles that see contacts.
   const canExport = hasRole(user?.role, MEMBER_CONTACT_ROLES);
+  // A group_leader records attendance only for a group it leads, so it must pick one first.
+  const isGroupLeader = user?.role === "group_leader";
+  const GROUP_REQUIRED_MESSAGE = "กรุณาเลือกพันธกิจของคุณก่อนบันทึกการเช็คชื่อ";
   // Active Tab: "live" | "qr" | "absentees" | "reports"
   const [activeTab, setActiveTab] = useState<
     "live" | "qr" | "absentees" | "reports"
@@ -414,6 +417,10 @@ export default function Attendance() {
     memberId: string,
     status: AttendanceStatus
   ) => {
+    if (isGroupLeader && !selectedGroupId) {
+      toast.error(GROUP_REQUIRED_MESSAGE);
+      return;
+    }
     const requestId = (statusRequestRef.current.get(memberId) ?? 0) + 1;
     statusRequestRef.current.set(memberId, requestId);
     const previous = attendanceRef.current[memberId];
@@ -458,6 +465,10 @@ export default function Attendance() {
   const handleScanSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!qrInputToken.trim()) return;
+    if (isGroupLeader && !selectedGroupId) {
+      toast.error(GROUP_REQUIRED_MESSAGE);
+      return;
+    }
 
     setScanning(true);
     try {
@@ -622,9 +633,12 @@ export default function Attendance() {
             </Field>
           </div>
 
-          {selectedService === "care_group" && (
+          {(selectedService === "care_group" || isGroupLeader) && (
             <div className="min-w-[200px] flex-1 sm:max-w-[240px]">
-              <Field label="เลือกพันธกิจ">
+              <Field
+                label={isGroupLeader ? "เลือกพันธกิจของคุณ" : "เลือกพันธกิจ"}
+                hint={isGroupLeader ? "ต้องเลือกพันธกิจที่คุณดูแลก่อนบันทึกการเช็คชื่อ" : undefined}
+              >
                 {props => (
                   <select
                     id={props.id}
@@ -634,7 +648,9 @@ export default function Attendance() {
                     onChange={e => setSelectedGroupId(e.target.value)}
                     className={CONTROL_CLASS}
                   >
-                    <option value="">-- ทุกพันธกิจ --</option>
+                    <option value="">
+                      {isGroupLeader ? "-- เลือกพันธกิจของคุณ --" : "-- ทุกพันธกิจ --"}
+                    </option>
                     {groups.map(g => (
                       <option key={g.id} value={g.id}>
                         {g.name}
