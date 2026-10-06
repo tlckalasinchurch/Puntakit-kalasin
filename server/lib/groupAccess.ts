@@ -91,12 +91,22 @@ export async function assertGroupWriteAccess(
 }
 
 /**
- * Member <-> group integrity for attendance writes that name a group: every
- * member must be an ACTIVE member of that group (group_members.status =
- * active, member not deleted). One failing member rejects the whole request
- * (403), so a bulk save never writes part of its rows.
+ * Member <-> group integrity for a `group_leader` attendance write that names a
+ * group: every member must be an ACTIVE member of that group
+ * (group_members.status = active, member not deleted). One failing member
+ * rejects the whole request (403), so a bulk save never writes part of its rows.
+ *
+ * Only a `group_leader` is held to this. admin, staff and ministry_leader keep
+ * the earlier behaviour: they may record a visitor or an unassigned member
+ * against the selected group, so the member need not belong to it.
  */
-export async function assertMembersActiveInGroup(groupId: string, memberIds: string[]): Promise<void> {
+export async function assertMembersInLedGroup(
+  user: { role: UserRole },
+  groupId: string,
+  memberIds: string[]
+): Promise<void> {
+  if (user.role !== "group_leader") return;
+
   const wanted = Array.from(new Set(memberIds));
   if (wanted.length === 0) return;
 

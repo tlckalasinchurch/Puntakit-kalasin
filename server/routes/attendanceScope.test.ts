@@ -200,7 +200,7 @@ describe("attendance group ownership", () => {
     });
   });
 
-  describe("write: member must be an active member of the group", () => {
+  describe("write: a group_leader may only record active members of its group", () => {
     const bulk = (who: string, groupId: string, memberIds: string[], date = "2026-09-20") =>
       call(who, "POST", "/api/attendance/bulk", { date, serviceType: "care_group", groupId, records: memberIds.map((memberId) => ({ memberId, status: "present" })) });
     const qr = (who: string, groupId: string, memberId: string) => call(who, "POST", "/api/attendance/qr-scan", { token: memberId, serviceType: "care_group", groupId, date: "2026-09-20" });
@@ -242,10 +242,30 @@ describe("attendance group ownership", () => {
       expect((await bulk("admin", g.H, [m.a1])).status).toBe(404);
     });
 
-    it("applies the same member/group check to admin and staff, and still allows their own valid writes", async () => {
-      for (const who of ["admin", "staff"]) {
-        expect((await checkIn(who, g.A, { memberId: m.b1, date: "2026-09-20" })).status, who).toBe(403);
-        expect([200, 201], who).toContain((await checkIn(who, g.A, { memberId: m.a1, date: "2026-09-20" })).status);
+    it("keeps visitor attendance for admin, staff and ministry_leader: a member outside the selected group is allowed on every route", async () => {
+      // b1 belongs to group B only; the selected group is A.
+      for (const who of ["admin", "staff", "ministry_leader"]) {
+        expect([200, 201], `${who} check-in`).toContain((await checkIn(who, g.A, { memberId: m.b1, date: "2026-09-20" })).status);
+        expect((await bulk(who, g.A, [m.b1, m.b2])).status, `${who} bulk`).toBe(200);
+        expect((await qr(who, g.A, m.b1)).status, `${who} qr-scan`).toBe(200);
+      }
+    });
+
+    it("keeps the earlier behaviour for admin, staff and ministry_leader with a deleted member, and with an inactive membership", async () => {
+      for (const who of ["admin", "staff", "ministry_leader"]) {
+        // Deleted member: check-in and qr-scan answer 404 from the member lookup, as before this fix.
+        expect((await checkIn(who, g.A, { memberId: m.delA, date: "2026-09-20" })).status, `${who} deleted`).toBe(404);
+        expect((await qr(who, g.A, m.delA)).status, `${who} deleted qr`).toBe(404);
+        // Inactive membership is not checked for these roles.
+        expect([200, 201], `${who} inactive`).toContain((await checkIn(who, g.A, { memberId: m.inactA, date: "2026-09-20" })).status);
+      }
+    });
+
+    it("still gives a viewer and a member 403 on every attendance write", async () => {
+      for (const who of ["viewer", "member"]) {
+        expect((await checkIn(who, g.A, { memberId: m.a1, date: "2026-09-20" })).status, `${who} check-in`).toBe(403);
+        expect((await bulk(who, g.A, [m.a1])).status, `${who} bulk`).toBe(403);
+        expect((await qr(who, g.A, m.a1)).status, `${who} qr-scan`).toBe(403);
       }
     });
 
