@@ -227,7 +227,7 @@ function GroupDetailBody({ group }: { group: MapGroup }) {
 }
 
 export default function MapPage() {
-  usePageTitle("แผนที่กลุ่มแคร์");
+  usePageTitle("แผนที่พันธกิจ");
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [category, setCategory] = useState<string | null>(null);

@@ -139,6 +139,19 @@ export const changePasswordInputSchema = z.object({
 });
 export type ChangePasswordInput = z.infer<typeof changePasswordInputSchema>;
 
+/** Optional decimal degrees stored as text: empty, or a number inside [min, max]. */
+const coordinateField = (min: number, max: number, label: string) =>
+  z
+    .string()
+    .trim()
+    .max(50)
+    .refine(
+      (v) => v === "" || (/^-?\d+(\.\d+)?$/.test(v) && Number(v) >= min && Number(v) <= max),
+      `${label}ต้องเป็นตัวเลขระหว่าง ${min} ถึง ${max}`
+    )
+    .optional()
+    .nullable();
+
 export const groupInputSchema = z.object({
   name: z.string().trim().min(1, "กรุณากรอกชื่อกลุ่ม").max(200),
   leaderId: z.string().uuid().optional().or(z.literal("")).nullable(),
@@ -153,8 +166,8 @@ export const groupInputSchema = z.object({
   meetingDay: z.string().trim().max(100).optional().or(z.literal("")),
   meetingTime: z.string().trim().max(100).optional().or(z.literal("")),
   meetingLocation: z.string().trim().max(300).optional().or(z.literal("")),
-  latitude: z.string().trim().max(50).optional().or(z.literal("")).nullable(),
-  longitude: z.string().trim().max(50).optional().or(z.literal("")).nullable(),
+  latitude: coordinateField(-90, 90, "ละติจูด"),
+  longitude: coordinateField(-180, 180, "ลองจิจูด"),
   maxMembers: z.coerce.number().int().min(1).max(500).optional().nullable(),
   isOpen: z.boolean().default(true),
   avatarUrl: z.string().trim().max(500).optional().or(z.literal("")).nullable(),

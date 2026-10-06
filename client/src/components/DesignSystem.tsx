@@ -61,7 +61,7 @@ function ActionButton({
   const Icon = action.icon;
   const className =
     variant === "primary"
-      ? "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] focus-visible:ring-offset-2 disabled:opacity-50"
+      ? "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] focus-visible:ring-offset-2 disabled:opacity-50"
       : "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
   const inner = (
     <>
@@ -662,7 +662,7 @@ export function Modal({
         aria-labelledby={titleId}
         tabIndex={-1}
         onClick={event => event.stopPropagation()}
-        className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[var(--radius-lg)] bg-[var(--color-canvas)] shadow-[var(--shadow)] outline-none sm:rounded-[var(--radius-lg)] ${
+        className={`flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[var(--radius-lg)] bg-[var(--color-canvas)] shadow-[var(--shadow)] outline-none sm:rounded-[var(--radius-lg)] ${
           size === "wide" ? "sm:max-w-3xl" : "sm:max-w-lg"
         }`}
         style={{ overscrollBehavior: "contain" }}

@@ -35,6 +35,7 @@ import {
 } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { api, ApiError, withRecheckHint } from "@/lib/api";
 import { fetchAllMembers } from "@/lib/fetchAll";
 import { parseCareGroupDescription } from "@shared/orgView";
@@ -185,6 +186,8 @@ const EMPTY_FORM = {
   meetingDay: "",
   meetingTime: "",
   meetingLocation: "",
+  latitude: "",
+  longitude: "",
   description: "",
   maxMembers: "",
   isOpen: true,
@@ -281,7 +284,7 @@ function MenuItem({
 }
 
 export default function Groups() {
-  usePageTitle("กลุ่มแคร์");
+  usePageTitle("พันธกิจ");
   const { user } = useAuth();
   const [, navigate] = useLocation();
 
@@ -336,28 +339,33 @@ export default function Groups() {
 
   const [searchPage, setSearchPage] = useState(1);
 
+  const debouncedSearch = useDebouncedValue(search, 300);
+  const fetchSeq = useRef(0);
   const fetchGroups = useCallback(async () => {
+    const seq = ++fetchSeq.current;
     setLoading(true);
     setError(null);
     setErrorTechnical(null);
     try {
       const params = new URLSearchParams();
-      if (search) params.set("search", search);
+      if (debouncedSearch) params.set("search", debouncedSearch);
       if (categoryFilter) params.set("category", categoryFilter);
       if (statusFilter) params.set("status", statusFilter);
       if (privacyFilter) params.set("privacy", privacyFilter);
 
       const res = await api.get<GroupItem[]>(`/api/groups?${params.toString()}`);
+      if (seq !== fetchSeq.current) return;
       setGroupsList(res);
     } catch (err) {
-      setError("โหลดข้อมูลกลุ่มไม่สำเร็จ");
+      if (seq !== fetchSeq.current) return;
+      setError(err instanceof ApiError ? err.message : "โหลดข้อมูลกลุ่มไม่สำเร็จ");
       setErrorTechnical(
         err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err)
       );
     } finally {
-      setLoading(false);
+      if (seq === fetchSeq.current) setLoading(false);
     }
-  }, [search, categoryFilter, statusFilter, privacyFilter]);
+  }, [debouncedSearch, categoryFilter, statusFilter, privacyFilter]);
 
   useEffect(() => {
     fetchGroups();
@@ -418,6 +426,8 @@ export default function Groups() {
       meetingDay: grp.meetingDay || "",
       meetingTime: grp.meetingTime || "",
       meetingLocation: grp.meetingLocation || "",
+      latitude: grp.latitude || "",
+      longitude: grp.longitude || "",
       description: grp.description || "",
       maxMembers: grp.maxMembers ? String(grp.maxMembers) : "",
       isOpen: grp.isOpen ?? true,
@@ -478,6 +488,17 @@ export default function Groups() {
       return;
     }
 
+    const badCoordinate = (v: string, min: number, max: number) =>
+      v.trim() !== "" && !(/^-?\d+(\.\d+)?$/.test(v.trim()) && Number(v) >= min && Number(v) <= max);
+    if (badCoordinate(form.latitude, -90, 90)) {
+      setFormError("ละติจูดต้องเป็นตัวเลขระหว่าง -90 ถึง 90");
+      return;
+    }
+    if (badCoordinate(form.longitude, -180, 180)) {
+      setFormError("ลองจิจูดต้องเป็นตัวเลขระหว่าง -180 ถึง 180");
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -494,6 +515,8 @@ export default function Groups() {
         meetingDay: form.meetingDay.trim(),
         meetingTime: form.meetingTime.trim(),
         meetingLocation: form.meetingLocation.trim(),
+        latitude: form.latitude.trim(),
+        longitude: form.longitude.trim(),
         description: form.description.trim(),
         maxMembers: form.maxMembers ? parseInt(form.maxMembers, 10) : null,
         isOpen: form.isOpen,
@@ -586,7 +609,7 @@ export default function Groups() {
     setRemoving(true);
     try {
       await api.delete(`/api/groups/${activeGroup.id}/members/${removeTarget.memberId}`);
-      toast.success("นำสมาชิกออกจากกลุ่มเรียบร้อยแล้ว (สถานะเป็น inactive)");
+      toast.success("นำสมาชิกออกจากกลุ่มเรียบร้อยแล้ว (สถานะเป็นไม่ใช้งาน)");
       // Reload members list to show updated status
       const res = await api.get<{ members: GroupMemberItem[] }>(`/api/groups/${activeGroup.id}`);
       setGroupMembersList(res.members || []);
@@ -635,6 +658,7 @@ export default function Groups() {
     setCategoryFilter("");
     setStatusFilter("");
     setPrivacyFilter("");
+    setLevelFilter("");
   };
 
   const activeMembers = groupMembersList.filter((m) => m.status === "active");
@@ -947,7 +971,7 @@ export default function Groups() {
                   <button
                     type="button"
                     onClick={() => openMembersModal(grp)}
-                    className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                    className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
                   >
                     <span className="whitespace-nowrap">สมาชิก {grp.memberCount} คน</span>
                   </button>
@@ -1015,7 +1039,7 @@ export default function Groups() {
               type="submit"
               form="group-form"
               disabled={saving}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
             >
               {saving
                 ? "กำลังบันทึก…"
@@ -1242,6 +1266,32 @@ export default function Groups() {
                 />
               )}
             </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="ละติจูด" hint="เช่น 16.4322 (ใช้แสดงหมุดบนแผนที่)">
+                {fieldProps => (
+                  <input
+                    {...fieldProps}
+                    className={INPUT_CLASS}
+                    inputMode="decimal"
+                    placeholder="16.4322"
+                    value={form.latitude}
+                    onChange={(e) => setForm({ ...form, latitude: e.target.value })}
+                  />
+                )}
+              </Field>
+              <Field label="ลองจิจูด" hint="เช่น 103.5061">
+                {fieldProps => (
+                  <input
+                    {...fieldProps}
+                    className={INPUT_CLASS}
+                    inputMode="decimal"
+                    placeholder="103.5061"
+                    value={form.longitude}
+                    onChange={(e) => setForm({ ...form, longitude: e.target.value })}
+                  />
+                )}
+              </Field>
+            </div>
             <label className="flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] p-3">
               <input
                 type="checkbox"
@@ -1360,7 +1410,7 @@ export default function Groups() {
                 <button
                   type="submit"
                   disabled={addingMember || !selectedMemberId}
-                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50 sm:w-auto"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50 sm:w-auto"
                 >
                   <UserPlus size={ICON_SIZE.sm} aria-hidden="true" />
                   {addingMember ? "กำลังเพิ่ม…" : "เพิ่มเข้ากลุ่ม"}
@@ -1449,7 +1499,7 @@ export default function Groups() {
       {deleteTarget && (
         <ConfirmDialog
           title="ยืนยันการลบกลุ่ม"
-          description={`คุณแน่ใจหรือไม่ว่าต้องการลบกลุ่ม "${deleteTarget.name}"? ระบบจะเปลี่ยนสถานะเป็นปิดกลุ่ม (Closed) โดยข้อมูลสมาชิกและประวัติการเข้าร่วมเดิมจะไม่สูญหาย`}
+          description={`คุณแน่ใจหรือไม่ว่าต้องการลบกลุ่ม "${deleteTarget.name}"? ระบบจะเปลี่ยนสถานะเป็นปิดกลุ่ม โดยข้อมูลสมาชิกและประวัติการเข้าร่วมเดิมจะไม่สูญหาย`}
           confirmLabel={deleting ? "กำลังลบ…" : "ลบกลุ่ม"}
           isSubmitting={deleting}
           onConfirm={handleDeleteGroup}

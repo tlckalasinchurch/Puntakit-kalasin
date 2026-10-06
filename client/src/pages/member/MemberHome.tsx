@@ -455,7 +455,7 @@ export default function MemberHome() {
                   className={`type-caption-strong mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none ${
                     evt.isRegistered
                       ? "border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-error)] hover:bg-[var(--color-canvas-soft)]"
-                      : "bg-[var(--color-primary)] text-[var(--color-on-dark)] hover:bg-[var(--color-primary-focus)]"
+                      : "bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-focus)]"
                   }`}
                 >
                   {evt.isRegistered && (

@@ -24,7 +24,7 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
   const isDemoMode = import.meta.env.VITE_PUNTAKIT_DEMO_MODE === "1";
 
   return (
-    <header className="sticky top-0 z-30 flex min-h-19 w-full items-center justify-between gap-3 overflow-hidden border-b border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 py-2 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 flex min-h-19 w-full items-center justify-between gap-3 overflow-hidden border-b border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] sm:px-6 lg:px-8">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <button
           type="button"
@@ -63,7 +63,7 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
         </button>
         {isDemoMode ? (
           <div
-            className="type-caption-strong flex size-11 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-primary)] text-[var(--color-on-dark)]"
+            className="type-caption-strong flex size-11 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-primary)] text-[var(--color-on-primary)]"
             title={user?.name ?? "ผู้ดูแลระบบตัวอย่าง"}
           >
             <span className="sr-only">

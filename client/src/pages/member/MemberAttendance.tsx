@@ -256,7 +256,7 @@ export default function MemberAttendance() {
               onClick={() => setFilterType(value)}
               className={`type-caption-strong inline-flex min-h-11 items-center rounded-[var(--radius-pill)] px-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none ${
                 isActive
-                  ? "bg-[var(--color-primary)] text-[var(--color-on-dark)]"
+                  ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                   : "border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-ink)] hover:bg-[var(--color-canvas-soft)]"
               }`}
             >

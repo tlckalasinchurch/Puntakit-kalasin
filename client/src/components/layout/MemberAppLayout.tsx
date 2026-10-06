@@ -79,7 +79,7 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
       </a>
 
       {/* Mobile app header — 60px sticky, token surfaces, no blue tint. */}
-      <header className="sticky top-0 z-40 flex h-[60px] items-center justify-between gap-2 border-b border-[var(--color-divider)] bg-[var(--color-canvas)] px-4">
+      <header className="sticky top-0 z-40 flex h-[calc(60px+env(safe-area-inset-top,0px))] items-center pt-[env(safe-area-inset-top,0px)] justify-between gap-2 border-b border-[var(--color-divider)] bg-[var(--color-canvas)] px-4">
         <Link
           href="/app"
           aria-label="กลับไปหน้าแรกของแอพสมาชิก"

@@ -50,6 +50,7 @@ export default function MemberEvents() {
     AnnouncementItem[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
@@ -59,7 +60,8 @@ export default function MemberEvents() {
       const [eventsRes, annRes, myRegRes] = await Promise.all([
         api.get<EventItem[]>("/api/events"),
         api.get<AnnouncementItem[]>("/api/announcements"),
-        api.get<{ eventId: string }[]>("/api/me/events/my").catch(() => []),
+        // A failure here must surface: swallowing it shows every event as "not registered".
+        api.get<{ eventId: string }[]>("/api/me/events/my"),
       ]);
 
       const registeredIds = (myRegRes || []).map(r => r.eventId);
@@ -95,6 +97,8 @@ export default function MemberEvents() {
     eventId: string,
     isRegistered: boolean
   ) => {
+    if (pendingEventId) return;
+    setPendingEventId(eventId);
     try {
       if (isRegistered) {
         await api.delete(`/api/me/events/${eventId}/register`);
@@ -111,6 +115,8 @@ export default function MemberEvents() {
       }
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "เกิดข้อผิดพลาด");
+    } finally {
+      setPendingEventId(null);
     }
   };
 
@@ -259,16 +265,18 @@ export default function MemberEvents() {
 
                     <button
                       type="button"
+                      disabled={pendingEventId !== null}
+                      aria-busy={pendingEventId === evt.id}
                       onClick={() =>
                         handleToggleRegistration(
                           evt.id,
                           Boolean(evt.isRegistered)
                         )
                       }
-                      className={`type-caption-strong mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none ${
+                      className={`type-caption-strong mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-60 motion-reduce:transition-none ${
                         evt.isRegistered
                           ? "border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-error)] hover:bg-[var(--color-canvas-soft)]"
-                          : "bg-[var(--color-primary)] text-[var(--color-on-dark)] hover:bg-[var(--color-primary-focus)]"
+                          : "bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-focus)]"
                       }`}
                     >
                       {evt.isRegistered ? (

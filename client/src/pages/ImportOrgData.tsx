@@ -37,7 +37,7 @@ interface Done {
 
 const BUTTON =
   "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] px-5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
-const PRIMARY = `${BUTTON} bg-[var(--color-primary)] text-[var(--color-on-dark)] hover:bg-[var(--color-primary-focus)]`;
+const PRIMARY = `${BUTTON} bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-focus)]`;
 const OUTLINE = `${BUTTON} border border-[var(--color-hairline)] text-[var(--color-ink)] hover:bg-[var(--color-canvas-soft)]`;
 
 export default function ImportOrgData() {

@@ -13,7 +13,7 @@ import { api, ApiError } from "@/lib/api";
  *   home    : who should be called (missed 2+ meetings in a row) + one big button
  *   checkin : tap the names of the people who came, then save
  *
- * Data: GET /api/org/overview (which care groups exist), GET
+ * Data: GET /api/care/groups (which care groups exist), GET
  * /api/care/groups/:id/roster (members, today's marks, consecutive misses) and
  * POST /api/attendance/bulk (save). Clay surfaces come from `.clay-*` in
  * index.css; nothing here is invented: an empty list says it is empty.
@@ -80,7 +80,7 @@ export default function CareToday() {
   const loadBodies = useCallback(async () => {
     setBodiesError(null);
     try {
-      const o = await api.get<{ bodies: BodyOption[]; unassigned?: CareOption[] }>("/api/org/overview");
+      const o = await api.get<{ bodies: BodyOption[]; unassigned?: CareOption[] }>("/api/care/groups");
       // Care groups with no body still need a check-in screen.
       const withUnassigned = o.unassigned?.length
         ? [...o.bodies, { name: "ยังไม่ระบุบอดี้", careGroups: o.unassigned }]
@@ -187,7 +187,7 @@ export default function CareToday() {
                 id="care-group"
                 value={groupId}
                 onChange={(e) => setGroupId(e.target.value)}
-                className="clay-chip mt-1.5 w-full appearance-none pr-4"
+                className="clay-chip mt-1.5 w-full appearance-none pr-4 !text-base"
               >
                 {bodies.map((b) => (
                   <optgroup key={b.name} label={b.name}>
@@ -260,7 +260,7 @@ export default function CareToday() {
                   </li>
                 ))}
               </ul>
-              <div className="sticky bottom-14 z-10 -mx-1 flex flex-col gap-2 bg-[var(--clay-ground)] px-1 py-3 lg:bottom-0">
+              <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-10 -mx-1 flex flex-col gap-2 bg-[var(--clay-ground)] px-1 py-3 lg:bottom-0">
                 {saveError && (
                   <p role="alert" className="type-caption rounded-[var(--radius-sm)] bg-[var(--color-error)]/10 p-3 text-[var(--color-error)]">
                     {saveError}

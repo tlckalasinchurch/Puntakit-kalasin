@@ -6,6 +6,7 @@ import { CREATE_ROLES } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { NotFoundError, ValidationError } from "../lib/errors.js";
 import { parseCareGroupDescription } from "../../shared/orgView.js";
+import { loadOrgOverview } from "./org.js";
 
 /**
  * Care-leader view of one care group: who belongs to it, who was marked on a
@@ -21,6 +22,20 @@ const present = new Set(["present", "online"]);
 
 /** Local calendar date as YYYY-MM-DD (the app records attendance by calendar day). */
 const dayKey = (d: Date | string) => new Date(d).toISOString().slice(0, 10);
+
+/**
+ * Care groups to pick from on the check-in screen. Same gate as the roster
+ * below (CREATE_ROLES), so a group_leader can open the screen that the nav
+ * offers them. `/api/org/overview` stays PRIVILEGED-only.
+ */
+careRouter.get("/groups", async (_req, res, next) => {
+  try {
+    const { bodies, unassigned } = await loadOrgOverview();
+    res.json({ success: true, data: { bodies, unassigned } });
+  } catch (err) {
+    next(err);
+  }
+});
 
 careRouter.get("/groups/:id/roster", async (req, res, next) => {
   try {
