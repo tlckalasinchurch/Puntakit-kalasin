@@ -19,6 +19,7 @@ import {
 import { ADMIN_ROLES, GROUP_MANAGE_ANY_ROLES } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
+import { getLedGroupIds } from "../lib/groupAccess.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 
 export const groupsRouter = Router();
@@ -99,31 +100,10 @@ async function verifyGroupManagementAccess(req: Request, groupId: string) {
       return true;
     }
 
-    // Also check if user has leader or assistant_leader role in active group_members
-    // Find linked member record for user
-    const [linkedMember] = await db
-      .select({ id: members.id })
-      .from(members)
-      .where(and(eq(members.userId, user.id), isNull(members.deletedAt)))
-      .limit(1);
-
-    if (linkedMember) {
-      const [membership] = await db
-        .select({ role: groupMembers.role })
-        .from(groupMembers)
-        .where(
-          and(
-            eq(groupMembers.groupId, groupId),
-            eq(groupMembers.memberId, linkedMember.id),
-            eq(groupMembers.status, "active"),
-            inArray(groupMembers.role, ["leader", "assistant_leader"])
-          )
-        )
-        .limit(1);
-
-      if (membership) {
-        return true;
-      }
+    // Also leads the group through an active leader or assistant_leader
+    // group_members row (see getLedGroupIds in ../lib/groupAccess.ts).
+    if ((await getLedGroupIds(user.id)).has(groupId)) {
+      return true;
     }
   }
 

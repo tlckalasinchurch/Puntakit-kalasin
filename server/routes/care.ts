@@ -3,6 +3,8 @@ import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/client.js";
 import { attendanceRecords, groupMembers, groups, members } from "../../shared/schema.js";
 import { CREATE_ROLES } from "../../shared/roles.js";
+import { resolveGroupScope, scopeAllows } from "../lib/groupAccess.js";
+import { maskPhone } from "./members.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { NotFoundError, ValidationError } from "../lib/errors.js";
 import { parseCareGroupDescription } from "../../shared/orgView.js";
@@ -89,7 +91,15 @@ careRouter.get("/groups/:id/roster", async (req, res, next) => {
     const statusAt = new Map<string, string>(); // `${member}|${day}` -> status
     for (const r of records) statusAt.set(`${r.memberId}|${r.day}`, r.status);
 
-    const rows = people.map((p) => {
+    // Contacts follow the members policy: a group_leader receives phone and
+    // LINE ID raw only for a group it leads; for any other group they are masked.
+    const scope = await resolveGroupScope(req.user!);
+    const showContacts = scopeAllows(scope, id);
+
+    const rows = people.map((person) => {
+      const p = showContacts
+        ? person
+        : { ...person, phone: person.phone ? maskPhone(person.phone) : null, lineId: null };
       // Consecutive recent meetings (newest first, before `date`) with no "present"/"online".
       let missed = 0;
       let lastSeen: string | null = null;
