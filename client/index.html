@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!--
+      theme-color is set (and kept in sync) by ThemeContext: light uses the
+      canvas-soft chrome tone, dark pure black.
+    -->
+    <meta name="theme-color" content="#f5f5f7" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Puntakit" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <!--
+      Prompt is requested as a head <link>, not a CSS @import: the @import sat
+      inside the bundled stylesheet, so the browser only discovered it after
+      downloading and parsing the whole bundle — a serial, render-blocking
+      round trip before any text could render.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800&display=swap"
+    />
+    <title>Puntakit Kalasin - คริสตจักรชีวิตสุขสันต์กาฬสินธุ์</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <!--
+      An Umami analytics tag was scaffolded here, pointing at a
+      `VITE_ANALYTICS_ENDPOINT` variable with a `data-website-id` of
+      `VITE_ANALYTICS_WEBSITE_ID`. Neither variable is defined anywhere in this
+      repo, so Vite left the placeholders literally in the built HTML and warned
+      on every build, and the tag was missing the required type="module"
+      attribute. Removed rather than shipped broken — note the placeholders are
+      written here without their percent delimiters on purpose, because Vite
+      substitutes those patterns anywhere in this file, comments included.
+      To re-enable: set both variables (see .env.example) and re-add the tag
+      with type="module".
+    -->
+  </body>
+</html>

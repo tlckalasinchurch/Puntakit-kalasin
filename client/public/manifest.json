@@ -1,0 +1,27 @@
+{
+  "name": "Puntakit Kalasin - คริสตจักรชีวิตสุขสันต์กาฬสินธุ์",
+  "short_name": "Puntakit",
+  "description": "ระบบบริหารคริสตจักรและแอพพลิเคชันสมาชิก คริสตจักรชีวิตสุขสันต์กาฬสินธุ์",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f5f7",
+  "theme_color": "#272729",
+  "lang": "th",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["lifestyle", "social", "productivity"]
+}
