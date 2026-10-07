@@ -5,6 +5,9 @@ Verification gate at audit time: `pnpm check` → **pass**; `pnpm test` → **50
 
 > ฉบับแปลภาษาไทยของรายงานนี้อยู่ที่ [`PUNTAKIT_UX_UI_AUDIT_2026-10-07_TH.md`](./PUNTAKIT_UX_UI_AUDIT_2026-10-07_TH.md)
 > (Thai translation of this report; finding IDs are shared between both documents.)
+>
+> แผนลงมือแก้ไขโค้ดตามรายงานนี้: [`PUNTAKIT_UX_UI_FIX_PLAN_2026-10-07.md`](./PUNTAKIT_UX_UI_FIX_PLAN_2026-10-07.md)
+> (Implementation plan — Thai, with an English summary in §17.)
 
 Scope: all 32 route entries in `client/src/App.tsx` (22 admin-shell, 5 member-PWA, 2 auth, 2 legal,
 1 fallback), the shell, the design
