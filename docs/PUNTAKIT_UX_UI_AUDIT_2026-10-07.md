@@ -3,6 +3,9 @@
 Baseline: **`bc2c56b`** (`main`, clean tree — PR #51 merge).
 Verification gate at audit time: `pnpm check` → **pass**; `pnpm test` → **506 tests / 40 files pass**.
 
+> ฉบับแปลภาษาไทยของรายงานนี้อยู่ที่ [`PUNTAKIT_UX_UI_AUDIT_2026-10-07_TH.md`](./PUNTAKIT_UX_UI_AUDIT_2026-10-07_TH.md)
+> (Thai translation of this report; finding IDs are shared between both documents.)
+
 Scope: all 32 route entries in `client/src/App.tsx` (22 admin-shell, 5 member-PWA, 2 auth, 2 legal,
 1 fallback), the shell, the design
 tokens in `client/src/index.css`, the shared primitives in `client/src/components/`, and the
