@@ -23,6 +23,7 @@ const ClerkSignInPage = lazy(() => import("./pages/ClerkSignInPage"));
 const ClerkSignUpPage = lazy(() => import("./pages/ClerkSignUpPage"));
 const Home = lazy(() => import("./pages/Home"));
 const Feed = lazy(() => import("./pages/Feed"));
+const MissionFeed = lazy(() => import("./pages/MissionFeed"));
 const FollowUps = lazy(() => import("./pages/FollowUps"));
 const Inbox = lazy(() => import("./pages/Inbox"));
 const ImportData = lazy(() => import("./pages/ImportData"));
@@ -129,6 +130,11 @@ function Router() {
       <Route path="/feed">
         <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
           <Feed />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/mission-feed">
+        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
+          <MissionFeed />
         </ProtectedRoute>
       </Route>
       <Route path="/follow-up">
