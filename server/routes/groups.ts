@@ -143,6 +143,22 @@ function maskGroupLocation<T extends { privacy?: string; meetingLocation?: strin
   };
 }
 
+export function canViewFullGroupRosterRole(role: string): boolean {
+  return ["super_admin", "admin", "ministry_leader"].includes(role);
+}
+
+function canViewFullGroupRoster(req: Request): boolean {
+  return canViewFullGroupRosterRole(req.user!.role);
+}
+
+function canViewMemberContacts(req: Request, group: { leaderId: string | null; coLeaderId: string | null }): boolean {
+  return (
+    canViewFullGroupRoster(req) ||
+    group.leaderId === req.user!.id ||
+    group.coLeaderId === req.user!.id
+  );
+}
+
 // 1. GET / - List groups with member count, leader info, and privacy masking
 groupsRouter.get("/", async (req, res, next) => {
   try {
@@ -229,7 +245,11 @@ groupsRouter.get("/", async (req, res, next) => {
     // Apply privacy masking for each group
     const maskedRows = rows.map((g) => {
       const isLeader = g.leaderId === req.user!.id || g.coLeaderId === req.user!.id;
-      return maskGroupLocation(g, req, isLeader);
+      const masked = maskGroupLocation(g, req, isLeader);
+      return {
+        ...masked,
+        leaderEmail: canViewMemberContacts(req, g) ? masked.leaderEmail : null,
+      };
     });
 
     res.json({
@@ -346,17 +366,28 @@ groupsRouter.get("/:id", async (req, res, next) => {
       .where(and(eq(groupMembers.groupId, id), isNull(members.deletedAt)))
       .orderBy(desc(groupMembers.status), desc(groupMembers.joinedAt));
 
-    const activeMembers = membersList.filter((m) => m.status === "active");
+    const canViewRoster = canViewFullGroupRoster(req) || isActiveMember;
+    const canViewContacts = canViewMemberContacts(req, group);
+    const visibleMembers = canViewRoster
+      ? membersList.map((member) => ({
+          ...member,
+          memberPhone: canViewContacts ? member.memberPhone : null,
+        }))
+      : [];
+    const activeMembers = visibleMembers.filter((m) => m.status === "active");
 
-    const maskedGroup = maskGroupLocation(group, req, isActiveMember);
+    const maskedGroup = {
+      ...maskGroupLocation(group, req, isActiveMember),
+      leaderEmail: canViewMemberContacts(req, group) ? group.leaderEmail : null,
+    };
 
     res.json({
       success: true,
       data: {
         ...maskedGroup,
-        members: membersList,
+        members: visibleMembers,
         activeMemberCount: activeMembers.length,
-        totalMemberCount: membersList.length,
+        totalMemberCount: canViewRoster ? membersList.length : 0,
       },
     });
   } catch (err) {
@@ -563,6 +594,30 @@ groupsRouter.get("/:id/members", async (req, res, next) => {
       throw new NotFoundError("ไม่พบกลุ่มที่ระบุ");
     }
 
+    const canViewAll = canViewFullGroupRoster(req);
+    const canManage = await verifyGroupManagementAccess(req, id).then(
+      () => true,
+      () => false,
+    );
+    if (!canViewAll && !canManage) {
+      const dbMember = await db
+        .select({ id: members.id })
+        .from(members)
+        .innerJoin(groupMembers, eq(groupMembers.memberId, members.id))
+        .where(
+          and(
+            eq(groupMembers.groupId, id),
+            eq(groupMembers.status, "active"),
+            eq(members.userId, req.user!.id),
+            isNull(members.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (!dbMember[0]) {
+        throw new ForbiddenError("คุณไม่มีสิทธิ์ดูสมาชิกของกลุ่มนี้");
+      }
+    }
+
     const lastAttendanceSubquery = db
       .select({
         memberId: attendanceRecords.memberId,
@@ -601,9 +656,15 @@ groupsRouter.get("/:id/members", async (req, res, next) => {
       .where(and(eq(groupMembers.groupId, id), isNull(members.deletedAt)))
       .orderBy(desc(groupMembers.status), desc(groupMembers.joinedAt));
 
+    const canViewContacts = canViewAll || canManage;
+    const safeRows = rows.map((row) => ({
+      ...row,
+      memberPhone: canViewContacts ? row.memberPhone : null,
+    }));
+
     res.json({
       success: true,
-      data: rows,
+      data: safeRows,
     });
   } catch (err) {
     next(err);
