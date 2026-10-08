@@ -272,7 +272,7 @@ export default function Inbox() {
     <AppLayout>
       <PageHeader
         title="ข้อมูลที่ส่งเข้ามา"
-        description="สิ่งที่ยังไม่ได้เป็นข้อมูลทางการ — พิมพ์สิ่งที่ได้รับ (เช่นจาก LINE) แล้วตรวจสอบก่อนเผยแพร่"
+        description="ตรวจสอบข้อมูลที่ส่งเข้ามา → อนุมัติหรือปฏิเสธ → เผยแพร่เป็นข้อมูลทางการ"
         primaryAction={{
           label: "บันทึกข้อมูลนำเข้า",
           icon: Plus,

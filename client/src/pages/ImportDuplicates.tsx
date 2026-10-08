@@ -3,6 +3,7 @@ import { Copy, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ImportStepper } from "@/components/ImportStepper";
 import {
   EmptyState,
   ErrorState,
@@ -490,6 +491,8 @@ export default function ImportDuplicates() {
           { label: "กลับไปหน้านำเข้าข้อมูล", href: "/import" },
         ]}
       />
+
+      <ImportStepper />
 
       <section className="card-surface mb-4 p-4 sm:p-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

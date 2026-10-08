@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Lock, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ImportStepper } from "@/components/ImportStepper";
 import { EmptyState, ErrorState, Field, PageHeader, StatusChip, type StatusTone } from "@/components/DesignSystem";
 import { ListSkeleton } from "@/components/LoadingStates";
 import { useAuth } from "@/contexts/AuthContext";
@@ -245,6 +246,8 @@ export default function ImportMergeApprovals() {
         description="ผู้ดูแลระบบอีกคนตรวจแผนรวมที่เสนอไว้ แล้วอนุมัติหรือปฏิเสธ การอนุมัติยังไม่รวมข้อมูลจริง"
         secondaryActions={[{ label: "กลับไปหน้าตรวจสอบข้อมูลซ้ำ", href: "/import/duplicates" }]}
       />
+
+      <ImportStepper />
 
       <section className="card-surface mb-4 p-4 sm:p-5">
         <Field label="สถานะแผน">

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { FileSpreadsheet, Lock, RefreshCw, ShieldCheck, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ImportStepper } from "@/components/ImportStepper";
 import { EmptyState, ErrorState, Modal, PageHeader, SectionHeader, StatusChip, type StatusTone } from "@/components/DesignSystem";
 import { ListSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
@@ -169,6 +170,8 @@ export default function ImportData() {
           { label: "รีเฟรช", icon: RefreshCw, onClick: () => void loadBatches() },
         ]}
       />
+
+      <ImportStepper />
 
       {canImport && (
         <section className="card-surface mb-4 p-4 sm:p-5">
