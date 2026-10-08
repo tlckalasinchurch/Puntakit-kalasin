@@ -1,6 +1,6 @@
 {
-  "id": "2dc54df9-852d-408a-8b53-cf2a1ad778c2",
-  "prevId": "8401dee7-fa7a-4839-b721-7786be8ae40b",
+  "id": "da250870-df47-45ca-8847-9a06af92adcb",
+  "prevId": "2dc54df9-852d-408a-8b53-cf2a1ad778c2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3826,6 +3826,204 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.import_merge_plans": {
+      "name": "import_merge_plans",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nickname": {
+          "name": "nickname",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "group_fingerprint": {
+          "name": "group_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_row_ids": {
+          "name": "source_row_ids",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "decision_id": {
+          "name": "decision_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "primary_source_row_id": {
+          "name": "primary_source_row_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "field_choices": {
+          "name": "field_choices",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'proposed'"
+        },
+        "proposed_by_id": {
+          "name": "proposed_by_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_at": {
+          "name": "proposed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "reviewed_by_id": {
+          "name": "reviewed_by_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "review_note": {
+          "name": "review_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "import_merge_plans_one_open_per_group": {
+          "name": "import_merge_plans_one_open_per_group",
+          "columns": [
+            {
+              "expression": "group_fingerprint",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"import_merge_plans\".\"status\" = 'proposed'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "import_merge_plans_fingerprint_idx": {
+          "name": "import_merge_plans_fingerprint_idx",
+          "columns": [
+            {
+              "expression": "group_fingerprint",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "proposed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "import_merge_plans_status_idx": {
+          "name": "import_merge_plans_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "proposed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "import_merge_plans_decision_id_import_duplicate_decisions_id_fk": {
+          "name": "import_merge_plans_decision_id_import_duplicate_decisions_id_fk",
+          "tableFrom": "import_merge_plans",
+          "tableTo": "import_duplicate_decisions",
+          "columnsFrom": [
+            "decision_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "import_merge_plans_proposed_by_id_users_id_fk": {
+          "name": "import_merge_plans_proposed_by_id_users_id_fk",
+          "tableFrom": "import_merge_plans",
+          "tableTo": "users",
+          "columnsFrom": [
+            "proposed_by_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "import_merge_plans_reviewed_by_id_users_id_fk": {
+          "name": "import_merge_plans_reviewed_by_id_users_id_fk",
+          "tableFrom": "import_merge_plans",
+          "tableTo": "users",
+          "columnsFrom": [
+            "reviewed_by_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

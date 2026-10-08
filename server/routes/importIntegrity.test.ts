@@ -203,4 +203,52 @@ describe("import integrity", () => {
     );
     expect(JSON.parse(failure!.details!)).toMatchObject({ stage: "write", errorCode: "CONFLICT" });
   });
+
+  it("proposals for the same duplicate group that race: one 201, the rest 409 (not 500), one open plan", async () => {
+    const res = await upload(await workbook("plan", true), "plan.xlsx");
+    expect(res.status).toBe(201);
+    const dup = (await (await fetch(`${baseUrl}/api/import/duplicates`, { headers: { Cookie: adminCookie } })).json()) as {
+      data: { duplicates: Array<{ nickname: string; members: Array<{ sourceRowId: string }> }> };
+    };
+    const group = dup.data.duplicates.find((g) => g.nickname === "หนูplan")!;
+    const ids = group.members.map((m) => m.sourceRowId);
+    expect((await post("duplicates/decisions", { nickname: group.nickname, sourceRowIds: ids, decision: "same_person" })).status).toBe(201);
+
+    const plan = {
+      nickname: group.nickname,
+      sourceRowIds: ids,
+      primarySourceRowId: ids[0],
+      fieldChoices: { fullName: ids[0], age: ids[0], occupation: ids[0], workplace: ids[0] },
+    };
+    recognised.length = 0;
+
+    // Hold every INSERT into import_merge_plans until all 5 requests reached it.
+    // Each request has already passed its "is a plan open?" pre-check by then,
+    // so they genuinely race into the unique index. (The query is intercepted on
+    // the embedded database client; no test hook exists in the route.)
+    const insertGate = makeGate();
+    const handle = (await import("../db/client.js")).getDatabaseHandle();
+    if (handle.driver !== "pglite") throw new Error("this race test needs the PGlite driver");
+    const originalQuery = handle.client.query.bind(handle.client);
+    (handle.client as { query: unknown }).query = async (sql: string, ...rest: unknown[]) => {
+      if (/insert into "import_merge_plans"/i.test(sql)) await insertGate.wait();
+      return (originalQuery as (...args: unknown[]) => Promise<unknown>)(sql, ...rest);
+    };
+    insertGate.arm(5);
+    let responses: Response[];
+    try {
+      responses = await Promise.all(Array.from({ length: 5 }, () => post("merge-plans", plan)));
+    } finally {
+      insertGate.disarm();
+      (handle.client as { query: unknown }).query = originalQuery;
+    }
+
+    const statuses = responses.map((r) => r.status).sort();
+    expect(statuses).toEqual([201, 409, 409, 409, 409]);
+    const open = await db.select().from(schema.importMergePlans).where(eq(schema.importMergePlans.status, "proposed"));
+    expect(open).toHaveLength(1);
+
+    // at least one request was stopped by the unique index (23505), not by the pre-check
+    expect(recognised).toContainEqual({ constraint: "import_merge_plans_one_open_per_group", matched: true });
+  });
 });

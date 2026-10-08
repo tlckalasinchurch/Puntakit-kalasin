@@ -30,6 +30,7 @@ const ImportDuplicates = lazy(() => import("./pages/ImportDuplicates"));
 const CareToday = lazy(() => import("./pages/CareToday"));
 const OrgChart = lazy(() => import("./pages/OrgChart"));
 const ImportOrgData = lazy(() => import("./pages/ImportOrgData"));
+const ImportMergeApprovals = lazy(() => import("./pages/ImportMergeApprovals"));
 const Members = lazy(() => import("./pages/Members"));
 const Groups = lazy(() => import("./pages/Groups"));
 const MapPage = lazy(() => import("./pages/Map"));
@@ -162,6 +163,11 @@ function Router() {
       <Route path="/import/duplicates">
         <ProtectedRoute allow={PRIVILEGED_ROLES}>
           <ImportDuplicates />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/import/merge-approvals">
+        <ProtectedRoute>
+          <ImportMergeApprovals />
         </ProtectedRoute>
       </Route>
       <Route path="/members">

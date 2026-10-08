@@ -7,6 +7,7 @@ import { getDb } from "../db/client.js";
 import {
   importBatches,
   importDuplicateDecisions,
+  importMergePlans,
   importRowNorm,
   importSourceRows,
   normalizationRules,
@@ -31,6 +32,7 @@ import { runAtomically } from "../db/atomic.js";
 import { isUniqueViolation, KNOWN_UNIQUE_CONSTRAINTS } from "../lib/dbErrors.js";
 import { runGroupMembersPreCheck } from "../lib/groupMembersPreCheck.js";
 import { createImportUploadToken, deleteImportBlob, readImportBlob } from "../lib/importBlob.js";
+import { mergePlansRouter } from "./importMergePlans.js";
 import { AppError, ConflictError, NotFoundError, ValidationError } from "../lib/errors.js";
 import {
   checksumBuffer,
@@ -60,6 +62,7 @@ import {
 export const importRouter = Router();
 
 importRouter.use(requireAuth);
+importRouter.use("/merge-plans", mergePlansRouter);
 
 /** Reads of import data: the privileged ministry roles, via shared/roles.ts. */
 const requireImportReader = requireRole(...PRIVILEGED_ROLES);
@@ -716,10 +719,27 @@ importRouter.get("/duplicates", requireImportReader, async (req, res, next) => {
             .leftJoin(users, eq(importDuplicateDecisions.decidedById, users.id))
             .where(inArray(importDuplicateDecisions.nickname, candidates.map((c) => c.nickname)))
             .orderBy(desc(importDuplicateDecisions.decidedAt));
+    // The newest merge plan for each exact group (any status), so the review
+    // screen can show whether a plan is proposed, approved or rejected.
+    const fingerprints = candidates.map((c) => duplicateGroupFingerprint(c.members.map((m) => m.sourceRowId)));
+    const planRows =
+      fingerprints.length === 0
+        ? []
+        : await db
+            .select({
+              id: importMergePlans.id,
+              groupFingerprint: importMergePlans.groupFingerprint,
+              status: importMergePlans.status,
+            })
+            .from(importMergePlans)
+            .where(inArray(importMergePlans.groupFingerprint, fingerprints))
+            .orderBy(desc(importMergePlans.proposedAt));
     const duplicates = candidates.map((group) => {
       const fingerprint = duplicateGroupFingerprint(group.members.map((m) => m.sourceRowId));
+      const latestPlan = planRows.find((p) => p.groupFingerprint === fingerprint);
       return {
         ...group,
+        mergePlan: latestPlan ? { id: latestPlan.id, status: latestPlan.status } : null,
         decisions: decisionRows
           .filter((d) => d.nickname === group.nickname)
           .map(({ groupFingerprint, nickname: _nickname, ...d }) => ({
