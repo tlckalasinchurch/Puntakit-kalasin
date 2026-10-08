@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Router, type Request } from "express";
 import express from "express";
 import { and, count, desc, eq, inArray, isNotNull } from "drizzle-orm";
@@ -26,9 +27,11 @@ import {
 import { PRIVILEGED_ROLES } from "../../shared/roles.js";
 import { requireAdmin, requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
+import { runAtomically } from "../db/atomic.js";
+import { isUniqueViolation, KNOWN_UNIQUE_CONSTRAINTS } from "../lib/dbErrors.js";
 import { runGroupMembersPreCheck } from "../lib/groupMembersPreCheck.js";
 import { createImportUploadToken, deleteImportBlob, readImportBlob } from "../lib/importBlob.js";
-import { ConflictError, NotFoundError, ValidationError } from "../lib/errors.js";
+import { AppError, ConflictError, NotFoundError, ValidationError } from "../lib/errors.js";
 import {
   checksumBuffer,
   computeCompleteness,
@@ -133,7 +136,10 @@ async function seedNormalizationRules(): Promise<number> {
         toCode: rule.toCode,
         confidence: rule.confidence,
       }))
-    );
+    )
+    // Two imports can seed at the same time. The natural unique index decides
+    // the winner and the loser must not fail: seeding is idempotent.
+    .onConflictDoNothing();
   return missing.length;
 }
 
@@ -220,27 +226,76 @@ const BLOCKED_FIELD_NOTE = "ยังไม่ยืนยัน semantic meanin
 const blockedFields = () =>
   IMPORT_BLOCKED_FIELD_KEYS.map((key) => ({ key, note: BLOCKED_FIELD_NOTE }));
 
+type ImportAuditExtra = Record<string, unknown>;
+
 /**
  * Shared by every upload path (raw body and Blob hand-off): dedupe by
- * checksum, parse, normalize, then write L1 + L2 in one transaction. It never
+ * checksum, parse, normalize, then write L1 + L2 as ONE atomic unit. It never
  * touches L3.
+ *
+ * Atomic unit = the `import_batches` row + every `import_source_rows` row +
+ * every `import_row_norm` row of this file. All of them are written together
+ * or none are (`runAtomically`: db.batch on Neon HTTP, db.transaction
+ * elsewhere). Ids are generated here because a Neon batch cannot read the
+ * result of an earlier statement.
+ *
+ * Every failure is written to the audit log (IMPORT_BATCH_FAILED) with the
+ * stage it failed in, so a failed import leaves a trace even though no
+ * import_batches row exists.
  */
-async function importWorkbookBytes(req: Request, bytes: Buffer, fileName: string) {
-  const db = getDb();
+async function importWorkbookBytes(req: Request, bytes: Buffer, fileName: string, extra: ImportAuditExtra = {}) {
   const checksum = checksumBuffer(bytes);
+  let stage: "precheck" | "parse" | "write" = "precheck";
+  try {
+    return await importWorkbookBytesUnchecked(req, bytes, fileName, checksum, extra, (next) => {
+      stage = next;
+    });
+  } catch (error) {
+    await logAudit({
+      req,
+      action: "IMPORT_BATCH_FAILED",
+      entityType: "import_batch",
+      entityId: null,
+      details: {
+        sourceFileName: fileName,
+        sizeBytes: bytes.length,
+        checksum,
+        stage,
+        errorCode: error instanceof AppError ? error.code : "UNEXPECTED",
+        ...extra,
+      },
+    });
+    throw error;
+  }
+}
+
+async function importWorkbookBytesUnchecked(
+  req: Request,
+  bytes: Buffer,
+  fileName: string,
+  checksum: string,
+  extra: ImportAuditExtra,
+  setStage: (stage: "precheck" | "parse" | "write") => void
+) {
+  const db = getDb();
 
   // §15: the same workbook is never imported twice silently.
-  const [existing] = await db
-    .select({ id: importBatches.id, sourceFileName: importBatches.sourceFileName })
-    .from(importBatches)
-    .where(eq(importBatches.fileChecksum, checksum))
-    .limit(1);
-  if (existing) {
-    throw new ConflictError("ไฟล์นี้ถูกนำเข้าไปแล้ว — ไม่นำเข้าซ้ำโดยอัตโนมัติ", [
-      { field: "existingBatchId", message: existing.id },
-    ]);
-  }
+  const duplicateOfExisting = async () => {
+    const [existing] = await db
+      .select({ id: importBatches.id, sourceFileName: importBatches.sourceFileName })
+      .from(importBatches)
+      .where(eq(importBatches.fileChecksum, checksum))
+      .limit(1);
+    return existing
+      ? new ConflictError("ไฟล์นี้ถูกนำเข้าไปแล้ว — ไม่นำเข้าซ้ำโดยอัตโนมัติ", [
+          { field: "existingBatchId", message: existing.id },
+        ])
+      : null;
+  };
+  const alreadyImported = await duplicateOfExisting();
+  if (alreadyImported) throw alreadyImported;
 
+  setStage("parse");
   let parsed: ParsedWorkbook;
   try {
     parsed = await withTempWorkbook(bytes, (filePath) => parseWorkbookFile(filePath));
@@ -266,69 +321,87 @@ async function importWorkbookBytes(req: Request, bytes: Buffer, fileName: string
     )
   );
 
+  setStage("write");
   await seedNormalizationRules();
 
   const CHUNK = 500;
-  const batchId = await db.transaction(async (tx) => {
-    const [batch] = await tx
-      .insert(importBatches)
-      .values({
-        sourceFileName: fileName,
-        fileChecksum: checksum,
-        layoutVariants,
-        checkboxConventions: parsed.checkboxConventions,
-        worksheetCount: parsed.worksheetCount,
-        rowCount: parsed.dataRowCount,
-        memberCount: parsed.memberRowCount,
-        quarantinedCount,
-        normalizationVersion: NORMALIZATION_VERSION,
-        importedById: req.user!.id,
-      })
-      .returning();
+  const batchId = randomUUID();
+  const sourceRowIds = prepared.map(() => randomUUID());
+  try {
+    await runAtomically((exec) => {
+      const statements: PromiseLike<unknown>[] = [
+        exec.insert(importBatches).values({
+          id: batchId,
+          sourceFileName: fileName,
+          fileChecksum: checksum,
+          layoutVariants,
+          checkboxConventions: parsed.checkboxConventions,
+          worksheetCount: parsed.worksheetCount,
+          rowCount: parsed.dataRowCount,
+          memberCount: parsed.memberRowCount,
+          quarantinedCount,
+          normalizationVersion: NORMALIZATION_VERSION,
+          importedById: req.user!.id,
+        }),
+      ];
 
-    for (let i = 0; i < prepared.length; i += CHUNK) {
-      const chunk = prepared.slice(i, i + CHUNK);
-      const saved = await tx
-        .insert(importSourceRows)
-        .values(chunk.map((item) => toSourceRowInsert(item, batch.id)))
-        .returning({ id: importSourceRows.id, sheetName: importSourceRows.sheetName, excelRow: importSourceRows.excelRow });
-
-      const normValues: (typeof importRowNorm.$inferInsert)[] = [];
-      for (const sourceRow of saved) {
-        const item = chunk.find(
-          (c) => c.sheetName === sourceRow.sheetName && c.excelRow === sourceRow.excelRow
+      // L1 first: every source row, so the L2 rows below can reference them.
+      for (let i = 0; i < prepared.length; i += CHUNK) {
+        statements.push(
+          exec.insert(importSourceRows).values(
+            prepared.slice(i, i + CHUNK).map((item, offset) => ({
+              id: sourceRowIds[i + offset],
+              ...toSourceRowInsert(item, batchId),
+            }))
+          )
         );
-        if (!item || item.outcome.status !== "ok") continue;
-        normValues.push({ sourceRowId: sourceRow.id, ...item.outcome.norm });
       }
-      if (normValues.length > 0) {
-        await tx.insert(importRowNorm).values(normValues);
-      }
-    }
 
-    return batch.id;
-  });
+      // L2: only rows that normalized; a quarantined row stays in L1 alone.
+      for (let i = 0; i < prepared.length; i += CHUNK) {
+        const normValues: (typeof importRowNorm.$inferInsert)[] = [];
+        prepared.slice(i, i + CHUNK).forEach((item, offset) => {
+          if (item.outcome.status === "ok") {
+            normValues.push({ sourceRowId: sourceRowIds[i + offset], ...item.outcome.norm });
+          }
+        });
+        if (normValues.length > 0) statements.push(exec.insert(importRowNorm).values(normValues));
+      }
+      return statements;
+    });
+  } catch (error) {
+    // Two uploads of the same file raced past the pre-check above; the unique
+    // index on the checksum picked the winner. This is a known conflict: 409.
+    // Any other database error is unexpected and stays a 500.
+    if (isUniqueViolation(error, KNOWN_UNIQUE_CONSTRAINTS.importFileChecksum)) {
+      throw (
+        (await duplicateOfExisting()) ??
+        new ConflictError("ไฟล์นี้ถูกนำเข้าไปแล้ว — ไม่นำเข้าซ้ำโดยอัตโนมัติ")
+      );
+    }
+    throw error;
+  }
 
   await logAudit({
     req,
     action: "IMPORT_BATCH_CREATED",
     entityType: "import_batch",
     entityId: batchId,
-    details: { sourceFileName: fileName, memberCount: parsed.memberRowCount, quarantinedCount },
+    details: { sourceFileName: fileName, memberCount: parsed.memberRowCount, quarantinedCount, ...extra },
   });
 
   const batch = await fetchBatchOrThrow(batchId);
   return {
-      batch,
-      counts: {
-        worksheets: parsed.worksheetCount,
-        dataRows: parsed.dataRowCount,
-        memberRows: parsed.memberRowCount,
-        normalized: parsed.memberRowCount - quarantinedCount,
-        quarantined: quarantinedCount,
-        skipped: 0, // §12: nothing is ever silently dropped
-      },
-      blockedFields: blockedFields(),
+    batch,
+    counts: {
+      worksheets: parsed.worksheetCount,
+      dataRows: parsed.dataRowCount,
+      memberRows: parsed.memberRowCount,
+      normalized: parsed.memberRowCount - quarantinedCount,
+      quarantined: quarantinedCount,
+      skipped: 0, // §12: nothing is ever silently dropped
+    },
+    blockedFields: blockedFields(),
   };
 }
 
@@ -367,21 +440,73 @@ importRouter.post("/upload/token", requireAdmin, async (req, res, next) => {
 });
 
 // 1c. POST /upload/from-blob — import a workbook the browser put in Blob (admin only).
-// The blob is deleted afterwards, success or not: member data is not kept in storage.
+//
+// Retention: the blob is deleted as soon as its bytes are fully in memory, before
+// parsing and writing. So a failed import needs a re-upload (the file is gone).
+// Deletion is not guaranteed: a timeout, a failed read or a failed delete leaves
+// the blob in storage; those cases are recorded in the audit log (never silent).
 importRouter.post("/upload/from-blob", requireAdmin, async (req, res, next) => {
-  const parsedBody = importFromBlobBodySchema.safeParse(req.body);
   try {
+    const parsedBody = importFromBlobBodySchema.safeParse(req.body);
     if (!parsedBody.success) {
       throw new ValidationError("ข้อมูลไม่ถูกต้อง", parsedBody.error.issues.map((i) => ({ field: i.path.join("."), message: i.message })));
     }
     const { pathname, fileName } = parsedBody.data;
     const safeName = sanitizeFileName(fileName);
+
+    let bytes: Buffer;
     try {
-      const bytes = await readImportBlob(pathname);
-      res.status(201).json({ success: true, data: await importWorkbookBytes(req, bytes, safeName) });
-    } finally {
-      await deleteImportBlob(pathname);
+      bytes = await readImportBlob(pathname);
+    } catch (error) {
+      // The bytes were NOT loaded, so the file is still the only copy.
+      // A ValidationError means the file is missing or can never be accepted
+      // (too large): removing it loses nothing. Any other failure (a broken
+      // read) keeps the blob so the upload is not lost, and says so in the audit log.
+      if (error instanceof ValidationError) {
+        await deleteImportBlob(pathname);
+      } else {
+        await logAudit({
+          req,
+          action: "IMPORT_BLOB_RETAINED",
+          entityType: "import_blob",
+          entityId: null,
+          details: { pathname, sourceFileName: safeName, reason: "READ_FAILED" },
+        });
+      }
+      await logAudit({
+        req,
+        action: "IMPORT_BATCH_FAILED",
+        entityType: "import_batch",
+        entityId: null,
+        details: {
+          sourceFileName: safeName,
+          stage: "read-blob",
+          errorCode: error instanceof AppError ? error.code : "UNEXPECTED",
+          source: "blob",
+          blobPathname: pathname,
+        },
+      });
+      throw error;
     }
+
+    // Bytes are safely loaded: the blob is no longer needed.
+    const blobDeleted = await deleteImportBlob(pathname);
+    if (!blobDeleted) {
+      await logAudit({
+        req,
+        action: "IMPORT_BLOB_DELETE_FAILED",
+        entityType: "import_blob",
+        entityId: null,
+        details: { pathname, sourceFileName: safeName },
+      });
+    }
+
+    const data = await importWorkbookBytes(req, bytes, safeName, {
+      source: "blob",
+      blobPathname: pathname,
+      blobDeleted,
+    });
+    res.status(201).json({ success: true, data });
   } catch (err) {
     next(err);
   }

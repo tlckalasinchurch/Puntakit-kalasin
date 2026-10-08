@@ -22,6 +22,7 @@ import {
   IMPORT_DUPLICATE_NOTE_MAX,
   type ImportDuplicateDecision,
 } from "@shared/importDecisions";
+import { decisionPanelKey } from "./importDuplicatesKeys";
 
 /**
  * Admin → ตรวจสอบข้อมูลซ้ำ (§17). Shows every row that shares a normalized
@@ -280,7 +281,7 @@ function CandidateCard({ candidate, canDecide, onSaved }: { candidate: Candidate
           </tbody>
         </table>
       </div>
-      <DecisionPanel key={candidate.decisions[0]?.id ?? "none"} candidate={candidate} canDecide={canDecide} onSaved={onSaved} />
+      <DecisionPanel key={decisionPanelKey(candidate)} candidate={candidate} canDecide={canDecide} onSaved={onSaved} />
     </article>
   );
 }
