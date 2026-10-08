@@ -18,6 +18,7 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { runAtomically } from "../lib/atomicWrites.js";
 import { careGroupsOf, careMembershipStatements, requireCareGroup } from "../lib/careMembership.js";
+import { getScopedMemberIds, isScopedRole } from "../lib/careScope.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 
 export const membersRouter = Router();
@@ -451,6 +452,10 @@ membersRouter.put(
         const dupConditions = [];
         if (parsed.data.phone) dupConditions.push(eq(members.phone, parsed.data.phone));
         if (parsed.data.email) dupConditions.push(eq(members.email, parsed.data.email));
+
+        // A group leader is only told about duplicates inside their own
+        // scope; a match outside it must look like no match.
+        const scope = isScopedRole(req.user!.role) ? await getScopedMemberIds(req.user!.id) : null;
 
         const [dup] = await db
           .select({ id: members.id, name: members.name, phone: members.phone, email: members.email })
