@@ -402,6 +402,19 @@ membersRouter.post(
       }
 
       const { careGroupId, ...input } = parsed.data;
+
+      // A group_leader cannot move a member to a group they don't lead,
+      // nor assign a leader (that's an admin operation).
+      if (isScopedRole(req.user!.role)) {
+        const { leadsGroup } = await import("../lib/careScope.js");
+        if (careGroupId && !(await leadsGroup(req.user!.id, careGroupId))) {
+          throw new ForbiddenError("คุณไม่มีสิทธิ์ย้ายสมาชิกไปยังกลุ่มนี้");
+        }
+        if (input.assignedLeaderId !== undefined) {
+          throw new ForbiddenError("คุณไม่มีสิทธิ์กำหนดผู้นำให้สมาชิก");
+        }
+      }
+
       const care = careGroupId ? await requireCareGroup(db, careGroupId) : null;
       const newId = randomUUID();
       const values = {
@@ -471,6 +484,12 @@ membersRouter.put(
         throw new NotFoundError("ไม่พบสมาชิกที่ต้องการแก้ไข");
       }
 
+      // Out of scope looks the same as missing, so ids cannot be probed.
+      if (isScopedRole(req.user!.role)) {
+        const scope = await getScopedMemberIds(req.user!.id);
+        if (!scope.includes(existing.id)) throw new NotFoundError("ไม่พบสมาชิกที่ต้องการแก้ไข");
+      }
+
       // Check duplicates excluding current member
       if (parsed.data.phone || parsed.data.email) {
         const dupConditions = [];
@@ -508,6 +527,19 @@ membersRouter.put(
       }
 
       const { careGroupId, ...input } = parsed.data;
+
+      // A group_leader cannot move a member to a group they don't lead,
+      // nor assign a leader (that's an admin operation).
+      if (isScopedRole(req.user!.role)) {
+        const { leadsGroup } = await import("../lib/careScope.js");
+        if (careGroupId && !(await leadsGroup(req.user!.id, careGroupId))) {
+          throw new ForbiddenError("คุณไม่มีสิทธิ์ย้ายสมาชิกไปยังกลุ่มนี้");
+        }
+        if (input.assignedLeaderId !== undefined) {
+          throw new ForbiddenError("คุณไม่มีสิทธิ์กำหนดผู้นำให้สมาชิก");
+        }
+      }
+
       const care = careGroupId ? await requireCareGroup(db, careGroupId) : null;
       const changes = { ...input, updatedById: req.user!.id, updatedAt: new Date() };
       if (careGroupId === undefined) {
