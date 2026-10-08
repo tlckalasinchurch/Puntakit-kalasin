@@ -45,7 +45,7 @@ const DANGER_BUTTON_CLASS =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-error)] bg-[var(--color-canvas)] px-4 text-sm font-semibold text-[var(--color-error)] transition-colors hover:bg-[var(--color-error)]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-error)] disabled:opacity-50";
 
 export default function Ministries() {
-  usePageTitle("พันธกิจ");
+  usePageTitle("ฝ่ายงาน");
   const { user } = useAuth();
   // Mirrors the server's `requireAdmin` (shared/roles.ts ADMIN_ROLES).
   const isAdmin = hasRole(user?.role, ADMIN_ROLES);
