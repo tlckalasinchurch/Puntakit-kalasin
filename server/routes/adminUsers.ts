@@ -40,17 +40,46 @@ adminUsersRouter.get("/", async (req, res, next) => {
       .orderBy(asc(users.name))
       .limit(500);
 
+    // Everything below mirrors `getLedGroupIds` (careScope.ts): a group counts
+    // when the user is its leader_id OR co_leader_id, at any level. `careGroups`
+    // keeps the old meaning (care groups they lead) because the picker edits it.
+    const userIds = rows.map((r) => r.id);
     const led = rows.length
       ? await db
-          .select({ id: groups.id, name: groups.name, leaderId: groups.leaderId })
+          .select({
+            id: groups.id,
+            name: groups.name,
+            orgLevel: groups.orgLevel,
+            leaderId: groups.leaderId,
+            coLeaderId: groups.coLeaderId,
+          })
           .from(groups)
-          .where(and(eq(groups.orgLevel, "care"), isNull(groups.deletedAt), inArray(groups.leaderId, rows.map((r) => r.id))))
+          .where(and(isNull(groups.deletedAt), or(inArray(groups.leaderId, userIds), inArray(groups.coLeaderId, userIds))))
           .orderBy(asc(groups.name))
       : [];
-    const byUser = new Map<string, { id: string; name: string }[]>();
-    for (const g of led) byUser.set(g.leaderId!, [...(byUser.get(g.leaderId!) ?? []), { id: g.id, name: g.name }]);
+    type Entry = { id: string; name: string; orgLevel: "body" | "care" | null; as: "leader" | "co_leader" };
+    const scopeOf = new Map<string, Entry[]>();
+    const add = (userId: string | null, g: (typeof led)[number], as: Entry["as"]) => {
+      if (userId) scopeOf.set(userId, [...(scopeOf.get(userId) ?? []), { id: g.id, name: g.name, orgLevel: g.orgLevel, as }]);
+    };
+    for (const g of led) {
+      add(g.leaderId, g, "leader");
+      if (g.coLeaderId && g.coLeaderId !== g.leaderId) add(g.coLeaderId, g, "co_leader");
+    }
 
-    res.json({ success: true, data: rows.map((r) => ({ ...r, careGroups: byUser.get(r.id) ?? [] })) });
+    res.json({
+      success: true,
+      data: rows.map((r) => {
+        const effective = scopeOf.get(r.id) ?? [];
+        return {
+          ...r,
+          careGroups: effective.filter((g) => g.as === "leader" && g.orgLevel === "care").map(({ id, name }) => ({ id, name })),
+          ledGroups: effective,
+          // The server applies group scope only to the group_leader role.
+          scopeActive: r.role === "group_leader",
+        };
+      }),
+    });
   } catch (err) {
     next(err);
   }

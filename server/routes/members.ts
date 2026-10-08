@@ -459,6 +459,10 @@ membersRouter.put(
             and(
               sql`${members.id} != ${req.params.id}`,
               isNull(members.deletedAt),
+              // A group leader is only told about duplicates inside their own
+              // scope. A match outside it must look the same as no match, or
+              // this endpoint becomes a phone/email lookup for the whole church.
+              scope ? (scope.length ? inArray(members.id, scope) : sql`false`) : undefined,
               or(...dupConditions)
             )
           )
@@ -466,7 +470,11 @@ membersRouter.put(
 
         if (dup) {
           const field = parsed.data.phone && dup.phone === parsed.data.phone ? "เบอร์โทรศัพท์" : "อีเมล";
-          throw new ConflictError(`${field} นี้ถูกใช้งานแล้วโดยสมาชิก: ${dup.name}`);
+          // Restricted roles get one generic message with no name, so the
+          // wording cannot reveal who holds the contact.
+          throw new ConflictError(
+            scope ? `${field} นี้ถูกใช้งานแล้วในระบบ` : `${field} นี้ถูกใช้งานแล้วโดยสมาชิก: ${dup.name}`
+          );
         }
       }
 
