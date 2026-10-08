@@ -470,6 +470,18 @@ groupsRouter.put("/:id", async (req, res, next) => {
       );
     }
 
+    // A group_leader may update meeting details of their own group, but not
+    // take over leadership, change privacy, or alter the org hierarchy.
+    // Check req.body (not parsed.data) because the schema fills defaults.
+    if (req.user!.role === "group_leader") {
+      const restricted = ["leaderId", "coLeaderId", "privacy", "orgLevel", "parentGroupId", "leaderMemberId"];
+      const body = req.body as Record<string, unknown>;
+      const attempted = restricted.filter((f) => body[f] !== undefined);
+      if (attempted.length > 0) {
+        throw new ForbiddenError("คุณไม่มีสิทธิ์เปลี่ยนข้อมูลส่วนนี้ของกลุ่ม");
+      }
+    }
+
     const db = getDb();
     const [existing] = await db
       .select()
@@ -715,6 +727,21 @@ groupsRouter.post("/:id/members", async (req, res, next) => {
 
     if (!member) {
       throw new NotFoundError("ไม่พบสมาชิกที่ระบุ");
+    }
+
+    // A group_leader cannot pull in a member who belongs to a group outside
+    // their scope. A free member (no groups) can be added.
+    if (req.user!.role === "group_leader") {
+      const { getLedGroupIds } = await import("../lib/careScope.js");
+      const led = await getLedGroupIds(req.user!.id);
+      const memberGroups = await db
+        .select({ groupId: groupMembers.groupId })
+        .from(groupMembers)
+        .where(and(eq(groupMembers.memberId, memberId), eq(groupMembers.status, "active")));
+      const outside = memberGroups.some((g) => !led.includes(g.groupId));
+      if (outside) {
+        throw new ForbiddenError("คุณไม่มีสิทธิ์เพิ่มสมาชิกท่านนี้เข้ากลุ่ม");
+      }
     }
 
     // Check if membership already exists (active or inactive)
