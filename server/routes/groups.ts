@@ -305,8 +305,9 @@ groupsRouter.get("/:id", async (req, res, next) => {
     }
 
     // A group_leader may only read the groups they lead; anything else is 403.
-    if (req.user!.role === "group_leader" && !(await leadsGroup(req.user!.id, id))) {
-      throw new ForbiddenError("คุณไม่มีสิทธิ์ดูข้อมูลกลุ่มนี้");
+    if (req.user!.role === "group_leader") {
+      const leads = await leadsGroup(req.user!.id, id);
+      if (!leads) throw new ForbiddenError("คุณไม่มีสิทธิ์ดูข้อมูลกลุ่มนี้");
     }
 
     // Check if current user is leader or active member
