@@ -158,3 +158,6 @@ skills-lock.json
 # Re-asserted after the broader `.env*` above so the documented template stays
 # visible in the repo.
 !.env.example
+
+# Local dev scripts (mobile-ux-fintech-principles).
+scripts-dev/
