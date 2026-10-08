@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
 import { ClerkProvider } from "@clerk/react";
 import { clerkThTH } from "./lib/clerkLocalization";
@@ -23,7 +23,6 @@ const ClerkSignInPage = lazy(() => import("./pages/ClerkSignInPage"));
 const ClerkSignUpPage = lazy(() => import("./pages/ClerkSignUpPage"));
 const Home = lazy(() => import("./pages/Home"));
 const Feed = lazy(() => import("./pages/Feed"));
-const MissionFeed = lazy(() => import("./pages/MissionFeed"));
 const FollowUps = lazy(() => import("./pages/FollowUps"));
 const Inbox = lazy(() => import("./pages/Inbox"));
 const ImportData = lazy(() => import("./pages/ImportData"));
@@ -132,10 +131,10 @@ function Router() {
           <Feed />
         </ProtectedRoute>
       </Route>
+      {/* Phase 3: /mission-feed used hardcoded mock data. Redirect to /feed
+          (real data from /api/activities) instead of maintaining two feeds. */}
       <Route path="/mission-feed">
-        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
-          <MissionFeed />
-        </ProtectedRoute>
+        <Redirect to="/feed" />
       </Route>
       <Route path="/follow-up">
         <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
