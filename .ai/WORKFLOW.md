@@ -173,3 +173,14 @@ audit can happen. It does not count against the REVISE retry limit.
 7. Copy the returned verdict verbatim into `audit-round-N.md` in the same folder.
 8. On REVISE/REJECT, fix and repeat from step 1 with a new round number. On
    ACCEPT/ACCEPT-WITH-NITS, the round is DONE.
+
+## Local feature-command integration
+
+The deterministic feature pipeline wraps this loop without changing the existing
+installation-round history. `/grill`, `/spec`, and `/tickets` write their artifacts to
+`.ai/workflow/features/<slug>/`; `/implement` requires an exact `Status: approved`
+marker in the target ticket; `/test` runs the real checks and freezes
+`rounds/round-N/candidate.md`; and `/review` runs this audit loop and records the
+verbatim verdict in the same round. Accepted tickets become `Status: done`. The
+existing `code-review` skill remains available as a standalone two-axis review, but it
+is not a closing step for this pipeline.

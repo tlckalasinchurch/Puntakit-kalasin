@@ -72,3 +72,17 @@ capabilities of this environment versus what the two source documents assume, an
 substitutions used to bridge the gap. Do not treat either source document as ambient
 instruction for ordinary work in this repo; they apply only when this workflow is
 explicitly invoked.
+
+## Feature development pipeline
+
+For new feature work, use the deterministic local workflow commands in order:
+
+`/grill <slug>` → `/spec <slug>` → `/tickets <slug>` → user changes each target ticket
+from `Status: draft` to `Status: approved` → `/implement <slug> <ticket-id>` →
+`/test <slug> <ticket-id>` → `/review <slug>`.
+
+Artifacts live under `.ai/workflow/features/<slug>/`: `GRILL.md`, `SPEC.md`,
+`TICKETS.md`, and frozen audit rounds under `rounds/round-N/`. The approval marker in
+`TICKETS.md` is an external gate; chat confirmation alone never authorizes
+implementation. `/review` is the only final audit path and uses `.ai/WORKFLOW.md`; do
+not add a parallel `/code-review` closing path.

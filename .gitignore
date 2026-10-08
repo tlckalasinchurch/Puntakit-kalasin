@@ -119,7 +119,9 @@ client/public/__manus__/version.json
 # Agent skills (npx skills) — source of truth is .agents/skills + skills-lock.json (committed).
 # .claude/skills and agent/skills are machine-generated junctions, re-create with:
 #   npx skills experimental_install
-.claude/
+.claude/*
+!.claude/commands/
+!.claude/commands/*.md
 agent/
 
 # Ruflo local secrets and runtime data
