@@ -267,13 +267,15 @@ export default function Members() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
-  // Care groups grouped by body, for the form picker and the list filter. The
-  // org overview is limited to staff roles; without it the picker simply hides.
+  // Care groups grouped by body, for the form picker and the list filter.
+  // /api/care/groups is readable by CREATE_ROLES (incl. group_leader);
+  // /api/org/overview is PRIVILEGED-only and 403s for group_leader (#49).
+  // Without options the picker simply hides.
   const [careOptions, setCareOptions] = useState<{ body: string; cares: { id: string; name: string }[] }[]>([]);
   const [careFilter, setCareFilter] = useState("");
   useEffect(() => {
     api
-      .get<{ bodies: { name: string; careGroups: { id: string; name: string }[] }[] }>("/api/org/overview")
+      .get<{ bodies: { name: string; careGroups: { id: string; name: string }[] }[] }>("/api/care/groups")
       .then((o) => setCareOptions(o.bodies.map((b) => ({ body: b.name, cares: b.careGroups }))))
       .catch(() => setCareOptions([]));
   }, []);
