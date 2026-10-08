@@ -681,8 +681,8 @@ attendanceRouter.get("/absentees", async (req, res, next) => {
   }
 });
 
-// 6. GET /summary - Attendance statistics & trends
-attendanceRouter.get("/summary", async (_req, res, next) => {
+// 6. GET /summary - Attendance statistics & trends (privileged only)
+attendanceRouter.get("/summary", requireRole(...PRIVILEGED_ROLES), async (_req, res, next) => {
   try {
     const db = getDb();
     const now = new Date();
