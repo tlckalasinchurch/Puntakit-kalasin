@@ -63,6 +63,11 @@ export interface NavGroup {
  * everyday work with people, talking to the congregation, then church-wide
  * setup. Labels are the shortest unambiguous Thai for each destination — no
  * dual-language slashes, no badges (see docs/PUNTAKIT_UX_UI_AUDIT_2026-10.md §2.1).
+ *
+ * Phase 1 (Oct 2026): Role-specific navigation. A group_leader sees a focused
+ * "งานของฉัน" menu (their weekly work), not the full 18-item admin menu.
+ * This reduces cognitive load for the primary user without changing any
+ * destination or business logic.
  */
 export const navGroups: NavGroup[] = [
   {
@@ -141,6 +146,32 @@ export const navGroups: NavGroup[] = [
   },
 ];
 
+/**
+ * Focused navigation for group leaders (Phase 1).
+ * A group leader's weekly work is: check in their group, follow up with
+ * absentees, and see their members. They do not need the full admin menu.
+ * This is a UX affordance only — server authorization is unchanged.
+ */
+export const groupLeaderNavGroups: NavGroup[] = [
+  {
+    name: "งานของฉัน",
+    items: [
+      {
+        label: "งานวันนี้",
+        path: "/care",
+        icon: ListChecks,
+      },
+      { label: "การติดตาม", path: "/follow-up", icon: ListTodo },
+      { label: "สมาชิกของฉัน", path: "/members", icon: Users },
+      { label: "กลุ่มของฉัน", path: "/groups", icon: UsersRound },
+    ],
+  },
+  {
+    name: "บัญชีของฉัน",
+    items: [{ label: "โปรไฟล์", path: "/profile", icon: UserRound }],
+  },
+];
+
 interface SidebarProps {
   open: boolean;
   onClose: () => void;
@@ -203,7 +234,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   // Roles arrive with the session; until then `hasRole` denies the gated
   // entries, so a `member` never sees a privileged menu item flash by.
-  const visibleGroups = navGroups
+  // Phase 1: group leaders get a focused menu (their weekly work only),
+  // not the full 18-item admin navigation.
+  const baseGroups = user?.role === "group_leader" ? groupLeaderNavGroups : navGroups;
+  const visibleGroups = baseGroups
     .map(group => ({
       ...group,
       items: group.items.filter(

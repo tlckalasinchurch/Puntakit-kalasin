@@ -1,4 +1,4 @@
-import { Home as HomeIcon, ListChecks, Menu, Users, UsersRound } from "lucide-react";
+import { Home as HomeIcon, ListChecks, ListTodo, Menu, Users, UsersRound } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
@@ -20,13 +20,22 @@ export function MobileBottomNav({ onMenu, menuOpen }: MobileBottomNavProps) {
   const [location] = useLocation();
   const { user } = useAuth();
   const canCheckIn = hasRole(user?.role, CREATE_ROLES);
+  const isGroupLeader = user?.role === "group_leader";
 
-  const items = [
-    { label: "หน้าหลัก", path: "/", icon: HomeIcon },
-    ...(canCheckIn ? [{ label: "เช็คชื่อ", path: "/care", icon: ListChecks }] : []),
-    { label: "สมาชิก", path: "/members", icon: Users },
-    { label: "พันธกิจ", path: "/groups", icon: UsersRound },
-  ];
+  // Phase 1: group leaders get a focused bottom nav — their weekly work first.
+  // "งานวันนี้" (today's work) is the primary destination, not a generic home.
+  const items = isGroupLeader
+    ? [
+        { label: "งานวันนี้", path: "/care", icon: ListChecks },
+        { label: "ติดตาม", path: "/follow-up", icon: ListTodo },
+        { label: "สมาชิก", path: "/members", icon: Users },
+      ]
+    : [
+        { label: "หน้าหลัก", path: "/", icon: HomeIcon },
+        ...(canCheckIn ? [{ label: "เช็คชื่อ", path: "/care", icon: ListChecks }] : []),
+        { label: "สมาชิก", path: "/members", icon: Users },
+        { label: "พันธกิจ", path: "/groups", icon: UsersRound },
+      ];
 
   const base =
     "type-fine flex min-h-14 flex-1 pb-1 flex-col items-center justify-center gap-1 px-1 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-focus)]";
