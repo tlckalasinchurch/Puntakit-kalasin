@@ -553,7 +553,9 @@ describe("Audit 2026-10-04 — permissions, error states and mobile forms", () =
   );
 
   it("quick follow-up buttons cannot be double-clicked", () => {
-    expect(read("client/src/pages/Members.tsx")).toMatch(
+    // MemberDetailModal was extracted from Members.tsx in Phase 6B —
+    // the button lives there now, behavior unchanged.
+    expect(read("client/src/components/members/MemberDetailModal.tsx")).toMatch(
       /disabled=\{creatingFollowUp\}/
     );
     expect(read("client/src/pages/Feed.tsx")).toMatch(
