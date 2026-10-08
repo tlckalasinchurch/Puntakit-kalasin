@@ -18,6 +18,7 @@ import {
 } from "../../shared/validation.js";
 import { ADMIN_ROLES, ADMIN_SHELL_ROLES, GROUP_MANAGE_ANY_ROLES } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { maskPhone } from "./members.js";
 import { logAudit } from "../lib/audit.js";
 import { getLedGroupIds } from "../lib/groupAccess.js";
 import { leadsGroup } from "../lib/careScope.js";
@@ -25,7 +26,7 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from ".
 
 export const groupsRouter = Router();
 
-groupsRouter.use(requireAuth, requireRole(...ADMIN_SHELL_ROLES));
+groupsRouter.use(requireAuth);
 
 type OrgFields = {
   orgLevel: "body" | "care" | null;
@@ -145,7 +146,7 @@ function maskGroupLocation<T extends { privacy?: string; meetingLocation?: strin
 }
 
 export function canViewFullGroupRosterRole(role: string): boolean {
-  return ["super_admin", "admin", "ministry_leader"].includes(role);
+  return ["super_admin", "admin", "ministry_leader", "staff"].includes(role);
 }
 
 function canViewFullGroupRoster(req: Request): boolean {
@@ -263,7 +264,7 @@ groupsRouter.get("/", async (req, res, next) => {
 });
 
 // 2. GET /:id - Group details with active member list and real-time attendance stats
-groupsRouter.get("/:id", async (req, res, next) => {
+groupsRouter.get("/:id", requireRole(...ADMIN_SHELL_ROLES), async (req, res, next) => {
   try {
     const { id } = req.params;
     const db = getDb();
@@ -598,7 +599,7 @@ groupsRouter.delete(
 );
 
 // 6. GET /:id/members - Get members of group with real-time last attended date
-groupsRouter.get("/:id/members", async (req, res, next) => {
+groupsRouter.get("/:id/members", requireRole(...ADMIN_SHELL_ROLES), async (req, res, next) => {
   try {
     const { id } = req.params;
     const db = getDb();
@@ -618,7 +619,9 @@ groupsRouter.get("/:id/members", async (req, res, next) => {
       () => true,
       () => false,
     );
-    if (!canViewAll && !canManage) {
+    // Viewers may see the roster (contacts masked); members must belong to the group.
+    const isViewer = req.user!.role === "viewer";
+    if (!canViewAll && !canManage && !isViewer) {
       const dbMember = await db
         .select({ id: members.id })
         .from(members)
@@ -678,7 +681,7 @@ groupsRouter.get("/:id/members", async (req, res, next) => {
     const canViewContacts = canViewAll || canManage;
     const safeRows = rows.map((row) => ({
       ...row,
-      memberPhone: canViewContacts ? row.memberPhone : null,
+      memberPhone: canViewContacts ? row.memberPhone : row.memberPhone ? maskPhone(row.memberPhone) : null,
     }));
 
     res.json({
