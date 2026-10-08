@@ -91,12 +91,17 @@ describe("GET /api/members contact privacy", () => {
     return { status: res.status, body: (await res.json()) as { data: Array<{ name: string; phone: string | null; email: string | null }> } };
   };
 
-  it("masks a formatted phone number and the email for a member-role account", async () => {
-    const { status, body } = await list("member");
+  it("masks a formatted phone number and the email for a viewer-role account", async () => {
+    const { status, body } = await list("viewer");
     expect(status).toBe(200);
     const row = body.data.find((m) => m.name === "สมชาย ทดสอบ")!;
     expect(row.phone).toBe("081-xxx-678");
     expect(row.email).toBe("so***@example.com");
+  });
+
+  it("member role cannot access the admin members API (403)", async () => {
+    const { status } = await list("member");
+    expect(status).toBe(403);
   });
 
   it("returns real contacts to staff and admin", async () => {
@@ -104,13 +109,13 @@ describe("GET /api/members contact privacy", () => {
     expect(body.data.find((m) => m.name === "สมชาย ทดสอบ")!.phone).toBe("081-234-5678");
   });
 
-  it.each(["member", "viewer", "group_leader"])("%s cannot find a member by phone or email", async (role) => {
+  it.each(["viewer", "group_leader"])("%s cannot find a member by phone or email", async (role) => {
     expect((await list(role, "?search=234-5678")).body.data).toHaveLength(0);
     expect((await list(role, "?search=somchai@example.com")).body.data).toHaveLength(0);
   });
 
-  it("everyone can still search by name", async () => {
-    expect((await list("member", `?search=${encodeURIComponent("สมชาย")}`)).body.data).toHaveLength(1);
+  it("viewer can still search by name", async () => {
+    expect((await list("viewer", `?search=${encodeURIComponent("สมชาย")}`)).body.data).toHaveLength(1);
   });
 
   it("admin and staff can search by phone and email", async () => {

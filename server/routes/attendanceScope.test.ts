@@ -391,12 +391,9 @@ describe("attendance group ownership", () => {
       expect(body.data.members.every((p) => p.lineId && p.phone && !p.phone.includes("*"))).toBe(true);
     });
 
-    it("masks phone and nulls LINE ID for the leader of another group", async () => {
+    it("denies the roster of another group to a leader (403)", async () => {
       const res = await roster("leaderB", "A");
-      expect(res.status).toBe(200);
-      const body = (await res.json()) as Roster;
-      expect(body.data.members.length).toBe(2);
-      expect(body.data.members.every((p) => p.lineId === null && (p.phone === null || p.phone.includes("-xxx-")))).toBe(true);
+      expect(res.status).toBe(403);
     });
 
     it("keeps admin, staff and ministry_leader reading raw contacts, as before", async () => {
