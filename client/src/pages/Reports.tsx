@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { CalendarDays, Download, FileBarChart, Lock, RefreshCw, Users } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { DateField } from "@/components/DateField";
 import { CardGridSkeleton } from "@/components/LoadingStates";
 import {
   EmptyState,
   ErrorState,
-  Field,
   PageHeader,
 } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
@@ -113,32 +113,21 @@ export default function Reports() {
 
       <section className="card-surface mb-4 p-4 sm:p-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="วันที่เริ่มต้น" hint="เว้นว่างไว้เพื่อดูข้อมูลทั้งหมด">
-            {(props) => (
-              <input
-                id={props.id}
-                aria-describedby={props["aria-describedby"]}
-                aria-invalid={props["aria-invalid"]}
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-base md:text-sm text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-              />
-            )}
-          </Field>
-          <Field label="วันที่สิ้นสุด" hint="เว้นว่างไว้เพื่อดูข้อมูลทั้งหมด" error={rangeError}>
-            {(props) => (
-              <input
-                id={props.id}
-                aria-describedby={props["aria-describedby"]}
-                aria-invalid={props["aria-invalid"]}
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-base md:text-sm text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-              />
-            )}
-          </Field>
+          <DateField
+            label="วันที่เริ่มต้น"
+            hint="เว้นว่างไว้เพื่อดูข้อมูลทั้งหมด"
+            value={startDate}
+            onChange={setStartDate}
+            clearable
+          />
+          <DateField
+            label="วันที่สิ้นสุด"
+            hint="เว้นว่างไว้เพื่อดูข้อมูลทั้งหมด"
+            value={endDate}
+            onChange={setEndDate}
+            error={rangeError}
+            clearable
+          />
         </div>
       </section>
 
