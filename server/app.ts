@@ -19,6 +19,7 @@ import { importRouter } from "./routes/import.js";
 import { orgDataRouter } from "./routes/orgData.js";
 import { orgRouter } from "./routes/org.js";
 import { careRouter } from "./routes/care.js";
+import { adminUsersRouter } from "./routes/adminUsers.js";
 import { portalRouter } from "./routes/portal.js";
 import { requestIdMiddleware } from "./middleware/requestId.js";
 import { isDemoModeEnabled, isLegacyTestAuthEnabled } from "./middleware/auth.js";
@@ -117,6 +118,7 @@ export function createApp() {
   app.use("/api/org-data", orgDataRouter);
   app.use("/api/org", orgRouter);
   app.use("/api/care", careRouter);
+  app.use("/api/admin/users", adminUsersRouter);
   app.use("/api/me", portalRouter);
   app.use("/api/announcements", announcementsRouter);
   app.use("/api/events", eventsRouter);

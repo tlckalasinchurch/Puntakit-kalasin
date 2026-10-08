@@ -106,6 +106,7 @@ describe("Mission Activity API — full loop (real PGlite Postgres)", () => {
       .returning();
 
     superAdminCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: superAdmin.id, email: superAdmin.email, role: "super_admin" })}`;
+    groupLeaderUserId = groupLeaderUser.id;
     groupLeaderCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: groupLeaderUser.id, email: groupLeaderUser.email, role: "group_leader" })}`;
     outsiderCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: outsiderUser.id, email: outsiderUser.email, role: "member" })}`;
     leaderOfGroupCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: leaderOfGroupUser.id, email: leaderOfGroupUser.email, role: "group_leader" })}`;
@@ -158,9 +159,16 @@ describe("Mission Activity API — full loop (real PGlite Postgres)", () => {
   });
 
   let activityId: string;
+  let groupLeaderUserId: string;
 
   describe("Create -> Persist -> Fetch -> Relate Group -> Relate Person", () => {
     it("creates a draft activity linked to a group and a participant member", async () => {
+      // A group_leader may file an activity only for a group they lead, tagging
+      // only members of that group. Lead group A and put the member in it for
+      // the create; the leadership is withdrawn again below so the later tests
+      // still cover "the creator no longer leads the group".
+      await db.update(schema.groups).set({ leaderId: groupLeaderUserId }).where(eq(schema.groups.id, groupId));
+      await db.insert(schema.groupMembers).values({ groupId, memberId, role: "member", status: "active" });
       const res = await fetch(`${baseUrl}/api/activities`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Cookie: groupLeaderCookie },
@@ -184,6 +192,7 @@ describe("Mission Activity API — full loop (real PGlite Postgres)", () => {
       expect(body.data.participants[0].memberId).toBe(memberId);
       expect(body.data.media).toHaveLength(1);
       activityId = body.data.id;
+      await db.update(schema.groups).set({ leaderId: null }).where(eq(schema.groups.id, groupId));
 
       // Verify it is really in PostgreSQL, not just in the HTTP response.
       const [row] = await db.select().from(schema.missionActivities).where(eq(schema.missionActivities.id, activityId));
@@ -234,7 +243,7 @@ describe("Mission Activity API — full loop (real PGlite Postgres)", () => {
       expect(body.data.status).toBe("pending_review");
     });
 
-    it("does NOT let the creator (a group_leader who does not lead this group) self-publish", async () => {
+    it("does NOT let the creator (a group_leader who no longer leads this group) self-publish", async () => {
       const res = await fetch(`${baseUrl}/api/activities/${activityId}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Cookie: groupLeaderCookie },

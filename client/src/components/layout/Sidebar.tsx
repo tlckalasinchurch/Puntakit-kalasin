@@ -12,6 +12,7 @@ import {
   MapPin,
   Megaphone,
   Network,
+  ShieldCheck,
   Sparkles,
   UserCheck,
   UserRound,
@@ -23,7 +24,7 @@ import { useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
-import { CREATE_ROLES, PRIVILEGED_ROLES, hasRole } from "@shared/roles";
+import { CREATE_ROLES, PRIVILEGED_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
 import type { UserRole } from "@shared/schema";
 import { Logo } from "./Logo";
 
@@ -122,6 +123,7 @@ export const navGroups: NavGroup[] = [
         icon: InboxIcon,
         roles: CREATE_ROLES,
       },
+      { label: "ผู้ใช้และสิทธิ์", path: "/admin/users", icon: ShieldCheck, roles: SUPER_ADMIN_ROLES },
       {
         label: "นำเข้าจาก Excel",
         path: "/import",

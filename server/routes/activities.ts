@@ -17,6 +17,7 @@ import {
   missionActivityStatusUpdateSchema,
 } from "../../shared/validation.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { assertGroupInScope, assertMembersInScope, getLedGroupIds, isScopedRole } from "../lib/careScope.js";
 import { logAudit } from "../lib/audit.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 import { CREATE_ROLES, DELETE_ROLES, PRIVILEGED_ROLES } from "../../shared/roles.js";
@@ -46,15 +47,6 @@ const STATUS_TRANSITIONS: Record<MissionActivityStatus, MissionActivityStatus[]>
 
 function isPrivileged(role: UserRole): boolean {
   return PRIVILEGED_ROLES.includes(role);
-}
-
-async function getLedGroupIds(userId: string): Promise<string[]> {
-  const db = getDb();
-  const rows = await db
-    .select({ id: groups.id })
-    .from(groups)
-    .where(and(isNull(groups.deletedAt), or(eq(groups.leaderId, userId), eq(groups.coLeaderId, userId))));
-  return rows.map((r) => r.id);
 }
 
 /** Read access: privileged roles see everything; everyone else sees published
@@ -105,6 +97,22 @@ async function canPublish(
     return ledGroupIds.includes(activity.groupId);
   }
   return false;
+}
+
+/**
+ * A group_leader files activities only for a group they lead, and may tag only
+ * the members of those groups. `requireGroup` is true on create (an activity
+ * without a group would sit outside every scope).
+ */
+async function assertActivityScope(
+  req: Request,
+  groupId: string | null | undefined,
+  participantMemberIds: string[] | undefined,
+  requireGroup: boolean
+): Promise<void> {
+  if (!isScopedRole(req.user!.role)) return;
+  if (groupId !== undefined || requireGroup) await assertGroupInScope(req, groupId || null);
+  if (participantMemberIds?.length) await assertMembersInScope(req, participantMemberIds);
 }
 
 async function fetchActivityDetail(id: string) {
@@ -327,6 +335,7 @@ activitiesRouter.post("/", requireRole(...CREATE_ROLES), async (req, res, next) 
 
     const { participantMemberIds, media, ...activityFields } = parsed.data;
     const db = getDb();
+    await assertActivityScope(req, activityFields.groupId, participantMemberIds, true);
 
     const [created] = await db
       .insert(missionActivities)
@@ -386,6 +395,7 @@ activitiesRouter.put("/:id", async (req, res, next) => {
     }
 
     const { participantMemberIds, media, ...activityFields } = parsed.data;
+    await assertActivityScope(req, activityFields.groupId, participantMemberIds, false);
 
     const [updated] = await db
       .update(missionActivities)

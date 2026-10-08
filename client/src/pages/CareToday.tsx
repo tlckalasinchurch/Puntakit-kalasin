@@ -13,7 +13,7 @@ import { api, ApiError } from "@/lib/api";
  *   home    : who should be called (missed 2+ meetings in a row) + one big button
  *   checkin : tap the names of the people who came, then save
  *
- * Data: GET /api/care/groups (which care groups exist), GET
+ * Data: GET /api/care/groups (which care groups the caller may use), GET
  * /api/care/groups/:id/roster (members, today's marks, consecutive misses) and
  * POST /api/attendance/bulk (save). Clay surfaces come from `.clay-*` in
  * index.css; nothing here is invented: an empty list says it is empty.
