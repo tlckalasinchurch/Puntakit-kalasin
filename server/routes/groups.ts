@@ -20,6 +20,7 @@ import { ADMIN_ROLES, GROUP_MANAGE_ANY_ROLES } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { getLedGroupIds } from "../lib/groupAccess.js";
+import { leadsGroup } from "../lib/careScope.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 
 export const groupsRouter = Router();
@@ -301,6 +302,11 @@ groupsRouter.get("/:id", async (req, res, next) => {
 
     if (!group) {
       throw new NotFoundError("ไม่พบข้อมูลกลุ่มที่ระบุ");
+    }
+
+    // A group_leader may only read the groups they lead; anything else is 403.
+    if (req.user!.role === "group_leader" && !(await leadsGroup(req.user!.id, id))) {
+      throw new ForbiddenError("คุณไม่มีสิทธิ์ดูข้อมูลกลุ่มนี้");
     }
 
     // Check if current user is leader or active member

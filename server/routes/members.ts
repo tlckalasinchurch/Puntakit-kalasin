@@ -147,6 +147,11 @@ membersRouter.get("/", async (req, res, next) => {
       );
     }
 
+    // A group_leader sees only members of the groups they lead; an empty
+    // scope means "nothing". Other roles are unscoped (null).
+    const scope = isScopedRole(req.user!.role) ? await getScopedMemberIds(req.user!.id) : null;
+    if (scope) conditions.push(scope.length ? inArray(members.id, scope) : sql`false`);
+
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Total count for pagination
@@ -331,6 +336,12 @@ membersRouter.get("/:id", async (req, res, next) => {
 
     if (!row) {
       throw new NotFoundError("ไม่พบข้อมูลสมาชิกที่ต้องการ");
+    }
+
+    // Out of scope looks the same as missing, so ids cannot be probed.
+    if (isScopedRole(req.user!.role)) {
+      const scope = await getScopedMemberIds(req.user!.id);
+      if (!scope.includes(row.id)) throw new NotFoundError("ไม่พบข้อมูลสมาชิกที่ต้องการ");
     }
 
     const careOf = await careGroupsOf(db, [row.id]);

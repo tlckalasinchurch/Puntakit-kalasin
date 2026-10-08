@@ -8,7 +8,7 @@ import { maskPhone } from "./members.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { NotFoundError, ValidationError } from "../lib/errors.js";
 import { parseCareGroupDescription } from "../../shared/orgView.js";
-import { loadOrgOverview } from "./org.js";
+import { getLedGroupIds, isScopedRole } from "../lib/careScope.js";
 
 /**
  * Care-leader view of one care group: who belongs to it, who was marked on a
@@ -26,14 +26,39 @@ const present = new Set(["present", "online"]);
 const dayKey = (d: Date | string) => new Date(d).toISOString().slice(0, 10);
 
 /**
- * Care groups to pick from on the check-in screen. Same gate as the roster
- * below (CREATE_ROLES), so a group_leader can open the screen that the nav
- * offers them. `/api/org/overview` stays PRIVILEGED-only.
+ * Care groups the caller may check in: every care group for staff-level roles,
+ * only the groups they lead for a group_leader (none when unassigned). Same
+ * `{ bodies: [{ name, careGroups: [{ id, name }] }] }` shape the page already reads.
  */
-careRouter.get("/groups", async (_req, res, next) => {
+careRouter.get("/groups", async (req, res, next) => {
   try {
-    const { bodies, unassigned } = await loadOrgOverview();
-    res.json({ success: true, data: { bodies, unassigned } });
+    const db = getDb();
+    const led = isScopedRole(req.user!.role) ? await getLedGroupIds(req.user!.id) : null;
+    const cares = await db
+      .select({ id: groups.id, name: groups.name, parentGroupId: groups.parentGroupId })
+      .from(groups)
+      .where(
+        and(
+          eq(groups.orgLevel, "care"),
+          isNull(groups.deletedAt),
+          led ? (led.length ? inArray(groups.id, led) : sql`false`) : undefined
+        )
+      )
+      .orderBy(asc(groups.name));
+    const bodyRows = await db
+      .select({ id: groups.id, name: groups.name })
+      .from(groups)
+      .where(and(eq(groups.orgLevel, "body"), isNull(groups.deletedAt)))
+      .orderBy(asc(groups.name));
+    const bodies = bodyRows
+      .map((b) => ({
+        name: b.name,
+        careGroups: cares.filter((c) => c.parentGroupId === b.id).map((c) => ({ id: c.id, name: c.name.trim() })),
+      }))
+      .filter((b) => b.careGroups.length > 0);
+    const orphans = cares.filter((c) => !bodyRows.some((b) => b.id === c.parentGroupId));
+    if (orphans.length) bodies.push({ name: "ไม่ระบุบอดี้", careGroups: orphans.map((c) => ({ id: c.id, name: c.name.trim() })) });
+    res.json({ success: true, data: { bodies } });
   } catch (err) {
     next(err);
   }
