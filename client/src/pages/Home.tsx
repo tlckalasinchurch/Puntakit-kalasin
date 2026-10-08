@@ -6,15 +6,12 @@ import {
   ChevronRight,
   Clock,
   Compass,
-  Database,
-  HeartHandshake,
   Inbox as InboxIcon,
   ListTodo,
   Megaphone,
   RotateCw,
   ShieldCheck,
   UserCheck,
-  UserPlus,
   UserRound,
   Users,
 } from "lucide-react";
@@ -83,14 +80,6 @@ const EVENT_CATEGORY_LABEL: Record<ChurchEvent["category"], string> = {
   meeting: "ประชุม",
   other: "อื่นๆ",
 };
-
-interface Ministry {
-  id: string;
-  name: string;
-  description: string | null;
-  leader: string | null;
-  status: "active" | "inactive";
-}
 
 interface OperationsSubmission {
   id: string;
@@ -499,84 +488,6 @@ const DISCIPLESHIP_PATHWAY = [
   { title: "สร้างสาวก", detail: "เติบโตและพร้อมส่งต่อพระพร" },
 ];
 
-function OperationalPulse({
-  health,
-  ready,
-  retry,
-}: {
-  health: QueryState<HealthStatus>;
-  ready: QueryState<HealthStatus>;
-  retry: () => void;
-}) {
-  const online = health.status === "success" && health.data.status === "ok";
-  const databaseReady = ready.status === "success" && ready.data.status === "ready";
-  const checkedAt = health.status === "success" && health.data.timestamp
-    ? new Date(health.data.timestamp).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
-    : "กำลังตรวจสอบ";
-
-  return (
-    <section
-      aria-labelledby="system-pulse-title"
-      className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 sm:p-5"
-    >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-canvas-soft)] text-[var(--color-primary)]">
-            <Activity size={ICON_SIZE.lg} aria-hidden="true" />
-          </span>
-          <div>
-            <h2
-              id="system-pulse-title"
-              className="type-body-strong text-[var(--color-ink)]"
-            >
-              สถานะการเชื่อมต่อ
-            </h2>
-            <p className="type-caption text-[var(--color-body-muted)]">
-              ตรวจล่าสุด {checkedAt}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={retry}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-        >
-          <RotateCw size={ICON_SIZE.sm} aria-hidden="true" /> ตรวจอีกครั้ง
-        </button>
-      </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <p className="type-caption flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-canvas-soft)] p-3 text-[var(--color-ink)]">
-          <ShieldCheck
-            size={ICON_SIZE.md}
-            aria-hidden="true"
-            className={
-              online ? "text-[var(--color-success)]" : "text-[var(--color-error)]"
-            }
-          />
-          ระบบบันทึกข้อมูล: {online ? "ใช้งานได้ตามปกติ" : "ขัดข้องชั่วคราว"}
-        </p>
-        <p className="type-caption flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-canvas-soft)] p-3 text-[var(--color-ink)]">
-          <Database
-            size={ICON_SIZE.md}
-            aria-hidden="true"
-            className={
-              databaseReady
-                ? "text-[var(--color-success)]"
-                : "text-[var(--color-warning)]"
-            }
-          />
-          ข้อมูลสมาชิกและกลุ่ม:{" "}
-          {databaseReady
-            ? "พร้อมใช้งาน"
-            : ready.status === "error"
-              ? "ยังใช้งานไม่ได้"
-              : "กำลังตรวจสอบ"}
-        </p>
-      </div>
-    </section>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -600,34 +511,44 @@ export default function Home() {
     "/api/dashboard/summary"
   );
   const [events, retryEvents] = useHomeQuery<ChurchEvent[]>("/api/events");
-  const [ministries, retryMinistries] =
-    useHomeQuery<Ministry[]>("/api/ministries");
   const [operations, retryOperations] = useHomeQuery<OperationsData>(
     canSeeOperations ? "/api/dashboard/operations" : null
   );
-  const [health, retryHealth] = useHomeQuery<HealthStatus>("/api/health");
-  const [ready, retryReady] = useHomeQuery<HealthStatus>("/api/ready");
-  const retrySystemStatus = useCallback(() => {
-    retryHealth();
-    retryReady();
-  }, [retryHealth, retryReady]);
 
   return (
     <AppLayout>
       <div className="home-editorial space-y-12 lg:space-y-20">
         {/* Greeting + search, then the organisation at a glance */}
+        {/* Phase 2: Role-aware hero. Group leaders see "งานวันนี้" (today's work)
+            with the check-in CTA as primary. Staff see the operational overview. */}
         <section aria-labelledby="home-title" className="space-y-6">
           <div>
             <p className="type-caption-strong text-[var(--color-primary)]">
               สวัสดี {user?.name ?? "ทีมงานพันธกิจ"}
             </p>
             <h1 id="home-title" className="type-display-md mt-2 text-[var(--color-ink)]">
-              ภาพรวมพันธกิจ
+              {user?.role === "group_leader" ? "งานวันนี้" : "ภาพรวมพันธกิจ"}
             </h1>
+            {user?.role === "group_leader" && (
+              <p className="type-body mt-2 text-[var(--color-body-muted)]">
+                {new Date().toLocaleDateString("th-TH", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </p>
+            )}
           </div>
-          <GlobalSearch variant="prominent" className="max-w-xl" />
+          {user?.role !== "group_leader" && (
+            <GlobalSearch variant="prominent" className="max-w-xl" />
+          )}
           {user && CREATE_ROLES.includes(user.role) && (
-            <Link href="/care" className="clay-btn w-full max-w-xl">
+            <Link
+              href="/care"
+              className="clay-btn w-full max-w-xl min-h-12 text-base"
+              aria-label="ไปหน้าเช็คชื่อพันธกิจวันนี้"
+            >
               เช็คชื่อพันธกิจวันนี้
             </Link>
           )}
@@ -824,74 +745,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Ministry areas, from the existing /api/ministries resource */}
-        <section aria-labelledby="home-ministries">
-          <SectionHeader
-            id="home-ministries"
-            title="ฝ่ายงาน"
-            description="ฝ่ายงานที่กำลังดำเนินอยู่และผู้นำที่รับผิดชอบ"
-            action={{ href: "/ministries", label: "ดูฝ่ายงานทั้งหมด" }}
-          />
-          <QueryView
-            state={ministries}
-            retry={retryMinistries}
-            skeleton={
-              <TileSkeleton
-                count={3}
-                className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-              />
-            }
-          >
-            {data => {
-              const active = data.filter(m => m.status === "active");
-              if (active.length === 0) {
-                return (
-                  <EmptyState
-                    icon={HeartHandshake}
-                    title="ยังไม่มีฝ่ายงานที่เปิดดำเนินการ"
-                    description="ฝ่ายงานที่มีสถานะเปิดใช้งานจะแสดงที่นี่"
-                    action={{ label: "ไปที่หน้าฝ่ายงาน", onClick: () => navigate("/ministries") }}
-                  />
-                );
-              }
-              return (
-                <>
-                  <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {active.slice(0, MINISTRY_PREVIEW_LIMIT).map(ministry => (
-                      <li
-                        key={ministry.id}
-                        className="flex gap-4 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-6"
-                      >
-                        <IconBadge icon={HeartHandshake} />
-                        <div className="min-w-0 flex-1">
-                          <p className="type-body-strong text-[var(--color-ink)]">
-                            {ministry.name}
-                          </p>
-                          {ministry.leader && (
-                            <p className="type-caption text-[var(--color-body-muted)]">
-                              ผู้นำ: {ministry.leader}
-                            </p>
-                          )}
-                          {ministry.description && (
-                            <p className="type-caption mt-2 line-clamp-2 text-[var(--color-body-muted)]">
-                              {ministry.description}
-                            </p>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                  {active.length > MINISTRY_PREVIEW_LIMIT && (
-                    <p className="type-caption mt-4 text-[var(--color-body-muted)]">
-                      แสดง {MINISTRY_PREVIEW_LIMIT} จาก {active.length} ฝ่ายงาน
-                    </p>
-                  )}
-                </>
-              );
-            }}
-          </QueryView>
-        </section>
-
         {/* People and groups that need a decision come first: a leader opening
             the app on a phone should reach this without scrolling past the
             editorial sections. */}
@@ -1056,39 +909,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* System health belongs at the bottom: a church leader should not meet
-            infrastructure vocabulary before the people who need care. */}
-        <OperationalPulse health={health} ready={ready} retry={retrySystemStatus} />
-
-        {/* Discipleship pathway: editorial framework, not analytics */}
-        <section aria-labelledby="home-pathway">
-          <SectionHeader
-            id="home-pathway"
-            title="เส้นทางการสร้างสาวก"
-            description="กรอบการเดินไปกับผู้คนของคริสตจักร 6 ขั้น — เป็นแนวทาง ไม่ใช่สถิติของสมาชิก"
-          />
-          <ol className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
-            {DISCIPLESHIP_PATHWAY.map((step, index) => (
-              <li key={step.title} className="flex gap-4">
-                <span
-                  aria-hidden="true"
-                  className="type-body-strong flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] border border-[var(--color-primary)] text-[var(--color-primary)]"
-                >
-                  {index + 1}
-                </span>
-                <div className="min-w-0 pt-2">
-                  <p className="type-body-strong text-[var(--color-ink)]">
-                    {step.title}
-                  </p>
-                  <p className="type-caption text-[var(--color-body-muted)]">
-                    {step.detail}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-
         {/* Context / discovery */}
         <nav aria-label="ทางลัดสำรวจพันธกิจ">
           <SectionHeader
@@ -1124,44 +944,6 @@ export default function Home() {
             ))}
           </ul>
         </nav>
-
-        {/* Next action */}
-        <section
-          aria-labelledby="home-next"
-          className="rounded-[var(--radius-lg)] bg-[var(--color-dark-surface)] px-6 py-12 text-[var(--color-on-dark)] sm:px-12"
-        >
-          <p className="type-caption-strong text-[var(--color-primary-on-dark)]">
-            นิมิตและพันธกิจคริสตจักร
-          </p>
-          <h2 id="home-next" className="type-display-md mt-3 max-w-2xl">
-            1 คน นำ 2 คน สู่พระคริสต์ และคริสตจักร
-          </h2>
-          <p className="type-body mt-4 max-w-2xl text-[var(--color-on-dark)]/70">
-            "เพราะคริสตจักร คือ บ้านของทุกคน
-            ร่วมสร้างสาวกให้เติบโตในพระวจนะและความรัก"
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button
-              asChild
-              className="bg-[var(--color-primary-on-dark)] text-[var(--color-dark-surface)] hover:bg-[var(--color-primary-on-dark)]/90"
-            >
-              <Link href="/members">
-                <UserPlus aria-hidden="true" />
-                เพิ่มสมาชิกใหม่
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              className="border-[var(--color-on-dark)]/40 text-[var(--color-on-dark)] hover:bg-[var(--color-on-dark)]/10"
-            >
-              <Link href="/attendance">
-                <UserCheck aria-hidden="true" />
-                เช็คชื่อการเข้าร่วม
-              </Link>
-            </Button>
-          </div>
-        </section>
       </div>
     </AppLayout>
   );
