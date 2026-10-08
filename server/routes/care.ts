@@ -6,9 +6,9 @@ import { CREATE_ROLES } from "../../shared/roles.js";
 import { resolveGroupScope, scopeAllows } from "../lib/groupAccess.js";
 import { maskPhone } from "./members.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { NotFoundError, ValidationError } from "../lib/errors.js";
+import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 import { parseCareGroupDescription } from "../../shared/orgView.js";
-import { getLedGroupIds, isScopedRole } from "../lib/careScope.js";
+import { getLedGroupIds, isScopedRole, leadsGroup } from "../lib/careScope.js";
 
 /**
  * Care-leader view of one care group: who belongs to it, who was marked on a
@@ -77,6 +77,12 @@ careRouter.get("/groups/:id/roster", async (req, res, next) => {
       .where(and(eq(groups.id, id), eq(groups.orgLevel, "care"), isNull(groups.deletedAt)))
       .limit(1);
     if (!care) throw new NotFoundError("ไม่พบพันธกิจที่ระบุ");
+
+    // A group_leader may only open the roster of groups they lead.
+    if (isScopedRole(req.user!.role) && !(await leadsGroup(req.user!.id, id))) {
+      throw new ForbiddenError("คุณไม่มีสิทธิ์ดูข้อมูลพันธกิจนี้");
+    }
+
     const [leader] = care.leaderMemberId
       ? await db.select({ name: members.name }).from(members).where(eq(members.id, care.leaderMemberId)).limit(1)
       : [];

@@ -216,6 +216,11 @@ membersRouter.get("/check-duplicate", requireRole(...MEMBER_UPDATE_ROLES), async
     if (phone) conditions.push(eq(members.phone, phone));
     if (email) conditions.push(eq(members.email, email));
 
+    // A group_leader only sees duplicates inside their own scope; a match
+    // outside it must look like no match.
+    const scope = isScopedRole(req.user!.role) ? await getScopedMemberIds(req.user!.id) : null;
+    const scopeCondition = scope ? (scope.length ? inArray(members.id, scope) : sql`false`) : undefined;
+
     const checkQuery = db
       .select({ id: members.id, name: members.name, phone: members.phone, email: members.email })
       .from(members)
@@ -223,6 +228,7 @@ membersRouter.get("/check-duplicate", requireRole(...MEMBER_UPDATE_ROLES), async
         and(
           isNull(members.deletedAt),
           excludeId ? sql`${members.id} != ${excludeId}` : undefined,
+          scopeCondition,
           or(...conditions)
         )
       )
@@ -255,10 +261,17 @@ membersRouter.get(
   async (req, res, next) => {
     try {
       const db = getDb();
+      // A group_leader exports only members of the groups they lead.
+      const scope = isScopedRole(req.user!.role) ? await getScopedMemberIds(req.user!.id) : null;
       const rows = await db
         .select()
         .from(members)
-        .where(isNull(members.deletedAt))
+        .where(
+          and(
+            isNull(members.deletedAt),
+            scope ? (scope.length ? inArray(members.id, scope) : sql`false`) : undefined
+          )
+        )
         .orderBy(members.name);
 
       const headers = [
