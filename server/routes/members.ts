@@ -10,6 +10,7 @@ import {
 } from "../../shared/validation.js";
 import {
   ADMIN_ROLES,
+  ADMIN_SHELL_ROLES,
   MEMBER_CONTACT_ROLES,
   MEMBER_CREATE_ROLES,
   MEMBER_UPDATE_ROLES,
@@ -23,7 +24,7 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from ".
 
 export const membersRouter = Router();
 
-membersRouter.use(requireAuth);
+membersRouter.use(requireAuth, requireRole(...ADMIN_SHELL_ROLES));
 
 /**
  * Masks a phone number whatever its format: keeps the first three and last

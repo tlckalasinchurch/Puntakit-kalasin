@@ -16,7 +16,7 @@ import {
   groupMemberUpdateSchema,
   groupQuerySchema,
 } from "../../shared/validation.js";
-import { ADMIN_ROLES, GROUP_MANAGE_ANY_ROLES } from "../../shared/roles.js";
+import { ADMIN_ROLES, ADMIN_SHELL_ROLES, GROUP_MANAGE_ANY_ROLES } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { getLedGroupIds } from "../lib/groupAccess.js";
@@ -25,7 +25,7 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from ".
 
 export const groupsRouter = Router();
 
-groupsRouter.use(requireAuth);
+groupsRouter.use(requireAuth, requireRole(...ADMIN_SHELL_ROLES));
 
 type OrgFields = {
   orgLevel: "body" | "care" | null;
