@@ -1,14 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   Camera,
   CheckCircle2,
   Image as ImageIcon,
   ListTodo,
+  Loader2,
   MapPin,
+  Pencil,
   Plus,
   RotateCcw,
   Send,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
@@ -28,12 +31,13 @@ import {
   FilterDisclosure,
 } from "@/components/DesignSystem";
 import { CardGridSkeleton } from "@/components/LoadingStates";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError, type ApiMeta, withRecheckHint } from "@/lib/api";
 import { fetchAllMembers } from "@/lib/fetchAll";
 import type { MissionActivityStatus, MissionActivityType } from "@shared/schema";
-import { CREATE_ROLES } from "@shared/roles";
+import { CREATE_ROLES, DELETE_ROLES, PRIVILEGED_ROLES } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface FeedActivity {
@@ -55,6 +59,22 @@ interface FeedActivity {
 interface GroupOption {
   id: string;
   name: string;
+}
+
+/** `GET /api/activities/:id` — the list query does not carry participants/media. */
+interface ActivityDetail {
+  id: string;
+  type: MissionActivityType;
+  status: MissionActivityStatus;
+  title: string;
+  story: string | null;
+  occurredAt: string;
+  groupId: string | null;
+  placeLabel: string | null;
+  createdById: string | null;
+  createdByName: string | null;
+  participants: { memberId: string; memberName: string }[];
+  media: { id: string; url: string; kind: "image" | "video"; sortOrder: number }[];
 }
 
 interface MemberOption {
@@ -126,6 +146,21 @@ function formatDateTime(iso: string) {
   });
 }
 
+/**
+ * `datetime-local` needs a wall-clock string in the viewer's own zone. The
+ * create form defaults to `new Date().toISOString().slice(0, 16)` (UTC), which
+ * is only correct for someone in UTC — reusing that for a stored timestamp
+ * would silently shift the recorded time, so edits convert properly.
+ */
+function toDateTimeLocal(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return EMPTY_FORM.occurredAt;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
+    date.getHours()
+  )}:${pad(date.getMinutes())}`;
+}
+
 export default function Feed() {
   usePageTitle("ฟีดกิจกรรมพันธกิจ");
   const { user } = useAuth();
@@ -155,7 +190,40 @@ export default function Feed() {
   const [transitioningId, setTransitioningId] = useState<string | null>(null);
   const [followUpActivityId, setFollowUpActivityId] = useState<string | null>(null);
 
+  // Edit/delete ride on the endpoints that already exist: `PUT /api/activities/:id`
+  // (guarded by `canManage`) and `DELETE /api/activities/:id` (guarded by
+  // `requireRole(...DELETE_ROLES)`). The client-side checks below only decide
+  // whether to offer the action — the server decides whether it is allowed.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [editBusyId, setEditBusyId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FeedActivity | null>(null);
+  const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  // Opening an edit starts a request whose response belongs to that one
+  // activity; a late answer from a previously opened card must not overwrite
+  // the form the user is looking at now.
+  const editRequestRef = useRef(0);
+
   const canCreate = user && CREATE_ROLES.includes(user.role);
+
+  /** Mirror of the server's `canManage`, minus the branch the client cannot see:
+   * a group leader's led groups are not in this page's data, so they get no
+   * button (the server still answers 403 if they try). */
+  const canEditActivity = (activity: FeedActivity) =>
+    user !== null &&
+    (PRIVILEGED_ROLES.includes(user.role) || user.id === activity.createdById);
+
+  /** Exactly the server's delete gate — no ownership branch, because the route
+   * has none. */
+  const canDeleteActivity = (activity: FeedActivity) =>
+    user !== null && DELETE_ROLES.includes(user.role);
+
+  /** The row being edited, so a failed detail load can be retried from inside
+   * the dialog instead of forcing the user to close and reopen it. */
+  const editingActivity = editingId ? (items.find((a) => a.id === editingId) ?? null) : null;
 
   const load = async (pageToLoad: number = page) => {
     setIsLoading(true);
@@ -211,12 +279,113 @@ export default function Feed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canCreate]);
 
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditingId(null);
+    setDetailLoading(false);
+    setDetailError(null);
+  };
+
   const openCreate = () => {
     setParticipantQuery("");
     setForm(EMPTY_FORM);
     setFormError(null);
     setTitleError(null);
+    setEditingId(null);
+    setDetailLoading(false);
+    setDetailError(null);
     setFormOpen(true);
+  };
+
+  /**
+   * Opens the same form in edit mode. The list row fills the core fields
+   * immediately so the dialog is never blank, then `GET /api/activities/:id`
+   * brings the participants and media the list query does not carry — without
+   * them a save would look like it had cleared them.
+   *
+   * Everyone who passes the server's `canManage` is in `CREATE_ROLES`, so the
+   * group and member option lists this form needs are already loaded.
+   */
+  const openEdit = async (activity: FeedActivity) => {
+    if (editBusyId || submitting) return;
+    const requestId = ++editRequestRef.current;
+    setParticipantQuery("");
+    setFormError(null);
+    setTitleError(null);
+    setDetailError(null);
+    setEditingId(activity.id);
+    setEditBusyId(activity.id);
+    setForm({
+      ...EMPTY_FORM,
+      type: activity.type,
+      title: activity.title,
+      story: activity.story ?? "",
+      occurredAt: toDateTimeLocal(activity.occurredAt),
+      groupId: activity.groupId ?? "",
+      placeLabel: activity.placeLabel ?? "",
+    });
+    setFormOpen(true);
+    setDetailLoading(true);
+    try {
+      const detail = await api.get<ActivityDetail>(`/api/activities/${activity.id}`);
+      if (editRequestRef.current !== requestId) return;
+      setForm({
+        ...EMPTY_FORM,
+        type: detail.type,
+        title: detail.title,
+        story: detail.story ?? "",
+        occurredAt: toDateTimeLocal(detail.occurredAt),
+        groupId: detail.groupId ?? "",
+        placeLabel: detail.placeLabel ?? "",
+        participantMemberIds: detail.participants.map((p) => p.memberId),
+        media: detail.media.map((m) => ({ url: m.url })),
+      });
+    } catch (err) {
+      if (editRequestRef.current !== requestId) return;
+      // Keep the dialog open with the core fields: the edit is still possible,
+      // and participants/media stay untouched because the save omits them.
+      setDetailError(
+        err instanceof ApiError
+          ? err.message
+          : "โหลดผู้เกี่ยวข้องและรูปภาพไม่สำเร็จ แก้ไขได้เฉพาะข้อมูลหลักเท่านั้น"
+      );
+    } finally {
+      if (editRequestRef.current === requestId) setDetailLoading(false);
+      if (editBusyId === activity.id) setEditBusyId(null);
+    }
+  };
+
+  const askDelete = (activity: FeedActivity) => {
+    setDeleteError(null);
+    setDeleteBusyId(activity.id);
+    setDeleteTarget(activity);
+  };
+
+  const cancelDelete = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteBusyId(null);
+    setDeleteError(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await api.delete(`/api/activities/${deleteTarget.id}`);
+      toast.success("ลบกิจกรรมแล้ว ไม่แสดงในฟีดอีก");
+      setDeleteTarget(null);
+      load();
+    } catch (err) {
+      // The dialog stays open so the failure is read where the action was taken.
+      const message = err instanceof ApiError ? err.message : "ลบกิจกรรมไม่สำเร็จ";
+      setDeleteError(message);
+      toast.error(message);
+    } finally {
+      setDeleting(false);
+      setDeleteBusyId(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -229,18 +398,33 @@ export default function Feed() {
     }
     setSubmitting(true);
     try {
-      await api.post("/api/activities", {
+      const payload = {
         type: form.type,
         title: form.title,
         story: form.story || undefined,
         occurredAt: new Date(form.occurredAt).toISOString(),
         groupId: form.groupId || null,
         placeLabel: form.placeLabel || undefined,
+        // Always sent in full, from the detail that was loaded when the dialog
+        // opened: `PUT /:id` fills an omitted list with `[]` (the schema's
+        // `.default([])` survives `.partial()`), so a save that did not carry
+        // the recorded people and photos would clear them. That is why the
+        // dialog refuses to save while the detail has not loaded — see D53 in
+        // docs/exec-plans/tech-debt-tracker.md.
         participantMemberIds: form.participantMemberIds,
         media: form.media.filter((m) => m.url.trim()).map((m) => ({ url: m.url.trim(), kind: "image" as const })),
-      });
-      toast.success("บันทึกกิจกรรมพันธกิจแล้ว (ฉบับร่าง)");
+      };
+      if (editingId) {
+        // `PUT /:id` never touches `status`: the lifecycle only moves through
+        // `PUT /:id/status` and its transition table, so an edit leaves it be.
+        await api.put(`/api/activities/${editingId}`, payload);
+        toast.success("บันทึกการแก้ไขกิจกรรมแล้ว");
+      } else {
+        await api.post("/api/activities", payload);
+        toast.success("บันทึกกิจกรรมพันธกิจแล้ว (ฉบับร่าง)");
+      }
       setFormOpen(false);
+      setEditingId(null);
       load();
     } catch (err) {
       const message =
@@ -452,6 +636,39 @@ export default function Feed() {
                         </button>
                       </div>
                     )}
+                    {(canEditActivity(activity) || canDeleteActivity(activity)) && (
+                      <div className="mt-2 flex items-center gap-2 border-t border-[var(--color-divider)] pt-3">
+                        {canEditActivity(activity) && (
+                          <button
+                            type="button"
+                            className={ROW_BUTTON_CLASS}
+                            disabled={editBusyId === activity.id}
+                            onClick={() => void openEdit(activity)}
+                          >
+                            {editBusyId === activity.id ? (
+                              <Loader2
+                                size={ICON_SIZE.sm}
+                                aria-hidden="true"
+                                className="animate-spin motion-reduce:animate-none"
+                              />
+                            ) : (
+                              <Pencil size={ICON_SIZE.sm} aria-hidden="true" />
+                            )}
+                            แก้ไข
+                          </button>
+                        )}
+                        {canDeleteActivity(activity) && (
+                          <button
+                            type="button"
+                            className={`${ROW_BUTTON_CLASS} text-[var(--color-error)]`}
+                            disabled={deleteBusyId === activity.id}
+                            onClick={() => askDelete(activity)}
+                          >
+                            <Trash2 size={ICON_SIZE.sm} aria-hidden="true" /> ลบ
+                          </button>
+                        )}
+                      </div>
+                    )}
                     {canAdvance && activity.groupId && (
                       <button
                         type="button"
@@ -483,21 +700,60 @@ export default function Feed() {
 
       <Modal
         open={formOpen}
-        onClose={() => setFormOpen(false)}
-        title="บันทึกกิจกรรมพันธกิจ"
+        onClose={closeForm}
+        title={editingId ? "แก้ไขกิจกรรมพันธกิจ" : "บันทึกกิจกรรมพันธกิจ"}
+        description={
+          editingId
+            ? "แก้ไขรายละเอียดที่บันทึกไว้ สถานะเผยแพร่ไม่เปลี่ยนแปลงจากการแก้ไขนี้"
+            : undefined
+        }
         footer={
           <>
-            <button type="button" className={CANCEL_BUTTON_CLASS} onClick={() => setFormOpen(false)}>
+            <button type="button" className={CANCEL_BUTTON_CLASS} onClick={closeForm}>
               ยกเลิก
             </button>
-            <button type="submit" form="feed-activity-form" className={PRIMARY_BUTTON_CLASS} disabled={submitting}>
-              {submitting ? "กำลังบันทึก…" : "บันทึกเป็นฉบับร่าง"}
+            <button type="submit" form="feed-activity-form" className={PRIMARY_BUTTON_CLASS} disabled={submitting || detailLoading || detailError !== null}>
+              {submitting ? "กำลังบันทึก…" : editingId ? "บันทึกการแก้ไข" : "บันทึกเป็นฉบับร่าง"}
             </button>
           </>
         }
       >
         <form id="feed-activity-form" className="flex flex-col gap-5" onSubmit={handleSubmit}>
           {formError && <FormError>{formError}</FormError>}
+          {detailLoading && (
+            <p
+              role="status"
+              className="type-caption flex items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--color-canvas-soft)] p-3 text-[var(--color-body-muted)]"
+            >
+              <Loader2
+                size={ICON_SIZE.sm}
+                aria-hidden="true"
+                className="animate-spin motion-reduce:animate-none"
+              />
+              กำลังโหลดผู้เกี่ยวข้องและรูปภาพ…
+            </p>
+          )}
+          {detailError && (
+            <div
+              role="alert"
+              className="type-caption flex flex-col gap-2 rounded-[var(--radius-sm)] bg-[var(--color-warning)]/10 p-3 text-[var(--color-ink)] sm:flex-row sm:items-center sm:justify-between"
+            >
+              <span>
+                {detailError} — ยังบันทึกไม่ได้ จนกว่าข้อมูลจะโหลดครวบ
+                เพราะการบันทึกตอนนี้จะทำให้ผู้เกี่ยวข้องและรูปภาพเดิมสูญหาย
+              </span>
+              {editingActivity && (
+                <button
+                  type="button"
+                  onClick={() => void openEdit(editingActivity)}
+                  className="type-caption-strong inline-flex min-h-11 shrink-0 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
+                  disabled={detailLoading}
+                >
+                  ลองอีกครั้ง
+                </button>
+              )}
+            </div>
+          )}
           <Field label="ประเภทกิจกรรม" required>
             {(props) => (
               <select
@@ -670,6 +926,25 @@ export default function Feed() {
           </fieldset>
         </form>
       </Modal>
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title="ลบกิจกรรมพันธกิจ"
+          description={`"${deleteTarget.title}" จะถูกซ่อนจากฟีดและแผนที่ทั้งหมด (ข้อมูลยังคงอยู่ในระบบ)`}
+          confirmLabel="ลบกิจกรรม"
+          busyLabel="กำลังลบ…"
+          details={[
+            `ประเภท: ${TYPE_LABELS[deleteTarget.type]}`,
+            `สถานะ: ${STATUS_LABELS[deleteTarget.status]}`,
+            `เกิดขึ้น: ${formatDateTime(deleteTarget.occurredAt)}`,
+            ...(deleteTarget.createdByName ? [`ผู้บันทึก: ${deleteTarget.createdByName}`] : []),
+          ]}
+          error={deleteError ?? undefined}
+          isSubmitting={deleting}
+          onConfirm={() => void confirmDelete()}
+          onCancel={cancelDelete}
+        />
+      )}
     </AppLayout>
   );
 }

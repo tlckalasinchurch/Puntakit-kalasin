@@ -280,7 +280,7 @@ export default function MemberHome() {
               ขอคำอธิษฐาน
             </span>
             <span className="type-fine block text-[var(--color-body-muted)]">
-              ส่งถึงทีมศิษยาภิบาล
+              บันทึกคำขออธิษฐานของคุณ
             </span>
           </span>
         </button>

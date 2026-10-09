@@ -314,6 +314,153 @@ describe("Mission Activity API — full loop (real PGlite Postgres)", () => {
     });
   });
 
+  describe("PUT /:id — edit authorization, ownership and field contract", () => {
+    it("lets the creator edit core fields without moving the lifecycle status", async () => {
+      const res = await fetch(`${baseUrl}/api/activities/${activityId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Cookie: groupLeaderCookie },
+        body: JSON.stringify({
+          type: "house_mission",
+          title: "เยี่ยมบ้านครอบครัวทดสอบ (แก้ไขหัวข้อ)",
+          story: "เรื่องราวที่แก้ไขแล้ว",
+          occurredAt: new Date().toISOString(),
+          // A caller must not be able to move the lifecycle through this route.
+          status: "archived",
+        }),
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { success: boolean; data: { title: string; status: string } };
+      expect(body.data.title).toBe("เยี่ยมบ้านครอบครัวทดสอบ (แก้ไขหัวข้อ)");
+      // PUT never touches status; only PUT /:id/status does, behind its table.
+      expect(body.data.status).toBe("published");
+
+      const [row] = await db
+        .select()
+        .from(schema.missionActivities)
+        .where(eq(schema.missionActivities.id, activityId));
+      expect(row!.status).toBe("published");
+      expect(row!.title).toBe("เยี่ยมบ้านครอบครัวทดสอบ (แก้ไขหัวข้อ)");
+    });
+
+    /**
+     * D53 (tech-debt tracker, branch master): `PUT` used to fill an omitted
+     * list with `[]` because the schema's `.default([])` survived `.partial()`,
+     * so `replaceParticipantsAndMedia` deleted the recorded people and photos.
+     * Fixed by `missionActivityUpdateSchema` in `shared/validation.ts` — an
+     * omitted list parses to `undefined` and the replacer leaves it alone.
+     * This test locks the fixed behavior; do not weaken it.
+     */
+    it("preserves participants and media when the edit omits them (D53 fixed)", async () => {
+      const res = await fetch(`${baseUrl}/api/activities/${activityId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Cookie: groupLeaderCookie },
+        body: JSON.stringify({ title: "เยี่ยมบ้านครอบครัวทดสอบ (แก้ไขเรื่องราว)" }),
+      });
+      expect(res.status).toBe(200);
+
+      const detail = await fetch(`${baseUrl}/api/activities/${activityId}`, {
+        headers: { Cookie: groupLeaderCookie },
+      });
+      const body = (await detail.json()) as { data: { participants: unknown[]; media: unknown[] } };
+      expect(body.data.participants).toHaveLength(1);
+      expect(body.data.media).toHaveLength(1);
+    });
+
+    // superAdmin, not the creator: on this branch a `group_leader` is
+    // tenant-scoped by `assertMembersInScope` (careScope.ts), so tagging a
+    // member outside their groups answers 403 — the same rule `POST` enforces.
+    it("keeps participants and media when the edit sends them explicitly", async () => {
+      const res = await fetch(`${baseUrl}/api/activities/${activityId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Cookie: superAdminCookie },
+        body: JSON.stringify({
+          title: "เยี่ยมบ้านครอบครัวทดสอบ (แก้ไขพร้อมผู้เกี่ยวข้อง)",
+          participantMemberIds: [memberId],
+          media: [{ url: "https://example.com/photo.jpg", kind: "image" }],
+        }),
+      });
+      expect(res.status).toBe(200);
+
+      const detail = await fetch(`${baseUrl}/api/activities/${activityId}`, {
+        headers: { Cookie: superAdminCookie },
+      });
+      const body = (await detail.json()) as {
+        data: { participants: { memberId: string }[]; media: unknown[] };
+      };
+      expect(body.data.participants).toHaveLength(1);
+      expect(body.data.participants[0].memberId).toBe(memberId);
+      expect(body.data.media).toHaveLength(1);
+    });
+
+    it("rejects an edit from a signed-in role that neither created it nor leads its group", async () => {
+      const res = await fetch(`${baseUrl}/api/activities/${activityId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Cookie: outsiderCookie },
+        body: JSON.stringify({ title: "พยายามแก้ไขของคนอื่น" }),
+      });
+      expect(res.status).toBe(403);
+    });
+
+    it("lets a group leader edit an activity of a group they lead, and blocks one who does not", async () => {
+      const createRes = await fetch(`${baseUrl}/api/activities`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Cookie: superAdminCookie },
+        body: JSON.stringify({
+          type: "bible_study",
+          title: "ศึกษาพระคัมภีร์กลุ่ม B (สร้างโดยผู้ดูแลระบบ)",
+          occurredAt: new Date().toISOString(),
+          groupId: leaderGroupId,
+        }),
+      });
+      expect(createRes.status).toBe(201);
+      const created = (await createRes.json()) as { data: { id: string } };
+
+      const asLeader = await fetch(`${baseUrl}/api/activities/${created.data.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Cookie: leaderOfGroupCookie },
+        body: JSON.stringify({ title: "ศึกษาพระคัมภีร์กลุ่ม B (ผู้นำกลุ่มแก้ไข)" }),
+      });
+      expect(asLeader.status).toBe(200);
+
+      // Same role, different group: ownership is the group they actually lead.
+      const asUnrelatedLeader = await fetch(`${baseUrl}/api/activities/${created.data.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Cookie: groupLeaderCookie },
+        body: JSON.stringify({ title: "กลุ่มที่ตนไม่นำ" }),
+      });
+      expect(asUnrelatedLeader.status).toBe(403);
+    });
+
+    it("returns 404 for an activity that was already soft-deleted", async () => {
+      const createRes = await fetch(`${baseUrl}/api/activities`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Cookie: superAdminCookie },
+        body: JSON.stringify({ type: "other", title: "กิจกรรมที่จะถูกลบ", occurredAt: new Date().toISOString() }),
+      });
+      const created = (await createRes.json()) as { data: { id: string } };
+      const del = await fetch(`${baseUrl}/api/activities/${created.data.id}`, {
+        method: "DELETE",
+        headers: { Cookie: superAdminCookie },
+      });
+      expect(del.status).toBe(200);
+
+      const res = await fetch(`${baseUrl}/api/activities/${created.data.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Cookie: superAdminCookie },
+        body: JSON.stringify({ title: "แก้ไขของที่ถูกลบไปแล้ว" }),
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it("records an audit row for the edit", async () => {
+      const rows = await db
+        .select()
+        .from(schema.auditLogs)
+        .where(eq(schema.auditLogs.entityId, activityId));
+      expect(rows.map((r) => r.action)).toContain("MISSION_ACTIVITY_UPDATED");
+    });
+  });
+
   describe("Soft delete", () => {
     it("rejects delete from a role outside DELETE_ROLES", async () => {
       const res = await fetch(`${baseUrl}/api/activities/${activityId}`, {

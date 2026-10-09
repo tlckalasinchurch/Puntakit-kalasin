@@ -618,7 +618,11 @@ portalRouter.post("/prayer-requests", async (req, res, next) => {
     res.status(201).json({
       success: true,
       data: prayer,
-      message: "ส่งคำขออธิษฐานเรียบร้อยแล้ว ทีมศิษยาภิบาลจะร่วมอธิษฐานเผื่อท่าน",
+      // Wording is deliberately limited to what this route actually does: it
+      // stores the row. There is no staff endpoint, no notification and no page
+      // that hands a request to a team yet (docs/PUNTAKIT_AUDIT_FOLLOWUP_2026-10-05.md
+      // D2), so the message must not claim the team already received it.
+      message: "บันทึกคำขออธิษฐานเรียบร้อยแล้ว — คำขอนี้รอผู้รับผิดชอบตรวจสอบ",
     });
   } catch (err) {
     next(err);

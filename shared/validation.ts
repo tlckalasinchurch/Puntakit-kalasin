@@ -308,6 +308,31 @@ export const missionActivityInputSchema = z.object({
 });
 export type MissionActivityInput = z.infer<typeof missionActivityInputSchema>;
 
+/**
+ * Update shape for `PUT /:id`. Identical to the create shape except the two
+ * child lists have **no `.default([])`**: with `.partial()` alone the inner
+ * default survives, so an edit that omits them parses to `[]` and
+ * `replaceParticipantsAndMedia` deletes the recorded people and photos
+ * (D53). With this schema an omitted list stays `undefined`, which the
+ * replacer treats as "leave it alone".
+ */
+const missionActivityUpdateLists = {
+  participantMemberIds: z.array(z.string().uuid()).max(200).optional(),
+  media: z
+    .array(
+      z.object({
+        url: z.string().trim().url("URL สื่อไม่ถูกต้อง").max(1000),
+        kind: z.enum(MISSION_MEDIA_KINDS).default("image"),
+      })
+    )
+    .max(30)
+    .optional(),
+};
+export const missionActivityUpdateSchema = missionActivityInputSchema
+  .partial()
+  .extend(missionActivityUpdateLists);
+export type MissionActivityUpdate = z.infer<typeof missionActivityUpdateSchema>;
+
 export const missionActivityStatusUpdateSchema = z.object({
   status: z.enum(MISSION_ACTIVITY_STATUSES),
 });

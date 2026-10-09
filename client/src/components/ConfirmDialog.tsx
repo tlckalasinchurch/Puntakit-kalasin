@@ -11,6 +11,13 @@ interface ConfirmDialogProps {
   /** Optional key facts shown above the buttons, one per line. */
   details?: string[];
   isSubmitting?: boolean;
+  /**
+   * Failure text for the confirmed action, shown inside the dialog. Without a
+   * slot for it, a rejected request would only surface as a toast that can be
+   * missed — and the user would be left looking at a still-open dialog with no
+   * explanation of why the action did not happen.
+   */
+  error?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -38,11 +45,20 @@ export function ConfirmDialog({
   tone = "danger",
   details,
   isSubmitting,
+  error,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
   return (
     <Modal open onClose={onCancel} title={title} description={description}>
+      {error && (
+        <p
+          role="alert"
+          className="type-caption mb-3 rounded-[var(--radius-sm)] bg-[var(--color-error)]/10 p-3 text-[var(--color-ink)]"
+        >
+          {error}
+        </p>
+      )}
       {details && details.length > 0 && (
         <ul className="mb-4 space-y-1.5 rounded-[var(--radius-md)] bg-[var(--color-canvas-soft)] p-3 text-sm text-[var(--color-ink)]">
           {details.map((line) => (
