@@ -15,6 +15,7 @@ import {
   missionActivityInputSchema,
   missionActivityQuerySchema,
   missionActivityStatusUpdateSchema,
+  missionActivityUpdateSchema,
 } from "../../shared/validation.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
@@ -377,7 +378,7 @@ activitiesRouter.put("/:id", async (req, res, next) => {
       throw new ForbiddenError("คุณไม่มีสิทธิ์แก้ไขกิจกรรมนี้");
     }
 
-    const parsed = missionActivityInputSchema.partial().safeParse(req.body);
+    const parsed = missionActivityUpdateSchema.safeParse(req.body);
     if (!parsed.success) {
       throw new ValidationError(
         parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง",

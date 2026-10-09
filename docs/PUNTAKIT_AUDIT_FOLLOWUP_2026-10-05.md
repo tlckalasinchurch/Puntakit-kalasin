@@ -110,7 +110,21 @@ D1, D2, D3, D4. Also UJ-07 (church name and phone hard-coded in the sidebar, log
 ### Refactor
 DS-03, DS-05, DS-07 (Terms and Privacy inline styles), DS-09 (four button implementations), DS-10 (dead CSS), DS-11 to DS-20.
 
-## 4. Needs a real environment
+## 5. Follow-up — 2026-10-09 (D2, D3 decided and shipped)
+
+Decisions taken from §2 above, with the "Alternative" option chosen for both.
+
+| ID | Decision | What shipped | Still open |
+|---|---|---|---|
+| D2 | Take the **Alternative**: no staff endpoint, no notification, no `/prayer` page. The copy now states the request is stored and waiting, instead of claiming the team already has it. | `server/routes/portal.ts` success message, `client/src/components/PrayerRequestModal.tsx` (toast, modal header, confidential explanation), `client/src/pages/member/MemberHome.tsx` quick-action subtitle | **D2-a** (which roles are the prayer team), **D2-b** (who reads confidential), **D2-c** (notification), **D2-d** (retention) — all still unanswered, so the receiving side is deliberately not built. `GET /api/me/prayer-requests/my` still has no UI consumer. |
+| D3 | Take the **Alternative**: the Feed UI now offers edit and delete on the endpoints that already exist. No permission was widened: edit follows the server's `canManage`, delete follows `DELETE_ROLES` exactly (the question "may a `published` activity be edited?" is answered **yes**, by the existing route — status itself is untouched by an edit). | `client/src/pages/Feed.tsx` (edit dialog reusing the create form + `ConfirmDialog` for delete), `client/src/components/ConfirmDialog.tsx` (new optional `error` slot) | — |
+
+Found while implementing D3 and recorded as **D53** in `docs/exec-plans/tech-debt-tracker.md`:
+`PUT /api/activities/:id` used to treat an omitted `participantMemberIds`/`media` as `[]`
+and delete the recorded people and photos (D53, now fixed — see R6). The Feed edit dialog
+is safe against it on top (loads `GET /:id` first, refuses to save until the detail arrives).
+
+## 6. Needs a real environment
 
 - Real iOS and Android: keyboard over the submit button, safe-area insets, pinch zoom.
 - Clerk sign-in and sign-out. Demo mode bypasses Clerk.

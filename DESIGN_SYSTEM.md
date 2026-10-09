@@ -1,4 +1,4 @@
-<!-- last_verified: 2026-10-07 -->
+<!-- last_verified: 2026-10-09 -->
 ---
 version: 1
 name: Puntakit Design System
@@ -234,6 +234,7 @@ Chrome ถอยหลัง พื้นผิวขาวยกขึ้นเ
 | `ErrorState` | " | `title` เป็นประโยคไทยที่ผู้ใช้เข้าใจ · ข้อความเทคนิคซ่อนหลัง "รายละเอียดทางเทคนิค" |
 | `StatusChip` | " | `tone` ∈ `success\|warning\|error\|info\|neutral` **และต้องมีข้อความกำกับเสมอ** |
 | `Modal` | " | ให้ `role=dialog`, Escape, focus trap, scroll containment มาแล้ว |
+| `ConfirmDialog` | `components/ConfirmDialog.tsx` | ยืนบน `Modal` · `details` = ข้อเท็จจริงที่ยืนยัน 1 บรรทัด/แถว · `isSubmitting` ปิดปุ่มทั้งสองกัน double submit · `error` = ข้อความเมื่อคำสั่งล้ม (render `role="alert"` ใน dialog) — **การลบล้างข้อมูลต้องมาทางนี้เท่านั้น ห้ามเขียน dialog เฉพาะหน้า** |
 | `Field` | " | ผูก `label`/`hint`/`error` อัตโนมัติ — **ห้ามใช้ placeholder แทน label** |
 | `DataBar`, `InitialsAvatar`, `MetricTile`, `ListPager`, `FilterDisclosure` | " | ใช้ของกลางเท่านี้ |
 
@@ -319,3 +320,5 @@ Chrome ถอยหลัง พื้นผิวขาวยกขึ้นเ
 | — | สีใน Clay เขียนเป็น `hsl()` | เพื่อไม่ให้ชนกับการสแกน hex ของ `design-tokens.test.ts` |
 | — | `--color-on-primary` ในโหมดมืด = `#1d1d1f` (ไม่ใช่ขาว) | ขาวบน `#7faf72` = 2.54:1 ไม่ผ่าน AA — ต้องใช้ `on-primary` ไม่ใช่ `on-dark` |
 | 2026-10-07 | บันทึก deviation 13 รายการจาก UX/UI audit รอบ 3 **โดยไม่ redesign** | audit เป็น source of truth — บทบาทของเอกสารนี้คือ *extract → document → standardize* |
+| 2026-10-09 | `ConfirmDialog` มี prop `error` (แสดง `role="alert"` ขณะอยู่ใน dialog) | เดิม action ล้มแล้วเห็นแค่ toast ที่อาจพลาดไป หรือ dialog ค้างโดยไม่มีคำอธิบาย — ตอนนี้ผิดพลาดต้องถูกอ่าน **ที่จุดที่กระทำ** |
+| 2026-10-09 | ข้อความตอบรับคำขออธิษฐาน เปลี่ยนเป็น "บันทึก…แล้ว รอผู้รับผิดชอบตรวจสอบ" | ระบบยังไม่มี endpoint/notification ฝ่ายทีม (D2 ยังไม่ตัดสิน) — copy ห้ามอ้างว่าทีมได้รับเรื่องแล้ว · ล็อกด้วย `client/src/prayer-request-copy-contract.test.ts` |

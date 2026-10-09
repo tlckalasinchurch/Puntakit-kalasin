@@ -1,4 +1,4 @@
-<!-- last_verified: 2026-10-07 -->
+<!-- last_verified: 2026-10-09 -->
 # Technical Debt Tracker
 
 รายการหนี้ทางเทคนิคที่ **ตรวจสอบแล้ว** ว่ามีอยู่จริงในโค้ด/เอกสาร
@@ -78,6 +78,8 @@
 | D51 | `docs/PUNTAKIT_AGENT_GUIDE.md` อ้าง `server/lib/logger.*` ที่ไม่มีอยู่ และ `AGENTS.md` เคยอ้างตาม | agent หา logger ไม่เจอ | แก้แล้ว (2026-10-07) — บันทึกไว้เป็นบทเรียน | 🟢 P3 |
 | D52 | **5 route modules ไม่มี `.test.ts` คู่ของตัวเอง** — `announcements`, `auth`, `churchProfile`, `events`, `ministries` (มี 21 test files แต่ 19 modules; มีแค่ `validationEnvelope.test.ts` แตะ validation ผิว) — ขัดคำอ้างใน `AGENTS.md` เดิมว่า "19 module แต่ละตัวมี test คู่" | guard/permission/CRUD ของ 5 modules พื้นนี้ไม่มี test ล็อก — regression หลุดได้เงียบ | เพิ่ม test คู่ตาม pattern route+test ที่มีอยู่ (เรียงตามความเสี่ยง: `auth` → `events` → `announcements` → `ministries` → `churchProfile`) | 🟠 P1 |
 
+| D53 | **`PUT /api/activities/:id` เคยล้าง `participantMemberIds`/`media` เมื่อ body ไม่ส่ง field นั้นมา** (ปิดแล้ว 2026-10-09 — ดู R6) — `missionActivityInputSchema.partial()` ยังคง `.default([])` ที่อยู่ข้างใน (`shared/validation.ts`) จึง parse เป็น `[]` แล้ว `replaceParticipantsAndMedia` (`server/routes/activities.ts:170,186`) ถือว่าเป็นคำสั่งลบทั้งชุด | **ข้อมูลสูญหายเงียบ ๆ** — แก้ไขกิจกรรมโดยส่งไม่ครบ จะทำให้ผู้เกี่ยวข้องและรูปภาพของกิจกรรมเดิมหายทั้งแถว (ยืนยันแล้วด้วยเทสต์จริงบน PGlite: `PUT {title}` → participants `[]`, media `[]`) | แก้แล้วด้วย `missionActivityUpdateSchema` (ตัด `.default([])` ออกจาก 2 lists ฝั่งแก้เท่านั้น; `POST` ไม่เปลี่ยน) · UI ของ Feed ยังกันไว้ชั้นที่สอง (ไม่บันทึกจนกว่าข้อมูลครบ) | 🟠 P1 |
+
 ## Resolved
 
 | # | เรื่อง | แก้เมื่อ | หลักฐาน |
@@ -85,3 +87,6 @@
 | R1 | `CLAUDE.md` ชี้ทาง agent ผิดรุ่น (ผูกกับ Claude โดยเฉพาะ) | 2026-10-07 | ลบ `CLAUDE.md` + ย้ายเนื้อหาเป็น `docs/PUNTAKIT_AGENT_GUIDE.md` |
 | R2 | งาน Claude workflow ที่ค้างในเรพ (`.ai/WORKFLOW.md`, opus blueprint, `.ai/workflow/`) | 2026-10-07 | ลบ 4 path — ดู patch `claude-removal.patch` |
 | R3 | ไม่มีเอกสารแกน (`PRD`/`ARCHITECTURE`/`DESIGN_SYSTEM`/`README`) | 2026-10-07 | สร้างครบในการยกระดับ Foundation ครั้งนี้ |
+| R4 | **Feed แก้ไข/ลบกิจกรรมพันธกิจไม่ได้** (UJ-05) — server มี `PUT`/`DELETE /api/activities/:id` อยู่แล้วแต่ UI ไม่มีปุ่มเลย ผิด draft ไม่ถอนออกได้ | 2026-10-09 | `client/src/pages/Feed.tsx` เชื่อม `PUT`/`DELETE` เดิม + `ConfirmDialog` (เลือกตัวเลือก "Alternative" ของ D3 — ไม่ขยายสิทธิ์: แก้ได้ตาม `canManage` ของ server, ลบได้ตาม `DELETE_ROLES` ตรง ๆ) · เทสต์: `server/routes/activities.test.ts` (authorization/ownership/404) + `client/src/feed-edit-delete-contract.test.ts` |
+| R5 | **ข้อความคำขออธิษฐานบอกว่าทีมได้รับเรื่องแล้ว ทั้งที่ไม่มีใครอ่านได้** (UJ-14) — ไม่มี staff endpoint ไม่มีการแจ้งเตือน ไม่มีหน้า `/prayer` | 2026-10-09 | ปิดเฉพาะส่วน copy (ตัวเลือก "Alternative" ของ D2): `server/routes/portal.ts:625` + `PrayerRequestModal.tsx` + `MemberHome.tsx:283` เปลี่ยนเป็น "บันทึกคำขออธิษฐานเรียบร้อยแล้ว — คำขอนี้รอผู้รับผิดชอบตรวจสอบ" · เทสต์ล็อกคำ: `client/src/prayer-request-copy-contract.test.ts` · หน้าทีมรับคำขอยังค้าง ต้องตอบ D2-a/D2-b ก่อน |
+| R6 | ปิด D53 ที่พบระหว่าง implement R4 — `PUT /api/activities/:id` เคยล้าง participants/media เมื่อ body ไม่ส่งมา (`.default([])` รอด `.partial()`) แก้ที่ `shared/validation.ts` ด้วย `missionActivityUpdateSchema` (ตัด default ออกจาก 2 lists ฝั่งแก้เท่านั้น; `POST` ยังใช้ `missionActivityInputSchema` เดิม) · เทสต์ที่เคยล็อกไว้แบบ `it.fails` กลับเป็น `it` แล้ว | — | `server/routes/activities.test.ts` ("preserves participants and media when the edit omits them (D53 fixed)") |

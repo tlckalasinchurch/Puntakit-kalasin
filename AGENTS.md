@@ -1,4 +1,4 @@
-<!-- last_verified: 2026-10-07 -->
+<!-- last_verified: 2026-10-09 -->
 # AGENTS.md
 
 > **ไฟล์นี้คือ control surface สำหรับ coding agent ทุกตัว — อ่านก่อนเริ่มงานใด ๆ**
@@ -167,6 +167,8 @@ React 19 · Vite 7 · **wouter** (ไม่ใช่ Next.js) · Tailwind v4 (CS
 | วงจร session/auth ต้อง sync ไม่วนลูป | `client/src/auth-session-contract.test.ts` |
 | สัญญา role gate | `client/src/role-gate-contract.test.ts` |
 | สัญญารายการสมาชิก | `client/src/members-list-contract.test.ts` |
+| สัญญาแก้ไข/ลบกิจกรรมใน Feed (ต้องใช้ role set จาก `shared/roles.ts`, `ConfirmDialog`, endpoint เดิม, กัน double submit, ไม่อ้างว่าแก้แล้วเปลี่ยนสถานะเผยแพร่) | `client/src/feed-edit-delete-contract.test.ts` |
+| ข้อความคำขออธิษฐานห้ามอ้างว่า "ทีมได้รับเรื่องแล้ว" ตอนที่ยังไม่มี endpoint/notification ฝ่ายทีม (D2) | `client/src/prayer-request-copy-contract.test.ts` |
 | **ทั้งหมด** | `.github/workflows/ci.yml` (Node 24) |
 
 ## 8. Doc update mapping — เปลี่ยนอะไร ต้องแก้เอกสารไหน
@@ -208,7 +210,7 @@ TZ=UTC pnpm install --frozen-lockfile && TZ=UTC pnpm check && TZ=UTC pnpm test &
 ## 10. Definition of Done
 
 - [ ] `pnpm check` ผ่าน (ไม่มี type error)
-- [ ] `pnpm test` ผ่าน **ที่ `TZ=UTC`** (506 tests เป็น baseline ณ 2026-10-07)
+- [ ] `pnpm test` ผ่าน **ที่ `TZ=UTC`** (528 tests เป็น baseline ณ 2026-10-09 — เครื่องที่ไม่มี `pnpm` บน PATH ให้เรียก binary ใน `node_modules` ตรง ๆ และบันทึกคำสั่งที่ใช้)
 - [ ] `pnpm build` ผ่าน
 - [ ] behaviour ที่เปลี่ยนมี test รองรับ และ **test ไม่ถูกลดทอน**
 - [ ] UI ผ่าน `DESIGN_SYSTEM.md` (token เท่านั้น, state ครบ, touch ≥44px, contrast ผ่าน)

@@ -91,8 +91,11 @@ export function PrayerRequestModal({
         isConfidential,
       });
 
+      // Same sentence the server returns: the request is stored and still
+      // waiting. Nothing delivers it to a team yet, so the copy must not
+      // promise that someone already has it.
       toast.success(
-        "ส่งคำขออธิษฐานเรียบร้อยแล้ว ทีมศิษยาภิบาลจะร่วมอธิษฐานเผื่อท่าน"
+        "บันทึกคำขออธิษฐานเรียบร้อยแล้ว — คำขอนี้รอผู้รับผิดชอบตรวจสอบ"
       );
       setTitle("");
       setContent("");
@@ -142,7 +145,7 @@ export function PrayerRequestModal({
         <div className="flex items-center gap-2 text-[var(--color-primary)]">
           <HeartHandshake size={ICON_SIZE.md} aria-hidden="true" />
           <span className="type-caption-strong">
-            แบ่งปันคำอธิษฐานกับทีมศิษยาภิบาล
+            บันทึกคำขออธิษฐานของคุณ
           </span>
         </div>
 
@@ -211,11 +214,10 @@ export function PrayerRequestModal({
                 aria-hidden="true"
                 className="text-[var(--color-warning)]"
               />
-              เป็นความลับเฉพาะศิษยาภิบาล
+              ทำเครื่องหมายว่าลับ
             </span>
             <span className="type-fine mt-0.5 block text-[var(--color-body-muted)]">
-              หากเปิดตัวเลือกนี้ เฉพาะศิษยาภิบาลเท่านั้นที่จะเห็นคำขอนี้
-              (ไม่ประกาศในทีมอธิษฐานทั่วไป)
+              คำขอที่ทำเครื่องหมายลับ จะถูกจำกัดสิทธิ์ผู้เปิดอ่านให้เฉพาะผู้รับผิดชอบคำขออธิษฐานเท่านั้น
             </span>
           </span>
         </label>
