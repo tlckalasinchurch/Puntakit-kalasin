@@ -111,7 +111,12 @@ export function PageHeader({
   return (
     <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
       <div className="min-w-0">
-        <h1 className="type-display-md text-[var(--color-ink)]">{title}</h1>
+        <h1
+          data-pk="page-title"
+          className="type-display-md text-[var(--color-ink)]"
+        >
+          {title}
+        </h1>
         {description && (
           <p className="type-caption mt-2 max-w-2xl text-[var(--color-body-muted)]">
             {description}

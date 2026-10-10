@@ -181,7 +181,7 @@ function MetricTile({
 }
 
 export default function Attendance() {
-  usePageTitle("ระบบเช็คชื่อและการเข้าร่วม");
+  usePageTitle("เช็คชื่อวันนมัสการ");
   const { user } = useAuth();
   // The CSV carries phone numbers; the server limits it to the same roles that see contacts.
   const canExport = hasRole(user?.role, MEMBER_CONTACT_ROLES);
@@ -547,7 +547,7 @@ export default function Attendance() {
   return (
     <AppLayout>
       <PageHeader
-        title="เช็คชื่อนมัสการ"
+        title="เช็คชื่อวันนมัสการ"
         description="บันทึกการเข้าร่วมนมัสการ พันธกิจ สแกน QR และติดตามสมาชิกที่ขาดต่อเนื่อง"
         secondaryActions={
           canExport
@@ -889,7 +889,7 @@ export default function Attendance() {
               ด้วยสมาร์ตโฟนของตนเอง
             </p>
 
-            <div className="mt-4 inline-block rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-3 shadow-[var(--shadow)]">
+            <div className="mt-4 inline-block pk-surface rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-3 shadow-[var(--shadow)]">
               {sessionQrDataUrl ? (
                 <img
                   src={sessionQrDataUrl}

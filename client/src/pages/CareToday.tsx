@@ -65,7 +65,7 @@ function readStored(): string {
 }
 
 export default function CareToday() {
-  usePageTitle("เช็คชื่อพันธกิจวันนี้");
+  usePageTitle("เช็คชื่อกลุ่มดูแล");
   const [bodies, setBodies] = useState<BodyOption[] | null>(null);
   const [bodiesError, setBodiesError] = useState<string | null>(null);
   const [groupId, setGroupId] = useState<string>(() => new URLSearchParams(window.location.search).get("group") ?? readStored());
@@ -166,7 +166,7 @@ export default function CareToday() {
 
   return (
     <AppLayout>
-      <PageHeader title="เช็คชื่อพันธกิจ" description={`${dateLabel} · แตะชื่อคนที่มา แล้วกดบันทึก`} />
+      <PageHeader title="เช็คชื่อกลุ่มดูแล" description={`${dateLabel} · แตะชื่อคนที่มา แล้วกดบันทึก`} />
 
       {bodiesError ? (
         <ErrorState title="โหลดรายชื่อพันธกิจไม่สำเร็จ" description={bodiesError} onRetry={() => void loadBodies()} />
