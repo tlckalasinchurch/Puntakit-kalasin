@@ -3,6 +3,13 @@
 
 > เพิ่มรายการใหม่ไว้บนสุด เฉพาะงานสำคัญที่เสร็จ (ผ่าน `/wrap`) ระบุให้ชัดว่าตรวจอะไร **และอะไรยังไม่ได้ตรวจ** ไม่มี commit ในรายการเหล่านี้ (ยังไม่ commit)
 
+## 2026-10-10 — D59 แก้บน `main` (PR #55) — นโยบายเบอร์โทร/LINE ID ของ roster กลุ่มและ roster เช็คชื่อ
+
+- **ลำดับ:** ตรวจ patch ที่ค้างใน worktree อื่น (สำรองเป็น patch ก่อนลบ worktree) → apply บน `main` → พบช่องว่างเพิ่มที่ patch ไม่ครอบคลุม: `GET /api/care/groups/:id/roster` ให้เบอร์+LINE จริงแก่ `ministry_leader` และหัวหน้ากลุ่มทุกคนในกลุ่ม (ยืนยันด้วย probe ชั่วคราวที่ลบแล้ว) → เจ้าของเลือกแบบ A (2 commit ใน PR เดียว) → merge แบบ rebase 2026-10-10 11:56Z: `3acdbbd` (groups) + `26878b4` (care roster + `contactMasked` + ข้อความใน `CareToday`)
+- **นโยบาย:** admin/staff เห็นจริง · `ministry_leader` ชื่อเห็น เบอร์ปิดบัง · `group_leader` เห็นเฉพาะสมาชิกที่ `assignedLeaderId` ตรง · `leaderEmail` ตาม `PRIVILEGED_ROLES` (ไม่เปลี่ยน) · สิทธิ์เข้า roster ไม่เปลี่ยน
+- **ตรวจจริง:** `tsc` 0 · build 0 · vitest 61 ไฟล์/738 tests · เทสต์ใหม่ล้มบนโค้ดเดิม 13+6 ข้อ · CI `verify` ผ่าน · production `dpl_FJtWvYcrv1Yqoj1fqztgX3BvetpP` READY, `/api/health` `/api/ready` 200, route ที่เปลี่ยนตอบ 401 เมื่อไม่มี session, log ไม่มี error ของแอป · **เทสต์เดิมเปลี่ยนโดยตั้งใจ 4 จุด** (`tenantScope` 2, `attendanceScope` 2) เพราะยืนยันพฤติกรรมเก่าที่ขัดนโยบาย
+- **NOT VERIFIED:** การปิดบังเบอร์เมื่อล็อกอินจริง, หน้า `CareToday` บนจอจริง, และจำนวนสมาชิกที่มี `assigned_leader_id` ใน production (ห้ามเข้า production — ดู tracker D60) · สาขาและ patch สำรองลบแล้ว
+
 ## 2026-10-10 — พอร์ต UI P1+P2 ไป `main` — **merged + deployed (PR #52, `be1c2e2`)**
 
 - **ลำดับเหตุการณ์ (ตรวจจาก `gh`/Vercel MCP):** commit `15a45d3` บนสาขา `port/ui-p1-p2` (จาก `4dd66ab`) → push → PR #52 → CI `verify` ล้ม 4 เทสต์ชุดเดียวกับ baseline ของ `main` (labels/Home.tsx, 12px floor, white-on-primary, Reports 16px; CI รอบ PR: 50 ไฟล์ผ่าน/4 ล้ม, 614 ผ่าน/4 ล้ม ตรงกับในเครื่อง) → preview `dpl_DHjfEsZb7fJ5HGV3ixGGuP55xU7J` READY (`/api/health` 200; ต้อง bypass Vercel Authentication) → เจ้าของสั่ง merge → squash `be1c2e2` 08:25:29Z → production `dpl_C9Tas4jMqj4BsKJh3QbeY45ArsTf` READY, `/api/health` 200 ทั้งผ่านดีพลอยเมนต์และ `puntakit-kalasin.vercel.app`, `/` 200 ให้ CSS `index-BlalgShE.css` (ตัวเดียวกับ preview) · rollback candidate = `dpl_BX7RAmbSbFo95nC9GHkz2rsrVpUi` (`4dd66ab`)
