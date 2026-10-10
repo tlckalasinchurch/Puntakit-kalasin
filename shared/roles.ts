@@ -103,3 +103,25 @@ export const DIRECTORY_ROLES: readonly UserRole[] = [...PRIVILEGED_ROLES, "viewe
 
 /** Roles that see member contact data unmasked (same rule as `maskSensitiveData`). */
 export const CONTACT_VISIBLE_ROLES: readonly UserRole[] = ["super_admin", "admin", "staff"];
+
+/**
+ * Membership lifecycle (`/api/memberships`, `shared/membership.ts`).
+ *
+ * - VIEW: super_admin/admin/staff see every member's status; a `group_leader`
+ *   sees members of the groups they lead AND of the care groups under a body
+ *   they lead (the "หัวหน้าบอดี้" case) — resolved server-side, never by the UI.
+ * - DECIDE: start / convert / renew / not-continue a term. Same roles, but a
+ *   `group_leader` may only act on members of a group they lead DIRECTLY (the
+ *   care leader reviews the trial; a body leader only looks).
+ * - PAYMENT: recording that money was received is limited to the office roles.
+ *
+ * `ministry_leader` is deliberately absent: it is the ministry-team role, not a
+ * place in the body → care hierarchy, and nobody has approved giving it
+ * member-level payment or review data (tracker D60 / DECISIONS D32).
+ */
+export const MEMBERSHIP_VIEW_ROLES: readonly UserRole[] = ["super_admin", "admin", "staff", "group_leader"];
+export const MEMBERSHIP_DECIDE_ROLES: readonly UserRole[] = ["super_admin", "admin", "staff", "group_leader"];
+export const MEMBERSHIP_PAYMENT_ROLES: readonly UserRole[] = ["super_admin", "admin", "staff"];
+
+/** Upload a member photo or a mission photo (`/api/media`). */
+export const MEDIA_UPLOAD_ROLES: readonly UserRole[] = [...MEMBER_UPDATE_ROLES];

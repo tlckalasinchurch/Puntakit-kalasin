@@ -19,6 +19,17 @@ import {
   SERVICE_TYPES,
   USER_ROLES,
 } from "./schema.js";
+import { MEMBERSHIP_TYPES, isDateOnly } from "./membership.js";
+
+/**
+ * Mission-activity media: an absolute http(s) URL, or the app's own private
+ * image path (`/api/media/<uuid>`) returned by `POST /api/media`. Nothing
+ * else relative is accepted, so this cannot be used to point at other routes.
+ */
+export const missionMediaUrl = z.union([
+  z.string().trim().url("URL สื่อไม่ถูกต้อง").max(1000),
+  z.string().trim().regex(/^\/api\/media\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "URL สื่อไม่ถูกต้อง"),
+]);
 
 /**
  * A phone number as people type it: digits plus the separators Thai numbers
@@ -298,7 +309,7 @@ export const missionActivityInputSchema = z.object({
   media: z
     .array(
       z.object({
-        url: z.string().trim().url("URL สื่อไม่ถูกต้อง").max(1000),
+        url: missionMediaUrl,
         kind: z.enum(MISSION_MEDIA_KINDS).default("image"),
       })
     )
@@ -321,7 +332,7 @@ const missionActivityUpdateLists = {
   media: z
     .array(
       z.object({
-        url: z.string().trim().url("URL สื่อไม่ถูกต้อง").max(1000),
+        url: missionMediaUrl,
         kind: z.enum(MISSION_MEDIA_KINDS).default("image"),
       })
     )
@@ -443,3 +454,42 @@ export const pushSubscriptionSchema = z.object({
 });
 export type PushSubscriptionInput = z.infer<typeof pushSubscriptionSchema>;
 
+
+
+// ---- Membership lifecycle (shared/membership.ts) -------------------------
+
+const dateOnlyField = z.string().refine(isDateOnly, "วันที่ต้องอยู่ในรูปแบบ YYYY-MM-DD");
+
+/** Open a member's first (or next, after a closed one) term. */
+export const membershipStartSchema = z.object({
+  type: z.enum(MEMBERSHIP_TYPES),
+  startsOn: dateOnlyField.optional(),
+});
+export type MembershipStartInput = z.infer<typeof membershipStartSchema>;
+
+/**
+ * What the care leader (or an office role) decides about an open term.
+ * - trial (วิสามัญ): `convert_to_ordinary` | `not_continued`
+ * - ordinary (สามัญ): `renew` | `not_continued`
+ * Nothing is decided by the system on a date.
+ */
+export const membershipDecisionSchema = z.object({
+  decision: z.enum(["convert_to_ordinary", "renew", "not_continued"]),
+  note: z.string().trim().max(500).optional().or(z.literal("")),
+});
+export type MembershipDecisionInput = z.infer<typeof membershipDecisionSchema>;
+
+/** Records that money was received. Only an authorised person calls this. */
+export const membershipPaymentSchema = z.object({
+  amountBaht: z.number().int("จำนวนเงินต้องเป็นจำนวนเต็ม").min(1, "จำนวนเงินต้องมากกว่า 0").max(100000),
+  paidOn: dateOnlyField.optional(),
+  note: z.string().trim().max(300).optional().or(z.literal("")),
+});
+export type MembershipPaymentInput = z.infer<typeof membershipPaymentSchema>;
+
+export const membershipOverviewQuerySchema = z.object({
+  filter: z.enum(["attention", "trial", "ordinary", "all"]).default("attention"),
+  careGroupId: z.string().uuid().optional(),
+  search: z.string().trim().max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(500).default(200),
+});

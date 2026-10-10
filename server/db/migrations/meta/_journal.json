@@ -85,6 +85,13 @@
       "when": 1791034369678,
       "tag": "0011_import_merge_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791622900300,
+      "tag": "0012_membership_lifecycle_and_media",
+      "breakpoints": true
     }
   ]
 }
