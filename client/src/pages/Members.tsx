@@ -136,7 +136,11 @@ function MemberCard({
       <button
         type="button"
         onClick={onOpen}
-        className="flex w-full min-h-11 items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 text-left transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+        className={`flex w-full min-h-11 items-start gap-3 pk-surface rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 text-left transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] ${
+          member.status === "ต้องติดตาม"
+            ? "border-l-[3px] border-l-[var(--color-warning)]"
+            : ""
+        }`}
       >
         <InitialsAvatar name={member.name} />
         <span className="min-w-0 flex-1">
@@ -572,9 +576,13 @@ export default function Members() {
         }
       />
 
+      {/* One roster surface from md up: toolbar, count, table and pager share
+          a single card instead of three stacked ones. Below md the toolbar is
+          its own card and each person is a card (no horizontal scrolling). */}
+      <div className="pk-surface-md md:overflow-hidden md:rounded-[var(--radius-lg)] md:border md:border-[var(--color-hairline)] md:bg-[var(--color-canvas)]">
       {/* Filters. The three selects are real labelled controls rather than
           text labels sitting next to unlabelled selects (audit §3.1). */}
-      <div className="mb-4 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 sm:flex-row sm:flex-wrap sm:items-end">
+      <div className="pk-surface-sm mb-4 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 sm:flex-row sm:flex-wrap sm:items-end md:mb-0 md:rounded-none md:border-0 md:border-b md:border-[var(--color-divider)]">
         <div className="min-w-0 flex-1 sm:min-w-60">
           <label
             htmlFor="members-search"
@@ -705,7 +713,7 @@ export default function Members() {
 
       {/* Result summary: one useful sentence instead of four KPI cards. */}
       {!isLoading && !error && (
-        <p className="type-caption mb-3 text-[var(--color-body-muted)]" role="status">
+        <p className="type-caption mb-3 text-[var(--color-body-muted)] md:mb-0 md:border-b md:border-[var(--color-divider)] md:bg-[var(--color-canvas-soft)] md:px-4 md:py-2.5" role="status">
           พบสมาชิก {meta.total.toLocaleString("th-TH")} คน
           {meta.totalPages > 1
             ? ` · หน้า ${meta.page} จาก ${meta.totalPages}`
@@ -758,13 +766,20 @@ export default function Members() {
           </ul>
 
           {/* Desktop (>= md): the full comparison table. */}
-          <div className="hidden overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] md:block">
-            <table className="w-full border-collapse text-left">
+          <div className="hidden overflow-hidden md:block">
+            <table className="w-full table-fixed border-collapse text-left">
+              <colgroup>
+                <col className="w-[32%]" />
+                <col className="w-[18%]" />
+                <col className="w-[22%]" />
+                <col className="w-[14%]" />
+                <col className="w-[140px]" />
+              </colgroup>
               <caption className="sr-only">
                 รายชื่อสมาชิก พร้อมประเภทสมาชิก กลุ่ม และการติดตาม
               </caption>
               <thead>
-                <tr className="border-b border-[var(--color-hairline)] bg-[var(--color-canvas-soft)]">
+                <tr className="border-b border-[var(--color-hairline)] bg-[var(--color-canvas)]">
                   <th scope="col" className="type-fine px-4 py-3 font-semibold text-[var(--color-text-tertiary)]">
                     สมาชิก
                   </th>
@@ -786,15 +801,25 @@ export default function Members() {
                 {members.map((m) => (
                   <tr
                     key={m.id}
-                    className="transition-colors hover:bg-[var(--color-canvas-soft)]"
+                    className="transition-colors hover:bg-[var(--color-accent-soft)]/40"
                   >
-                    <td className="px-4 py-3">
+                    <td
+                      className={`px-4 py-3 ${
+                        m.status === "ต้องติดตาม"
+                          ? "shadow-[inset_3px_0_0_var(--color-warning)]"
+                          : ""
+                      }`}
+                    >
                       <div className="flex items-center gap-3">
-                        <InitialsAvatar name={m.name} size={36} />
+                        <InitialsAvatar name={m.name} size={40} />
                         <div className="min-w-0">
-                          <p className="type-caption-strong truncate text-[var(--color-ink)]">
+                          <button
+                            type="button"
+                            onClick={() => openMember(m)}
+                            className="type-caption-strong block max-w-full truncate rounded-[var(--radius-xs)] text-left text-[var(--color-ink)] hover:text-[var(--color-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                          >
                             {m.name} {m.nickname ? `(${m.nickname})` : ""}
-                          </p>
+                          </button>
                           {(() => {
                             const detail = [
                               m.phone || m.email || m.lineId,
@@ -819,11 +844,11 @@ export default function Members() {
                       </StatusChip>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="type-caption whitespace-nowrap text-[var(--color-text-secondary)]">
+                      <p className="type-caption truncate text-[var(--color-text-secondary)]">
                         {m.careGroup?.name ?? m.group ?? "ยังไม่มีกลุ่ม"}
                       </p>
                       {m.area && (
-                        <p className="type-fine whitespace-nowrap text-[var(--color-text-tertiary)]">
+                        <p className="type-fine truncate text-[var(--color-text-tertiary)]">
                           อ.{m.area}
                         </p>
                       )}
@@ -876,7 +901,7 @@ export default function Members() {
           {meta.totalPages > 1 && (
             <nav
               aria-label="การแบ่งหน้า"
-              className="mt-4 flex flex-col items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 sm:flex-row"
+              className="mt-4 flex flex-col items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 sm:flex-row md:mt-0 md:rounded-none md:border-0 md:border-t md:border-[var(--color-divider)]"
             >
               <span className="type-caption text-[var(--color-body-muted)]">
                 หน้า {meta.page} จาก {meta.totalPages}
@@ -903,6 +928,8 @@ export default function Members() {
           )}
         </>
       )}
+
+      </div>
 
       {/* Create / Edit — a real dialog with Escape, focus handling and a
           scrollable body, so the 12-field form is usable on a phone. */}

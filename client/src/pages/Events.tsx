@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { CalendarDays, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CalendarDays, ChevronDown, Clock, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
@@ -9,7 +9,6 @@ import {
   FormError,
   Modal,
   PageHeader,
-  SectionHeader,
   StatusChip,
   type StatusTone,
 } from "@/components/DesignSystem";
@@ -17,6 +16,7 @@ import { CardGridSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useResource } from "@/hooks/useResource";
+import { daysUntil, groupEvents } from "@/lib/eventGroups";
 import { ApiError, withRecheckHint, fieldErrorsFrom, requiredErrors } from "@/lib/api";
 import { ADMIN_ROLES, hasRole } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -85,6 +85,130 @@ function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("th-TH", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
+const PAST_PREVIEW = 6;
+
+function dateParts(iso: string) {
+  const d = new Date(iso);
+  return {
+    weekday: d.toLocaleDateString("th-TH", { weekday: "short" }),
+    day: d.toLocaleDateString("th-TH", { day: "numeric" }),
+    month: d.toLocaleDateString("th-TH", { month: "short" }),
+    time: d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+  };
+}
+
+function countdownLabel(iso: string) {
+  const days = daysUntil(iso);
+  if (days <= 0) return "วันนี้";
+  if (days === 1) return "พรุ่งนี้";
+  return `อีก ${days.toLocaleString("th-TH")} วัน`;
+}
+
+const ICON_BUTTON_CLASS =
+  "flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+const ICON_DANGER_CLASS =
+  "flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-error-soft)] hover:text-[var(--color-error)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+
+/**
+ * One event as an agenda row. The date is the anchor (a block the eye can scan
+ * down), the title and place come next, and the two icon actions are quiet but
+ * keep their 44px targets. A status chip appears only when it adds
+ * information: on rows that are not simply "scheduled and upcoming".
+ */
+function EventRow({
+  ev,
+  showStatus,
+  canManage,
+  muted,
+  onEdit,
+  onDelete,
+}: {
+  ev: Event;
+  showStatus: boolean;
+  canManage: boolean;
+  muted?: boolean;
+  onEdit: (ev: Event) => void;
+  onDelete: (ev: Event) => void;
+}) {
+  const d = dateParts(ev.eventDate);
+  return (
+    <li className="flex items-start gap-3 p-4 sm:gap-4 sm:p-5">
+      <time
+        dateTime={ev.eventDate}
+        className={`flex w-14 shrink-0 flex-col items-center rounded-[var(--radius-md)] py-2 ${
+          muted
+            ? "bg-[var(--color-canvas-sunken)] text-[var(--color-text-secondary)]"
+            : "bg-[var(--color-accent-soft)] text-[var(--color-primary)]"
+        }`}
+      >
+        <span className="type-fine font-semibold text-[var(--color-ink)]">{d.weekday}</span>
+        <span className="type-display-md">{d.day}</span>
+        <span className="type-fine font-semibold text-[var(--color-ink)]">{d.month}</span>
+      </time>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <h3 className="type-body-strong min-w-0 text-[var(--color-ink)]">{ev.title}</h3>
+          {showStatus && (
+            <StatusChip tone={STATUS_TONE[ev.status]}>{STATUS_LABEL[ev.status]}</StatusChip>
+          )}
+        </div>
+        <p className="type-caption mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[var(--color-text-secondary)]">
+          <span className="inline-flex items-center gap-1.5">
+            <Clock size={ICON_SIZE.xs} aria-hidden="true" className="shrink-0 text-[var(--color-body-muted)]" />
+            {d.time} น.
+          </span>
+          {ev.location && (
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+              <MapPin size={ICON_SIZE.xs} aria-hidden="true" className="shrink-0 text-[var(--color-body-muted)]" />
+              <span className="truncate">{ev.location}</span>
+            </span>
+          )}
+          <span className="text-[var(--color-body-muted)]">{CATEGORY_LABEL[ev.category]}</span>
+        </p>
+        {ev.description && (
+          <p className="type-caption mt-2 line-clamp-2 text-[var(--color-body-muted)]">{ev.description}</p>
+        )}
+      </div>
+
+      {canManage && (
+        <div className="-mr-2 flex shrink-0 items-center">
+          <button type="button" className={ICON_BUTTON_CLASS} onClick={() => onEdit(ev)} aria-label={`แก้ไขกิจกรรม ${ev.title}`}>
+            <Pencil size={ICON_SIZE.sm} aria-hidden="true" />
+          </button>
+          <button type="button" className={ICON_DANGER_CLASS} onClick={() => onDelete(ev)} aria-label={`ลบกิจกรรม ${ev.title}`}>
+            <Trash2 size={ICON_SIZE.sm} aria-hidden="true" />
+          </button>
+        </div>
+      )}
+    </li>
+  );
+}
+
+function EventGroupList({
+  id,
+  title,
+  count,
+  children,
+}: {
+  id: string;
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <section aria-labelledby={id} className="mt-8">
+      <h2 id={id} className="type-body-strong mb-3 flex items-baseline gap-2 text-[var(--color-ink)]">
+        {title}
+        <span className="type-caption font-normal text-[var(--color-body-muted)]">{count.toLocaleString("th-TH")} รายการ</span>
+      </h2>
+      <ul className="pk-surface divide-y divide-[var(--color-divider)] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)]">
+        {children}
+      </ul>
+    </section>
+  );
+}
+
 export default function Events() {
   usePageTitle("การนมัสการ / กิจกรรม");
   const { user } = useAuth();
@@ -100,6 +224,7 @@ export default function Events() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<Event | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showAllPast, setShowAllPast] = useState(false);
 
   const openCreate = () => {
     setEditing(null);
@@ -169,7 +294,10 @@ export default function Events() {
     }
   };
 
-  const countLabel = !isLoading && !error ? `${items.length.toLocaleString("th-TH")} กิจกรรม` : undefined;
+  const groups = useMemo(() => groupEvents(items), [items]);
+  const upcomingCount = (groups.next ? 1 : 0) + groups.upcoming.length;
+  const visiblePast = showAllPast ? groups.past : groups.past.slice(0, PAST_PREVIEW);
+  const nextParts = groups.next ? dateParts(groups.next.eventDate) : null;
 
   return (
     <AppLayout>
@@ -179,8 +307,14 @@ export default function Events() {
         primaryAction={isAdmin ? { label: "เพิ่มกิจกรรม", icon: Plus, onClick: openCreate } : undefined}
       />
 
-      <section aria-labelledby="events-heading">
-        <SectionHeader id="events-heading" title="รายการกิจกรรม" description={countLabel} />
+      {!isLoading && !error && items.length > 0 && (
+        <p className="type-caption mb-5 text-[var(--color-body-muted)]" role="status">
+          ทั้งหมด {items.length.toLocaleString("th-TH")} กิจกรรม · กำลังจะมาถึง {upcomingCount.toLocaleString("th-TH")} · ผ่านมาแล้ว {groups.past.length.toLocaleString("th-TH")} · ยกเลิก {groups.cancelled.length.toLocaleString("th-TH")}
+        </p>
+      )}
+
+      <div>
+        <h2 id="events-heading" className="sr-only">รายการกิจกรรม</h2>
 
         {isLoading ? (
           <CardGridSkeleton count={6} />
@@ -207,56 +341,124 @@ export default function Events() {
             }
           />
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {items.map(ev => (
-              <article
-                key={ev.id}
-                className="flex flex-col justify-between rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5 transition-shadow hover:shadow-[var(--shadow)] motion-reduce:transition-none"
-              >
-                <div>
-                  <div className="mb-2 flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <StatusChip tone="neutral" className="mb-2">
-                        {CATEGORY_LABEL[ev.category]}
-                      </StatusChip>
-                      <h3 className="type-body-strong leading-snug text-[var(--color-ink)]">{ev.title}</h3>
-                    </div>
-                    <StatusChip tone={STATUS_TONE[ev.status]}>{STATUS_LABEL[ev.status]}</StatusChip>
-                  </div>
-                  {ev.description && (
-                    <p className="type-caption mb-4 line-clamp-3 text-[var(--color-text-secondary)]">
-                      {ev.description}
-                    </p>
-                  )}
-                  <div className="mb-4 space-y-1.5">
-                    <p className="type-caption flex items-center gap-2 text-[var(--color-text-secondary)]">
-                      <CalendarDays size={ICON_SIZE.sm} aria-hidden="true" className="shrink-0 text-[var(--color-primary)]" />
-                      <span>{formatDateTime(ev.eventDate)}</span>
-                    </p>
-                    {ev.location && (
-                      <p className="type-caption flex items-center gap-2 text-[var(--color-text-secondary)]">
-                        <MapPin size={ICON_SIZE.sm} aria-hidden="true" className="shrink-0 text-[var(--color-body-muted)]" />
-                        <span className="truncate">{ev.location}</span>
-                      </p>
-                    )}
-                  </div>
+          <>
+            {groups.next && nextParts ? (
+              <article aria-labelledby="event-next-title" className="pk-hero p-6 sm:p-8">
+                <div className="flex items-start justify-between gap-8">
+                <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="type-caption-strong text-[var(--color-primary-on-dark)]">กิจกรรมถัดไป</p>
+                  <p className="type-caption-strong rounded-[var(--radius-pill)] border border-[var(--color-on-dark-hairline)] px-3 py-1 text-[var(--color-on-dark)]">
+                    {countdownLabel(groups.next.eventDate)}
+                  </p>
                 </div>
-
+                <h2 id="event-next-title" className="type-display-md mt-3 text-[var(--color-on-dark)]">
+                  {groups.next.title}
+                </h2>
+                <dl className="type-body mt-4 space-y-2 text-[var(--color-on-dark-muted)]">
+                  <div className="flex items-center gap-2.5">
+                    <dt className="sr-only">วันและเวลา</dt>
+                    <CalendarDays size={ICON_SIZE.sm} aria-hidden="true" className="shrink-0 text-[var(--color-primary-on-dark)]" />
+                    <dd>
+                      <span className="sm:hidden">
+                        {nextParts.weekday} {nextParts.day} {nextParts.month} ·{" "}
+                      </span>
+                      {nextParts.time} น.
+                    </dd>
+                  </div>
+                  {groups.next.location && (
+                    <div className="flex items-center gap-2.5">
+                      <dt className="sr-only">สถานที่</dt>
+                      <MapPin size={ICON_SIZE.sm} aria-hidden="true" className="shrink-0 text-[var(--color-primary-on-dark)]" />
+                      <dd className="min-w-0">{groups.next.location}</dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt className="sr-only">ประเภท</dt>
+                    <dd className="type-caption text-[var(--color-on-dark-muted)]">{CATEGORY_LABEL[groups.next.category]}</dd>
+                  </div>
+                </dl>
+                {groups.next.description && (
+                  <p className="type-caption mt-4 line-clamp-3 max-w-2xl text-[var(--color-on-dark-muted)]">
+                    {groups.next.description}
+                  </p>
+                )}
                 {isAdmin && (
-                  <div className="mt-2 flex items-center gap-2 border-t border-[var(--color-divider)] pt-3">
-                    <button type="button" className={CARD_ACTION_CLASS} onClick={() => openEdit(ev)}>
+                  <div className="mt-5 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(groups.next!)}
+                      className="type-caption-strong inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-on-dark-hairline)] px-4 text-[var(--color-on-dark)] transition-colors hover:bg-[var(--color-on-dark)]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-on-dark)]"
+                    >
                       <Pencil size={ICON_SIZE.sm} aria-hidden="true" /> แก้ไข
                     </button>
-                    <button type="button" className={CARD_DELETE_CLASS} onClick={() => setDeleteTarget(ev)}>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget(groups.next)}
+                      aria-label={`ลบกิจกรรม ${groups.next.title}`}
+                      className="type-caption-strong inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-pill)] px-4 text-[var(--color-on-dark-muted)] transition-colors hover:bg-[var(--color-on-dark)]/10 hover:text-[var(--color-on-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-on-dark)]"
+                    >
                       <Trash2 size={ICON_SIZE.sm} aria-hidden="true" /> ลบ
                     </button>
                   </div>
                 )}
+                </div>
+                <time
+                  dateTime={groups.next.eventDate}
+                  className="hidden shrink-0 flex-col items-center rounded-[var(--radius-md)] border border-[var(--color-on-dark-hairline)] px-7 py-4 text-[var(--color-on-dark)] sm:flex"
+                >
+                  <span className="type-caption-strong text-[var(--color-primary-on-dark)]">{nextParts.weekday}</span>
+                  <span className="type-hero">{nextParts.day}</span>
+                  <span className="type-caption-strong text-[var(--color-on-dark-muted)]">{nextParts.month}</span>
+                </time>
+                </div>
               </article>
-            ))}
-          </div>
+            ) : (
+              <p className="type-caption rounded-[var(--radius-lg)] border border-dashed border-[var(--color-hairline)] px-4 py-5 text-[var(--color-body-muted)]">
+                ยังไม่มีกิจกรรมที่กำลังจะมาถึง
+                {isAdmin ? " — เพิ่มกิจกรรมใหม่ได้จากปุ่ม “เพิ่มกิจกรรม” ด้านบน" : ""}
+              </p>
+            )}
+
+            {groups.upcoming.length > 0 && (
+              <EventGroupList id="events-upcoming" title="หลังจากนั้น" count={groups.upcoming.length}>
+                {groups.upcoming.map(ev => (
+                  <EventRow key={ev.id} ev={ev} showStatus={false} canManage={isAdmin} onEdit={openEdit} onDelete={setDeleteTarget} />
+                ))}
+              </EventGroupList>
+            )}
+
+            {groups.past.length > 0 && (
+              <EventGroupList id="events-past" title="ผ่านมาแล้ว" count={groups.past.length}>
+                {visiblePast.map(ev => (
+                  <EventRow key={ev.id} ev={ev} showStatus muted canManage={isAdmin} onEdit={openEdit} onDelete={setDeleteTarget} />
+                ))}
+                {groups.past.length > PAST_PREVIEW && (
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setShowAllPast(v => !v)}
+                      aria-expanded={showAllPast}
+                      className="type-caption-strong flex min-h-11 w-full items-center justify-center gap-2 text-[var(--color-primary)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-focus)]"
+                    >
+                      {showAllPast ? "แสดงน้อยลง" : `แสดงทั้งหมด ${groups.past.length.toLocaleString("th-TH")} รายการ`}
+                      <ChevronDown size={ICON_SIZE.sm} aria-hidden="true" className={showAllPast ? "rotate-180" : ""} />
+                    </button>
+                  </li>
+                )}
+              </EventGroupList>
+            )}
+
+            {groups.cancelled.length > 0 && (
+              <EventGroupList id="events-cancelled" title="ยกเลิก" count={groups.cancelled.length}>
+                {groups.cancelled.map(ev => (
+                  <EventRow key={ev.id} ev={ev} showStatus muted canManage={isAdmin} onEdit={openEdit} onDelete={setDeleteTarget} />
+                ))}
+              </EventGroupList>
+            )}
+          </>
         )}
-      </section>
+      </div>
 
       <Modal
         open={formOpen}

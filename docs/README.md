@@ -1,4 +1,4 @@
-<!-- last_verified: 2026-10-07 -->
+<!-- last_verified: 2026-10-10 -->
 # Puntakit — Documentation Map
 
 แผนที่เอกสารทั้งหมดของโปรเจกต์ ใช้ไฟล์นี้เป็นจุดเริ่มต้นก่อนอ่านเอกสารใด ๆ
@@ -27,6 +27,7 @@
 |---|---|---|
 | [`PUNTAKIT_FOUNDATION_INVENTORY.md`](./PUNTAKIT_FOUNDATION_INVENTORY.md) | ผล INSPECT + จำแนกเอกสาร + baseline gate | 🟢 canonical |
 | [`PUNTAKIT_MISSION_DOMAIN_PLAN.md`](./PUNTAKIT_MISSION_DOMAIN_PLAN.md) | domain model, schema, mapping, decision log | 🟢 **canonical** |
+| [`PUNTAKIT_MISSION_OPERATING_MODEL_BASELINE.md`](./PUNTAKIT_MISSION_OPERATING_MODEL_BASELINE.md) | **ฐานตรวจที่ยืนยันแล้ว** (2026-10-10): โมเดลการดำเนินงานเป้าหมาย เทียบกับโค้ดจริง · สิทธิ์ที่บังคับจริง · ช่องว่าง · ทะเบียนข้อตัดสินใจ · ลำดับงาน (ไม่ใช่การตัดสินใจ — ข้อเสนออยู่ที่ ADR 002–004) | 🟢 canonical (baseline) |
 | [`PUNTAKIT_IMPLEMENTATION_PLAN.md`](./PUNTAKIT_IMPLEMENTATION_PLAN.md) | แผนเป็น phase + สถานะ | 🟢 canonical (roadmap) |
 | [`PUNTAKIT_PRODUCT_ARCHITECTURE.md`](./PUNTAKIT_PRODUCT_ARCHITECTURE.md) | product hierarchy, IA, security model | 🟡 มีหัวข้อที่ประกาศตัวเองว่าถูกแทนที่ |
 | [`PUNTAKIT_AGENT_GUIDE.md`](./PUNTAKIT_AGENT_GUIDE.md) | engineering guide (จาก `CLAUDE.md` เดิม) | 🟡 **route list ล้าสมัย** (14 vs 19 จริง) |
@@ -34,6 +35,7 @@
 | [`PUNTAKIT_AUDIT_FOLLOWUP_2026-10-05.md`](./PUNTAKIT_AUDIT_FOLLOWUP_2026-10-05.md) | ปิดอะไรแล้ว / ค้างอะไร / ต้องการการตัดสินใจ | 🟡 open items |
 | [`PUNTAKIT_PRODUCT_RESEARCH.md`](./PUNTAKIT_PRODUCT_RESEARCH.md) | research notes | 📚 reference |
 | [`PUNTAKIT_MISSION_SOURCE_AUDIT.md`](./PUNTAKIT_MISSION_SOURCE_AUDIT.md) | audit ไฟล์ต้นทาง (มี sha256) | 📚 evidence |
+| [`adr/adr-002.md`](./adr/adr-002.md) · [`003`](./adr/adr-003.md) · [`004`](./adr/adr-004.md) | โครงสร้างองค์กรสามระดับ + ศัพท์ + ขั้นตอนตรวจ production (002) · สิทธิ์/`team_lead` (003) · รายงานรายสัปดาห์/ตัวชี้วัด (004) | 🟠 **proposed** — ข้อกำหนดเป้าหมาย ยังไม่ผ่านการตรวจรับ ยังไม่ implemented |
 | [`PUNTAKIT_SESSION_REPORT_2026-09-30.md`](./PUNTAKIT_SESSION_REPORT_2026-09-30.md) | maintenance/perf + production incident §9 | 📚 historical |
 | [`PUNTAKIT_UX_UI_AUDIT_2026-10-07.md`](./PUNTAKIT_UX_UI_AUDIT_2026-10-07.md) | **UX/UI audit รอบ 3** | 🟢 **canonical** (audit) |
 | [`PUNTAKIT_UX_UI_AUDIT_2026-10.md`](./PUNTAKIT_UX_UI_AUDIT_2026-10.md) | UX/UI audit รอบ 1 | ⛔ **SUPERSEDED BY รอบ 3** (โดยเฉพาะ §5 mobile) |

@@ -261,7 +261,7 @@ function TileSkeleton({
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-6"
+          className="space-y-3 pk-surface rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-6"
         >
           <Skeleton className="h-4 w-1/3" />
           <Skeleton className="h-5 w-3/4" />
@@ -517,7 +517,7 @@ function OperationalPulse({
   return (
     <section
       aria-labelledby="system-pulse-title"
-      className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 sm:p-5"
+      className="pk-surface rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 sm:p-5"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
@@ -614,18 +614,23 @@ export default function Home() {
 
   return (
     <AppLayout>
-      <div className="home-editorial space-y-12 lg:space-y-20">
+      <div className="home-editorial pk-stagger space-y-12 lg:space-y-20">
         {/* Greeting + search, then the organisation at a glance */}
         <section aria-labelledby="home-title" className="space-y-6">
-          <div>
-            <p className="type-caption-strong text-[var(--color-primary)]">
-              สวัสดี {user?.name ?? "ทีมงานพันธกิจ"}
-            </p>
-            <h1 id="home-title" className="type-display-md mt-2 text-[var(--color-ink)]">
-              ภาพรวมพันธกิจ
-            </h1>
+          <div className="pk-hero space-y-6 p-6 sm:p-8">
+            <div>
+              <p className="type-caption-strong text-[var(--color-primary-on-dark)]">
+                สวัสดี {user?.name ?? "ทีมงานพันธกิจ"}
+              </p>
+              <h1
+                id="home-title"
+                className="type-display-md mt-2 text-[var(--color-on-dark)]"
+              >
+                ภาพรวมพันธกิจ
+              </h1>
+            </div>
+            <GlobalSearch variant="prominent" className="max-w-xl" />
           </div>
-          <GlobalSearch variant="prominent" className="max-w-xl" />
           {user && CREATE_ROLES.includes(user.role) && (
             <Link href="/care" className="clay-btn w-full max-w-xl">
               เช็คชื่อพันธกิจวันนี้
@@ -860,7 +865,7 @@ export default function Home() {
                     {active.slice(0, MINISTRY_PREVIEW_LIMIT).map(ministry => (
                       <li
                         key={ministry.id}
-                        className="flex gap-4 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-6"
+                        className="flex gap-4 pk-surface rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-6"
                       >
                         <IconBadge icon={HeartHandshake} />
                         <div className="min-w-0 flex-1">
@@ -1101,7 +1106,7 @@ export default function Home() {
               <li key={href}>
                 <Link
                   href={href}
-                  className="flex min-h-11 items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 outline-none transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                  className="flex min-h-11 items-center gap-4 pk-surface rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 outline-none transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
                 >
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-canvas-soft)] text-[var(--color-primary)]">
                     <Icon size={ICON_SIZE.lg} aria-hidden="true" />

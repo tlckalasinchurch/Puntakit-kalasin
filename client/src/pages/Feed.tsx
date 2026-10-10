@@ -556,7 +556,7 @@ export default function Feed() {
               return (
                 <article
                   key={activity.id}
-                  className="flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] transition-shadow hover:shadow-[var(--shadow)] motion-reduce:transition-none"
+                  className="flex flex-col overflow-hidden pk-surface rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] transition-shadow hover:shadow-[var(--shadow)] motion-reduce:transition-none"
                 >
                   {activity.thumbnailUrl ? (
                     <img src={activity.thumbnailUrl} alt="" className="h-40 w-full object-cover" />

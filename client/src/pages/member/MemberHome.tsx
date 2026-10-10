@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link } from "wouter";
 import QRCode from "qrcode";
 import {
   Bell,
-  Calendar,
-  CalendarDays,
   CheckCircle2,
-  ChevronRight,
   HeartHandshake,
-  Megaphone,
   QrCode,
   UserCheck,
   UsersRound,
@@ -17,7 +12,13 @@ import { toast } from "sonner";
 import { MemberAppLayout } from "@/components/layout/MemberAppLayout";
 import { PrayerRequestModal } from "@/components/PrayerRequestModal";
 import { ListSkeleton } from "@/components/LoadingStates";
-import { EmptyState, ErrorState } from "@/components/DesignSystem";
+import { ErrorState } from "@/components/DesignSystem";
+import {
+  MemberListEmpty,
+  MemberListItem,
+  MemberListRow,
+  MemberListSection,
+} from "@/components/MemberList";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { subscribeToPushNotifications } from "@/lib/pwa";
@@ -173,6 +174,9 @@ export default function MemberHome() {
   const user = data?.user;
   const announcements = data?.recentAnnouncements ?? [];
   const events = data?.upcomingEvents ?? [];
+  // The API returns events soonest-first, so this is the next one the member can
+  // still register for. It alone gets the filled button; the rest are outlined.
+  const nextRegistrableId = events.find(evt => !evt.isRegistered)?.id;
   const attendanceCount = data?.attendanceStats?.totalAttended ?? 0;
   const greetingName = member?.nickname
     ? `คุณ${member.nickname}`
@@ -193,14 +197,9 @@ export default function MemberHome() {
     <MemberAppLayout>
       {/* Greeting */}
       <header className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="type-lead font-semibold text-[var(--color-ink)]">
-            สวัสดี, {greetingName}
-          </h1>
-          <p className="type-caption mt-1 text-[var(--color-body-muted)]">
-            ขอบคุณที่ร่วมนมัสการกับคริสตจักรชีวิตสุขสันต์กาฬสินธุ์
-          </p>
-        </div>
+        <h1 className="type-lead min-w-0 font-semibold text-[var(--color-ink)]">
+          สวัสดี, {greetingName}
+        </h1>
         <button
           type="button"
           onClick={handleEnablePush}
@@ -213,16 +212,16 @@ export default function MemberHome() {
         </button>
       </header>
 
-      {/* Digital member pass */}
+      {/* Digital member pass — the one focal element of the page. */}
       <section
         aria-labelledby="member-pass-heading"
-        className="rounded-[var(--radius-lg)] bg-gradient-to-br from-[var(--color-dark-surface-2)] to-[var(--color-dark-surface)] p-4 text-[var(--color-on-dark)] shadow-[var(--shadow)]"
+        className="rounded-[var(--radius-lg)] bg-[var(--color-dark-surface)] p-4 text-[var(--color-on-dark)]"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p
               id="member-pass-heading"
-              className="type-fine font-semibold tracking-wide text-[var(--color-primary-on-dark)]"
+              className="type-caption-strong text-[var(--color-primary-on-dark)]"
             >
               บัตรสมาชิกคริสตจักร
             </p>
@@ -230,18 +229,18 @@ export default function MemberHome() {
               {member?.name || user?.name}
             </p>
           </div>
-          <span className="type-fine shrink-0 rounded-[var(--radius-sm)] bg-[var(--color-on-dark)]/15 px-2 py-1 font-semibold">
+          <span className="type-caption-strong shrink-0 rounded-[var(--radius-sm)] bg-[var(--color-on-dark)]/15 px-2 py-1">
             {membershipLabel}
           </span>
         </div>
 
-        <div className="mt-4 flex items-center gap-3">
-          <div className="flex size-[108px] shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-canvas)] p-2">
+        <div className="mt-3 flex flex-col items-center gap-2 text-center">
+          <div className="flex size-[140px] shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-canvas)] p-3">
             {qrDataUrl ? (
               <img
                 src={qrDataUrl}
                 alt="คิวอาร์โค้ดสำหรับเช็คชื่อของสมาชิก"
-                className="block size-[92px]"
+                className="block size-[116px]"
               />
             ) : (
               <QrCode
@@ -253,11 +252,11 @@ export default function MemberHome() {
           </div>
 
           <div className="min-w-0">
-            <p className="type-fine text-[var(--color-on-dark-muted)]">
+            <p className="type-caption text-[var(--color-on-dark-muted)]">
               ยื่นคิวอาร์โค้ดนี้ที่จุดลงทะเบียนหน้าประตูโบสถ์
               เพื่อเช็คชื่อเข้าร่วมนมัสการ
             </p>
-            <p className="type-fine mt-2 flex items-center gap-1.5 font-semibold text-[var(--color-primary-on-dark)]">
+            <p className="type-caption-strong mt-2 flex items-center justify-center gap-2 text-[var(--color-primary-on-dark)]">
               <UserCheck size={ICON_SIZE.sm} aria-hidden="true" />
               <span>เข้าโบสถ์แล้ว {attendanceCount} ครั้ง</span>
             </p>
@@ -265,226 +264,110 @@ export default function MemberHome() {
         </div>
       </section>
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <button
-          type="button"
-          onClick={() => setPrayerModalOpen(true)}
-          className="flex min-h-[44px] items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-3 text-left transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none"
-        >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-accent-soft)] text-[var(--color-primary)]">
-            <HeartHandshake size={ICON_SIZE.lg} aria-hidden="true" />
-          </span>
-          <span className="min-w-0">
-            <span className="type-caption-strong block text-[var(--color-ink)]">
-              ขอคำอธิษฐาน
-            </span>
-            <span className="type-fine block text-[var(--color-body-muted)]">
-              บันทึกคำขออธิษฐานของคุณ
-            </span>
-          </span>
-        </button>
+      {/* Upcoming events — time-bound and actionable, so they sit directly
+          under the pass: on a 360×740 screen the first event is then visible
+          without scrolling. */}
+      <MemberListSection
+        id="member-events-heading"
+        title="กิจกรรมที่กำลังจะมาถึง"
+        action={
+          events.length > 0
+            ? { label: "ดูทั้งหมด", href: "/app/events" }
+            : undefined
+        }
+      >
+        {events.length > 0 ? (
+          events.map(evt => (
+            <MemberListItem key={evt.id}>
+              <h3 className="type-body text-[var(--color-ink)]">
+                {evt.title}
+              </h3>
+              <p className="type-caption mt-1 text-[var(--color-body-muted)]">
+                {new Date(evt.eventDate).toLocaleDateString("th-TH", {
+                  dateStyle: "long",
+                })}
+                {evt.location ? ` • ${evt.location}` : ""}
+              </p>
+              <button
+                type="button"
+                onClick={() =>
+                  handleRegisterEvent(evt.id, Boolean(evt.isRegistered))
+                }
+                className={`type-caption-strong mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none ${
+                  evt.isRegistered
+                    ? "border border-[var(--color-error)] bg-[var(--color-canvas)] text-[var(--color-error)] hover:bg-[var(--color-canvas-soft)]"
+                    : evt.id === nextRegistrableId
+                      ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-focus)]"
+                      : "border border-[var(--color-primary)] bg-[var(--color-canvas)] text-[var(--color-primary)] hover:bg-[var(--color-accent-soft)]"
+                }`}
+              >
+                {evt.isRegistered && (
+                  <CheckCircle2 size={ICON_SIZE.sm} aria-hidden="true" />
+                )}
+                <span>
+                  {evt.isRegistered
+                    ? "ลงทะเบียนแล้ว • ยกเลิก"
+                    : "ลงทะเบียนเข้าร่วม"}
+                </span>
+              </button>
+            </MemberListItem>
+          ))
+        ) : (
+          <MemberListEmpty>ยังไม่มีกิจกรรมที่เปิดรับลงทะเบียน</MemberListEmpty>
+        )}
+      </MemberListSection>
 
-        <Link
-          href="/app/group"
-          className="flex min-h-[44px] items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-3 transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none"
-        >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-accent-soft)] text-[var(--color-primary)]">
-            <UsersRound size={ICON_SIZE.lg} aria-hidden="true" />
-          </span>
-          <span className="min-w-0">
-            <span className="type-caption-strong block text-[var(--color-ink)]">
-              พันธกิจของฉัน
-            </span>
-            <span className="type-fine block text-[var(--color-body-muted)]">
-              นัดพบและเพื่อนในกลุ่ม
-            </span>
-          </span>
-        </Link>
-      </div>
-
-      {/* My care group, or an actionable empty state */}
-      {data?.careGroup ? (
-        <Link
-          href="/app/group"
-          className="flex min-h-[44px] items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none"
-        >
-          <span className="min-w-0">
-            <span className="type-fine block font-semibold text-[var(--color-primary)]">
-              พันธกิจประจำตัว
-            </span>
-            <span className="type-body-strong block truncate text-[var(--color-ink)]">
-              {data.careGroup.name}
-            </span>
-            <span className="type-fine block text-[var(--color-body-muted)]">
-              {careGroupSchedule || "ยังไม่ระบุวันนัดหมาย"}
-            </span>
-          </span>
-          <ChevronRight
-            size={ICON_SIZE.md}
-            aria-hidden="true"
-            className="shrink-0 text-[var(--color-body-muted)]"
+      {/* Mine: care group + prayer request */}
+      <MemberListSection id="member-mine-heading" title="ของฉัน">
+        {data?.careGroup ? (
+          <MemberListRow
+            icon={UsersRound}
+            eyebrow="พันธกิจของฉัน"
+            title={data.careGroup.name}
+            subtitle={careGroupSchedule || "ยังไม่ระบุวันนัดหมาย"}
+            href="/app/group"
           />
-        </Link>
-      ) : (
-        <EmptyState
-          icon={UsersRound}
-          title="คุณยังไม่มีพันธกิจ"
-          description="เมื่อคุณเข้าร่วมพันธกิจ วันนัดหมายและผู้นำกลุ่มจะแสดงไว้ที่นี่"
-          action={{
-            label: "ติดต่อฝ่ายต้อนรับคริสตจักร",
-            href: "tel:043811800",
-          }}
+        ) : (
+          <MemberListRow
+            icon={UsersRound}
+            title="ยังไม่ได้เข้าร่วมพันธกิจ"
+            subtitle="ติดต่อฝ่ายต้อนรับคริสตจักร"
+            href="tel:043811800"
+          />
+        )}
+        <MemberListRow
+          icon={HeartHandshake}
+          title="ขอคำอธิษฐาน"
+          subtitle="บันทึกคำขออธิษฐานของคุณ"
+          onClick={() => setPrayerModalOpen(true)}
         />
-      )}
+      </MemberListSection>
 
       {/* Announcements */}
-      <section
-        aria-labelledby="member-announcements-heading"
-        className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4"
+      <MemberListSection
+        id="member-announcements-heading"
+        title="ประกาศจากคริสตจักร"
+        action={
+          announcements.length > 0
+            ? { label: "ดูทั้งหมด", href: "/app/events" }
+            : undefined
+        }
       >
-        <div className="flex items-center justify-between gap-2">
-          <h2
-            id="member-announcements-heading"
-            className="type-body-strong flex min-w-0 items-center gap-2 text-[var(--color-ink)]"
-          >
-            <Megaphone
-              size={ICON_SIZE.sm}
-              aria-hidden="true"
-              className="shrink-0 text-[var(--color-primary)]"
-            />
-            <span className="truncate">ประกาศจากคริสตจักร</span>
-          </h2>
-          {announcements.length > 0 && (
-            <Link
-              href="/app/events"
-              className="type-caption-strong inline-flex min-h-11 shrink-0 items-center rounded-[var(--radius-sm)] px-2 text-[var(--color-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-            >
-              ดูทั้งหมด
-            </Link>
-          )}
-        </div>
-
         {announcements.length > 0 ? (
-          <ul className="mt-3 flex flex-col gap-2">
-            {announcements.map(ann => (
-              <li
-                key={ann.id}
-                className="rounded-[var(--radius-md)] border border-[var(--color-divider)] bg-[var(--color-canvas-soft)] p-3"
-              >
-                <h3 className="type-caption-strong text-[var(--color-ink)]">
-                  {ann.title}
-                </h3>
-                <p className="type-fine mt-1 line-clamp-2 text-[var(--color-body-muted)]">
-                  {ann.content}
-                </p>
-              </li>
-            ))}
-          </ul>
+          announcements.map(ann => (
+            <MemberListItem key={ann.id}>
+              <h3 className="type-body text-[var(--color-ink)]">
+                {ann.title}
+              </h3>
+              <p className="type-caption mt-1 line-clamp-2 text-[var(--color-body-muted)]">
+                {ann.content}
+              </p>
+            </MemberListItem>
+          ))
         ) : (
-          <div className="mt-2">
-            <EmptyState
-              inset
-              icon={Megaphone}
-              title="ยังไม่มีประกาศใหม่"
-              description="เมื่อคริสตจักรมีประกาศข่าวสาร จะแสดงไว้ที่นี่"
-              action={{
-                label: "ดูกิจกรรมและประกาศทั้งหมด",
-                href: "/app/events",
-              }}
-            />
-          </div>
+          <MemberListEmpty>ยังไม่มีประกาศใหม่</MemberListEmpty>
         )}
-      </section>
-
-      {/* Upcoming events */}
-      <section
-        aria-labelledby="member-events-heading"
-        className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4"
-      >
-        <div className="flex items-center justify-between gap-2">
-          <h2
-            id="member-events-heading"
-            className="type-body-strong flex min-w-0 items-center gap-2 text-[var(--color-ink)]"
-          >
-            <Calendar
-              size={ICON_SIZE.sm}
-              aria-hidden="true"
-              className="shrink-0 text-[var(--color-primary)]"
-            />
-            <span className="truncate">กิจกรรมที่กำลังจะมาถึง</span>
-          </h2>
-          {events.length > 0 && (
-            <Link
-              href="/app/events"
-              className="type-caption-strong inline-flex min-h-11 shrink-0 items-center rounded-[var(--radius-sm)] px-2 text-[var(--color-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-            >
-              ดูทั้งหมด
-            </Link>
-          )}
-        </div>
-
-        {events.length > 0 ? (
-          <ul className="mt-3 flex flex-col gap-2.5">
-            {events.map(evt => (
-              <li
-                key={evt.id}
-                className="rounded-[var(--radius-md)] border border-[var(--color-divider)] bg-[var(--color-canvas-soft)] p-3"
-              >
-                <h3 className="type-caption-strong text-[var(--color-ink)]">
-                  {evt.title}
-                </h3>
-                <p className="type-fine mt-1 flex items-center gap-1.5 text-[var(--color-body-muted)]">
-                  <CalendarDays
-                    size={ICON_SIZE.xs}
-                    aria-hidden="true"
-                    className="shrink-0"
-                  />
-                  <span>
-                    {new Date(evt.eventDate).toLocaleDateString("th-TH", {
-                      dateStyle: "long",
-                    })}
-                    {evt.location ? ` • ${evt.location}` : ""}
-                  </span>
-                </p>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleRegisterEvent(evt.id, Boolean(evt.isRegistered))
-                  }
-                  className={`type-caption-strong mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none ${
-                    evt.isRegistered
-                      ? "border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-error)] hover:bg-[var(--color-canvas-soft)]"
-                      : "bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-focus)]"
-                  }`}
-                >
-                  {evt.isRegistered && (
-                    <CheckCircle2 size={ICON_SIZE.sm} aria-hidden="true" />
-                  )}
-                  <span>
-                    {evt.isRegistered
-                      ? "ลงทะเบียนแล้ว • ยกเลิก"
-                      : "ลงทะเบียนเข้าร่วม"}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="mt-2">
-            <EmptyState
-              inset
-              icon={CalendarDays}
-              title="ยังไม่มีกิจกรรมที่เปิดรับลงทะเบียน"
-              description="เมื่อคริสตจักรเปิดรับลงทะเบียนกิจกรรม จะแสดงไว้ที่นี่"
-              action={{
-                label: "ดูประกาศและกิจกรรมทั้งหมด",
-                href: "/app/events",
-              }}
-            />
-          </div>
-        )}
-      </section>
+      </MemberListSection>
 
       {/* Prayer request modal */}
       <PrayerRequestModal

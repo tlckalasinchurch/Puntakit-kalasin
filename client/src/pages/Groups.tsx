@@ -39,6 +39,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { api, ApiError, withRecheckHint } from "@/lib/api";
 import { fetchAllMembers } from "@/lib/fetchAll";
 import { parseCareGroupDescription } from "@shared/orgView";
+import { sectionGroups, type BodySection } from "@/lib/groupSections";
 import { MemberPicker } from "@/components/MemberPicker";
 import { useLocation, useSearch } from "wouter";
 import type {
@@ -676,6 +677,264 @@ export default function Groups() {
     searchPageSafe * MEMBERS_PER_PAGE
   );
 
+  const { sections, unparentedCare, others } = sectionGroups(visibleGroups, bodies);
+  const boardBuckets =
+    sections.length + (unparentedCare.length > 0 ? 1 : 0) + (others.length > 0 ? 1 : 0);
+
+  const renderGroupCard = (grp: GroupItem, inSection: boolean) => {
+    const Heading = inSection ? "h3" : "h2";
+            const statusCfg = STATUS_LABELS[grp.status] ?? STATUS_LABELS.active;
+            const privacyCfg = PRIVACY_LABELS[grp.privacy] ?? PRIVACY_LABELS.public;
+            const leaderLabel = grp.orgLevel === "body" ? "หนบ." : grp.orgLevel === "care" ? "หนค." : "ผู้นำ";
+            const leaderText =
+              grp.leaderMemberName ||
+              (grp.orgLevel === "care" ? parseCareGroupDescription(grp.description).careLeaderName : null) ||
+              grp.leaderName ||
+              null;
+            const canEditThis = canEditGroup(grp);
+            const schedule = [grp.meetingDay, grp.meetingTime]
+              .filter(Boolean)
+              .join(" · ");
+
+            const showCategoryChip = !(
+              grp.orgLevel &&
+              (grp.category === "cell" || grp.category === "general")
+            );
+            // In a body section the heading already says where the group sits,
+            // so a row of chips is only worth its height when it has a chip.
+            const showTopRow = !inSection || showCategoryChip;
+
+            return (
+              <li
+                key={grp.id}
+                className="flex flex-col gap-3 pk-surface rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5"
+              >
+                {showTopRow && (
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {grp.orgLevel && !inSection && (
+                      <StatusChip tone={grp.orgLevel === "body" ? "success" : "info"}>
+                        {ORG_LEVEL_LABELS[grp.orgLevel]}
+                      </StatusChip>
+                    )}
+                    {showCategoryChip && (
+                      <StatusChip tone={CATEGORY_TONES[grp.category] ?? "neutral"}>
+                        {CATEGORY_LABELS[grp.category] ?? grp.category}
+                      </StatusChip>
+                    )}
+                  </div>
+                  <StatusChip tone={statusCfg.tone}>{statusCfg.label}</StatusChip>
+                </div>
+                )}
+
+                <div className="min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <Heading className="type-body-strong min-w-0 text-[var(--color-ink)]">
+                      {grp.name}
+                    </Heading>
+                    {!showTopRow && (
+                      <StatusChip tone={statusCfg.tone} className="shrink-0">
+                        {statusCfg.label}
+                      </StatusChip>
+                    )}
+                  </div>
+                  {!inSection && grp.parentGroupId && bodyNameById.get(grp.parentGroupId) && (
+                    <p className="type-caption mt-1 text-[var(--color-body-muted)]">
+                      {bodyNameById.get(grp.parentGroupId)}
+                    </p>
+                  )}
+                  {grp.area && (
+                    <p className="type-caption mt-1 flex items-center gap-1.5 text-[var(--color-body-muted)]">
+                      <MapPin size={ICON_SIZE.xs} aria-hidden="true" />
+                      {grp.area}
+                    </p>
+                  )}
+                  {!grp.orgLevel && grp.description && (
+                    <p className="type-caption mt-2 line-clamp-3 text-[var(--color-text-secondary)]">
+                      {grp.description}
+                    </p>
+                  )}
+                </div>
+
+                <dl className="type-caption space-y-1.5 text-[var(--color-text-secondary)]">
+                  {schedule && (
+                    <div className="flex items-start gap-2">
+                      <dt className="sr-only">เวลานัดพบ</dt>
+                      <Clock
+                        size={ICON_SIZE.sm}
+                        aria-hidden="true"
+                        className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
+                      />
+                      <dd className="font-semibold text-[var(--color-ink)]">{schedule}</dd>
+                    </div>
+                  )}
+                  {grp.meetingLocation && (
+                    <div className="flex items-start gap-2">
+                      <dt className="sr-only">สถานที่นัดพบ</dt>
+                      <MapPin
+                        size={ICON_SIZE.sm}
+                        aria-hidden="true"
+                        className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
+                      />
+                      <dd className="min-w-0 break-words">
+                        {grp.meetingLocation}
+                        {grp.privacy !== "public" && (
+                          <Lock
+                            size={ICON_SIZE.xs}
+                            aria-hidden="true"
+                            className="ml-1.5 inline text-[var(--color-text-quaternary)]"
+                          />
+                        )}
+                      </dd>
+                    </div>
+                  )}
+                  <div className="flex items-start gap-2">
+                    <dt className="sr-only">ผู้รับผิดชอบ</dt>
+                    <Users
+                      size={ICON_SIZE.sm}
+                      aria-hidden="true"
+                      className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
+                    />
+                    <dd>
+                      {leaderLabel} {leaderText ?? <span className="text-[var(--color-body-muted)]">ยังไม่ระบุ</span>}
+                    </dd>
+                  </div>
+                  {grp.privacy !== "public" && (
+                    <div className="flex items-start gap-2">
+                      <dt className="sr-only">การเปิดเผยข้อมูล</dt>
+                      <Lock
+                        size={ICON_SIZE.sm}
+                        aria-hidden="true"
+                        className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
+                      />
+                      <dd>{privacyCfg.label}</dd>
+                    </div>
+                  )}
+                </dl>
+
+                {/* One primary action, then one overflow menu. */}
+                <div className="mt-auto flex items-center gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => openMembersModal(grp)}
+                    className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                  >
+                    <span className="whitespace-nowrap">สมาชิก {grp.memberCount} คน</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/attendance?groupId=${grp.id}`)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                  >
+                    <UserCheck size={ICON_SIZE.sm} aria-hidden="true" className="shrink-0" />
+                    <span className="whitespace-nowrap">เช็คชื่อ</span>
+                  </button>
+                  {(canEditThis || isAdmin) && (
+                    <RowMenu label={`ตัวเลือกเพิ่มเติมของกลุ่ม ${grp.name}`}>
+                      {close => (
+                        <>
+                          {canEditThis && (
+                            <MenuItem
+                              icon={Pencil}
+                              label="แก้ไขข้อมูลกลุ่ม"
+                              onSelect={() => {
+                                close();
+                                openEditModal(grp);
+                              }}
+                            />
+                          )}
+                          {isAdmin && (
+                            <MenuItem
+                              icon={Trash2}
+                              label="ลบกลุ่ม"
+                              tone="danger"
+                              onSelect={() => {
+                                close();
+                                setDeleteTarget(grp);
+                              }}
+                            />
+                          )}
+                        </>
+                      )}
+                    </RowMenu>
+                  )}
+                </div>
+              </li>
+            );
+  };
+
+  const renderBodyHeader = (sec: BodySection<GroupItem>) => {
+    const item = sec.bodyItem;
+    const leaderText = item ? item.leaderMemberName || item.leaderName : null;
+    const statusCfg = item ? STATUS_LABELS[item.status] ?? STATUS_LABELS.active : null;
+    const canEditThis = item ? canEditGroup(item) : false;
+    return (
+      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-[var(--color-hairline)] pb-3">
+        <span
+          aria-hidden="true"
+          className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-accent-soft)] text-[var(--color-primary)]"
+        >
+          <UsersRound size={ICON_SIZE.md} />
+        </span>
+        <div className="min-w-0 flex-1 basis-40">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 id={`body-${sec.body.id}`} className="type-body-strong text-[var(--color-ink)]">
+              {sec.body.name}
+            </h2>
+            <StatusChip tone="success">บอดี้</StatusChip>
+            {item && statusCfg && item.status !== "active" && (
+              <StatusChip tone={statusCfg.tone}>{statusCfg.label}</StatusChip>
+            )}
+          </div>
+          <p className="type-caption mt-0.5 text-[var(--color-body-muted)]">
+            {sec.children.length.toLocaleString("th-TH")} พันธกิจ
+            {leaderText ? ` · หนบ. ${leaderText}` : ""}
+          </p>
+        </div>
+        {item && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => openMembersModal(item)}
+              className="type-caption-strong inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+            >
+              <span className="whitespace-nowrap">สมาชิก {item.memberCount} คน</span>
+            </button>
+            {(canEditThis || isAdmin) && (
+              <RowMenu label={`ตัวเลือกเพิ่มเติมของบอดี้ ${item.name}`}>
+                {close => (
+                  <>
+                    {canEditThis && (
+                      <MenuItem
+                        icon={Pencil}
+                        label="แก้ไขข้อมูลกลุ่ม"
+                        onSelect={() => {
+                          close();
+                          openEditModal(item);
+                        }}
+                      />
+                    )}
+                    {isAdmin && (
+                      <MenuItem
+                        icon={Trash2}
+                        label="ลบกลุ่ม"
+                        tone="danger"
+                        onSelect={() => {
+                          close();
+                          setDeleteTarget(item);
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+              </RowMenu>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <AppLayout>
       <PageHeader
@@ -697,7 +956,7 @@ export default function Groups() {
         </p>
       )}
 
-      <div className="mb-4 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 sm:flex-row sm:flex-wrap sm:items-end">
+      <div className="mb-4 flex flex-col gap-3 pk-surface rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="min-w-0 flex-1 sm:min-w-60">
           <label
             htmlFor="groups-search"
@@ -852,171 +1111,64 @@ export default function Groups() {
           />
         )
       ) : (
-        <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {visibleGroups.map((grp) => {
-            const statusCfg = STATUS_LABELS[grp.status] ?? STATUS_LABELS.active;
-            const privacyCfg = PRIVACY_LABELS[grp.privacy] ?? PRIVACY_LABELS.public;
-            const leaderLabel = grp.orgLevel === "body" ? "หนบ." : grp.orgLevel === "care" ? "หนค." : "ผู้นำ";
-            const leaderText =
-              grp.leaderMemberName ||
-              (grp.orgLevel === "care" ? parseCareGroupDescription(grp.description).careLeaderName : null) ||
-              grp.leaderName ||
-              null;
-            const canEditThis = canEditGroup(grp);
-            const schedule = [grp.meetingDay, grp.meetingTime]
-              .filter(Boolean)
-              .join(" · ");
+        <div className="space-y-10">
+          {sections.map(sec => (
+            <section key={sec.body.id} aria-labelledby={`body-${sec.body.id}`}>
+              {renderBodyHeader(sec)}
+              {sec.children.length > 0 ? (
+                <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {sec.children.map(grp => renderGroupCard(grp, true))}
+                </ul>
+              ) : (
+                <p className="type-caption rounded-[var(--radius-lg)] border border-dashed border-[var(--color-hairline)] px-4 py-4 text-[var(--color-body-muted)]">
+                  ไม่มีพันธกิจภายใต้บอดี้นี้ที่ตรงกับตัวกรองปัจจุบัน
+                </p>
+              )}
+            </section>
+          ))}
 
-            return (
-              <li
-                key={grp.id}
-                className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5"
+          {unparentedCare.length > 0 && (
+            <section aria-labelledby="groups-unparented">
+              <h2
+                id="groups-unparented"
+                className={
+                  boardBuckets > 1
+                    ? "type-body-strong mb-3 flex items-baseline gap-2 text-[var(--color-ink)]"
+                    : "sr-only"
+                }
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {grp.orgLevel && (
-                      <StatusChip tone={grp.orgLevel === "body" ? "success" : "info"}>
-                        {ORG_LEVEL_LABELS[grp.orgLevel]}
-                      </StatusChip>
-                    )}
-                    {!(grp.orgLevel && (grp.category === "cell" || grp.category === "general")) && (
-                      <StatusChip tone={CATEGORY_TONES[grp.category] ?? "neutral"}>
-                        {CATEGORY_LABELS[grp.category] ?? grp.category}
-                      </StatusChip>
-                    )}
-                  </div>
-                  <StatusChip tone={statusCfg.tone}>{statusCfg.label}</StatusChip>
-                </div>
+                พันธกิจที่ยังไม่สังกัดบอดี้
+                <span className="type-caption font-normal text-[var(--color-body-muted)]">
+                  {unparentedCare.length.toLocaleString("th-TH")} กลุ่ม
+                </span>
+              </h2>
+              <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {unparentedCare.map(grp => renderGroupCard(grp, false))}
+              </ul>
+            </section>
+          )}
 
-                <div className="min-w-0">
-                  <h2 className="type-body-strong text-[var(--color-ink)]">
-                    {grp.name}
-                  </h2>
-                  {grp.parentGroupId && bodyNameById.get(grp.parentGroupId) && (
-                    <p className="type-caption mt-1 text-[var(--color-body-muted)]">
-                      {bodyNameById.get(grp.parentGroupId)}
-                    </p>
-                  )}
-                  {grp.area && (
-                    <p className="type-caption mt-1 flex items-center gap-1.5 text-[var(--color-body-muted)]">
-                      <MapPin size={ICON_SIZE.xs} aria-hidden="true" />
-                      {grp.area}
-                    </p>
-                  )}
-                  {!grp.orgLevel && grp.description && (
-                    <p className="type-caption mt-2 line-clamp-3 text-[var(--color-text-secondary)]">
-                      {grp.description}
-                    </p>
-                  )}
-                </div>
-
-                <dl className="type-caption space-y-1.5 text-[var(--color-text-secondary)]">
-                  {schedule && (
-                    <div className="flex items-start gap-2">
-                      <dt className="sr-only">เวลานัดพบ</dt>
-                      <Clock
-                        size={ICON_SIZE.sm}
-                        aria-hidden="true"
-                        className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
-                      />
-                      <dd>{schedule}</dd>
-                    </div>
-                  )}
-                  {grp.meetingLocation && (
-                    <div className="flex items-start gap-2">
-                      <dt className="sr-only">สถานที่นัดพบ</dt>
-                      <MapPin
-                        size={ICON_SIZE.sm}
-                        aria-hidden="true"
-                        className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
-                      />
-                      <dd className="min-w-0 break-words">
-                        {grp.meetingLocation}
-                        {grp.privacy !== "public" && (
-                          <Lock
-                            size={ICON_SIZE.xs}
-                            aria-hidden="true"
-                            className="ml-1.5 inline text-[var(--color-text-quaternary)]"
-                          />
-                        )}
-                      </dd>
-                    </div>
-                  )}
-                  <div className="flex items-start gap-2">
-                    <dt className="sr-only">ผู้รับผิดชอบ</dt>
-                    <Users
-                      size={ICON_SIZE.sm}
-                      aria-hidden="true"
-                      className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
-                    />
-                    <dd>
-                      {leaderLabel} {leaderText ?? <span className="text-[var(--color-body-muted)]">ยังไม่ระบุ</span>}
-                    </dd>
-                  </div>
-                  {grp.privacy !== "public" && (
-                    <div className="flex items-start gap-2">
-                      <dt className="sr-only">การเปิดเผยข้อมูล</dt>
-                      <Lock
-                        size={ICON_SIZE.sm}
-                        aria-hidden="true"
-                        className="mt-0.5 shrink-0 text-[var(--color-text-quaternary)]"
-                      />
-                      <dd>{privacyCfg.label}</dd>
-                    </div>
-                  )}
-                </dl>
-
-                {/* One primary action, then one overflow menu. */}
-                <div className="mt-auto flex items-center gap-2 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => openMembersModal(grp)}
-                    className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-                  >
-                    <span className="whitespace-nowrap">สมาชิก {grp.memberCount} คน</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/attendance?groupId=${grp.id}`)}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-                  >
-                    <UserCheck size={ICON_SIZE.sm} aria-hidden="true" className="shrink-0" />
-                    <span className="whitespace-nowrap">เช็คชื่อ</span>
-                  </button>
-                  {(canEditThis || isAdmin) && (
-                    <RowMenu label={`ตัวเลือกเพิ่มเติมของกลุ่ม ${grp.name}`}>
-                      {close => (
-                        <>
-                          {canEditThis && (
-                            <MenuItem
-                              icon={Pencil}
-                              label="แก้ไขข้อมูลกลุ่ม"
-                              onSelect={() => {
-                                close();
-                                openEditModal(grp);
-                              }}
-                            />
-                          )}
-                          {isAdmin && (
-                            <MenuItem
-                              icon={Trash2}
-                              label="ลบกลุ่ม"
-                              tone="danger"
-                              onSelect={() => {
-                                close();
-                                setDeleteTarget(grp);
-                              }}
-                            />
-                          )}
-                        </>
-                      )}
-                    </RowMenu>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+          {others.length > 0 && (
+            <section aria-labelledby="groups-others">
+              <h2
+                id="groups-others"
+                className={
+                  boardBuckets > 1
+                    ? "type-body-strong mb-3 flex items-baseline gap-2 text-[var(--color-ink)]"
+                    : "sr-only"
+                }
+              >
+                กลุ่มทั่วไป
+                <span className="type-caption font-normal text-[var(--color-body-muted)]">
+                  {others.length.toLocaleString("th-TH")} กลุ่ม
+                </span>
+              </h2>
+              <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {others.map(grp => renderGroupCard(grp, false))}
+              </ul>
+            </section>
+          )}
+        </div>
       )}
 
       {/* Create / Edit */}

@@ -46,6 +46,26 @@ export function maskEmail(email: string): string {
 }
 
 /**
+ * The one rule for who may see a member's real contact details: super_admin,
+ * admin, staff, and the member's own `assignedLeaderId`. `maskSensitiveData`
+ * applies it here and the group endpoints (`routes/groups.ts`) apply it to the
+ * member rows they return, so every route that shows a member uses the same
+ * rule (tech-debt D54: the group endpoints used to skip it).
+ */
+export function canSeeMemberContacts(
+  userRole: UserRole,
+  userId: string,
+  assignedLeaderId: string | null
+): boolean {
+  return (
+    userRole === "super_admin" ||
+    userRole === "admin" ||
+    userRole === "staff" ||
+    assignedLeaderId === userId
+  );
+}
+
+/**
  * Applies the role-based field mask to a member row.
  *
  * Exported so `members.test.ts` can assert the real rules instead of a copy of
@@ -53,11 +73,7 @@ export function maskEmail(email: string): string {
  * changes, which is how `lineId` stayed visible to every signed-in role.
  */
 export function maskSensitiveData(member: Member, userRole: UserRole, userId: string): Member {
-  const isPrivileged =
-    userRole === "super_admin" ||
-    userRole === "admin" ||
-    userRole === "staff" ||
-    member.assignedLeaderId === userId;
+  const isPrivileged = canSeeMemberContacts(userRole, userId, member.assignedLeaderId);
 
   if (isPrivileged) {
     return member;

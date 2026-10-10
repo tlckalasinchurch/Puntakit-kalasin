@@ -896,7 +896,7 @@ export default function Attendance() {
               ด้วยสมาร์ตโฟนของตนเอง
             </p>
 
-            <div className="mt-4 inline-block rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-3 shadow-[var(--shadow)]">
+            <div className="mt-4 inline-block pk-surface rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-3 shadow-[var(--shadow)]">
               {sessionQrDataUrl ? (
                 <img
                   src={sessionQrDataUrl}

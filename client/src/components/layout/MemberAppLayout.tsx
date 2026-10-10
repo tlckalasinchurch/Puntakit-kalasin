@@ -34,6 +34,9 @@ interface MemberAppLayoutProps {
   title?: string;
 }
 
+/** Bottom nav height in px, excluding the home-indicator inset. Single source. */
+const NAV_HEIGHT = 72;
+
 const NAV_ITEMS = [
   { label: "หน้าแรก", path: "/app", icon: HomeIcon },
   { label: "กิจกรรม", path: "/app/events", icon: CalendarDays },
@@ -54,6 +57,19 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
     user?.role === "ministry_leader" ||
     user?.role === "group_leader";
 
+  // The sticky header and the fixed nav both cover the viewport edges, so a
+  // keyboard-focused control scrolled "into view" can land underneath them
+  // (WCAG 2.4.11). Scroll-padding lives on the root scroller; restore on leave.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.scrollPaddingTop = "calc(60px + env(safe-area-inset-top, 0px) + 8px)";
+    root.style.scrollPaddingBottom = `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px) + 8px)`;
+    return () => {
+      root.style.scrollPaddingTop = "";
+      root.style.scrollPaddingBottom = "";
+    };
+  }, []);
+
   useEffect(() => {
     setCanInstall(isInstallPromptAvailable());
     const handler = () => setCanInstall(true);
@@ -70,7 +86,13 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
   };
 
   return (
-    <div className="relative mx-auto flex min-h-screen w-full max-w-[600px] flex-col bg-[var(--color-canvas-soft)] shadow-[var(--shadow)]">
+    <div
+      // One source for the nav height: the nav is exactly this tall (plus the
+      // home-indicator inset) and <main> reserves the same amount, so the two
+      // can never drift apart again.
+      style={{ "--member-nav-h": `${NAV_HEIGHT}px` } as React.CSSProperties}
+      className="relative mx-auto flex min-h-dvh w-full max-w-[600px] flex-col bg-[var(--color-canvas-soft)] shadow-[var(--shadow)]"
+    >
       <a
         href="#member-app-main"
         className="type-caption-strong sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-[var(--radius-sm)] focus:bg-[var(--color-canvas)] focus:px-4 focus:py-3 focus:text-[var(--color-ink)] focus:shadow-[var(--shadow)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-focus)]"
@@ -113,17 +135,19 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
         </div>
       </header>
 
-      {/* Main content — bottom padding clears the fixed nav + safe area. */}
-      <main id="member-app-main" className="flex flex-1 flex-col gap-3.5 px-4 pb-[88px] pt-4">
+      {/* Main content — bottom padding = nav height + home-indicator inset + breathing room. */}
+      <main id="member-app-main"
+        className="flex flex-1 flex-col gap-4 px-4 pb-[calc(var(--member-nav-h)+env(safe-area-inset-bottom,0px)+16px)] pt-4 scroll-mt-20"
+      >
         <RouteErrorBoundary>{children}</RouteErrorBoundary>
       </main>
 
-      {/* Bottom navigation — 5 real links, >= 44px tall each. */}
+      {/* Bottom navigation — 5 real links, >= 44px tall each. Hairline, no shadow. */}
       <nav
         aria-label="เมนูหลักของแอพสมาชิก"
-        className="fixed bottom-0 left-1/2 z-30 w-full max-w-[600px] -translate-x-1/2 border-t border-[var(--color-divider)] bg-[var(--color-canvas)] pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_18px_rgba(29,29,31,0.06)]"
+        className="fixed bottom-0 left-1/2 z-30 h-[calc(var(--member-nav-h)+env(safe-area-inset-bottom,0px))] w-full max-w-[600px] -translate-x-1/2 border-t border-[var(--color-divider)] bg-[var(--color-canvas)] pb-[env(safe-area-inset-bottom,0px)]"
       >
-        <ul className="flex items-stretch justify-around">
+        <ul className="flex h-full items-stretch justify-around">
           {NAV_ITEMS.map(item => {
             const isActive = location === item.path;
             const Icon = item.icon;
@@ -132,7 +156,7 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
                 <Link
                   href={item.path}
                   aria-current={isActive ? "page" : undefined}
-                  className={`flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-1 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none ${
+                  className={`flex h-full flex-col items-center justify-center gap-1 px-1 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none ${
                     isActive
                       ? "text-[var(--color-primary)]"
                       : "text-[var(--color-body-muted)]"
@@ -150,7 +174,7 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
                     />
                   </span>
                   <span
-                    className={`type-fine ${
+                    className={`type-caption ${
                       isActive ? "font-bold" : "font-medium"
                     }`}
                   >

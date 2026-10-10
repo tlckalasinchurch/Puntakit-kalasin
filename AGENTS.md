@@ -22,6 +22,7 @@
 | 7 | [`docs/PUNTAKIT_AGENT_GUIDE.md`](./docs/PUNTAKIT_AGENT_GUIDE.md) | ต้องการรายละเอียด env/กับดักการรันในเครื่อง |
 | 8 | [`docs/PUNTAKIT_UX_UI_AUDIT_2026-10-07.md`](./docs/PUNTAKIT_UX_UI_AUDIT_2026-10-07.md) | แตะ UI แล้วต้องรู้ deviation ที่ค้างอยู่ |
 | 9 | [`docs/adr/`](./docs/adr/) | ก่อนเปลี่ยนการตัดสินใจเชิงสถาปัตยกรรมที่มีอยู่ |
+| 10 | [`docs/adr/adr-002.md`](./docs/adr/adr-002.md) · [`003`](./docs/adr/adr-003.md) · [`004`](./docs/adr/adr-004.md) + `PRD.md` §7A | **ก่อน** แตะโครงสร้างองค์กร/ศัพท์ระดับ (ADR 002), สิทธิ์ตามสายบังคับบัญชา/บทบาท `team_lead` (ADR 003), รายงานรายสัปดาห์/สถิติ/เป้าหมาย (ADR 004) — ข้อกำหนด `proposed` ที่ยัง **ไม่ implemented** และบางข้อยังขัดแย้ง/ค้าง (ดู Open decisions ในแต่ละ ADR) |
 
 ## 2. Repository map
 
@@ -145,6 +146,14 @@ React 19 · Vite 7 · **wouter** (ไม่ใช่ Next.js) · Tailwind v4 (CS
 - ต้องมี `CLERK_SECRET_KEY` และ publishable key ไม่งั้น middleware throw และทุก request หลัง guard จะได้ 500
 - `/api/health` = liveness (ห้ามผูกกับ DB) · `/api/ready` = readiness (503 `DATABASE_UNAVAILABLE`)
 - ก่อน deploy: [`DEPLOYMENT_CHECKLIST_TH.md`](./DEPLOYMENT_CHECKLIST_TH.md)
+
+### 6.10 โครงสร้างองค์กร / สิทธิ์ตามสายบังคับบัญชา / รายงานรายสัปดาห์ (ข้อกำหนด `proposed`)
+- รายละเอียดอยู่ที่ ADR 002–004 และ `PRD.md` §7A — **ห้ามคัดลอกมาที่นี่** และ **ห้ามถือว่า implemented**: โค้ดวันนี้มี 2 ระดับองค์กร (`body`/`care`), `group_leader` เห็นเฉพาะกลุ่มที่นำ, ยังไม่มีตารางรายงานรายสัปดาห์
+- **ห้ามแก้** `GROUP_ORG_LEVELS`, `assertOrgHierarchy`, `shared/roles.ts`, `server/lib/groupAccess.ts`, หรือสร้างบทบาท/ตารางที่ ADR เหล่านั้นกล่าวถึง จนกว่า ADR ที่เกี่ยวข้องเป็น `accepted` และมี security tests ครอบคลุม (เจ้าของไฟล์คือ Security/Database/Architect ตาม §5)
+- **ห้ามเปลี่ยนป้าย UI ที่มีมติเดิม** (เช่น "พันธกิจ" บนระดับ `care`) เพราะเพิ่มระดับใหม่ — ความขัดแย้งด้านศัพท์บันทึกที่ ADR 002
+- **ห้ามใช้ตัวเลขขนาดองค์กร (6/20/52/49) เป็นข้อเท็จจริง** — `NOT VERIFIED` จนกว่าจะ audit ไฟล์ต้นฉบับ
+- **ห้ามอนุมาน** "ไม่ส่งรายงาน" เป็น "ไม่ได้จัดกิจกรรม" และห้ามเขียนข้อความที่อ้างว่าระบบสอดคล้อง PDPA
+- Member PWA (`/app/*`) ไม่ใช่หน้าผู้บริหาร — อย่านำรูปแบบหน้า member ไปใช้กับ dashboard ตามบทบาทอื่น
 
 ---
 

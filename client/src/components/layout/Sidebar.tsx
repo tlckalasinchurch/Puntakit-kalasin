@@ -225,7 +225,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         ref={drawerRef}
         id="app-sidebar"
         tabIndex={-1}
-        className={`fixed inset-y-0 left-0 z-50 flex w-60 max-w-[85vw] flex-col overflow-y-auto bg-[var(--color-dark-surface)] text-[var(--color-on-dark)] outline-none transition-transform duration-200 ease-out motion-reduce:transition-none lg:static lg:translate-x-0 ${
+        className={`pk-sidebar fixed inset-y-0 left-0 z-50 flex w-60 max-w-[85vw] flex-col overflow-y-auto bg-[var(--color-dark-surface)] text-[var(--color-on-dark)] outline-none transition-transform duration-200 ease-out motion-reduce:transition-none lg:static lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
         aria-label="เมนูหลัก"
@@ -266,7 +266,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                         aria-current={isActive ? "page" : undefined}
                         className={`type-caption-strong flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-on-dark)] ${
                           isActive
-                            ? "bg-[var(--color-primary-on-dark)]/15 text-[var(--color-primary-on-dark)]"
+                            ? "pk-nav-active bg-[var(--color-primary-on-dark)]/15 text-[var(--color-primary-on-dark)]"
                             : "text-[var(--color-on-dark-muted)] hover:bg-[var(--color-on-dark)]/5 hover:text-[var(--color-on-dark)]"
                         }`}
                       >

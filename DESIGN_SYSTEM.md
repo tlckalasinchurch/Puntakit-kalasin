@@ -1,4 +1,4 @@
-<!-- last_verified: 2026-10-09 -->
+<!-- last_verified: 2026-10-10 -->
 ---
 version: 1
 name: Puntakit Design System
@@ -121,8 +121,9 @@ layout:
   responsive_rule: 'ตาราง > 4 คอลัมน์ ต้องเปลี่ยนเป็น card/list ที่ md'
 
 motion:
-  easing: ไม่ได้กำหนดเป็น token
-  duration: ไม่ได้กำหนดเป็น token
+  # กำหนดเมื่อ 2026-10-10 — ใช้ใน admin shell (.pk-premium) เท่านั้น; member PWA ยังไม่ได้รับ
+  easing: { out: 'cubic-bezier(0.22, 1, 0.36, 1)  (--pk-ease-out)', in: 'cubic-bezier(0.4, 0, 1, 1)  (--pk-ease-in)' }
+  duration: { fast: 160ms, base: 240ms, slow: 480ms }   # --pk-dur-fast / --pk-dur-base / --pk-dur-slow
   rule: >
     ใช้เฉพาะเพื่อตอบสนองการกระทำของผู้ใช้ (เปิด/ขยาย/ยืนยัน) — ห้าม animation เข้าเอง
     และทุกอย่างต้องถูกปิดโดย prefers-reduced-motion
@@ -154,6 +155,7 @@ Chrome ถอยหลัง พื้นผิวขาวยกขึ้นเ
 
 - **Looks like:** เครื่องมือภายในที่นิ่ง สะอาด อ่านง่ายบนมือถือ · ตัวอักษรไทยเป็นพระเอก
 - **Doesn't look like:** template admin ธีมน้ำเงิน · landing page SaaS · แดชบอร์ดที่มี 6 สี
+- **Premium admin shell (2026-10-10, ตามคำสั่งผู้ใช้):** ชั้น *เพิ่มเติม* บน admin shell เท่านั้น (`.pk-premium` ที่ `AppLayout`) — กระจกโปร่ง (`.pk-glass`) เฉพาะ chrome ที่ sticky/fixed (topbar, bottom nav), บรรยากาศไล่เฉด (`.pk-atmosphere`), hero กราไฟต์ที่ Home (`.pk-hero`), เงาสองชั้นแบบกลางของการ์ด (`.card-surface`/`.pk-surface`), ขีดโอลีฟนำหัวเรื่อง (`[data-pk="page-title"]`) และ motion token `--pk-*` ทุกเฉดสีมาจาก token เดิมผ่าน `color-mix` ไม่มี hex ใหม่ และ **ไม่เปลี่ยนค่า token แกน** — กฎ "ไม่มี gradient ประดับ" ด้านบนยังใช้กับ member PWA และทุกที่นอก shell นี้ · ล็อกขอบเขตด้วย `client/src/premium-shell-contract.test.ts`
 - **Real-world references:** neutral ladder ของ Apple (นำมาใช้) — แต่ **เปลี่ยนสี interactive จาก Action Blue เป็น olive** (`DESIGN-apple.md` คือบันทึกการวิเคราะห์ต้นทาง ไม่ใช่ระบบของเรา)
 
 ## 3. Colour
@@ -303,7 +305,7 @@ Chrome ถอยหลัง พื้นผิวขาวยกขึ้นเ
 
 | หัวข้อ | สถานะ |
 |---|---|
-| Motion tokens (easing/duration) | **NOT DEFINED** — ใช้ค่าของ Tailwind/utility ไปก่อน |
+| Motion tokens (easing/duration) | **กำหนดแล้ว 2026-10-10** (`--pk-ease-*`, `--pk-dur-*`) สำหรับ admin shell — member PWA **ยัง NOT DEFINED** |
 | Typography tokens สำหรับ `<code>`/mono | **NOT DEFINED** (มีที่ใช้ `font-mono` บ้างแต่ไม่มี token) |
 | Focus ring token แยกสำหรับ dark | **NOT DEFINED** — `.dark` ตั้ง `--color-primary-focus = #7faf72` เท่ากับ `--color-primary` ⇒ hover ของปุ่ม primary **ไม่มี feedback** (1.00:1) และ ring สีเดียวกับปุ่ม = deviation |
 | Token สำหรับขอบ control ที่ผ่าน 3:1 | **NOT DEFINED** — audit เสนอ `--color-border-strong: #86868b` แต่ **ยังไม่มีใน `index.css`** |
@@ -320,5 +322,6 @@ Chrome ถอยหลัง พื้นผิวขาวยกขึ้นเ
 | — | สีใน Clay เขียนเป็น `hsl()` | เพื่อไม่ให้ชนกับการสแกน hex ของ `design-tokens.test.ts` |
 | — | `--color-on-primary` ในโหมดมืด = `#1d1d1f` (ไม่ใช่ขาว) | ขาวบน `#7faf72` = 2.54:1 ไม่ผ่าน AA — ต้องใช้ `on-primary` ไม่ใช่ `on-dark` |
 | 2026-10-07 | บันทึก deviation 13 รายการจาก UX/UI audit รอบ 3 **โดยไม่ redesign** | audit เป็น source of truth — บทบาทของเอกสารนี้คือ *extract → document → standardize* |
+| 2026-10-10 | เพิ่ม premium layer (glass/atmosphere/hero/motion) เฉพาะ admin shell ผ่าน `.pk-premium` — **ไม่แก้ token แกน** และไม่แตะ member PWA | ผู้ใช้สั่งยกระดับภาพทั้งเว็บ แต่ member PWA ยังอยู่หลังเกณฑ์ตรวจรับ Q21/Q13 และใช้ primitives ร่วมกัน จึงผูกเอฟเฟกต์กับ scope ของ shell · glass ใช้เฉพาะ sticky/fixed เพราะ blur บนเนื้อหาที่เลื่อนทำให้ repaint หนัก · tint olive จำกัดในแถบ topbar เพราะ body-muted บน canvas-soft มี contrast 4.6:1 ไม่มีที่ให้พื้นเข้มขึ้น |
 | 2026-10-09 | `ConfirmDialog` มี prop `error` (แสดง `role="alert"` ขณะอยู่ใน dialog) | เดิม action ล้มแล้วเห็นแค่ toast ที่อาจพลาดไป หรือ dialog ค้างโดยไม่มีคำอธิบาย — ตอนนี้ผิดพลาดต้องถูกอ่าน **ที่จุดที่กระทำ** |
 | 2026-10-09 | ข้อความตอบรับคำขออธิษฐาน เปลี่ยนเป็น "บันทึก…แล้ว รอผู้รับผิดชอบตรวจสอบ" | ระบบยังไม่มี endpoint/notification ฝ่ายทีม (D2 ยังไม่ตัดสิน) — copy ห้ามอ้างว่าทีมได้รับเรื่องแล้ว · ล็อกด้วย `client/src/prayer-request-copy-contract.test.ts` |

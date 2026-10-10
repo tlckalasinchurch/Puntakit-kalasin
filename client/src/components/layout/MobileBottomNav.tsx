@@ -34,7 +34,7 @@ export function MobileBottomNav({ onMenu, menuOpen }: MobileBottomNavProps) {
   return (
     <nav
       aria-label="เมนูล่าง"
-      className="fixed inset-x-0 bottom-0 z-30 flex border-t border-[var(--color-hairline)] bg-[var(--color-canvas)] pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 flex border-t border-[var(--color-hairline)] pk-glass pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       {items.map(({ label, path, icon: Icon }) => {
         const active = location === path;

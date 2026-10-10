@@ -5,10 +5,29 @@ Status: **PARTIALLY IMPLEMENTED.** Phase 1 (read-only source audit) and Phase 2
 engine, the `/api/import` routes, and the read-only `group_members` pre-check)
 are built and tested. Migration step 2 onward is still proposed only.
 
-Date: 2026-10-02 · revised 2026-10-03
+Date: 2026-10-02 · revised 2026-10-03 · annotated 2026-10-09 (documentation only)
 Scope: งานพันธกิจบ้าน (mission groups) from the Excel registration workbooks
 Source data: 6 churches · 8 `.xlsx` files · 8 distinct sha256 · 674 member rows
 across 75 worksheets · ~23 groups · 0 coordinates
+
+> **2026-10-09 annotation — PROPOSED, not accepted, not implemented.** The product
+> owner described a three-level organisation (body → a new middle "แคร์" level →
+> the existing `care` level, which the UI calls "พันธกิจ"; about 6 / 20 / 52
+> units, about 49 operating) with role-scoped access, a weekly report that
+> confirms whether the group actually met, and goals/statistics rolled up from
+> that data. Those figures are **NOT VERIFIED**: the source workbooks and the
+> sample report are not on the machine that reviewed this, they disagree with the
+> "~23 groups" above (the audit counted 72 member sheets), and "20" cannot be
+> checked against the database at all because the middle level does not exist in
+> it. The organisation direction is **conditional on a production check (Q24)
+> that has not been done.**
+> The requirements — and the single terminology table — live in
+> [`ADR 002`](./adr/adr-002.md) (levels, terminology, production check),
+> [`ADR 003`](./adr/adr-003.md) (scoped permissions, `team_lead`, personal data) and
+> [`ADR 004`](./adr/adr-004.md) (weekly report workflow, metric definitions).
+> This plan does not repeat them. Where it disagrees with them, the places are
+> marked **[ADR-conflict]** below; nothing else in this plan was changed. No
+> schema, migration or code was touched.
 
 ## Decision log
 
@@ -27,6 +46,14 @@ across 75 worksheets · ~23 groups · 0 coordinates
 | Q11 | Excel-only member fields | New `mission_member_details` (1:1) |
 | Q12 | Weekly report | New `weekly_reports` / `weekly_report_attendance` / `weekly_report_activities` |
 | Q13 | Geography | Flat `areas` table |
+| Q14 | Org levels *(proposed 2026-10-09, conditional on Q24)* | Three levels: `body` → a new middle level ("แคร์", technical name undecided) → existing `care` (UI "พันธกิจ"). `careGroupId` keeps its meaning; no UI label with an existing church decision is changed. See ADR 002 |
+| Q15 | Scoped access *(proposed 2026-10-09)* | Scope = real group leadership (`leaderId`, `coLeaderId`) + `parentGroupId` hierarchy; read/create/update/approve/export/delete separated; new `team_lead` role (requirements recorded, not created); no `admin` as team lead; statistician role deferred. See ADR 003 |
+| Q16 | Weekly report workflow *(owner-confirmed 2026-10-09; ADR still proposed)* | `draft → submitted → needs_revision \| acknowledged` + `superseded`; submitters are the leaders defined by `getLedGroupIds`; the middle-level leader acknowledges or returns it; body leader and team lead read only. See ADR 004 |
+| Q17 | Headline metric *(owner-confirmed 2026-10-09; ADR still proposed)* | Official figure = acknowledged reports that say the group met; pending acknowledgement shown separately; denominator = `active` groups; "no report" is never counted as "did not meet". See ADR 004 |
+| Q18 | Report week *(owner-confirmed 2026-10-09; ADR still proposed)* | Monday–Sunday, Thai time, `weekStart` stored as a plain date. See ADR 004 |
+| Q19 | Report versions *(owner-decided 2026-10-09: option "ก"; ADR still proposed; **design unproven**)* | Two partial unique indexes — one current non-draft version, and one open draft, per group per week — with an atomic "supersede the old version, then promote the draft" submit; a returned (`needs_revision`) report is also revised through a new version. See ADR 004 |
+
+*Q14–Q19 are this log's own numbering; they are not the question numbers used in the 2026-10-09 working session. The ADRs hold the authoritative wording and the Open decisions.*
 
 ## Standing rules
 
@@ -167,6 +194,22 @@ weekly_report_activities
   id, weeklyReportId → weekly_reports,
   activityType, description, createdAt
 ```
+
+> **[ADR-conflict] `weekly_reports` as written above cannot serve ADR 004.**
+> It has no field saying whether the group met, no reviewer, and its
+> `UNIQUE (group_id, week_start)` forbids keeping a superseded version beside the
+> current one (§9 asks for both). ADR 004 therefore proposes — as design notes,
+> **not DDL** — a `held` flag (+ optional reason), reviewer/review time/return
+> note, and `version` / `supersedes_id` / `superseded_at`. A single
+> `UNIQUE (group_id, week_start) WHERE superseded_at IS NULL` would collide while a
+> new draft exists beside the current version, so the owner chose **two** partial
+> unique indexes (ADR 004, option "ก"): one current **non-draft** version per
+> group per week (`… WHERE superseded_at IS NULL AND status <> 'draft'`) and one
+> open draft per group per week (`… WHERE status = 'draft'`). Submitting a new
+> version supersedes the old one first and then promotes the draft, in one atomic
+> write. **This design is unproven** — there is no DDL and no test, and the repo's
+> only partial-index test (`pendingMigration0010.test.ts`) covers a single index.
+> Nothing was built.
 
 ### New columns on existing tables
 
@@ -389,11 +432,25 @@ weekly_reports (draft → submitted → acknowledged)
 
 | Rule | Detail |
 |---|---|
-| One report per group per week | `UNIQUE (group_id, week_start)` — editing updates, never duplicates |
+| One report per group per week | `UNIQUE (group_id, week_start)` — editing updates, never duplicates — **[ADR-conflict]** superseded by ADR 004: one *current non-draft* version plus at most one open draft per group per week; editing a submitted, acknowledged or returned report creates a new version |
 | `attendanceCount` | Derived from attendance rows, never typed |
 | `weekEnd` | Derived from `weekStart + 6 days` |
 | Step 2 roster | Only `leftAt IS NULL` members; someone who left mid-week is added by explicit search and flagged `after_leave` |
 | Editing a submitted report | Superseded, old version kept |
+
+> **[ADR-conflict] differences recorded in ADR 004 (2026-10-09; ADR still
+> proposed):** status gains `needs_revision` (the middle-level leader returns a
+> report); that leader — not `GROUP_MANAGE_ANY_ROLES` — acknowledges; the
+> overview shows "not submitted" but the detail view separates "no row" from
+> "draft"; the report records whether the group actually met; **submitters are
+> the leaders defined by `getLedGroupIds`, not "any current member"** (owner
+> decision Q26); **the week is Monday–Sunday, Thai time, `weekStart` a plain
+> date** (Q28) — the example week above, 2–8 ต.ค. 2569, runs Friday to Thursday
+> and no longer applies. Version handling (Q29) is resolved by ADR 004's two
+> partial unique indexes (design unproven; see §2 note). While a revision is a
+> draft, the acknowledged current version still counts as the official figure;
+> when the revision is submitted the group moves from "acknowledged" to "pending
+> acknowledgement" until it is acknowledged again.
 
 | Question answered | Source |
 |---|---|
@@ -463,6 +520,12 @@ areas
 Flat by design. The real dataset is one province, ~23 groups; a hierarchy would
 add joins and screens that nobody uses. `displayName` is assembled in the
 database layer so the UI never concatenates by hand.
+
+> **Clarification (2026-10-09):** "flat" here means the *geographic* `areas`
+> table. It says nothing about the *organisation* hierarchy (three levels, see
+> ADR 002), which is a different thing and lives in `groups.parentGroupId`. The
+> "~23 groups" premise is **[ADR-conflict]** with the owner's figure of about 52
+> (NOT VERIFIED — see the annotation at the top).
 
 **Group area ≠ member residence — they are separate columns and are never
 forced equal.**
@@ -582,7 +645,7 @@ rollback cannot restore the original data is not allowed on production.
 | Constraint | Table | Why |
 |---|---|---|
 | `UNIQUE (group_id, member_id) WHERE left_at IS NULL` | `group_members` | One current membership, unlimited history |
-| `UNIQUE (group_id, week_start)` | `weekly_reports` | One report per group per week |
+| `UNIQUE (group_id, week_start)` | `weekly_reports` | One report per group per week — **[ADR-conflict]** replaced by ADR 004's two partial unique indexes (current non-draft version; open draft); not built, unproven |
 | `UNIQUE (weekly_report_id, member_id)` | `weekly_report_attendance` | No double-ticking |
 | `UNIQUE (member_id)` | `mission_member_details` | It is 1:1 |
 | `UNIQUE (normalizedName)` | `areas` | No duplicate localities |
@@ -608,9 +671,18 @@ Reuses the canonical sets in `shared/roles.ts`. No second permission system.
 | Merge / split a duplicate | `requireAdmin`, audit-logged |
 | Create / edit a mission group | `GROUP_MANAGE_ANY_ROLES`, or a `group_leader` of that group via `verifyGroupManagementAccess` |
 | Place a map pin | same as group edit |
-| Submit a weekly report | any current member of that group |
-| Acknowledge a weekly report | `GROUP_MANAGE_ANY_ROLES` |
+| Submit a weekly report | any current member of that group — **[ADR-conflict]** ADR 004 (owner decision Q26): only the leaders defined by `getLedGroupIds` |
+| Acknowledge a weekly report | `GROUP_MANAGE_ANY_ROLES` — **[ADR-conflict]** ADR 003/004: the middle-level leader above that group (scope-based); body leader and `team_lead` read-only; self-approval rule undecided (ADR 003 S7) |
 | View group location | existing `maskGroupLocation` privacy rule, unchanged |
+
+> **[ADR-conflict] 2026-10-09:** "No second permission system" still holds —
+> ADR 003 derives scope from group leadership and `parentGroupId` rather than
+> adding roles per level. It does need two things that do not exist today: a
+> hierarchical scope (`resolveGroupScope` only covers groups the user leads) and
+> a `team_lead` role (requirements recorded in ADR 003, not created; `admin` can
+> delete and `staff` sees every member's contacts, so neither fits). A
+> read/export-only statistician role is **deferred**. No role or security test
+> was added.
 
 **The gap this exposes:** `groups.leaderId` → `users`, i.e. a Clerk account.
 Workbook leaders have no account, so `coordinatorName` is plain text and cannot
@@ -618,6 +690,11 @@ satisfy the ownership gate. A village coordinator is therefore **not yet a
 user** and cannot be given scoped access to their own group. Enabling that means
 inviting them to Clerk — a product decision, not a schema one, and it is listed
 below as out of scope for now.
+
+> **[ADR-conflict] 2026-10-09:** the proposed model has the leaders of the
+> lowest-level (`care`) groups submit reports and see only their own group's members, which needs an account
+> per leader. That reopens the "invite coordinators to Clerk" decision (ADR 003
+> S3); the out-of-scope row below is no longer a safe default for that model.
 
 ---
 
@@ -699,9 +776,9 @@ PUT  /api/groups/:id/location           latitude/longitude
 | Migration | The pre-check reports duplicate counts; the migration refuses to run when they are non-zero |
 | Migration | Every `up` has a tested `down`; row counts before and after are asserted |
 | Constraint | Partial unique index permits rejoin while rejecting a second active membership |
-| Constraint | `UNIQUE (group_id, week_start)` rejects a second report for the same week |
+| Constraint | `UNIQUE (group_id, week_start)` rejects a second report for the same week — **[ADR-conflict]** to be replaced by tests for ADR 004's two indexes (a second current non-draft version is rejected; a second open draft is rejected; a draft beside the current version is allowed; supersede-then-promote succeeds and the reverse order fails). **None of these tests exists yet** |
 | Weekly flow | Attendance count is derived, never trusted from the client |
-| Route | Import endpoints are admin-gated; weekly submit is limited to current members |
+| Route | Import endpoints are admin-gated; weekly submit is limited to current members — **[ADR-conflict]** ADR 004 (owner decision Q26): limited to the leaders defined by `getLedGroupIds`, not general members or a `host` |
 | Regression | The full suite stays green — no response shape is removed. Baseline at this revision: 26 files / 303 tests |
 | Pre-check | `runGroupMembersPreCheck()` writes nothing and reports each condition separately: duplicate pairs, historical `left_at` rows, duplicate active rows, `status` vs `left_at` conflicts, orphan references |
 | Pre-check | `migrationBlocked` stays true while any blocking count is non-zero, so migration 0010 can never be justified by a partial report |
@@ -718,9 +795,9 @@ PUT  /api/groups/:id/location           latitude/longitude
 | Interpreting checkbox semantics | Unconfirmed by the people who filled the forms (Q5) |
 | Automatic duplicate merging | A wrong merge destroys a person's record |
 | Any birth date derived from age | Fabricates data |
-| Hierarchy beyond flat areas | One province, ~23 groups |
+| Hierarchy beyond flat areas | One province, ~23 groups — applies to the geographic `areas` table only; the organisation hierarchy is ADR 002 |
 | Auto-normalising goal spellings | Needs a human decision on which variants are real |
-| Inviting village coordinators to Clerk | A product decision about accounts and privacy |
+| Inviting village coordinators to Clerk | A product decision about accounts and privacy — **reopened by the proposed model, see ADR 003 S3** |
 | Merging `attendance_records` with `weekly_reports` | They are genuinely different facts |
 | Changing recharts / sonner / brand colours | Q4 |
 | Sarabun font | Permitted, but scheduled last and gated on visual regression |

@@ -17,9 +17,11 @@ import {
   groupQuerySchema,
 } from "../../shared/validation.js";
 import { ADMIN_ROLES, GROUP_MANAGE_ANY_ROLES } from "../../shared/roles.js";
+import type { UserRole } from "../../shared/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { getLedGroupIds } from "../lib/groupAccess.js";
+import { canSeeMemberContacts, maskPhone } from "./members.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 
 export const groupsRouter = Router();
@@ -141,6 +143,26 @@ function maskGroupLocation<T extends { privacy?: string; meetingLocation?: strin
     latitude: null,
     longitude: null,
   };
+}
+
+/**
+ * Member rows returned by the group endpoints follow the same contact rule as
+ * `/api/members` (`canSeeMemberContacts`): super_admin, admin, staff and the
+ * member's own assigned leader see the real phone number; everyone else gets
+ * the masked form. `assignedLeaderId` is only needed to apply the rule, so it
+ * is dropped from the response (the response shape is unchanged).
+ */
+function maskGroupMemberRows<T extends { memberPhone: string | null; assignedLeaderId: string | null }>(
+  rows: T[],
+  user: { id: string; role: UserRole }
+): Array<Omit<T, "assignedLeaderId">> {
+  return rows.map(({ assignedLeaderId, ...row }) => ({
+    ...row,
+    memberPhone:
+      row.memberPhone && !canSeeMemberContacts(user.role, user.id, assignedLeaderId)
+        ? maskPhone(row.memberPhone)
+        : row.memberPhone,
+  }));
 }
 
 // 1. GET / - List groups with member count, leader info, and privacy masking
@@ -323,7 +345,7 @@ groupsRouter.get("/:id", async (req, res, next) => {
       .as("last_att");
 
     // Get group members with dynamic lastAttendedAt
-    const membersList = await db
+    const rawMembersList = await db
       .select({
         id: groupMembers.id,
         groupId: groupMembers.groupId,
@@ -336,6 +358,7 @@ groupsRouter.get("/:id", async (req, res, next) => {
         memberNickname: members.nickname,
         memberAvatarUrl: members.avatarUrl,
         memberPhone: members.phone,
+        assignedLeaderId: members.assignedLeaderId,
         membershipStatus: members.membershipStatus,
         pastoralStatus: members.status,
         lastAttendedAt: lastAttendanceSubquery.lastAttendedAt,
@@ -346,6 +369,7 @@ groupsRouter.get("/:id", async (req, res, next) => {
       .where(and(eq(groupMembers.groupId, id), isNull(members.deletedAt)))
       .orderBy(desc(groupMembers.status), desc(groupMembers.joinedAt));
 
+    const membersList = maskGroupMemberRows(rawMembersList, req.user!);
     const activeMembers = membersList.filter((m) => m.status === "active");
 
     const maskedGroup = maskGroupLocation(group, req, isActiveMember);
@@ -591,6 +615,7 @@ groupsRouter.get("/:id/members", async (req, res, next) => {
         memberNickname: members.nickname,
         memberAvatarUrl: members.avatarUrl,
         memberPhone: members.phone,
+        assignedLeaderId: members.assignedLeaderId,
         membershipStatus: members.membershipStatus,
         pastoralStatus: members.status,
         lastAttendedAt: lastAttendanceSubquery.lastAttendedAt,
@@ -603,7 +628,7 @@ groupsRouter.get("/:id/members", async (req, res, next) => {
 
     res.json({
       success: true,
-      data: rows,
+      data: maskGroupMemberRows(rows, req.user!),
     });
   } catch (err) {
     next(err);

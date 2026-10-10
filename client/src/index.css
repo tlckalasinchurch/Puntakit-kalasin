@@ -1236,3 +1236,225 @@
 @media (prefers-reduced-motion: reduce) {
   .clay-btn, .clay-tile, .clay-progress > i { transition: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Premium admin shell (added 2026-10-10) — additive and opt-in.
+
+   Everything below is scoped to `.pk-premium` (set by AppLayout), `.pk-glass`
+   (sticky/fixed chrome only) and the sign-in shell. The member PWA (/app/*)
+   shares the DesignSystem primitives but never carries `.pk-premium`, so its
+   look is unchanged. Colours are derived from existing tokens (color-mix over
+   var()), so the dark-mode remap applies automatically; no new hex values.
+   Motion: transform/opacity only, and the global prefers-reduced-motion
+   override earlier in this file zeroes every duration below.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  --pk-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --pk-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --pk-dur-fast: 160ms;
+  --pk-dur-base: 240ms;
+  --pk-dur-slow: 480ms;
+  --pk-rise: 10px;
+  --pk-glass-blur: 16px;
+  --pk-glass-bg: var(--color-canvas);
+  --pk-glass-line: var(--color-hairline);
+}
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  :root {
+    --pk-glass-bg: color-mix(in srgb, var(--color-canvas) 82%, transparent);
+    --pk-glass-line: color-mix(in srgb, var(--color-hairline) 85%, transparent);
+  }
+}
+
+/* Glass: sticky/fixed chrome only (topbar, bottom nav). Content scrolls
+   underneath it, which is the only place the blur has anything to show. */
+.pk-glass {
+  background: var(--pk-glass-bg);
+  border-color: var(--pk-glass-line);
+  -webkit-backdrop-filter: blur(var(--pk-glass-blur)) saturate(1.15);
+  backdrop-filter: blur(var(--pk-glass-blur)) saturate(1.15);
+}
+
+/* Atmosphere: a lifted highlight top-left and an olive tint kept inside the
+   topbar band, so no body text sits on a tinted area (body-muted on
+   canvas-soft is only 4.6:1, there is no headroom for a darker backdrop). */
+.pk-atmosphere {
+  background-color: var(--color-canvas-soft);
+}
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .pk-atmosphere {
+    background-image:
+      radial-gradient(
+        52rem 26rem at 10% -8%,
+        color-mix(in srgb, var(--color-canvas) 70%, transparent),
+        transparent 72%
+      ),
+      radial-gradient(
+        34rem 11rem at 96% 0%,
+        color-mix(in srgb, var(--color-primary) 9%, transparent),
+        transparent 70%
+      );
+  }
+}
+
+/* One strong entrance per page: the whole content block rises in once.
+   `backwards` fill leaves no transform behind afterwards, so fixed-position
+   descendants (dialogs) are not trapped in a containing block. */
+@keyframes pk-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--pk-rise));
+  }
+}
+.pk-premium .pk-route {
+  animation: pk-rise var(--pk-dur-slow) var(--pk-ease-out) backwards;
+}
+/* Opt-in stagger for a short run of sibling sections (Home). */
+.pk-stagger > * {
+  animation: pk-rise var(--pk-dur-slow) var(--pk-ease-out) backwards;
+}
+.pk-stagger > :nth-child(2) { animation-delay: 70ms; }
+.pk-stagger > :nth-child(3) { animation-delay: 140ms; }
+.pk-stagger > :nth-child(4) { animation-delay: 210ms; }
+.pk-stagger > :nth-child(n + 5) { animation-delay: 280ms; }
+/* The stagger replaces the page-level rise on that block. */
+.pk-premium .pk-route:has(> .pk-stagger) { animation: none; }
+
+/* Pressed feedback for every button in the admin shell (transform only). */
+.pk-premium button:not(:disabled):not(.clay-btn):active {
+  transform: scale(0.985);
+}
+
+/* Sidebar: the graphite ramp the tokens already define (dark-surface-2 → 3). */
+.pk-premium .pk-sidebar {
+  background-image: linear-gradient(
+    180deg,
+    var(--color-dark-surface-2) 0%,
+    var(--color-dark-surface-3) 100%
+  );
+}
+.pk-nav-active {
+  position: relative;
+}
+.pk-nav-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.625rem;
+  bottom: 0.625rem;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--color-primary-on-dark);
+}
+
+/* Hero: the one atmospheric surface on Home. Graphite ramp plus an olive glow
+   in the corner; text on it is on-dark (≥ 5.7:1 for the eyebrow). */
+.pk-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  color: var(--color-on-dark);
+  background: linear-gradient(
+    135deg,
+    var(--color-dark-surface-2) 0%,
+    var(--color-dark-surface-3) 100%
+  );
+}
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .pk-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      30rem 15rem at 94% -12%,
+      color-mix(in srgb, var(--color-primary-on-dark) 26%, transparent),
+      transparent 70%
+    );
+  }
+}
+.pk-hero > * {
+  position: relative;
+}
+
+/* Sign-in / sign-up shell: same atmosphere, and a card that reads as a glass
+   plate over it. The card is static (not scrolling), so blur is safe here. */
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .login-shell {
+    background-image:
+      radial-gradient(
+        46rem 24rem at 15% -5%,
+        color-mix(in srgb, var(--color-canvas) 75%, transparent),
+        transparent 72%
+      ),
+      radial-gradient(
+        40rem 26rem at 95% 100%,
+        color-mix(in srgb, var(--color-primary) 12%, transparent),
+        transparent 70%
+      );
+  }
+  .login-card {
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    -webkit-backdrop-filter: blur(var(--pk-glass-blur));
+    backdrop-filter: blur(var(--pk-glass-blur));
+    animation: pk-rise var(--pk-dur-slow) var(--pk-ease-out) backwards;
+  }
+}
+
+/* Layered surfaces: the shared card (`.card-surface`) and the bespoke card
+   strings that already match it (`.pk-surface`) get a two-step neutral shadow
+   — a tight contact shadow and a wide, faint ambient one. Neutral black only
+   (the design system forbids tinted shadows); dark mode deepens it. */
+.pk-premium .card-surface,
+.pk-premium .pk-surface {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 12px 28px -16px rgb(0 0 0 / 0.14);
+}
+.dark .pk-premium .card-surface,
+.dark .pk-premium .pk-surface {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.3),
+    0 12px 28px -16px rgb(0 0 0 / 0.5);
+}
+
+/* Page title anchor: a short olive rule above the PageHeader title gives every
+   admin page the same recognisable start without adding a second colour. */
+.pk-premium [data-pk="page-title"]::before {
+  content: "";
+  display: block;
+  width: 28px;
+  height: 3px;
+  margin-bottom: 10px;
+  border-radius: 2px;
+  background: var(--color-primary);
+}
+
+/* Dark mode: the hero is graphite on a graphite page, so it needs a defining
+   edge. Uses the existing on-dark hairline token. */
+.dark .pk-hero {
+  box-shadow: inset 0 0 0 1px var(--color-on-dark-hairline);
+}
+
+/* Responsive variants of the layered surface (custom classes cannot take
+   Tailwind breakpoint variants): `-sm` below md, `-md` from md up. */
+@media (max-width: 767.98px) {
+  .pk-premium .pk-surface-sm {
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.04),
+      0 12px 28px -16px rgb(0 0 0 / 0.14);
+  }
+}
+@media (min-width: 768px) {
+  .pk-premium .pk-surface-md {
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.04),
+      0 12px 28px -16px rgb(0 0 0 / 0.14);
+  }
+}
+.dark .pk-premium .pk-surface-sm,
+.dark .pk-premium .pk-surface-md {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.3),
+    0 12px 28px -16px rgb(0 0 0 / 0.5);
+}
