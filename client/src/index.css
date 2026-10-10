@@ -29,6 +29,11 @@
   --color-warning: #c77819;
   --color-error: #c23b4d;
   --color-info: #2f6fcc;
+  /* Text on a tinted status chip (≥ 4.5:1 on the 10–12% tint of its own colour). The plain
+     status colours stay for borders and icons; StatusChip text uses these. */
+  --color-success-ink: #15704a;
+  --color-warning-ink: #8a5410;
+  --color-info-ink: #1f5aa6;
 
   /* Radius grammar */
   --radius-none: 0px;
@@ -1415,6 +1420,9 @@
   --color-accent-soft: rgba(127, 175, 114, 0.16);
   --color-info-soft: rgba(47, 111, 204, 0.24);
   --color-info-strong: #8ab6ef;
+  --color-success-ink: #66d7a0;
+  --color-warning-ink: #f2b867;
+  --color-info-ink: #9cc4f5;
   --background: var(--color-canvas);
   --foreground: var(--color-ink);
   --card: var(--color-canvas);
