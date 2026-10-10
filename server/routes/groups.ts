@@ -17,8 +17,9 @@ import {
   groupQuerySchema,
 } from "../../shared/validation.js";
 import { ADMIN_ROLES, ADMIN_SHELL_ROLES, GROUP_MANAGE_ANY_ROLES } from "../../shared/roles.js";
+import type { UserRole } from "../../shared/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { maskPhone } from "./members.js";
+import { canSeeMemberContacts, maskPhone } from "./members.js";
 import { logAudit } from "../lib/audit.js";
 import { getLedGroupIds } from "../lib/groupAccess.js";
 import { leadsGroup } from "../lib/careScope.js";
@@ -153,12 +154,41 @@ function canViewFullGroupRoster(req: Request): boolean {
   return canViewFullGroupRosterRole(req.user!.role);
 }
 
-function canViewMemberContacts(req: Request, group: { leaderId: string | null; coLeaderId: string | null }): boolean {
+/**
+ * Whether the signed-in account may see the group's leader account email.
+ *
+ * This is deliberately NOT the member-contact rule: leader email keeps the
+ * rule the 2026-10 authz audit documented (`docs/PUNTAKIT_AUTHZ_AUDIT_2026-10-04.md`
+ * — "leader email only for PRIV", which includes `ministry_leader`) plus the
+ * group's own leader and co-leader. Member phone numbers use
+ * `canSeeMemberContacts` instead.
+ */
+function canViewLeaderEmail(req: Request, group: { leaderId: string | null; coLeaderId: string | null }): boolean {
   return (
     canViewFullGroupRoster(req) ||
     group.leaderId === req.user!.id ||
     group.coLeaderId === req.user!.id
   );
+}
+
+/**
+ * Applies the shared member-contact rule to roster rows.
+ *
+ * `assignedLeaderId` is only read to decide visibility, so it is dropped from
+ * the response; the response shape is unchanged.
+ */
+function maskRosterRows<
+  T extends { memberPhone: string | null; assignedLeaderId: string | null },
+>(rows: T[], user: { id: string; role: UserRole }) {
+  return rows.map(({ assignedLeaderId, ...row }) => ({
+    ...row,
+    memberPhone:
+      canSeeMemberContacts(user.role, user.id, assignedLeaderId) && row.memberPhone
+        ? row.memberPhone
+        : row.memberPhone
+          ? maskPhone(row.memberPhone)
+          : null,
+  }));
 }
 
 // 1. GET / - List groups with member count, leader info, and privacy masking
@@ -250,7 +280,7 @@ groupsRouter.get("/", async (req, res, next) => {
       const masked = maskGroupLocation(g, req, isLeader);
       return {
         ...masked,
-        leaderEmail: canViewMemberContacts(req, g) ? masked.leaderEmail : null,
+        leaderEmail: canViewLeaderEmail(req, g) ? masked.leaderEmail : null,
       };
     });
 
@@ -364,6 +394,7 @@ groupsRouter.get("/:id", requireRole(...ADMIN_SHELL_ROLES), async (req, res, nex
         memberNickname: members.nickname,
         memberAvatarUrl: members.avatarUrl,
         memberPhone: members.phone,
+        assignedLeaderId: members.assignedLeaderId,
         membershipStatus: members.membershipStatus,
         pastoralStatus: members.status,
         lastAttendedAt: lastAttendanceSubquery.lastAttendedAt,
@@ -375,18 +406,12 @@ groupsRouter.get("/:id", requireRole(...ADMIN_SHELL_ROLES), async (req, res, nex
       .orderBy(desc(groupMembers.status), desc(groupMembers.joinedAt));
 
     const canViewRoster = canViewFullGroupRoster(req) || isActiveMember;
-    const canViewContacts = canViewMemberContacts(req, group);
-    const visibleMembers = canViewRoster
-      ? membersList.map((member) => ({
-          ...member,
-          memberPhone: canViewContacts ? member.memberPhone : null,
-        }))
-      : [];
+    const visibleMembers = canViewRoster ? maskRosterRows(membersList, req.user!) : [];
     const activeMembers = visibleMembers.filter((m) => m.status === "active");
 
     const maskedGroup = {
       ...maskGroupLocation(group, req, isActiveMember),
-      leaderEmail: canViewMemberContacts(req, group) ? group.leaderEmail : null,
+      leaderEmail: canViewLeaderEmail(req, group) ? group.leaderEmail : null,
     };
 
     res.json({
@@ -668,6 +693,7 @@ groupsRouter.get("/:id/members", requireRole(...ADMIN_SHELL_ROLES), async (req, 
         memberNickname: members.nickname,
         memberAvatarUrl: members.avatarUrl,
         memberPhone: members.phone,
+        assignedLeaderId: members.assignedLeaderId,
         membershipStatus: members.membershipStatus,
         pastoralStatus: members.status,
         lastAttendedAt: lastAttendanceSubquery.lastAttendedAt,
@@ -678,11 +704,10 @@ groupsRouter.get("/:id/members", requireRole(...ADMIN_SHELL_ROLES), async (req, 
       .where(and(eq(groupMembers.groupId, id), isNull(members.deletedAt)))
       .orderBy(desc(groupMembers.status), desc(groupMembers.joinedAt));
 
-    const canViewContacts = canViewAll || canManage;
-    const safeRows = rows.map((row) => ({
-      ...row,
-      memberPhone: canViewContacts ? row.memberPhone : row.memberPhone ? maskPhone(row.memberPhone) : null,
-    }));
+    // `canManage` still gates WRITE access to the roster; it no longer widens who
+    // may read member contacts. Reading contacts follows `canSeeMemberContacts`,
+    // the same rule `/api/members` uses.
+    const safeRows = maskRosterRows(rows, req.user!);
 
     res.json({
       success: true,

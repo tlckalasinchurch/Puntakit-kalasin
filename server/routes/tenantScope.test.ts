@@ -126,7 +126,10 @@ describe("group_leader tenant scope (real PGlite Postgres)", () => {
     const group = await call(leaderA, "GET", `/api/groups/${careA}`);
     expect(group.status).toBe(200);
     const roster = await json(await call(leaderA, "GET", `/api/groups/${careA}/members`));
-    expect(roster.data.map((r: { memberPhone: string }) => r.memberPhone).sort()).toEqual(["0811111111", "0822222222"]);
+    // Roster read access is unchanged; member phone numbers are masked because a
+    // group leader is not in CONTACT_VISIBLE_ROLES and is not these members'
+    // assignedLeaderId (see server/routes/groupContactPrivacy.test.ts).
+    expect(roster.data.map((r: { memberPhone: string }) => r.memberPhone).sort()).toEqual(["081-xxx-111", "082-xxx-222"]);
     const care = await json(await call(leaderA, "GET", `/api/care/groups/${careA}/roster`));
     expect(care.data.members).toHaveLength(2);
   });
@@ -371,7 +374,9 @@ describe("group_leader tenant scope (real PGlite Postgres)", () => {
     expect((await call(co, "GET", `/api/members/${mC.id}`)).status).toBe(200);
     expect((await call(co, "GET", `/api/groups/${c.id}`)).status).toBe(200);
     const roster = await json(await call(co, "GET", `/api/groups/${c.id}/members`));
-    expect(roster.data.map((r: { memberPhone: string }) => r.memberPhone)).toEqual(["0855555555"]);
+    // Masked, for the same reason as above: a co-leader reads the roster but is
+    // not a contact-visible role.
+    expect(roster.data.map((r: { memberPhone: string }) => r.memberPhone)).toEqual(["085-xxx-555"]);
     expect((await call(co, "GET", `/api/care/groups/${c.id}/roster`)).status).toBe(200);
     const mine = (await json(await call(co, "GET", "/api/care/groups"))).data.bodies.flatMap((b: { careGroups: { name: string }[] }) => b.careGroups.map((g) => g.name));
     expect(mine).toEqual(["พันธกิจ C"]);

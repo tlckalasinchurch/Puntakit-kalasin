@@ -11,9 +11,11 @@ import {
 import {
   ADMIN_ROLES,
   ADMIN_SHELL_ROLES,
+  CONTACT_VISIBLE_ROLES,
   MEMBER_CONTACT_ROLES,
   MEMBER_CREATE_ROLES,
   MEMBER_UPDATE_ROLES,
+  hasRole,
 } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
@@ -48,6 +50,26 @@ export function maskEmail(email: string): string {
 }
 
 /**
+ * The single rule for who may see one member's real contact details:
+ * `CONTACT_VISIBLE_ROLES` (super_admin, admin, staff), or the account that is
+ * that member's own `assignedLeaderId`.
+ *
+ * `/api/members` applies it in `maskSensitiveData`, and the group roster
+ * endpoints (`routes/groups.ts`) apply it per member row, so every surface that
+ * shows a member's phone number agrees. Before this, the group endpoints used
+ * their own list (`canViewFullGroupRosterRole`, which also contains
+ * `ministry_leader`) plus the group's leader/co-leader, so those roles received
+ * unmasked numbers that `/api/members` masked for the same accounts.
+ */
+export function canSeeMemberContacts(
+  userRole: UserRole | undefined,
+  userId: string,
+  assignedLeaderId: string | null
+): boolean {
+  return hasRole(userRole, CONTACT_VISIBLE_ROLES) || assignedLeaderId === userId;
+}
+
+/**
  * Applies the role-based field mask to a member row.
  *
  * Exported so `members.test.ts` can assert the real rules instead of a copy of
@@ -55,11 +77,7 @@ export function maskEmail(email: string): string {
  * changes, which is how `lineId` stayed visible to every signed-in role.
  */
 export function maskSensitiveData(member: Member, userRole: UserRole, userId: string): Member {
-  const isPrivileged =
-    userRole === "super_admin" ||
-    userRole === "admin" ||
-    userRole === "staff" ||
-    member.assignedLeaderId === userId;
+  const isPrivileged = canSeeMemberContacts(userRole, userId, member.assignedLeaderId);
 
   if (isPrivileged) {
     return member;
