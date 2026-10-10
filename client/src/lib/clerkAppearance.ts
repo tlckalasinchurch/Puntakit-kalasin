@@ -30,9 +30,40 @@ export const clerkAppearance = {
     colorBackground: "var(--color-canvas)",
   },
   elements: {
+    rootBox: { width: "100%" },
     cardBox: { boxShadow: "none", border: "none", background: "transparent", width: "100%" },
     card: { boxShadow: "none", border: "none", background: "transparent", padding: 0 },
     footer: { background: "transparent" },
     footerAction: { background: "transparent" },
+  },
+} satisfies ClerkAppearance;
+
+/**
+ * Sign-in only. `ClerkSignInPage` already renders the page title and welcome
+ * line, so Clerk's own header repeated "เข้าสู่ระบบ / ยินดีต้อนรับ" a second
+ * time right under it. Controls get a 44px target and 16px text (iOS Safari
+ * zooms into smaller fields on focus). Sign-up keeps `clerkAppearance`, which
+ * leaves Clerk's header in place because that page has no title of its own.
+ */
+export const clerkSignInAppearance = {
+  variables: clerkAppearance.variables,
+  elements: {
+    ...clerkAppearance.elements,
+    header: { display: "none" },
+    formFieldLabel: { fontWeight: 600 },
+    formFieldInput: {
+      minHeight: "44px",
+      fontSize: "16px",
+      borderRadius: "var(--radius-sm)",
+      boxShadow: "none",
+      border: "1px solid var(--color-hairline)",
+    },
+    formButtonPrimary: {
+      minHeight: "44px",
+      fontSize: "16px",
+      borderRadius: "var(--radius-pill)",
+      boxShadow: "none",
+    },
+    footerActionLink: { fontWeight: 600 },
   },
 } satisfies ClerkAppearance;
