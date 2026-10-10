@@ -168,7 +168,7 @@ export default function Announcements() {
             {items.map(a => (
               <article
                 key={a.id}
-                className="flex flex-col justify-between rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5"
+                className="flex flex-col justify-between pk-surface rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5"
               >
                 <div>
                   <div className="mb-2 flex items-start justify-between gap-2">

@@ -24,7 +24,7 @@ import { useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
-import { CREATE_ROLES, PRIVILEGED_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
+import { ADMIN_ROLES, CREATE_ROLES, PRIVILEGED_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
 import type { UserRole } from "@shared/schema";
 import { Logo } from "./Logo";
 
@@ -88,14 +88,14 @@ export const navGroups: NavGroup[] = [
     name: "งานดูแล",
     items: [
       {
-        label: "เช็คชื่อพันธกิจ",
+        label: "เช็คชื่อกลุ่มดูแล",
         path: "/care",
         icon: ListChecks,
         roles: CREATE_ROLES,
       },
-      { label: "เช็คชื่อนมัสการ", path: "/attendance", icon: UserCheck },
+      { label: "เช็คชื่อวันนมัสการ", path: "/attendance", icon: UserCheck },
       { label: "การติดตาม", path: "/follow-up", icon: ListTodo },
-      { label: "การนมัสการ", path: "/events", icon: CalendarDays },
+      { label: "กิจกรรม", path: "/events", icon: CalendarDays },
     ],
   },
   {
@@ -140,7 +140,9 @@ export const navGroups: NavGroup[] = [
   {
     name: "บัญชีของฉัน",
     items: [
-      { label: "แอพสมาชิก", path: "/app", icon: Sparkles },
+      // Menu visibility only: `/app` itself stays reachable by URL for every
+      // signed-in role, and `member` is routed there by ProtectedRoute.
+      { label: "แอปสมาชิก", path: "/app", icon: Sparkles, roles: ADMIN_ROLES },
       { label: "โปรไฟล์", path: "/profile", icon: UserRound },
     ],
   },
@@ -261,7 +263,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         ref={drawerRef}
         id="app-sidebar"
         tabIndex={-1}
-        className={`fixed inset-y-0 left-0 z-50 flex w-60 max-w-[85vw] flex-col overflow-y-auto bg-[var(--color-dark-surface)] text-[var(--color-on-dark)] outline-none transition-transform duration-200 ease-out motion-reduce:transition-none lg:static lg:translate-x-0 ${
+        className={`pk-sidebar fixed inset-y-0 left-0 z-50 flex w-60 max-w-[85vw] flex-col overflow-y-auto bg-[var(--color-dark-surface)] text-[var(--color-on-dark)] outline-none transition-transform duration-200 ease-out motion-reduce:transition-none lg:static lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
         aria-label="เมนูหลัก"
@@ -302,7 +304,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                         aria-current={isActive ? "page" : undefined}
                         className={`type-caption-strong flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-on-dark)] ${
                           isActive
-                            ? "bg-[var(--color-primary-on-dark)]/15 text-[var(--color-primary-on-dark)]"
+                            ? "pk-nav-active bg-[var(--color-primary-on-dark)]/15 text-[var(--color-primary-on-dark)]"
                             : "text-[var(--color-on-dark-muted)] hover:bg-[var(--color-on-dark)]/5 hover:text-[var(--color-on-dark)]"
                         }`}
                       >
