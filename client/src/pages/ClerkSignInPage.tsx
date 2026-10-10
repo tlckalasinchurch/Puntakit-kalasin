@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { SignIn } from "@clerk/react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
-import { clerkAppearance } from "@/lib/clerkAppearance";
+import { clerkSignInAppearance } from "@/lib/clerkAppearance";
 import { Logo } from "@/components/layout/Logo";
 import { ErrorState } from "@/components/DesignSystem";
 import { LegalLinks } from "@/components/LegalLinks";
@@ -100,8 +100,13 @@ export default function ClerkSignInPage() {
               routing="hash"
               signUpUrl="/signup"
               fallbackRedirectUrl="/"
-              appearance={clerkAppearance}
+              appearance={clerkSignInAppearance}
             />
+          )}
+          {!isDemoMode && !error && (
+            <p className="type-fine mt-4 text-center text-[var(--color-body-muted)]">
+              เข้าสู่ระบบไม่ได้? แจ้งผู้ดูแลระบบของคริสตจักรเพื่อตรวจสอบบัญชีของคุณ
+            </p>
           )}
           <LegalLinks />
         </div>
