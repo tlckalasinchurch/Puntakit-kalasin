@@ -383,12 +383,15 @@ describe("attendance group ownership", () => {
     type Roster = { data: { members: Array<{ id: string; phone: string | null; lineId: string | null }> } };
     const roster = (who: string | null, group: string) => call(who, "GET", `/api/care/groups/${g[group]}/roster?date=2026-10-11`);
 
-    it("gives the leader of the group raw phone and LINE ID", async () => {
+    // Contacts follow the members policy (D59): real phone / LINE ID only for
+    // super_admin, admin, staff or the member's own assignedLeaderId. Leading the
+    // group is not enough. Full matrix: careRosterContactPrivacy.test.ts.
+    it("gives the leader of the group the roster, with contacts masked for members not assigned to them", async () => {
       const res = await roster("leaderA", "A");
       expect(res.status).toBe(200);
       const body = (await res.json()) as Roster;
       expect(body.data.members.length).toBe(2);
-      expect(body.data.members.every((p) => p.lineId && p.phone && !p.phone.includes("*"))).toBe(true);
+      expect(body.data.members.every((p) => p.phone && p.phone.includes("xxx") && p.lineId === null)).toBe(true);
     });
 
     it("denies the roster of another group to a leader (403)", async () => {
@@ -396,11 +399,16 @@ describe("attendance group ownership", () => {
       expect(res.status).toBe(403);
     });
 
-    it("keeps admin, staff and ministry_leader reading raw contacts, as before", async () => {
-      for (const who of ["admin", "staff", "ministry_leader"]) {
+    it("keeps admin and staff reading raw contacts; ministry_leader reads the roster with contacts masked", async () => {
+      for (const who of ["admin", "staff"]) {
         const body = (await (await roster(who, "A")).json()) as Roster;
-        expect(body.data.members.every((p) => p.lineId && p.phone), who).toBe(true);
+        expect(body.data.members.every((p) => p.lineId && p.phone && !p.phone.includes("xxx")), who).toBe(true);
       }
+      const res = await roster("ministry_leader", "A");
+      expect(res.status).toBe(200);
+      const masked = (await res.json()) as Roster;
+      expect(masked.data.members.length).toBe(2);
+      expect(masked.data.members.every((p) => p.phone && p.phone.includes("xxx") && p.lineId === null)).toBe(true);
     });
 
     it("answers 401 to anonymous and 403 to a member and a viewer", async () => {

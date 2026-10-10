@@ -3,8 +3,7 @@ import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/client.js";
 import { attendanceRecords, groupMembers, groups, members } from "../../shared/schema.js";
 import { CREATE_ROLES } from "../../shared/roles.js";
-import { resolveGroupScope, scopeAllows } from "../lib/groupAccess.js";
-import { maskPhone } from "./members.js";
+import { canSeeMemberContacts, maskPhone } from "./members.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 import { parseCareGroupDescription } from "../../shared/orgView.js";
@@ -91,7 +90,14 @@ careRouter.get("/groups/:id/roster", async (req, res, next) => {
       : [];
 
     const people = await db
-      .select({ id: members.id, name: members.name, nickname: members.nickname, phone: members.phone, lineId: members.lineId })
+      .select({
+        id: members.id,
+        name: members.name,
+        nickname: members.nickname,
+        phone: members.phone,
+        lineId: members.lineId,
+        assignedLeaderId: members.assignedLeaderId,
+      })
       .from(groupMembers)
       .innerJoin(members, eq(groupMembers.memberId, members.id))
       .where(and(eq(groupMembers.groupId, id), eq(groupMembers.status, "active"), isNull(members.deletedAt)))
@@ -122,15 +128,20 @@ careRouter.get("/groups/:id/roster", async (req, res, next) => {
     const statusAt = new Map<string, string>(); // `${member}|${day}` -> status
     for (const r of records) statusAt.set(`${r.memberId}|${r.day}`, r.status);
 
-    // Contacts follow the members policy: a group_leader receives phone and
-    // LINE ID raw only for a group it leads; for any other group they are masked.
-    const scope = await resolveGroupScope(req.user!);
-    const showContacts = scopeAllows(scope, id);
+    // Contacts follow the members policy, one member at a time: real phone and
+    // LINE ID only for super_admin / admin / staff or the member's own
+    // assignedLeaderId (`canSeeMemberContacts`, the rule /api/members applies).
+    // Leading or being allowed to open this roster does not widen it, and
+    // ministry_leader is masked like on /api/members. `assignedLeaderId` only
+    // decides visibility and is not returned; `contactMasked` tells the page to
+    // show "เบอร์ถูกปิดบัง" instead of a tel: link to a masked number.
+    const user = req.user!;
 
-    const rows = people.map((person) => {
-      const p = showContacts
-        ? person
-        : { ...person, phone: person.phone ? maskPhone(person.phone) : null, lineId: null };
+    const rows = people.map(({ assignedLeaderId, ...person }) => {
+      const contactMasked = !canSeeMemberContacts(user.role, user.id, assignedLeaderId);
+      const p = contactMasked
+        ? { ...person, phone: person.phone ? maskPhone(person.phone) : null, lineId: null }
+        : person;
       // Consecutive recent meetings (newest first, before `date`) with no "present"/"online".
       let missed = 0;
       let lastSeen: string | null = null;
@@ -142,7 +153,7 @@ careRouter.get("/groups/:id/roster", async (req, res, next) => {
         }
         missed += 1;
       }
-      return { ...p, status: statusAt.get(`${p.id}|${date}`) ?? null, missed, lastSeen };
+      return { ...p, contactMasked, status: statusAt.get(`${p.id}|${date}`) ?? null, missed, lastSeen };
     });
 
     res.json({
