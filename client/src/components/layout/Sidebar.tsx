@@ -1,4 +1,5 @@
 import {
+  BadgeCheck,
   BarChart3,
   FileSpreadsheet,
   Building2,
@@ -24,7 +25,7 @@ import { useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
-import { ADMIN_ROLES, CREATE_ROLES, PRIVILEGED_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
+import { ADMIN_ROLES, CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, PRIVILEGED_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
 import type { UserRole } from "@shared/schema";
 import { Logo } from "./Logo";
 
@@ -81,6 +82,12 @@ export const navGroups: NavGroup[] = [
         roles: PRIVILEGED_ROLES,
       },
       { label: "สมาชิก", path: "/members", icon: Users },
+      {
+        label: "สถานะสมาชิก",
+        path: "/memberships",
+        icon: BadgeCheck,
+        roles: MEMBERSHIP_VIEW_ROLES,
+      },
       { label: "พันธกิจ", path: "/groups", icon: UsersRound },
     ],
   },
@@ -165,6 +172,7 @@ export const groupLeaderNavGroups: NavGroup[] = [
       },
       { label: "การติดตาม", path: "/follow-up", icon: ListTodo },
       { label: "สมาชิกของฉัน", path: "/members", icon: Users },
+      { label: "สถานะสมาชิก", path: "/memberships", icon: BadgeCheck },
       { label: "กลุ่มของฉัน", path: "/groups", icon: UsersRound },
     ],
   },
