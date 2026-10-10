@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { HomeMyWork } from "@/components/home/HomeMyWork";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { OrgSnapshot } from "@/components/OrgSnapshot";
 import { Button } from "@/components/ui/button";
@@ -546,15 +547,9 @@ export default function Home() {
           {!isGroupLeader && (
             <GlobalSearch variant="prominent" className="max-w-xl" />
           )}
-          {user && CREATE_ROLES.includes(user.role) && (
-            <Link
-              href="/care"
-              className="clay-btn w-full max-w-xl min-h-12 text-base"
-              aria-label="ไปหน้าเช็คชื่อพันธกิจวันนี้"
-            >
-              เช็คชื่อพันธกิจวันนี้
-            </Link>
-          )}
+          {/* Quick actions first (large, thumb-sized), then this person's own numbers
+              and latest photos — scoped by the API to what their role may see. */}
+          {user && user.role !== "member" && <HomeMyWork />}
           {canSeeOperations && <OrgSnapshot />}
         </section>
 
