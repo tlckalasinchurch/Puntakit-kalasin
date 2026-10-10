@@ -45,9 +45,9 @@ export function ImportStepper() {
                   aria-hidden="true"
                   className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
                     isComplete
-                      ? "bg-[var(--color-primary)] text-[var(--color-on-dark)]"
+                      ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                       : isCurrent
-                        ? "bg-[var(--color-primary)] text-[var(--color-on-dark)] ring-2 ring-[var(--color-primary-focus)] ring-offset-2"
+                        ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] ring-2 ring-[var(--color-primary-focus)] ring-offset-2"
                         : "bg-[var(--color-canvas-soft)] text-[var(--color-body-muted)]"
                   }`}
                 >

@@ -344,7 +344,7 @@ function CareGroupSheet({ user, onClose, onSaved }: { user: UserRow | null; onCl
             type="button"
             onClick={() => save(false)}
             disabled={saving || !options}
-            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-dark)] hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
+            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
           >
             {saving ? "กำลังบันทึก..." : "บันทึก"}
           </button>

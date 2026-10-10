@@ -499,6 +499,9 @@ export default function Home() {
   const canSeeOperations = Boolean(
     user && OPERATIONS_ROLES.includes(user.role)
   );
+  // Group leaders get a focused "today" header; this picks a page heading,
+  // it is not a role label (those come from ROLE_LABELS in shared/labels.ts).
+  const isGroupLeader = user?.role === "group_leader";
 
   // Redirect member role directly to Member PWA
   useEffect(() => {
@@ -527,9 +530,9 @@ export default function Home() {
               สวัสดี {user?.name ?? "ทีมงานพันธกิจ"}
             </p>
             <h1 id="home-title" className="type-display-md mt-2 text-[var(--color-ink)]">
-              {user?.role === "group_leader" ? "งานวันนี้" : "ภาพรวมพันธกิจ"}
+              {isGroupLeader ? "งานวันนี้" : "ภาพรวมพันธกิจ"}
             </h1>
-            {user?.role === "group_leader" && (
+            {isGroupLeader && (
               <p className="type-body mt-2 text-[var(--color-body-muted)]">
                 {new Date().toLocaleDateString("th-TH", {
                   weekday: "long",
@@ -540,7 +543,7 @@ export default function Home() {
               </p>
             )}
           </div>
-          {user?.role !== "group_leader" && (
+          {!isGroupLeader && (
             <GlobalSearch variant="prominent" className="max-w-xl" />
           )}
           {user && CREATE_ROLES.includes(user.role) && (

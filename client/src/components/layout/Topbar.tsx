@@ -111,7 +111,7 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
         >
           <Bell size={ICON_SIZE.md} aria-hidden="true" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[var(--color-error)] px-1 text-[10px] font-bold text-white">
+            <span className="absolute -top-1 -right-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[var(--color-error)] px-1 type-fine font-bold text-white">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
