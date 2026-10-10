@@ -1717,3 +1717,285 @@
     0 1px 2px rgb(0 0 0 / 0.3),
     0 12px 28px -16px rgb(0 0 0 / 0.5);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Membership card (`components/membership/MemberCard.tsx`).
+
+   A landscape ID-1 card (85.6 × 54 mm) drawn in CSS from register data — no
+   baked-in artwork carries a name or a number. Everything scales with the
+   card's own width (`cqw`), and small text never drops below 12px (`max()`),
+   so it reads the same on a phone and in a wide dialog. The emerald and gold
+   are card-scoped on purpose: they are the card's identity, not app chrome.
+   ═══════════════════════════════════════════════════════════════════════ */
+.pk-card {
+  --card-emerald-hi: #0f5b3d;
+  --card-emerald-mid: #0a432d;
+  --card-emerald-lo: #06291c;
+  --card-gold-hi: #f7e08f;
+  --card-gold-mid: #d8b256;
+  --card-gold-lo: #9c7527;
+  --card-ink: #0a3a27;
+  container-type: inline-size;
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  aspect-ratio: 1.586;
+  overflow: hidden;
+  border-radius: 4.2cqw;
+  color: #fff;
+  font-family: var(--font-sans, "Prompt", system-ui, sans-serif);
+  background:
+    radial-gradient(120% 90% at 18% 0%, var(--card-emerald-hi) 0%, transparent 62%),
+    linear-gradient(135deg, var(--card-emerald-mid) 0%, var(--card-emerald-lo) 100%);
+  box-shadow:
+    0 0 0 0.45cqw var(--card-gold-mid) inset,
+    0 18px 40px -22px rgb(0 0 0 / 0.55);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.pk-card__decor {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.pk-card > *:not(.pk-card__decor) {
+  position: absolute;
+}
+.pk-card__photo {
+  left: 4.4cqw;
+  top: 10.5cqw;
+  width: 28.5cqw;
+  height: 34cqw;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 2.2cqw;
+  border: 0.7cqw solid var(--card-gold-mid);
+  background: var(--card-emerald-lo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pk-card__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pk-card__photo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1cqw;
+  color: var(--card-gold-hi);
+  font-size: max(12px, 3.2cqw);
+  text-align: center;
+  padding: 1cqw;
+}
+.pk-card__photo-empty strong {
+  font-size: 11cqw;
+  line-height: 1;
+}
+.pk-card__brand {
+  left: 36.5cqw;
+  top: 3.6cqw;
+  width: 43cqw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.pk-card__emblem {
+  width: 11.5cqw;
+  height: 11.5cqw;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 0.45cqw solid var(--card-gold-mid);
+  background: var(--card-emerald-lo);
+}
+.pk-card__emblem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 42%;
+  transform: scale(1.35);
+  display: block;
+}
+.pk-card__brandline {
+  margin: 0.8cqw 0 0;
+  color: var(--card-gold-hi);
+  font-size: max(12px, 2.7cqw);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+.pk-card__ribbon {
+  margin: 0.8cqw 0 0;
+  padding: 0.3cqw 3cqw;
+  font-size: max(12px, 2.4cqw);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--card-ink);
+  background: linear-gradient(90deg, var(--card-gold-lo), var(--card-gold-hi) 50%, var(--card-gold-lo));
+  border-radius: 0.8cqw;
+  max-width: 100%;
+}
+.pk-card__num {
+  right: 4.5cqw;
+  top: 1.5cqw;
+  text-align: center;
+  line-height: 1;
+  background: linear-gradient(180deg, var(--card-gold-hi), var(--card-gold-mid) 60%, var(--card-gold-lo));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 800;
+  font-size: 14cqw;
+}
+.pk-card__num small {
+  display: block;
+  margin-top: 0.4cqw;
+  font-size: max(12px, 2.4cqw);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--card-gold-hi);
+  -webkit-text-fill-color: var(--card-gold-hi);
+}
+.pk-card__plate {
+  left: 36.5cqw;
+  top: 27cqw;
+  width: 37cqw;
+  height: 10.5cqw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2cqw;
+  border-radius: 2cqw;
+  border: 0.5cqw solid var(--card-gold-mid);
+  background: linear-gradient(180deg, #fff, #eef2ef);
+  color: var(--card-ink);
+  font-size: 6.4cqw;
+  font-weight: 800;
+  line-height: 1.1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pk-card__kind {
+  left: 75.5cqw;
+  top: 28cqw;
+  width: 19cqw;
+  text-align: center;
+  color: var(--card-gold-hi);
+  font-size: max(12px, 3cqw);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.pk-card__name {
+  left: 36.5cqw;
+  top: 39cqw;
+  width: 58cqw;
+  margin: 0;
+  text-align: center;
+  font-size: max(14px, 4.4cqw);
+  font-weight: 700;
+  line-height: 1.2;
+  text-shadow: 0 0.2cqw 0.6cqw rgb(0 0 0 / 0.35);
+}
+.pk-card__member {
+  left: 41cqw;
+  top: 46.8cqw;
+  width: 30cqw;
+  margin: 0;
+  padding-top: 0.9cqw;
+  text-align: center;
+  color: var(--card-gold-hi);
+  border-top: 0.25cqw solid var(--card-gold-mid);
+  font-size: max(12px, 2.6cqw);
+  font-weight: 600;
+  letter-spacing: 0.32em;
+}
+.pk-card__meta {
+  left: 4.4cqw;
+  bottom: 9cqw;
+  width: 30cqw;
+  margin: 0;
+  font-size: max(12px, 2.7cqw);
+  line-height: 1.25;
+}
+.pk-card__meta dt {
+  display: none;
+}
+.pk-card__meta dd {
+  margin: 0;
+}
+.pk-card__no {
+  font-size: max(14px, 4cqw);
+  font-weight: 700;
+  color: var(--card-gold-hi);
+}
+.pk-card__valid {
+  right: 4.4cqw;
+  bottom: 11cqw;
+  max-width: 44cqw;
+  text-align: right;
+  font-size: max(12px, 2.7cqw);
+  line-height: 1.25;
+  color: var(--card-gold-hi);
+  white-space: nowrap;
+}
+.pk-card__valid-type {
+  display: none;
+}
+
+/* A phone-width card cannot hold every line at a readable size, so it drops the
+   decorative ones (English wordmark, "MEMBER") and folds the membership type
+   into the validity line. Nothing from the register is dropped. */
+@container (max-width: 460px) {
+  .pk-card__brandline,
+  .pk-card__member,
+  .pk-card__kind {
+    display: none;
+  }
+  .pk-card__valid-type {
+    display: inline;
+  }
+  .pk-card__photo {
+    top: 9cqw;
+    height: 31cqw;
+  }
+  .pk-card__meta {
+    bottom: 8.5cqw;
+  }
+  .pk-card__valid {
+    bottom: 8.5cqw;
+    max-width: 56cqw;
+  }
+  .pk-card__name {
+    top: 40.5cqw;
+  }
+}
+
+/* Print only the card, at its real size (Save as PDF works the same way). */
+@media print {
+  body.pk-printing-card * {
+    visibility: hidden !important;
+  }
+  body.pk-printing-card .pk-card,
+  body.pk-printing-card .pk-card * {
+    visibility: visible !important;
+  }
+  body.pk-printing-card .pk-card {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 85.6mm;
+    max-width: none;
+    box-shadow: none;
+  }
+  @page {
+    size: 85.6mm 54mm;
+    margin: 0;
+  }
+}
