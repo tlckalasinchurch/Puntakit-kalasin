@@ -5,7 +5,7 @@ import { ClerkProvider } from "@clerk/react";
 import { clerkThTH } from "./lib/clerkLocalization";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ADMIN_ROLES, ADMIN_SHELL_ROLES, PRIVILEGED_ROLES } from "@shared/roles";
+import { ADMIN_ROLES, ADMIN_SHELL_ROLES, MEMBERSHIP_VIEW_ROLES, PRIVILEGED_ROLES } from "@shared/roles";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -24,6 +24,7 @@ const ClerkSignUpPage = lazy(() => import("./pages/ClerkSignUpPage"));
 const Home = lazy(() => import("./pages/Home"));
 const Feed = lazy(() => import("./pages/Feed"));
 const FollowUps = lazy(() => import("./pages/FollowUps"));
+const Memberships = lazy(() => import("./pages/Memberships"));
 const Inbox = lazy(() => import("./pages/Inbox"));
 const ImportData = lazy(() => import("./pages/ImportData"));
 const ImportDuplicates = lazy(() => import("./pages/ImportDuplicates"));
@@ -135,6 +136,11 @@ function Router() {
           (real data from /api/activities) instead of maintaining two feeds. */}
       <Route path="/mission-feed">
         <Redirect to="/feed" />
+      </Route>
+      <Route path="/memberships">
+        <ProtectedRoute allow={MEMBERSHIP_VIEW_ROLES}>
+          <Memberships />
+        </ProtectedRoute>
       </Route>
       <Route path="/follow-up">
         <ProtectedRoute allow={ADMIN_SHELL_ROLES}>

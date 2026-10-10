@@ -1,7 +1,11 @@
 import { Pencil, Plus, ShieldCheck } from "lucide-react";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { InitialsAvatar, Modal, StatusChip, type StatusTone } from "@/components/DesignSystem";
+import { MemberCardPanel } from "@/components/membership/MemberCardPanel";
+import { MembershipPanel } from "@/components/membership/MembershipPanel";
+import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
+import { MEMBERSHIP_VIEW_ROLES, hasRole } from "@shared/roles";
 import { MEMBERSHIP_STATUS_LABELS } from "@shared/labels";
 import type { MembershipStatus } from "@shared/schema";
 import type { Member } from "./types";
@@ -61,6 +65,8 @@ export function MemberDetailModal({
   creatingFollowUp,
   canManage,
 }: MemberDetailModalProps) {
+  const { user } = useAuth();
+  const canSeeMembership = hasRole(user?.role, MEMBERSHIP_VIEW_ROLES);
   return (
     <Modal
       open={selectedMember !== null}
@@ -144,6 +150,22 @@ export function MemberDetailModal({
               </div>
             )}
           </div>
+
+          <section aria-labelledby="member-card-title">
+            <h3 id="member-card-title" className="type-caption-strong mb-2 text-[var(--color-ink)]">
+              บัตรสมาชิก
+            </h3>
+            <MemberCardPanel memberId={selectedMember.id} />
+          </section>
+
+          {canSeeMembership && (
+            <section aria-labelledby="membership-title">
+              <h3 id="membership-title" className="type-caption-strong mb-2 text-[var(--color-ink)]">
+                สถานะสมาชิกรายปี
+              </h3>
+              <MembershipPanel memberId={selectedMember.id} />
+            </section>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <section className="rounded-[var(--radius-md)] border border-[var(--color-hairline)] p-4">
