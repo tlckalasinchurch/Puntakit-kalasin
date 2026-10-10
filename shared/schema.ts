@@ -1,6 +1,7 @@
 import {
   type AnyPgColumn,
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -14,6 +15,12 @@ import { sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { IMPORT_DUPLICATE_DECISIONS } from "./importDecisions.js";
 import { IMPORT_MERGE_PLAN_STATUSES, type ImportMergeField } from "./importMerge.js";
+import {
+  MEMBERSHIP_CLOSE_REASONS,
+  MEMBERSHIP_TERM_STATUSES,
+  MEMBERSHIP_TYPES,
+  PAYMENT_STATUSES,
+} from "./membership.js";
 
 const id = () =>
   text("id")
@@ -132,6 +139,8 @@ export const members = pgTable(
     consentGiven: boolean("consent_given").notNull().default(false),
     consentDate: timestamp("consent_date", { withTimezone: true }),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Printed membership-card number ("No. 00304" = 304). Null until assigned; unique when set. */
+    memberNo: integer("member_no"),
     notes: text("notes"),
     createdById: text("created_by_id").references(() => users.id, { onDelete: "set null" }),
     updatedById: text("updated_by_id").references(() => users.id, { onDelete: "set null" }),
@@ -146,6 +155,7 @@ export const members = pgTable(
     index("members_email_idx").on(table.email),
     index("members_user_id_idx").on(table.userId),
     index("members_deleted_at_idx").on(table.deletedAt),
+    uniqueIndex("members_member_no_uniq").on(table.memberNo),
   ]
 );
 
@@ -836,6 +846,84 @@ export const importMergePlans = pgTable(
     index("import_merge_plans_status_idx").on(table.status, table.proposedAt),
   ]
 );
+
+/**
+ * Annual membership lifecycle. One row per cycle, never overwritten: a renewal
+ * closes the current row and opens the next one, so history stays intact.
+ * Rules and status maths live in `shared/membership.ts`.
+ *
+ * Dates are `date` columns read as strings (no timezone round-trip). A payment
+ * is only ever recorded by an authorised person (`payment_recorded_by_id`);
+ * nothing marks a term paid by inference, and no card data is stored.
+ */
+export const membershipTerms = pgTable(
+  "membership_terms",
+  {
+    id: id(),
+    memberId: text("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    type: text("type", { enum: MEMBERSHIP_TYPES }).notNull(),
+    status: text("status", { enum: MEMBERSHIP_TERM_STATUSES }).notNull().default("open"),
+    startsOn: date("starts_on", { mode: "string" }).notNull(),
+    /** Exclusive end of the cycle. */
+    endsOn: date("ends_on", { mode: "string" }).notNull(),
+    closedReason: text("closed_reason", { enum: MEMBERSHIP_CLOSE_REASONS }),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    /** Who closed the term (care leader / admin) and why. */
+    decidedById: text("decided_by_id").references(() => users.id, { onDelete: "set null" }),
+    decisionNote: text("decision_note"),
+    feeBaht: integer("fee_baht").notNull().default(0),
+    paymentStatus: text("payment_status", { enum: PAYMENT_STATUSES }).notNull().default("not_required"),
+    paidAmountBaht: integer("paid_amount_baht"),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    paymentRecordedById: text("payment_recorded_by_id").references(() => users.id, { onDelete: "set null" }),
+    paymentNote: text("payment_note"),
+    createdById: text("created_by_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("membership_terms_member_id_idx").on(table.memberId),
+    index("membership_terms_status_ends_idx").on(table.status, table.endsOn),
+    // At most one open term per member: the current cycle.
+    uniqueIndex("membership_terms_one_open_per_member").on(table.memberId).where(sql`${table.status} = 'open'`),
+  ]
+);
+
+export const MEDIA_KINDS = ["member_avatar", "mission_photo"] as const;
+export type MediaKind = (typeof MEDIA_KINDS)[number];
+
+/**
+ * An uploaded image. The bytes live in a PRIVATE blob (or a local file in
+ * dev/test); this row is what lets `GET /api/media/:id` authorise a read and
+ * find the bytes. URLs stored elsewhere (`members.avatar_url`,
+ * `mission_activity_media.url`) point at `/api/media/:id`, never at storage.
+ */
+export const mediaAssets = pgTable(
+  "media_assets",
+  {
+    id: id(),
+    kind: text("kind", { enum: MEDIA_KINDS }).notNull(),
+    storage: text("storage", { enum: ["blob", "local"] }).notNull(),
+    pathname: text("pathname").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    /** The member a `member_avatar` belongs to, or the care group a `mission_photo` was taken for. */
+    memberId: text("member_id").references(() => members.id, { onDelete: "set null" }),
+    groupId: text("group_id").references(() => groups.id, { onDelete: "set null" }),
+    uploadedById: text("uploaded_by_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("media_assets_member_id_idx").on(table.memberId),
+    index("media_assets_group_id_idx").on(table.groupId),
+  ]
+);
+
+export type MembershipTerm = typeof membershipTerms.$inferSelect;
+export type MediaAsset = typeof mediaAssets.$inferSelect;
 
 export type User = typeof users.$inferSelect;
 export type UserSession = typeof userSessions.$inferSelect;
