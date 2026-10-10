@@ -3,6 +3,12 @@
 
 > เพิ่มรายการใหม่ไว้บนสุด เฉพาะงานสำคัญที่เสร็จ (ผ่าน `/wrap`) ระบุให้ชัดว่าตรวจอะไร **และอะไรยังไม่ได้ตรวจ** ไม่มี commit ในรายการเหล่านี้ (ยังไม่ commit)
 
+## 2026-10-10 — เมนู Sidebar ลดจาก 6 เหลือ 4 กลุ่ม (เจ้าของสั่ง; `master` เท่านั้น)
+
+- `Sidebar.tsx`: กลุ่ม "งานประจำ" / "กิจกรรมและสื่อสาร" แสดงตลอด; "เพิ่มเติม" (ผังองค์กร, ข้อมูลคริสตจักร, ฝ่ายงาน, รายงาน, ข้อมูลที่ส่งเข้ามา, นำเข้าจาก Excel) และ "บัญชีของฉัน" พับได้ (`<details>`) เปิดเองเมื่อหน้าปัจจุบันอยู่ในกลุ่ม · **ไม่เปลี่ยน** path, `roles`, ป้ายเดิม; แถบล่างมือถือไม่แก้
+- ตรวจจริง: `tsc` 0 · `vitest client/src` 13 ไฟล์/124 tests · `vite build` · Playwright (Vite :3100, fixture `/api/auth/me` ฝั่งเบราว์เซอร์ ไม่เขียน DB) — 360/768/1280 ไม่ overflow ไม่มี console error; admin/ministry_leader/group_leader/viewer เห็นรายการตามสิทธิ์เดิม (viewer ไม่เห็น เช็คชื่อพันธกิจ/ผังองค์กร/รายงาน/ข้อมูลที่ส่งเข้ามา/นำเข้า); dark mode contrast หัวกลุ่ม 5.8:1; Enter/Space สลับกลุ่ม, Tab ข้ามลิงก์ในกลุ่มที่พับ, Escape ปิด drawer · ภาพ `Work\_shots-nav\`
+- **ไม่ได้ตรวจ:** บทบาท `member` (ถูกส่งไป `/app`), `super_admin`, ผู้ใช้ screen reader · ยังไม่ได้ตัดสิน: รวม/เปลี่ยนชื่อ "เช็คชื่อ…" และ "การนมัสการ" (ป้ายมีมติเดิม)
+
 ## 2026-10-10 — D54 release preparation: **หยุด — patch ไม่ใช้กับสาขา production** (ไม่ได้ commit/push/deploy)
 
 - **ตรวจ:** git (branch `master`, HEAD `3afed5b`, 26 ไฟล์แก้ + 27 ไฟล์ใหม่ที่ไม่เกี่ยวข้องกับ D54 — ไฟล์ของ D54 มีเพียง `groups.ts`, `members.ts`, `groupMemberPrivacy.test.ts`) · remotes/branches · Vercel (อ่าน metadata ของ project `puntakit-kalasin` อย่างเดียว ไม่เรียก production ไม่ดึงข้อมูลสมาชิก)

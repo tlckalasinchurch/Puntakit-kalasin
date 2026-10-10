@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarDays,
   Camera,
+  ChevronDown,
   HeartHandshake,
   Home as HomeIcon,
   Inbox as InboxIcon,
@@ -29,6 +30,8 @@ import { Logo } from "./Logo";
 
 export interface NavGroup {
   name: string;
+  /** Rendered as a fold-away section that opens when the current page is inside it. */
+  collapsible?: boolean;
   items: {
     label: string;
     path: string;
@@ -65,22 +68,11 @@ export interface NavGroup {
  */
 export const navGroups: NavGroup[] = [
   {
-    name: "หลัก",
+    name: "งานประจำ",
     items: [
       { label: "หน้าหลัก", path: "/", icon: HomeIcon },
-      {
-        label: "ผังองค์กร",
-        path: "/org",
-        icon: Network,
-        roles: PRIVILEGED_ROLES,
-      },
       { label: "สมาชิก", path: "/members", icon: Users },
       { label: "พันธกิจ", path: "/groups", icon: UsersRound },
-    ],
-  },
-  {
-    name: "งานดูแล",
-    items: [
       {
         label: "เช็คชื่อพันธกิจ",
         path: "/care",
@@ -89,20 +81,28 @@ export const navGroups: NavGroup[] = [
       },
       { label: "เช็คชื่อนมัสการ", path: "/attendance", icon: UserCheck },
       { label: "การติดตาม", path: "/follow-up", icon: ListTodo },
-      { label: "การนมัสการ", path: "/events", icon: CalendarDays },
     ],
   },
   {
-    name: "สื่อสารและกิจกรรม",
+    name: "กิจกรรมและสื่อสาร",
     items: [
+      { label: "การนมัสการ", path: "/events", icon: CalendarDays },
       { label: "ฟีดกิจกรรม", path: "/feed", icon: Camera },
       { label: "การประกาศ", path: "/announcements", icon: Megaphone },
       { label: "แผนที่พันธกิจ", path: "/map", icon: MapPin },
     ],
   },
   {
-    name: "คริสตจักร",
+    // Used occasionally, so folded away until the current page is inside it.
+    name: "เพิ่มเติม",
+    collapsible: true,
     items: [
+      {
+        label: "ผังองค์กร",
+        path: "/org",
+        icon: Network,
+        roles: PRIVILEGED_ROLES,
+      },
       { label: "ข้อมูลคริสตจักร", path: "/church", icon: Building2 },
       { label: "ฝ่ายงาน", path: "/ministries", icon: HeartHandshake },
       {
@@ -111,11 +111,6 @@ export const navGroups: NavGroup[] = [
         icon: BarChart3,
         roles: PRIVILEGED_ROLES,
       },
-    ],
-  },
-  {
-    name: "ผู้ดูแลระบบ",
-    items: [
       {
         label: "ข้อมูลที่ส่งเข้ามา",
         path: "/inbox",
@@ -132,9 +127,10 @@ export const navGroups: NavGroup[] = [
   },
   {
     name: "บัญชีของฉัน",
+    collapsible: true,
     items: [
-      { label: "แอพสมาชิก", path: "/app", icon: Sparkles },
       { label: "โปรไฟล์", path: "/profile", icon: UserRound },
+      { label: "แอพสมาชิก", path: "/app", icon: Sparkles },
     ],
   },
 ];
@@ -245,19 +241,18 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         </div>
 
         <nav className="flex flex-1 flex-col gap-5 px-2 py-4">
-          {visibleGroups.map(group => (
-            <div key={group.name}>
-              <h2 className="type-fine mb-1 px-3 font-semibold text-[var(--color-on-dark-muted)]">
-                {group.name}
-              </h2>
+          {visibleGroups.map(group => {
+            // `/worship` renders the same page as `/events`, so the events
+            // entry must also read as current on that route.
+            const isItemActive = (path: string) =>
+              location === path ||
+              (path === "/events" && location === "/worship") ||
+              (path === "/import" && location.startsWith("/import/"));
+            const groupActive = group.items.some(item => isItemActive(item.path));
+            const list = (
               <ul className="flex flex-col gap-0.5">
                 {group.items.map(({ label, path, icon: Icon }) => {
-                  // `/worship` renders the same page as `/events`, so the
-                  // events entry must also read as current on that route.
-                  const isActive =
-                    location === path ||
-                    (path === "/events" && location === "/worship") ||
-                    (path === "/import" && location.startsWith("/import/"));
+                  const isActive = isItemActive(path);
                   return (
                     <li key={path}>
                       <Link
@@ -285,8 +280,35 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   );
                 })}
               </ul>
-            </div>
-          ))}
+            );
+            if (group.collapsible) {
+              return (
+                <details
+                  key={`${group.name}-${groupActive}`}
+                  open={groupActive}
+                  className="group"
+                >
+                  <summary className="type-fine flex min-h-11 cursor-pointer list-none items-center justify-between rounded-[var(--radius-sm)] px-3 font-semibold text-[var(--color-on-dark-muted)] hover:bg-[var(--color-on-dark)]/5 hover:text-[var(--color-on-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-on-dark)] [&::-webkit-details-marker]:hidden">
+                    {group.name}
+                    <ChevronDown
+                      size={ICON_SIZE.sm}
+                      aria-hidden="true"
+                      className="transition-transform group-open:rotate-180 motion-reduce:transition-none"
+                    />
+                  </summary>
+                  <div className="mt-1">{list}</div>
+                </details>
+              );
+            }
+            return (
+              <div key={group.name}>
+                <h2 className="type-fine mb-1 px-3 font-semibold text-[var(--color-on-dark-muted)]">
+                  {group.name}
+                </h2>
+                {list}
+              </div>
+            );
+          })}
         </nav>
       </aside>
     </>
