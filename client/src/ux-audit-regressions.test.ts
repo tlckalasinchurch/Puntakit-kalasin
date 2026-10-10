@@ -496,11 +496,23 @@ describe("Audit 2026-10-04 — permissions, error states and mobile forms", () =
       "Events",
       "Announcements",
       "Ministries",
-      "Reports",
       "Inbox",
     ]) {
       const src = read(`client/src/pages/${page}.tsx`);
       expect(src, `${page}.tsx`).toMatch(
+        /min-h-11 w-full[^"]*text-base md:text-sm/
+      );
+    }
+
+    // Reports no longer has native text controls: its date range uses the
+    // shared DateField, a button-triggered popover (iOS only zooms on focus of
+    // a text <input>/<select>/<textarea>). So the rule above is replaced by:
+    // Reports must keep using DateField and must not grow a native text
+    // control without the 16px class.
+    const reports = read("client/src/pages/Reports.tsx");
+    expect(reports).toMatch(/import \{ DateField \} from "@\/components\/DateField"/);
+    if (/<(input|select|textarea)\b/.test(reports)) {
+      expect(reports, "Reports.tsx native control").toMatch(
         /min-h-11 w-full[^"]*text-base md:text-sm/
       );
     }
