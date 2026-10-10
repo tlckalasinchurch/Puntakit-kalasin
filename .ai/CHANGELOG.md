@@ -3,6 +3,16 @@
 
 > เพิ่มรายการใหม่ไว้บนสุด เฉพาะงานสำคัญที่เสร็จ (ผ่าน `/wrap`) ระบุให้ชัดว่าตรวจอะไร **และอะไรยังไม่ได้ตรวจ** ไม่มี commit ในรายการเหล่านี้ (ยังไม่ commit)
 
+## 2026-10-10 — พอร์ต UI P1+P2 ไป `main` — **merged + deployed (PR #52, `be1c2e2`)**
+
+- **ลำดับเหตุการณ์ (ตรวจจาก `gh`/Vercel MCP):** commit `15a45d3` บนสาขา `port/ui-p1-p2` (จาก `4dd66ab`) → push → PR #52 → CI `verify` ล้ม 4 เทสต์ชุดเดียวกับ baseline ของ `main` (labels/Home.tsx, 12px floor, white-on-primary, Reports 16px; CI รอบ PR: 50 ไฟล์ผ่าน/4 ล้ม, 614 ผ่าน/4 ล้ม ตรงกับในเครื่อง) → preview `dpl_DHjfEsZb7fJ5HGV3ixGGuP55xU7J` READY (`/api/health` 200; ต้อง bypass Vercel Authentication) → เจ้าของสั่ง merge → squash `be1c2e2` 08:25:29Z → production `dpl_C9Tas4jMqj4BsKJh3QbeY45ArsTf` READY, `/api/health` 200 ทั้งผ่านดีพลอยเมนต์และ `puntakit-kalasin.vercel.app`, `/` 200 ให้ CSS `index-BlalgShE.css` (ตัวเดียวกับ preview) · rollback candidate = `dpl_BX7RAmbSbFo95nC9GHkz2rsrVpUi` (`4dd66ab`)
+- **NOT VERIFIED บน production:** หน้าที่ล็อกอินแล้ว (เมนูใหม่, หัวข้อ `/care` `/attendance` `/events`, เมนู "แอปสมาชิก" เฉพาะแอดมิน, เมนู `group_leader` ชุดเดิม) — ยังไม่มีผู้ใช้ที่ได้รับอนุญาตตรวจ · **ห้ามเรียก PRODUCTION VERIFIED** จนกว่าจะตรวจ · CI ของ `main` แดงมาตลอด (6 push ล่าสุดล้มทั้งหมด; ผมอ่านสาเหตุได้เฉพาะ run ล่าสุด) — การแก้ 4 เทสต์นั้นเป็นงานแยกที่ยังไม่ได้อนุมัติ
+- **รายละเอียดการพอร์ต (ก่อน merge ยังเป็นสาขา `port/ui-p1-p2`, ตอนนี้อยู่ใน `main` แล้ว):**
+
+- P1: `index.css` (ต่อท้ายบล็อก `.pk-*` 198 บรรทัด ตัดกฎ `.login-*` ออกเพราะ `main` ออกแบบ sign-in ใหม่), `DesignSystem`, `AppLayout`, `Events` + `lib/eventGroups`, `Announcements`/`Feed`/`Map`/`Attendance` (1 บรรทัด `pk-surface`) · P2: เมนูบน `Sidebar` ของ `main` (คง `groupLeaderNavGroups`, "ผู้ใช้และสิทธิ์", แถบล่าง group_leader) — "เช็คชื่อกลุ่มดูแล" `/care`, "เช็คชื่อวันนมัสการ" `/attendance`, "กิจกรรม" `/events` (+ alias `/worship`), "แอปสมาชิก" เฉพาะ `super_admin`/`admin` · หัวข้อหน้า `CareToday`/`Attendance`/`Events` ตรงกับชื่อเมนู · test ใหม่ `nav-structure-contract`, `premium-shell-contract`, `eventGroups`
+- ตรวจจริง: `tsc` 0 · build 0 · vitest ทั้งชุด 54 ไฟล์ ผ่าน 614 **ล้ม 4 ซึ่งเกิดบน `origin/main` เดิมเหมือนกัน** (labels/Home.tsx, 12px floor, white-on-primary, Reports 16px — รายการ offender ไม่มีไฟล์ของเรา) · Playwright บน API ของ `main` (PGlite ชั่วคราว): 6 หน้า × 360/1280 ไม่ overflow/ไม่มี console error, เมนูตาม 6 บทบาท, `/care` `/attendance` `/worship` `/events` หัวข้อ+ชื่อแท็บ+รายการเมนูที่ active ถูกต้อง · ภาพ `Work\_shots-port-p1p2\`
+- หมายเหตุ: การซ่อนเมนู "แอปสมาชิก" **ไม่ใช่การป้องกัน route** — `viewer` เปิด `/app` ด้วย URL ได้ (ยืนยันแล้ว; ไม่เปลี่ยนในรอบนี้) · ยังไม่ตรวจกับ production · ข้อความ "เช็คชื่อพันธกิจวันนี้" ที่ปุ่มหน้า `Home.tsx` ไม่ได้แก้ (นอกขอบเขต P3)
+
 ## 2026-10-10 — เมนู Sidebar ลดจาก 6 เหลือ 4 กลุ่ม (เจ้าของสั่ง; `master` เท่านั้น)
 
 - `Sidebar.tsx`: กลุ่ม "งานประจำ" / "กิจกรรมและสื่อสาร" แสดงตลอด; "เพิ่มเติม" (ผังองค์กร, ข้อมูลคริสตจักร, ฝ่ายงาน, รายงาน, ข้อมูลที่ส่งเข้ามา, นำเข้าจาก Excel) และ "บัญชีของฉัน" พับได้ (`<details>`) เปิดเองเมื่อหน้าปัจจุบันอยู่ในกลุ่ม · **ไม่เปลี่ยน** path, `roles`, ป้ายเดิม; แถบล่างมือถือไม่แก้
