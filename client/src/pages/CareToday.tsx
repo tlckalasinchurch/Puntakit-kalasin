@@ -33,6 +33,8 @@ interface RosterMember {
   nickname: string | null;
   phone: string | null;
   lineId: string | null;
+  /** True when the server masked this member's contact for the signed-in role. */
+  contactMasked?: boolean;
   status: "present" | "absent" | "leave" | "online" | null;
   missed: number;
   lastSeen: string | null;
@@ -326,7 +328,12 @@ export default function CareToday() {
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {m.phone ? (
+                          {m.phone && m.contactMasked ? (
+                            // A masked number cannot be dialled: say so instead of linking to it.
+                            <span className="type-caption self-center text-[var(--color-body-muted)]">
+                              เบอร์ถูกปิดบัง — ขอจากผู้ดูแลที่ได้รับมอบหมาย
+                            </span>
+                          ) : m.phone ? (
                             <a className="clay-chip" href={`tel:${m.phone}`}>
                               <Phone size={18} aria-hidden="true" />
                               โทร {m.phone}
