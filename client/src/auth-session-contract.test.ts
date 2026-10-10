@@ -58,13 +58,11 @@ describe("auth: signed-out and failed-profile-load stay distinct", () => {
   });
 
   it("the login page does not render Clerk's SignIn card over a known error", () => {
-    const source = read("pages/ClerkSignInPage.tsx");
+    const source = read("pages/PinSignInPage.tsx");
     // `<SignIn/>` must sit in the final `else` branch, after the error branch,
     // otherwise Clerk keeps redirecting a signed-in user to fallbackRedirectUrl.
-    const errorBranch = source.indexOf(") : error ? (");
-    const signIn = source.indexOf("<SignIn");
-    expect(errorBranch).toBeGreaterThan(-1);
-    expect(signIn).toBeGreaterThan(errorBranch);
+    expect(source).toContain("pin-login__error");
+    expect(source).not.toContain("<SignIn");
   });
 });
 
@@ -78,12 +76,12 @@ describe("auth: the server names why an account cannot be used", () => {
     expect(source).toContain("ACCOUNT_LINK_CONFLICT");
   });
 
-  it("clerkAuth raises the specific code instead of a bare 403", () => {
+  it("firstParty auth keeps credential failures generic", () => {
     const source = readFileSync(
-      path.join(REPO_ROOT, "server", "lib", "clerkAuth.ts"),
+      path.join(REPO_ROOT, "server", "lib", "firstPartyAuth.ts"),
       "utf8"
     );
-    expect(source).toContain("AccountLinkConflictError");
+    expect(source).toContain("scrypt");
     expect(source).toContain("AccountSuspendedError");
   });
 

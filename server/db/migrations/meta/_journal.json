@@ -92,6 +92,13 @@
       "when": 1791622900300,
       "tag": "0012_membership_lifecycle_and_media",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791650103836,
+      "tag": "0013_first_party_pin_auth",
+      "breakpoints": true
     }
   ]
 }

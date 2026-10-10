@@ -1,6 +1,5 @@
 import { Bell, Menu, Moon, Sun } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
-import { UserButton } from "@clerk/react";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
@@ -55,8 +54,7 @@ function useUnreadCount(path: string | null): number {
  */
 export function Topbar({ onMenu, menuOpen }: TopbarProps) {
   const { theme, toggleTheme } = useTheme();
-  const { user } = useAuth();
-  const isDemoMode = import.meta.env.VITE_PUNTAKIT_DEMO_MODE === "1";
+  const { user, logout } = useAuth();
 
   // Real pending-work count for the bell badge (submissions awaiting review).
   // Reviewers only — other roles keep a quiet bell with no badge.
@@ -116,21 +114,15 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
             </span>
           )}
         </button>
-        {isDemoMode ? (
-          <div
-            className="type-caption-strong flex size-11 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-primary)] text-[var(--color-on-primary)]"
-            title={user?.name ?? "ผู้ดูแลระบบตัวอย่าง"}
-          >
-            <span className="sr-only">
-              เข้าสู่ระบบในชื่อ {user?.name ?? "ผู้ดูแลระบบตัวอย่าง"}
-            </span>
-            <span aria-hidden="true">
-              {(user?.name ?? "ผด").slice(0, 2)}
-            </span>
-          </div>
-        ) : (
-          <UserButton />
-        )}
+        <button
+          type="button"
+          onClick={() => void logout()}
+          className="type-caption-strong flex size-11 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-primary)] text-[var(--color-on-primary)]"
+          title="ออกจากระบบ"
+          aria-label="ออกจากระบบ"
+        >
+          {(user?.name ?? "ผู้ใช้").slice(0, 2)}
+        </button>
       </div>
     </header>
   );

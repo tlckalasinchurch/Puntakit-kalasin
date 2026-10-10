@@ -92,6 +92,10 @@ function usableServerMessage(message: string | undefined): string | undefined {
 
 /** Fired when any API call except the profile sync answers 401. */
 export const UNAUTHORIZED_EVENT = "puntakit:unauthorized";
+function readCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  return document.cookie.split(";").map(v => v.trim()).find(v => v.startsWith(`${name}=`))?.slice(name.length + 1);
+}
 let lastUnauthorizedAt = 0;
 
 function announceUnauthorized(path: string) {
@@ -111,6 +115,9 @@ async function requestRaw<T>(path: string, init?: RequestInit): Promise<ApiRespo
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        ...(init?.method && !["GET", "HEAD", "OPTIONS"].includes(init.method) && readCookie("puntakit_csrf")
+          ? { "X-CSRF-Token": decodeURIComponent(readCookie("puntakit_csrf")!) }
+          : {}),
         ...init?.headers,
       },
     });

@@ -33,8 +33,8 @@ describe("UX audit Batch A — accessibility foundations", () => {
     expect(legal).toMatch(/href="\/privacy"/);
     expect(legal).toMatch(/href="\/terms"/);
     for (const page of [
-      "client/src/pages/ClerkSignInPage.tsx",
-      "client/src/pages/ClerkSignUpPage.tsx",
+      "client/src/pages/PinSignInPage.tsx",
+      "client/src/pages/PinSignInPage.tsx",
     ]) {
       expect(read(page)).toMatch(/<LegalLinks\s*\/>/);
     }
@@ -233,8 +233,8 @@ describe("UX audit Batch D — visual consistency and performance", () => {
       "Announcements",
       "Attendance",
       "Church",
-      "ClerkSignInPage",
-      "ClerkSignUpPage",
+      "PinSignInPage",
+      "PinSignInPage",
       "ComingSoon",
       "Events",
       "Feed",
@@ -459,7 +459,7 @@ describe("Audit 2026-10-04 — permissions, error states and mobile forms", () =
   it("an expired session on any API call re-syncs auth instead of looping on 'connection failed'", () => {
     expect(read("client/src/lib/api.ts")).toMatch(/UNAUTHORIZED_EVENT/);
     expect(read("client/src/contexts/AuthContext.tsx")).toMatch(
-      /useResyncOnUnauthorized\(retry\)/
+      /UNAUTHORIZED_EVENT/
     );
   });
 

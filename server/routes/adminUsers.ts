@@ -5,6 +5,7 @@ import { getDb } from "../db/client.js";
 import { groups, users, USER_ROLES } from "../../shared/schema.js";
 import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
+import { hashPin } from "../lib/firstPartyAuth.js";
 import { runAtomically } from "../lib/atomicWrites.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 
@@ -23,6 +24,7 @@ adminUsersRouter.use(requireAuth, (req, _res, next) => {
 });
 
 const roleSchema = z.object({ role: z.enum(USER_ROLES) });
+const pinSchema = z.object({ pin: z.string().regex(/^\d{6}$/, "PIN ต้องเป็นตัวเลข 6 หลัก") });
 const careGroupsSchema = z.object({
   groupIds: z.array(z.string().uuid()).max(200),
   /** Must be true to take a care group away from a different current leader. */
@@ -34,7 +36,7 @@ adminUsersRouter.get("/", async (req, res, next) => {
     const db = getDb();
     const search = typeof req.query.search === "string" ? req.query.search.trim().slice(0, 100) : "";
     const rows = await db
-      .select({ id: users.id, name: users.name, email: users.email, role: users.role, status: users.status, createdAt: users.createdAt })
+      .select({ id: users.id, name: users.name, email: users.email, role: users.role, status: users.status, createdAt: users.createdAt, pinConfigured: sql<boolean>`(${users.pinHash} is not null)` })
       .from(users)
       .where(search ? or(ilike(users.name, `%${search}%`), ilike(users.email, `%${search}%`)) : undefined)
       .orderBy(asc(users.name))
@@ -83,6 +85,18 @@ adminUsersRouter.get("/", async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+adminUsersRouter.put("/:id/pin", async (req, res, next) => {
+  try {
+    const parsed = pinSchema.safeParse(req.body);
+    if (!parsed.success) throw new ValidationError("PIN ไม่ถูกต้อง", [{ field: "pin", message: "ต้องเป็นตัวเลข 6 หลัก" }]);
+    const [target] = await getDb().select({ id: users.id, email: users.email }).from(users).where(eq(users.id, req.params.id)).limit(1);
+    if (!target) throw new NotFoundError("ไม่พบผู้ใช้");
+    await getDb().update(users).set({ pinHash: await hashPin(parsed.data.pin), pinFailedAttempts: 0, pinLockedUntil: null, pinUpdatedAt: new Date(), updatedAt: new Date() }).where(eq(users.id, target.id));
+    await logAudit({ req, action: "USER_PIN_CHANGED", entityType: "user", entityId: target.id, details: { email: target.email } });
+    res.json({ success: true, data: { id: target.id, pinConfigured: true } });
+  } catch (err) { next(err); }
 });
 
 adminUsersRouter.put("/:id/role", async (req, res, next) => {

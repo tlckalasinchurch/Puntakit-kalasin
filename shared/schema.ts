@@ -50,6 +50,11 @@ export const users = pgTable(
      * Null once the account is Clerk-only. New accounts authenticate via Clerk.
      */
     passwordHash: text("password_hash"),
+    /** First-party PIN verifier; plaintext PINs are never stored. */
+    pinHash: text("pin_hash"),
+    pinFailedAttempts: integer("pin_failed_attempts").notNull().default(0),
+    pinLockedUntil: timestamp("pin_locked_until", { withTimezone: true }),
+    pinUpdatedAt: timestamp("pin_updated_at", { withTimezone: true }),
     name: text("name").notNull(),
     role: text("role", { enum: USER_ROLES })
       .notNull()

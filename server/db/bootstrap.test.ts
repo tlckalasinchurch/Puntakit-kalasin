@@ -25,7 +25,7 @@ const MANAGED_KEYS = [
  *  0010_org_hierarchy added org hierarchy columns to groups;
  *  0011_import_merge_plans added merge plans and their approval state;
  *  0012_membership_lifecycle_and_media added membership_terms, media_assets and members.member_no. */
-const MIGRATION_COUNT = 13;
+const MIGRATION_COUNT = 14;
 
 const originalEnv = { ...process.env };
 const tempDirs: string[] = [];

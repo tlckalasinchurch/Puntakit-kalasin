@@ -1,8 +1,6 @@
 import express, { type ErrorRequestHandler, type Request } from "express";
 import { sql } from "drizzle-orm";
-import { clerkMiddleware } from "@clerk/express";
 import { authRouter } from "./routes/auth.js";
-import { clerkWebhookRouter } from "./routes/clerkWebhook.js";
 import { activitiesRouter } from "./routes/activities.js";
 import { followUpsRouter } from "./routes/followUps.js";
 import { submissionsRouter } from "./routes/submissions.js";
@@ -27,7 +25,7 @@ import { mediaRouter } from "./routes/media.js";
 import { homeRouter } from "./routes/home.js";
 import { requestIdMiddleware } from "./middleware/requestId.js";
 import { isDemoModeEnabled, isLegacyTestAuthEnabled } from "./middleware/auth.js";
-import { isClerkConfigured, resolveClerkPublishableKey } from "./lib/clerkAuth.js";
+import { csrfProtection } from "./lib/firstPartyAuth.js";
 import { AppError } from "./lib/errors.js";
 import { getDb } from "./db/client.js";
 
@@ -43,12 +41,6 @@ export function createApp() {
   app.set("trust proxy", 1);
 
   app.use(requestIdMiddleware);
-  // Must run before express.json(): Svix verifies the exact raw request body.
-  app.use(
-    "/api/webhooks",
-    express.raw({ type: "application/json", limit: "1mb" }),
-    clerkWebhookRouter
-  );
   app.use(express.json({ limit: "1mb" }));
   app.use((req, _res, next) => {
     const cookies: Record<string, string> = {};
@@ -71,42 +63,15 @@ export function createApp() {
     });
   });
 
-  // Clerk is the only authentication provider. The middleware attaches the
-  // verified Clerk session to every request; protected routes enforce it.
-  const isProduction = process.env.NODE_ENV === "production";
-
-  // Fail fast on auth-mode flags that only make sense outside a deployment.
-  // Silently ignoring them would hide a real misconfiguration instead of
-  // surfacing it at start-up (the same policy `server/db/config.ts` applies to
-  // PGlite): with the legacy test path active, a token signed with the test
-  // secret satisfies `requireAuth` and, because `requireRole()` always lets
-  // `super_admin` through, every gate in the app.
-  if (isProduction && process.env.PUNTAKIT_TEST_AUTH === "1") {
-    throw new Error(
-      "PUNTAKIT_TEST_AUTH=1 is rejected when NODE_ENV=production. It enables the legacy cookie/JWT auth path, which must never be reachable from a deployment. Remove the variable."
-    );
+  // First-party authentication uses the database-backed session cookie.
+  // Test/demo shortcuts are explicitly isolated in middleware/auth.ts.
+  if (process.env.NODE_ENV === "production" && process.env.PUNTAKIT_TEST_AUTH === "1") {
+    throw new Error("PUNTAKIT_TEST_AUTH=1 is rejected when NODE_ENV=production.");
   }
-  if (isProduction && process.env.PUNTAKIT_DEMO_MODE === "1") {
-    throw new Error(
-      "PUNTAKIT_DEMO_MODE=1 is rejected when NODE_ENV=production. Demo mode auto-provisions an admin account. Remove the variable."
-    );
+  if (process.env.NODE_ENV === "production" && process.env.PUNTAKIT_DEMO_MODE === "1") {
+    throw new Error("PUNTAKIT_DEMO_MODE=1 is rejected when NODE_ENV=production.");
   }
-
-  const isLegacyTestRuntime = isLegacyTestAuthEnabled();
-  const isLocalDemoRuntime = isDemoModeEnabled();
-  if (!isLegacyTestRuntime && !isLocalDemoRuntime) {
-    if (!isClerkConfigured()) {
-      throw new Error(
-        "Clerk is not configured: CLERK_SECRET_KEY and a publishable key (CLERK_PUBLISHABLE_KEY or VITE_CLERK_PUBLISHABLE_KEY) are required in non-test environments."
-      );
-    }
-    // Pass the key explicitly. Left to itself, `clerkMiddleware()` only looks
-    // for CLERK_PUBLISHABLE_KEY in the environment — a name this project never
-    // sets, because the browser build uses VITE_CLERK_PUBLISHABLE_KEY — and
-    // every request behind the middleware then fails with a 500
-    // "Publishable key is missing".
-    app.use(clerkMiddleware({ publishableKey: resolveClerkPublishableKey() }));
-  }
+  app.use(csrfProtection);
 
   // API Routes
   app.use("/api/auth", authRouter);

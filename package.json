@@ -18,13 +18,10 @@
     "db:push": "dotenv -e .env.local -- drizzle-kit push",
     "db:migrate": "dotenv -e .env.local -- tsx server/scripts/migrate.ts",
     "db:migrate:env": "tsx server/scripts/migrate.ts",
-    "db:relink-clerk": "dotenv -e .env.local -- tsx server/scripts/relink-clerk-user.ts",
-    "db:relink-clerk:env": "tsx server/scripts/relink-clerk-user.ts"
+    "db:set-pin": "dotenv -e .env.local -- tsx server/scripts/set-pin.ts",
+    "db:set-pin:env": "tsx server/scripts/set-pin.ts"
   },
   "dependencies": {
-    "@clerk/express": "^2.1.72",
-    "@clerk/localizations": "^4.21.0",
-    "@clerk/react": "^6.17.2",
     "@electric-sql/pglite": "^0.5.8",
     "@hookform/resolvers": "^5.2.2",
     "@neondatabase/serverless": "^1.1.0",
@@ -77,7 +74,6 @@
     "react-resizable-panels": "^3.0.6",
     "recharts": "^2.15.2",
     "sonner": "^2.0.7",
-    "svix": "^2.6.0",
     "tailwind-merge": "^3.3.1",
     "vaul": "^1.1.2",
     "wouter": "^3.3.5",

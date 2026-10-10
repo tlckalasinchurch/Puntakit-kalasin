@@ -1,8 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Route, Switch, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
-import { ClerkProvider } from "@clerk/react";
-import { clerkThTH } from "./lib/clerkLocalization";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ADMIN_ROLES, ADMIN_SHELL_ROLES, MEMBERSHIP_VIEW_ROLES, PRIVILEGED_ROLES } from "@shared/roles";
@@ -19,8 +17,7 @@ import NotFound from "@/pages/NotFound";
 //
 // NotFound stays a static import on purpose: it is the route fallback, so it
 // must render without ever suspending.
-const ClerkSignInPage = lazy(() => import("./pages/ClerkSignInPage"));
-const ClerkSignUpPage = lazy(() => import("./pages/ClerkSignUpPage"));
+const PinSignInPage = lazy(() => import("./pages/PinSignInPage"));
 const Home = lazy(() => import("./pages/Home"));
 const Feed = lazy(() => import("./pages/Feed"));
 const FollowUps = lazy(() => import("./pages/FollowUps"));
@@ -54,16 +51,6 @@ const MemberGroup = lazy(() => import("./pages/member/MemberGroup"));
 const MemberAttendance = lazy(() => import("./pages/member/MemberAttendance"));
 const MemberProfile = lazy(() => import("./pages/member/MemberProfile"));
 
-// Clerk owns production sign-in/sign-out flows. Local demo mode is explicit,
-// requires VITE_PUNTAKIT_DEMO_MODE=1, and is never enabled by default.
-const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-const IS_DEMO_MODE = import.meta.env.VITE_PUNTAKIT_DEMO_MODE === "1";
-if (!CLERK_PUBLISHABLE_KEY && !IS_DEMO_MODE) {
-  throw new Error(
-    "Missing VITE_CLERK_PUBLISHABLE_KEY. Add the Clerk publishable key or explicitly enable VITE_PUNTAKIT_DEMO_MODE=1 for local development."
-  );
-}
-
 /** Page-content loading → skeleton (design.md §8); never "..." text. */
 function RouteSkeleton() {
   return (
@@ -88,8 +75,7 @@ function RouteSkeleton() {
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={ClerkSignInPage} />
-      <Route path="/signup" component={ClerkSignUpPage} />
+      <Route path="/login" component={PinSignInPage} />
 
       {/* Public legal routes (accessible without login) */}
       <Route path="/privacy" component={Privacy} />
@@ -270,19 +256,7 @@ function App() {
     </ThemeProvider>
   );
 
-  return (
-    <ErrorBoundary>
-      {IS_DEMO_MODE ? (
-        content
-      ) : (
-        // Thai localization belongs on the provider: Clerk v6 removed the
-        // per-component `localization` prop from <SignIn/>/<SignUp/>.
-        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} localization={clerkThTH}>
-          {content}
-        </ClerkProvider>
-      )}
-    </ErrorBoundary>
-  );
+  return <ErrorBoundary>{content}</ErrorBoundary>;
 }
 
 export default App;
