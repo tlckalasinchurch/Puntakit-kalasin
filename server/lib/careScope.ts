@@ -1,9 +1,10 @@
 import type { Request } from "express";
-import { and, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { getDb } from "../db/client.js";
-import { groupMembers, groups, members } from "../../shared/schema.js";
+import { groupMembers, members } from "../../shared/schema.js";
 import type { UserRole } from "../../shared/schema.js";
 import { ForbiddenError } from "./errors.js";
+import { getLedGroupIds as getScopedGroupIds } from "./groupAccess.js";
 
 /**
  * Tenant scope for the `group_leader` role.
@@ -17,11 +18,7 @@ import { ForbiddenError } from "./errors.js";
 export const isScopedRole = (role: UserRole): boolean => role === "group_leader";
 
 export async function getLedGroupIds(userId: string): Promise<string[]> {
-  const rows = await getDb()
-    .select({ id: groups.id })
-    .from(groups)
-    .where(and(isNull(groups.deletedAt), or(eq(groups.leaderId, userId), eq(groups.coLeaderId, userId))));
-  return rows.map((r) => r.id);
+  return Array.from(await getScopedGroupIds(userId));
 }
 
 export async function leadsGroup(userId: string, groupId: string): Promise<boolean> {

@@ -205,6 +205,10 @@ groupsRouter.get("/", async (req, res, next) => {
     const { search, category, status, privacy, area, orgLevel, parentGroupId } = parsed.data;
     const db = getDb();
     const conditions = [isNull(groups.deletedAt)];
+    const ledGroupIds = req.user!.role === "group_leader" ? await getLedGroupIds(req.user!.id) : null;
+    if (ledGroupIds) {
+      conditions.push(inArray(groups.id, Array.from(ledGroupIds)));
+    }
 
     if (status) {
       conditions.push(eq(groups.status, status));

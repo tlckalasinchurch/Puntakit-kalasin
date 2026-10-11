@@ -40,7 +40,29 @@ export async function getLedGroupIds(userId: string): Promise<Set<string>> {
       )
     );
 
-  return new Set([...direct, ...viaMembership].map((r) => r.id));
+  const directIds = [...direct, ...viaMembership].map((r) => r.id);
+  const bodyChildren = directIds.length
+    ? await db
+        .select({ id: groups.id })
+        .from(groups)
+        .where(and(isNull(groups.deletedAt), eq(groups.orgLevel, "care"), inArray(groups.parentGroupId, directIds)))
+    : [];
+
+  // A user who leads a body may see the care groups nested under that body.
+  // Direct care leaders keep their existing one-group scope.
+  const bodyIds = await db
+    .select({ id: groups.id })
+    .from(groups)
+    .where(and(isNull(groups.deletedAt), eq(groups.orgLevel, "body"), inArray(groups.id, directIds)));
+  const bodyCareIds = bodyIds.length
+    ? (await db
+        .select({ id: groups.id })
+        .from(groups)
+        .where(and(isNull(groups.deletedAt), eq(groups.orgLevel, "care"), inArray(groups.parentGroupId, bodyIds.map((body) => body.id)))))
+        .map((row) => row.id)
+    : [];
+
+  return new Set([...directIds, ...bodyChildren.map((r) => r.id), ...bodyCareIds]);
 }
 
 /**
