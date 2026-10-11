@@ -6,6 +6,7 @@ import {
   CalendarDays,
   Camera,
   HeartHandshake,
+  KeyRound,
   Home as HomeIcon,
   Inbox as InboxIcon,
   ListChecks,
@@ -136,6 +137,7 @@ export const navGroups: NavGroup[] = [
         roles: CREATE_ROLES,
       },
       { label: "ผู้ใช้และสิทธิ์", path: "/admin/users", icon: ShieldCheck, roles: SUPER_ADMIN_ROLES },
+      { label: "จัดการ PIN บอดี้", path: "/admin/pins", icon: KeyRound, roles: SUPER_ADMIN_ROLES },
       {
         label: "นำเข้าจาก Excel",
         path: "/import",

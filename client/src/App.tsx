@@ -3,7 +3,7 @@ import { Route, Switch, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ADMIN_ROLES, ADMIN_SHELL_ROLES, MEMBERSHIP_VIEW_ROLES, PRIVILEGED_ROLES } from "@shared/roles";
+import { ADMIN_ROLES, ADMIN_SHELL_ROLES, MEMBERSHIP_VIEW_ROLES, PRIVILEGED_ROLES, SUPER_ADMIN_ROLES } from "@shared/roles";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -30,6 +30,7 @@ const OrgChart = lazy(() => import("./pages/OrgChart"));
 const ImportOrgData = lazy(() => import("./pages/ImportOrgData"));
 const ImportMergeApprovals = lazy(() => import("./pages/ImportMergeApprovals"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
+const PinManagement = lazy(() => import("./pages/PinManagement"));
 const Members = lazy(() => import("./pages/Members"));
 const Groups = lazy(() => import("./pages/Groups"));
 const MapPage = lazy(() => import("./pages/Map"));
@@ -156,6 +157,11 @@ function Router() {
       <Route path="/admin/users">
         <ProtectedRoute>
           <AdminUsers />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/pins">
+        <ProtectedRoute allow={SUPER_ADMIN_ROLES}>
+          <PinManagement />
         </ProtectedRoute>
       </Route>
       <Route path="/import/org">
