@@ -13,6 +13,7 @@ import {
 } from "../../shared/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { DIRECTORY_ROLES, PRIVILEGED_ROLES as OPERATIONS_ROLES } from "../../shared/roles.js";
+import { memberIdsInGroups, resolveMembershipScope } from "../lib/membershipScope.js";
 
 export const dashboardRouter = Router();
 
@@ -24,6 +25,14 @@ const INACTIVE_GROUP_DAYS = 14;
 dashboardRouter.get("/summary", async (req, res, next) => {
   try {
     const db = getDb();
+    const membershipScope = await resolveMembershipScope(req.user!);
+    const scopedMemberIds = membershipScope.kind === "groups" ? await memberIdsInGroups(membershipScope.viewGroupIds) : null;
+    const memberScope =
+      scopedMemberIds === null
+        ? undefined
+        : scopedMemberIds.length === 0
+          ? sql`false`
+          : inArray(members.id, scopedMemberIds);
 
     // Calculate beginning of current month
     const now = new Date();
@@ -33,35 +42,35 @@ dashboardRouter.get("/summary", async (req, res, next) => {
     const [totalResult] = await db
       .select({ count: count() })
       .from(members)
-      .where(isNull(members.deletedAt));
+      .where(and(isNull(members.deletedAt), memberScope));
     const totalMembers = Number(totalResult?.count ?? 0);
 
     // 2. New members this month
     const [newResult] = await db
       .select({ count: count() })
       .from(members)
-      .where(and(isNull(members.deletedAt), gte(members.joinedAt, startOfMonth)));
+      .where(and(isNull(members.deletedAt), gte(members.joinedAt, startOfMonth), memberScope));
     const newThisMonth = Number(newResult?.count ?? 0);
 
     // 3. Need follow-up count
     const [needFollowResult] = await db
       .select({ count: count() })
       .from(members)
-      .where(and(isNull(members.deletedAt), eq(members.status, "ต้องติดตาม")));
+      .where(and(isNull(members.deletedAt), eq(members.status, "ต้องติดตาม"), memberScope));
     const needFollowUp = Number(needFollowResult?.count ?? 0);
 
     // 4. Followed up count
     const [followedResult] = await db
       .select({ count: count() })
       .from(members)
-      .where(and(isNull(members.deletedAt), eq(members.status, "ติดตามแล้ว")));
+      .where(and(isNull(members.deletedAt), eq(members.status, "ติดตามแล้ว"), memberScope));
     const followedUp = Number(followedResult?.count ?? 0);
 
     // 5. In group count (members assigned to a cell group)
     const [inGroupResult] = await db
       .select({ count: count() })
       .from(members)
-      .where(and(isNull(members.deletedAt), eq(members.membershipStatus, "active")));
+      .where(and(isNull(members.deletedAt), eq(members.membershipStatus, "active"), memberScope));
     const activeMembers = Number(inGroupResult?.count ?? 0);
 
     // 6. Recent 5 members
@@ -76,7 +85,7 @@ dashboardRouter.get("/summary", async (req, res, next) => {
         joinedAt: members.joinedAt,
       })
       .from(members)
-      .where(isNull(members.deletedAt))
+      .where(and(isNull(members.deletedAt), memberScope))
       .orderBy(desc(members.createdAt))
       .limit(5);
 

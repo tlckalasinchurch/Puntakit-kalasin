@@ -40,29 +40,23 @@ export async function getLedGroupIds(userId: string): Promise<Set<string>> {
       )
     );
 
-  const directIds = [...direct, ...viaMembership].map((r) => r.id);
-  const bodyChildren = directIds.length
-    ? await db
-        .select({ id: groups.id })
-        .from(groups)
-        .where(and(isNull(groups.deletedAt), eq(groups.orgLevel, "care"), inArray(groups.parentGroupId, directIds)))
-    : [];
+  return new Set([...direct, ...viaMembership].map((r) => r.id));
+}
 
-  // A user who leads a body may see the care groups nested under that body.
-  // Direct care leaders keep their existing one-group scope.
-  const bodyIds = await db
-    .select({ id: groups.id })
-    .from(groups)
-    .where(and(isNull(groups.deletedAt), eq(groups.orgLevel, "body"), inArray(groups.id, directIds)));
-  const bodyCareIds = bodyIds.length
-    ? (await db
-        .select({ id: groups.id })
-        .from(groups)
-        .where(and(isNull(groups.deletedAt), eq(groups.orgLevel, "care"), inArray(groups.parentGroupId, bodyIds.map((body) => body.id)))))
-        .map((row) => row.id)
-    : [];
-
-  return new Set([...directIds, ...bodyChildren.map((r) => r.id), ...bodyCareIds]);
+/** Groups a leader may read: direct groups plus every descendant care group. */
+export async function getViewableGroupIds(userId: string): Promise<Set<string>> {
+  const all = await getLedGroupIds(userId);
+  const db = getDb();
+  let frontier = Array.from(all);
+  while (frontier.length > 0) {
+    const children = await db
+      .select({ id: groups.id })
+      .from(groups)
+      .where(and(isNull(groups.deletedAt), inArray(groups.parentGroupId, frontier)));
+    frontier = children.map((row) => row.id).filter((id) => !all.has(id));
+    for (const id of frontier) all.add(id);
+  }
+  return all;
 }
 
 /**
@@ -74,7 +68,7 @@ export type GroupScope = { kind: "all" } | { kind: "led"; ids: Set<string> };
 
 export async function resolveGroupScope(user: { id: string; role: UserRole }): Promise<GroupScope> {
   if (user.role !== "group_leader") return { kind: "all" };
-  return { kind: "led", ids: await getLedGroupIds(user.id) };
+  return { kind: "led", ids: await getViewableGroupIds(user.id) };
 }
 
 export function scopeAllows(scope: GroupScope, groupId: string): boolean {

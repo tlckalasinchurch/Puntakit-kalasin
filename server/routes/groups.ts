@@ -21,7 +21,7 @@ import type { UserRole } from "../../shared/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { canSeeMemberContacts, maskPhone } from "./members.js";
 import { logAudit } from "../lib/audit.js";
-import { getLedGroupIds } from "../lib/groupAccess.js";
+import { getLedGroupIds, getViewableGroupIds } from "../lib/groupAccess.js";
 import { leadsGroup } from "../lib/careScope.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 
@@ -205,7 +205,7 @@ groupsRouter.get("/", async (req, res, next) => {
     const { search, category, status, privacy, area, orgLevel, parentGroupId } = parsed.data;
     const db = getDb();
     const conditions = [isNull(groups.deletedAt)];
-    const ledGroupIds = req.user!.role === "group_leader" ? await getLedGroupIds(req.user!.id) : null;
+    const ledGroupIds = req.user!.role === "group_leader" ? await getViewableGroupIds(req.user!.id) : null;
     if (ledGroupIds) {
       conditions.push(inArray(groups.id, Array.from(ledGroupIds)));
     }

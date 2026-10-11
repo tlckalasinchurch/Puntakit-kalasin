@@ -47,6 +47,7 @@ describe("Operations dashboard API — real aggregates (real PGlite Postgres)", 
 
   let adminCookie: string;
   let memberCookie: string;
+  let groupLeaderCookie: string;
 
   let inactiveGroupId: string;
   let activeGroupId: string;
@@ -89,6 +90,23 @@ describe("Operations dashboard API — real aggregates (real PGlite Postgres)", 
 
     adminCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: admin.id, email: admin.email, role: "admin" })}`;
     memberCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: member.id, email: member.email, role: "member" })}`;
+
+    const [groupLeader] = await db
+      .insert(schema.users)
+      .values({ email: "leader@ops-test.local", passwordHash: "x", name: "หัวหน้าแคร์", role: "group_leader" })
+      .returning();
+    groupLeaderCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: groupLeader.id, email: groupLeader.email, role: "group_leader" })}`;
+
+    const [leaderGroup] = await db
+      .insert(schema.groups)
+      .values({ name: "พันธกิจของหัวหน้า (ทดสอบ)", leaderId: groupLeader.id, createdById: admin.id })
+      .returning();
+    const [inScopeMember] = await db
+      .insert(schema.members)
+      .values({ name: "สมาชิกในขอบเขต (ทดสอบ)", status: "ต้องติดตาม", createdById: admin.id })
+      .returning();
+    await db.insert(schema.members).values({ name: "สมาชิกนอกขอบเขต (ทดสอบ)", status: "ติดตามแล้ว", createdById: admin.id });
+    await db.insert(schema.groupMembers).values({ groupId: leaderGroup.id, memberId: inScopeMember.id, status: "active" });
 
     // Pending submission
     await db.insert(schema.missionSubmissions).values({ rawText: "ทดสอบ operations", createdById: admin.id });
@@ -149,5 +167,15 @@ describe("Operations dashboard API — real aggregates (real PGlite Postgres)", 
     expect(inactiveNames).not.toContain("กลุ่มมีชีวิต (ทดสอบ)");
 
     expect(body.data.recentActivity.some((a: any) => a.title === "กิจกรรมล่าสุดของกลุ่มมีชีวิต")).toBe(true);
+  });
+
+  it("scopes member summary counts for a group leader", async () => {
+    const res = await fetch(`${baseUrl}/api/dashboard/summary`, { headers: { Cookie: groupLeaderCookie } });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: any };
+    expect(body.data.totalMembers).toBe(1);
+    expect(body.data.needFollowUp).toBe(1);
+    expect(body.data.followedUp).toBe(0);
+    expect(body.data.recentMembers).toEqual([]);
   });
 });
