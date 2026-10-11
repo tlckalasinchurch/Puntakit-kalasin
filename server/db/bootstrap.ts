@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { migrate as migrateNeon } from "drizzle-orm/neon-http/migrator";
 import { migrate as migratePostgres } from "drizzle-orm/postgres-js/migrator";
 import { migrate as migratePglite } from "drizzle-orm/pglite/migrator";
@@ -6,6 +6,7 @@ import * as path from "node:path";
 import * as schema from "../../shared/schema.js";
 import { getDatabaseConfig, getDatabaseHandle, getDb } from "./client.js";
 import type { DatabaseDriver } from "./config.js";
+import { DEFAULT_SUPER_ADMIN_PIN, hashPin } from "../lib/firstPartyAuth.js";
 
 /**
  * Driver-aware migration + schema verification.
@@ -76,8 +77,31 @@ export async function bootstrapDatabase(options: BootstrapOptions = {}): Promise
   }
 
   const verification = await verifyDatabaseSchema();
+  await ensureDefaultSuperAdminPins();
 
   return { driver: config.driver, ranMigrations: true, verification };
+}
+
+/**
+ * Give existing super admins the agreed starter PIN once. The NULL guard is
+ * intentional: a PIN chosen later by an admin must never be replaced on boot.
+ */
+async function ensureDefaultSuperAdminPins(): Promise<void> {
+  const db = getDb();
+  const candidates = await db
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(and(eq(schema.users.role, "super_admin"), isNull(schema.users.pinHash)))
+    .limit(100);
+  if (candidates.length === 0) return;
+
+  const pinHash = await hashPin(DEFAULT_SUPER_ADMIN_PIN);
+  for (const candidate of candidates) {
+    await db
+      .update(schema.users)
+      .set({ pinHash, pinFailedAttempts: 0, pinLockedUntil: null, pinUpdatedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(schema.users.id, candidate.id), isNull(schema.users.pinHash)));
+  }
 }
 
 /**

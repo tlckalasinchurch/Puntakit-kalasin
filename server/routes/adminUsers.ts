@@ -5,7 +5,7 @@ import { getDb } from "../db/client.js";
 import { groups, users, USER_ROLES } from "../../shared/schema.js";
 import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
-import { hashPin } from "../lib/firstPartyAuth.js";
+import { DEFAULT_SUPER_ADMIN_PIN, hashPin } from "../lib/firstPartyAuth.js";
 import { runAtomically } from "../lib/atomicWrites.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 
@@ -114,9 +114,17 @@ adminUsersRouter.put("/:id/role", async (req, res, next) => {
         .where(and(eq(users.role, "super_admin"), eq(users.status, "active")));
       if (count <= 1) throw new ConflictError("ต้องมีผู้ดูแลระบบสูงสุดอย่างน้อย 1 คน");
     }
+    const starterPinHash = target.role !== "super_admin" && parsed.data.role === "super_admin" && !target.pinHash
+      ? await hashPin(DEFAULT_SUPER_ADMIN_PIN)
+      : target.pinHash;
     const [updated] = await db
       .update(users)
-      .set({ role: parsed.data.role, updatedAt: new Date() })
+      .set({
+        role: parsed.data.role,
+        pinHash: starterPinHash,
+        ...(starterPinHash !== target.pinHash ? { pinUpdatedAt: new Date(), pinFailedAttempts: 0, pinLockedUntil: null } : {}),
+        updatedAt: new Date(),
+      })
       .where(eq(users.id, target.id))
       .returning({ id: users.id, role: users.role });
     await logAudit({ req, action: "USER_ROLE_CHANGED", entityType: "user", entityId: target.id, details: { from: target.role, to: updated.role } });

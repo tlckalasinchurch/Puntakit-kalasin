@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { verifyPin } from "../lib/firstPartyAuth.js";
 
 /**
  * Org hierarchy on groups (body -> care) against real embedded PostgreSQL.
@@ -95,10 +96,13 @@ describe("Admin users (real PGlite Postgres)", () => {
     expect((await call("PUT", `/api/admin/users/${memberA.u.id}/role`, { role: "root" })).status).toBe(400);
     const ok = await call("PUT", `/api/admin/users/${memberA.u.id}/role`, { role: "group_leader" });
     expect(ok.status).toBe(200);
+    const promote = await call("PUT", `/api/admin/users/${memberA.u.id}/role`, { role: "super_admin" });
+    expect(promote.status).toBe(200);
     const [row] = await db.select().from(schema.users).where(eq(schema.users.id, memberA.u.id));
-    expect(row.role).toBe("group_leader");
+    expect(row.role).toBe("super_admin");
+    expect(await verifyPin("999999", row.pinHash)).toBe(true);
     const audit = await db.select().from(schema.auditLogs).where(eq(schema.auditLogs.action, "USER_ROLE_CHANGED"));
-    expect(audit.length).toBe(1);
+    expect(audit.length).toBe(2);
   });
 
   it("does not let a super admin change their own role, and lets another super admin change a peer", async () => {
