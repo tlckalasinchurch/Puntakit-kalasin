@@ -1,8 +1,8 @@
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import type { Request, Response } from "express";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { getDb } from "../db/client.js";
-import { auditLogs, userSessions, users } from "../../shared/schema.js";
+import { auditLogs, members, userSessions, users } from "../../shared/schema.js";
 import type { AuthenticatedUser } from "./auth.js";
 import { AccountSuspendedError, RateLimitError, UnauthorizedError } from "./errors.js";
 
@@ -40,8 +40,13 @@ export async function verifyPin(pin: string, encoded: string | null): Promise<bo
   }
 }
 
-function requestKey(req: Request, identity: string): string {
-  return `${req.ip}:${identity.trim().toLowerCase()}`;
+export function normalizePhone(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  // Accept both Thai local format (08x...) and international +66 format.
+  return digits.startsWith("66") && digits.length === 11 ? `0${digits.slice(2)}` : digits;
+}
+function requestKey(req: Request, phone: string): string {
+  return `${req.ip}:${phone}`;
 }
 function checkSourceLimit(key: string): void {
   const now = Date.now();
@@ -114,11 +119,23 @@ export async function loadSessionUser(req: Request): Promise<AuthenticatedUser> 
   return { id: row.user.id, email: row.user.email, name: row.user.name, role: row.user.role as AuthenticatedUser["role"], sessionId: row.session.id };
 }
 
-export async function authenticateWithPin(req: Request, res: Response, identity: string, pin: string): Promise<AuthenticatedUser> {
-  const normalized = identity.trim().toLowerCase();
+export async function authenticateWithPin(req: Request, res: Response, phone: string, pin: string): Promise<AuthenticatedUser> {
+  const normalized = normalizePhone(phone);
   checkSourceLimit(requestKey(req, normalized));
   const db = getDb();
-  const [user] = await db.select().from(users).where(eq(users.email, normalized)).limit(1);
+  const storedPhoneDigits = sql`regexp_replace(${members.phone}, '[^0-9]', '', 'g')`;
+  const phoneMatches = or(
+    eq(storedPhoneDigits, normalized),
+    normalized.length === 10 ? eq(storedPhoneDigits, `66${normalized.slice(1)}`) : undefined,
+  );
+  const rows = normalized.length >= 9 && phoneMatches
+    ? await db.select({ user: users }).from(members)
+      .innerJoin(users, eq(members.userId, users.id))
+      .where(and(phoneMatches, eq(users.status, "active")))
+      .limit(2)
+    : [];
+  const uniqueUsers = Array.from(new Map(rows.map((row) => [row.user.id, row.user])).values());
+  const user = uniqueUsers.length === 1 ? uniqueUsers[0] : undefined;
   const locked = user?.pinLockedUntil && user.pinLockedUntil > new Date();
   const valid = Boolean(user && !locked && user.status === "active" && await verifyPin(pin, user.pinHash));
   if (!valid) {
@@ -129,6 +146,7 @@ export async function authenticateWithPin(req: Request, res: Response, identity:
     }
     throw new UnauthorizedError(GENERIC_LOGIN_ERROR);
   }
+  if (!user) throw new UnauthorizedError(GENERIC_LOGIN_ERROR);
   await db.update(users).set({ pinFailedAttempts: 0, pinLockedUntil: null, updatedAt: new Date() }).where(eq(users.id, user.id));
   await db.insert(auditLogs).values({ userId: user.id, action: "auth.login_success", entityType: "user", entityId: user.id, ipAddress: req.ip?.slice(0, 100), userAgent: req.get("user-agent")?.slice(0, 500) });
   await createSession(req, res, user.id);
