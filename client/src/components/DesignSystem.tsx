@@ -190,7 +190,7 @@ export type StatusTone = "success" | "warning" | "error" | "info" | "neutral";
 const TONE_CLASS: Record<StatusTone, string> = {
   success: "bg-[var(--color-success)]/10 text-[var(--color-success-ink)]",
   warning: "bg-[var(--color-warning)]/10 text-[var(--color-warning-ink)]",
-  error: "bg-[var(--color-error)]/10 text-[var(--color-error)]",
+  error: "bg-[var(--color-error)]/10 text-[var(--color-error-ink)]",
   info: "bg-[var(--color-info-soft)] text-[var(--color-info-ink)]",
   neutral:
     "bg-[var(--color-canvas-soft)] text-[var(--color-text-secondary)]",

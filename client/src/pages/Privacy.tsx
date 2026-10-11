@@ -57,7 +57,7 @@ export default function Privacy() {
         data-testid="privacy-page"
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-          <Lock size={20} style={{ color: "var(--blue)" }} />
+          <Lock size={20} style={{ color: "var(--color-primary)" }} />
           <h1 style={{ margin: 0, fontSize: 24 }}>นโยบายความเป็นส่วนตัว</h1>
         </div>
         <p className="login-sub" style={{ marginTop: 0 }}>
@@ -67,25 +67,25 @@ export default function Privacy() {
 
         {sections.map((s) => (
           <section key={s.title} style={{ marginTop: 24 }}>
-            <h2 style={{ fontSize: 16, margin: "0 0 8px", color: "var(--navy)" }}>{s.title}</h2>
+            <h2 className="type-body-strong mb-2 text-[var(--color-ink)]">{s.title}</h2>
             {s.body.map((p, i) => (
-              <p key={i} style={{ fontSize: 13, lineHeight: 1.7, color: "var(--muted)", margin: "0 0 8px" }}>
+              <p key={i} className="type-caption mb-2 text-[var(--color-text-secondary)]">
                 {p}
               </p>
             ))}
           </section>
         ))}
 
-        <div style={{ marginTop: 32, paddingTop: 20, borderTop: "1px solid var(--line)" }}>
+        <div style={{ marginTop: 32, paddingTop: 20, borderTop: "1px solid var(--color-hairline)" }}>
           <Link
             href="/terms"
-            style={{ fontSize: 14, minHeight: 44, display: "inline-flex", alignItems: "center", fontWeight: 600, color: "var(--blue)", textDecoration: "none", marginRight: 20 }}
+            className="type-caption-strong mr-5 inline-flex min-h-11 items-center text-[var(--color-primary)] no-underline"
           >
             อ่านเงื่อนไขการใช้งาน →
           </Link>
           <Link
             href="/login"
-            style={{ fontSize: 14, minHeight: 44, display: "inline-flex", alignItems: "center", fontWeight: 600, color: "var(--muted)", textDecoration: "none", gap: 4 }}
+            className="type-caption-strong inline-flex min-h-11 items-center gap-1 text-[var(--color-body-muted)] no-underline"
           >
             <ArrowLeft size={14} /> กลับหน้าเข้าสู่ระบบ
           </Link>

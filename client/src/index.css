@@ -34,6 +34,7 @@
   --color-success-ink: #15704a;
   --color-warning-ink: #8a5410;
   --color-info-ink: #1f5aa6;
+  --color-error-ink: #c23b4d;
 
   /* Radius grammar */
   --radius-none: 0px;
@@ -657,7 +658,7 @@
 }
 .chip-success { background: color-mix(in srgb, var(--color-success) 12%, transparent); color: var(--color-success); }
 .chip-warning { background: color-mix(in srgb, var(--color-warning) 14%, transparent); color: var(--color-warning); }
-.chip-error   { background: color-mix(in srgb, var(--color-error) 10%, transparent); color: var(--color-error); }
+.chip-error   { background: color-mix(in srgb, var(--color-error) 10%, transparent); color: var(--color-error-ink); }
 .chip-info    { background: color-mix(in srgb, var(--color-info) 12%, transparent); color: var(--color-info); }
 .chip-neutral { background: var(--color-canvas-soft); color: var(--color-body-muted); }
 
@@ -1252,7 +1253,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--color-error);
+  color: var(--color-error-ink);
   font-size: 14px;
   font-weight: 700;
 }
@@ -1423,6 +1424,7 @@
   --color-success-ink: #66d7a0;
   --color-warning-ink: #f2b867;
   --color-info-ink: #9cc4f5;
+  --color-error-ink: #f4a3ac;
   --background: var(--color-canvas);
   --foreground: var(--color-ink);
   --card: var(--color-canvas);

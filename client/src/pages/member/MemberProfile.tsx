@@ -543,7 +543,7 @@ export default function MemberProfile() {
         <button
           type="button"
           onClick={() => setConfirmLogout(true)}
-          className="type-caption-strong inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-[var(--color-error)] bg-[var(--color-canvas)] px-4 text-[var(--color-error)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none"
+          className="type-caption-strong inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-[var(--color-error)] bg-[var(--color-canvas)] px-4 text-[var(--color-error-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none"
         >
           <LogOut size={ICON_SIZE.sm} aria-hidden="true" />
           <span>ออกจากระบบ</span>

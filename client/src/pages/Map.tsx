@@ -145,7 +145,7 @@ function CategoryChip({
       aria-pressed={active}
       className={`type-caption-strong h-11 shrink-0 whitespace-nowrap rounded-[var(--radius-pill)] px-4 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] ${
         active
-          ? "bg-[var(--color-primary)] text-white"
+          ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
           : "border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-body-muted)] hover:bg-[var(--color-canvas-soft)]"
       }`}
     >
@@ -367,7 +367,7 @@ export default function MapPage() {
               aria-pressed={view === "map"}
               className={`type-caption-strong flex h-11 items-center gap-1.5 px-4 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] ${
                 view === "map"
-                  ? "bg-[var(--color-primary)] text-white"
+                  ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                   : "text-[var(--color-body-muted)]"
               }`}
             >
@@ -380,7 +380,7 @@ export default function MapPage() {
               aria-pressed={view === "list"}
               className={`type-caption-strong flex h-11 items-center gap-1.5 px-4 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] ${
                 view === "list"
-                  ? "bg-[var(--color-primary)] text-white"
+                  ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                   : "text-[var(--color-body-muted)]"
               }`}
             >

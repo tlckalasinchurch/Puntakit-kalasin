@@ -127,37 +127,37 @@ const STATUS_OPTIONS: {
     value: "present",
     label: "มา",
     active:
-      "border-transparent bg-[var(--color-success)] text-[var(--color-on-dark)]",
-    idle: "border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-success)] hover:bg-[var(--color-success)]/10",
+      "border-transparent bg-[var(--color-success-ink)] text-[var(--color-on-primary)]",
+    idle: "border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-success-ink)] hover:bg-[var(--color-success)]/10",
   },
   {
     value: "online",
     label: "ออนไลน์",
     active:
-      "border-transparent bg-[var(--color-info-strong)] text-[var(--color-on-dark)]",
-    idle: "border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-info-strong)] hover:bg-[var(--color-info-soft)]",
+      "border-transparent bg-[var(--color-info-ink)] text-[var(--color-on-primary)]",
+    idle: "border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-info-ink)] hover:bg-[var(--color-info-soft)]",
   },
   {
     value: "leave",
     label: "ลา",
     active:
-      "border-transparent bg-[var(--color-warning)] text-[var(--color-on-dark)]",
-    idle: "border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-warning)] hover:bg-[var(--color-warning)]/10",
+      "border-transparent bg-[var(--color-warning-ink)] text-[var(--color-on-primary)]",
+    idle: "border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-warning-ink)] hover:bg-[var(--color-warning)]/10",
   },
   {
     value: "absent",
     label: "ขาด",
     active:
-      "border-transparent bg-[var(--color-error)] text-[var(--color-on-dark)]",
-    idle: "border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-error)] hover:bg-[var(--color-error)]/10",
+      "border-transparent bg-[var(--color-error-ink)] text-[var(--color-on-primary)]",
+    idle: "border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-error-ink)] hover:bg-[var(--color-error)]/10",
   },
 ];
 
 const METRIC_TONE = {
-  success: "bg-[var(--color-success)]/10 text-[var(--color-success)]",
-  info: "bg-[var(--color-info-soft)] text-[var(--color-info-strong)]",
-  warning: "bg-[var(--color-warning)]/10 text-[var(--color-warning)]",
-  error: "bg-[var(--color-error)]/10 text-[var(--color-error)]",
+  success: "bg-[var(--color-success)]/10 text-[var(--color-success-ink)]",
+  info: "bg-[var(--color-info-soft)] text-[var(--color-info-ink)]",
+  warning: "bg-[var(--color-warning)]/10 text-[var(--color-warning-ink)]",
+  error: "bg-[var(--color-error)]/10 text-[var(--color-error-ink)]",
 } as const;
 
 function MetricTile({
