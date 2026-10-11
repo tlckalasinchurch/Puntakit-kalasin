@@ -5,7 +5,6 @@ import { authenticateWithPin, genericLoginError, revokeSession, setCsrfCookie } 
 import { ValidationError } from "../lib/errors.js";
 
 const loginSchema = z.object({
-  phone: z.string().trim().regex(/^[0-9+() .-]{9,24}$/, "กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้อง"),
   pin: z.string().regex(/^\d{6}$/, "กรุณากรอกรหัส PIN 6 หลัก"),
 });
 
@@ -20,7 +19,7 @@ authRouter.post("/login", async (req, res, next) => {
   try {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) throw new ValidationError(genericLoginError());
-    const user = await authenticateWithPin(req, res, parsed.data.phone, parsed.data.pin);
+    const user = await authenticateWithPin(req, res, parsed.data.pin);
     res.json({ success: true, data: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (err) { next(err); }
 });

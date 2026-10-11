@@ -64,6 +64,12 @@ describe("auth: signed-out and failed-profile-load stay distinct", () => {
     expect(source).toContain("pin-login__error");
     expect(source).not.toContain("<SignIn");
   });
+
+  it("the PIN login page does not ask for a phone number", () => {
+    const source = read("pages/PinSignInPage.tsx");
+    expect(source).not.toContain("เบอร์โทรศัพท์");
+    expect(source).toContain('api.post("/api/auth/login", { pin })');
+  });
 });
 
 describe("auth: the server names why an account cannot be used", () => {

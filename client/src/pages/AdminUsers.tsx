@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, ShieldCheck, Users } from "lucide-react";
+import { KeyRound, Search, ShieldCheck, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { EmptyState, ErrorState, InitialsAvatar, PageHeader } from "@/components/DesignSystem";
@@ -26,6 +26,7 @@ interface UserRow {
   email: string;
   role: UserRole;
   status: "active" | "suspended";
+  pinConfigured: boolean;
   careGroups: { id: string; name: string }[];
   /** Every group the user leads or co-leads — the same set the server uses for scope. */
   ledGroups: { id: string; name: string; orgLevel: "body" | "care" | null; as: "leader" | "co_leader" }[];
@@ -58,6 +59,7 @@ export default function AdminUsers() {
   const [pending, setPending] = useState<{ user: UserRow; role: UserRole } | null>(null);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
+  const [pinEditing, setPinEditing] = useState<UserRow | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -197,6 +199,14 @@ export default function AdminUsers() {
                   >
                     {u.careGroups.length ? `ดูแล ${u.careGroups.length} พันธกิจ · แก้ไข` : "เลือกพันธกิจที่ดูแล"}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setPinEditing(u)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-semibold text-[var(--color-ink)] hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                  >
+                    <KeyRound size={16} aria-hidden="true" />
+                    {u.pinConfigured ? "เปลี่ยน PIN" : "ตั้ง PIN"}
+                  </button>
                 </div>
               </li>
             );
@@ -226,7 +236,101 @@ export default function AdminUsers() {
           await load();
         }}
       />
+      <PinSheet
+        user={pinEditing}
+        onClose={() => setPinEditing(null)}
+        onSaved={async () => {
+          setPinEditing(null);
+          await load();
+        }}
+      />
     </AppLayout>
+  );
+}
+
+function PinSheet({ user, onClose, onSaved }: { user: UserRow | null; onClose: () => void; onSaved: () => Promise<void> }) {
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setPin("");
+      setConfirmPin("");
+    }
+  }, [user]);
+
+  async function save() {
+    if (!user || pin.length !== 6 || pin !== confirmPin) return;
+    setSaving(true);
+    try {
+      await api.put(`/api/admin/users/${user.id}/pin`, { pin });
+      toast.success(`ตั้ง PIN ให้ ${user.name} แล้ว`);
+      await onSaved();
+    } catch (err) {
+      toast.error(errorText(err, "ตั้ง PIN ไม่สำเร็จ"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Sheet open={user !== null} onOpenChange={(next) => !next && onClose()}>
+      <SheetContent side="right" className="flex w-full flex-col sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle className="type-lead pr-8 text-[var(--color-ink)]">ตั้ง PIN ให้ {user?.name}</SheetTitle>
+          <SheetDescription className="type-caption text-[var(--color-body-muted)]">
+            PIN ต้องเป็นตัวเลข 6 หลัก ใช้สำหรับเข้าสู่ระบบ
+          </SheetDescription>
+        </SheetHeader>
+        <div className="flex flex-1 flex-col gap-4 px-4">
+          <label className="grid gap-2 text-sm font-semibold text-[var(--color-ink)]">
+            PIN ใหม่
+            <input
+              type="password"
+              inputMode="numeric"
+              autoComplete="new-password"
+              maxLength={6}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              className={INPUT_CLASS}
+              placeholder="ตัวเลข 6 หลัก"
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-[var(--color-ink)]">
+            ยืนยัน PIN ใหม่
+            <input
+              type="password"
+              inputMode="numeric"
+              autoComplete="new-password"
+              maxLength={6}
+              value={confirmPin}
+              onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              className={INPUT_CLASS}
+              placeholder="กรอกซ้ำอีกครั้ง"
+            />
+          </label>
+          {confirmPin.length > 0 && pin !== confirmPin && <p className="type-caption text-[var(--color-error)]">PIN ไม่ตรงกัน</p>}
+        </div>
+        <div className="flex items-center justify-end gap-3 border-t border-[var(--color-hairline)] p-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="min-h-11 rounded-[var(--radius-pill)] px-4 text-sm font-semibold text-[var(--color-body-muted)] hover:bg-[var(--color-canvas-soft)]"
+          >
+            ยกเลิก
+          </button>
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving || pin.length !== 6 || pin !== confirmPin}
+            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
+          >
+            {saving ? "กำลังบันทึก..." : "บันทึก PIN"}
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 

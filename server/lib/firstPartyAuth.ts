@@ -1,8 +1,8 @@
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import type { Request, Response } from "express";
-import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, isNotNull } from "drizzle-orm";
 import { getDb } from "../db/client.js";
-import { auditLogs, members, userSessions, users } from "../../shared/schema.js";
+import { auditLogs, userSessions, users } from "../../shared/schema.js";
 import type { AuthenticatedUser } from "./auth.js";
 import { AccountSuspendedError, RateLimitError, UnauthorizedError } from "./errors.js";
 
@@ -11,6 +11,8 @@ function deriveKey(value: string, salt: Buffer, length: number, params: { N: num
 }
 export const AUTH_COOKIE_NAME = "puntakit_session";
 export const CSRF_COOKIE_NAME = "puntakit_csrf";
+/** One-time starter PIN for the first super admin; never overwrites a custom PIN. */
+export const DEFAULT_SUPER_ADMIN_PIN = "999999";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const PIN_MAX_ATTEMPTS = 5;
 const PIN_LOCK_MS = 15 * 60 * 1000;
@@ -40,13 +42,8 @@ export async function verifyPin(pin: string, encoded: string | null): Promise<bo
   }
 }
 
-export function normalizePhone(value: string): string {
-  const digits = value.replace(/\D/g, "");
-  // Accept both Thai local format (08x...) and international +66 format.
-  return digits.startsWith("66") && digits.length === 11 ? `0${digits.slice(2)}` : digits;
-}
-function requestKey(req: Request, phone: string): string {
-  return `${req.ip}:${phone}`;
+function requestKey(req: Request): string {
+  return `${req.ip}:pin-login`;
 }
 function checkSourceLimit(key: string): void {
   const now = Date.now();
@@ -119,23 +116,18 @@ export async function loadSessionUser(req: Request): Promise<AuthenticatedUser> 
   return { id: row.user.id, email: row.user.email, name: row.user.name, role: row.user.role as AuthenticatedUser["role"], sessionId: row.session.id };
 }
 
-export async function authenticateWithPin(req: Request, res: Response, phone: string, pin: string): Promise<AuthenticatedUser> {
-  const normalized = normalizePhone(phone);
-  checkSourceLimit(requestKey(req, normalized));
+export async function authenticateWithPin(req: Request, res: Response, pin: string): Promise<AuthenticatedUser> {
+  checkSourceLimit(requestKey(req));
   const db = getDb();
-  const storedPhoneDigits = sql`regexp_replace(${members.phone}, '[^0-9]', '', 'g')`;
-  const phoneMatches = or(
-    eq(storedPhoneDigits, normalized),
-    normalized.length === 10 ? eq(storedPhoneDigits, `66${normalized.slice(1)}`) : undefined,
-  );
-  const rows = normalized.length >= 9 && phoneMatches
-    ? await db.select({ user: users }).from(members)
-      .innerJoin(users, eq(members.userId, users.id))
-      .where(and(phoneMatches, eq(users.status, "active")))
-      .limit(2)
-    : [];
-  const uniqueUsers = Array.from(new Map(rows.map((row) => [row.user.id, row.user])).values());
-  const user = uniqueUsers.length === 1 ? uniqueUsers[0] : undefined;
+  const candidates = await db.select().from(users)
+    .where(and(eq(users.status, "active"), isNotNull(users.pinHash)))
+    .limit(1000);
+  const matches = [];
+  for (const candidate of candidates) {
+    if (await verifyPin(pin, candidate.pinHash)) matches.push(candidate);
+  }
+  // A PIN must identify exactly one account. Duplicate PINs fail closed.
+  const user = matches.length === 1 ? matches[0] : undefined;
   const locked = user?.pinLockedUntil && user.pinLockedUntil > new Date();
   const valid = Boolean(user && !locked && user.status === "active" && await verifyPin(pin, user.pinHash));
   if (!valid) {

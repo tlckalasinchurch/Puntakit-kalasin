@@ -13,7 +13,6 @@ export default function PinSignInPage() {
   usePageTitle("เข้าสู่ระบบ");
   const [, navigate] = useLocation();
   const { user } = useAuth();
-  const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -35,11 +34,11 @@ export default function PinSignInPage() {
   };
 
   const submit = async () => {
-    if (busy || pin.length !== 6 || !phone.trim()) return;
+    if (busy || pin.length !== 6) return;
     setBusy(true);
     setError("");
     try {
-      await api.post("/api/auth/login", { phone, pin });
+      await api.post("/api/auth/login", { pin });
       window.location.assign("/");
     } catch (err) {
       setPin("");
@@ -55,12 +54,6 @@ export default function PinSignInPage() {
 
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     const target = event.target as HTMLElement;
-
-    // Do not let the page-level keypad shortcuts interfere with the phone field.
-    if (target.tagName === "INPUT") {
-      if (event.key === "Enter") void submit();
-      return;
-    }
 
     if (/^\d$/.test(event.key)) {
       event.preventDefault();
@@ -104,20 +97,8 @@ export default function PinSignInPage() {
           <div className="pin-login__heading">
             <p className="pin-login__eyebrow">ยินดีต้อนรับกลับ</p>
             <h1 id="login-title" className="type-display-md">เข้าสู่ระบบ</h1>
-            <p className="type-body pin-login__sub">กรอกข้อมูลเพื่อเข้าสู่ระบบของคุณ</p>
+            <p className="type-body pin-login__sub">กรอกรหัส PIN เพื่อเข้าสู่ระบบ</p>
           </div>
-
-          <label className="pin-login__identity">
-            เบอร์โทรศัพท์
-            <input
-              type="tel"
-              inputMode="tel"
-              autoComplete="username"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              placeholder="08x-xxx-xxxx"
-            />
-          </label>
 
           <div className="pin-login__pin-heading">
             <span>รหัส PIN</span>
@@ -148,7 +129,7 @@ export default function PinSignInPage() {
             type="button"
             className="pin-login__submit"
             aria-busy={busy}
-            disabled={busy || pin.length !== 6 || !phone.trim()}
+            disabled={busy || pin.length !== 6}
             onClick={() => void submit()}
           >
             <ShieldCheck size={19} aria-hidden="true" />
