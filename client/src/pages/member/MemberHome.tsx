@@ -200,7 +200,7 @@ export default function MemberHome() {
             </span>
             <div>
               <p className="text-2xl font-extrabold tracking-tight text-[#075B5D] sm:text-3xl">Puntakit</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--color-body-muted)]">
                 พันธกิจ · กลุ่ม · คน · เติบโตไปด้วยกัน
               </p>
             </div>
@@ -211,10 +211,10 @@ export default function MemberHome() {
             aria-label={`โปรไฟล์ของ${greetingName}`}
           >
             <span className="text-right">
-              <span className="block text-sm font-semibold text-slate-700">
+              <span className="block text-sm font-semibold text-[var(--color-ink)]">
                 สวัสดีครับ
               </span>
-              <span className="block max-w-24 truncate text-xs text-slate-500">
+              <span className="block max-w-24 truncate text-xs text-[var(--color-body-muted)]">
                 {groupName}
               </span>
             </span>
@@ -234,7 +234,7 @@ export default function MemberHome() {
         {/* Digital member pass */}
         <section
           aria-labelledby="member-pass-heading"
-          className="rounded-3xl bg-slate-800 p-5 text-white shadow-sm"
+          className="rounded-3xl bg-[var(--color-dark-surface)] p-5 text-white shadow-sm"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -265,7 +265,7 @@ export default function MemberHome() {
                 <QrCode
                   size={ICON_SIZE["2xl"]}
                   aria-hidden="true"
-                  className="text-slate-800"
+                  className="text-[var(--color-ink)]"
                 />
               )}
             </div>
@@ -300,7 +300,7 @@ export default function MemberHome() {
           <div className="flex items-center justify-between gap-2">
             <h2
               id="member-announcements-heading"
-              className="flex min-w-0 items-center gap-2 font-semibold text-slate-800"
+              className="flex min-w-0 items-center gap-2 font-semibold text-[var(--color-ink)]"
             >
               <Megaphone
                 size={ICON_SIZE.sm}
@@ -324,12 +324,12 @@ export default function MemberHome() {
               {announcements.map(ann => (
                 <li
                   key={ann.id}
-                  className="rounded-xl bg-slate-50 p-3"
+                  className="rounded-xl bg-[var(--color-canvas-soft)] p-3"
                 >
-                  <h3 className="text-sm font-semibold text-slate-800">
+                  <h3 className="text-sm font-semibold text-[var(--color-ink)]">
                     {ann.title}
                   </h3>
-                  <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                  <p className="mt-1 line-clamp-2 text-xs text-[var(--color-body-muted)]">
                     {ann.content}
                   </p>
                 </li>
@@ -359,7 +359,7 @@ export default function MemberHome() {
           <div className="flex items-center justify-between gap-2">
             <h2
               id="member-events-heading"
-              className="flex min-w-0 items-center gap-2 font-semibold text-slate-800"
+              className="flex min-w-0 items-center gap-2 font-semibold text-[var(--color-ink)]"
             >
               <Calendar
                 size={ICON_SIZE.sm}
@@ -383,12 +383,12 @@ export default function MemberHome() {
               {events.map(evt => (
                 <li
                   key={evt.id}
-                  className="rounded-xl bg-slate-50 p-3"
+                  className="rounded-xl bg-[var(--color-canvas-soft)] p-3"
                 >
-                  <h3 className="text-sm font-semibold text-slate-800">
+                  <h3 className="text-sm font-semibold text-[var(--color-ink)]">
                     {evt.title}
                   </h3>
-                  <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--color-body-muted)]">
                     <CalendarDays
                       size={ICON_SIZE.xs}
                       aria-hidden="true"
@@ -408,7 +408,7 @@ export default function MemberHome() {
                     }
                     className={`mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] ${
                       evt.isRegistered
-                        ? "border border-slate-200 bg-white text-red-600 hover:bg-slate-50"
+                        ? "border border-slate-200 bg-white text-red-600 hover:bg-[var(--color-canvas-soft)]"
                         : "bg-[#0C7C82] text-white hover:bg-[#0a6b70]"
                     }`}
                   >
