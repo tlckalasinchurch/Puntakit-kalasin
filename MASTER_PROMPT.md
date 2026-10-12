@@ -78,7 +78,7 @@ DB_AUTO_MIGRATE=false
 - `DATABASE_DRIVER` ตรงกับ provider
 - `DATABASE_URL` ไม่ถูกครอบด้วย quote และใช้ scheme ที่รองรับ
 - schema/migrations ถูก apply แล้ว
-- บัญชี `super_admin` เปลี่ยน PIN แล้ว ไม่ใช่ค่า `DEFAULT_SUPER_ADMIN_PIN`
+- ทุกบัญชี `super_admin` บน production ตั้ง PIN แล้ว ผ่าน `pnpm db:set-pin:env` และ `/api/ready` ไม่ตอบ `503 SUPER_ADMIN_PIN_MISSING`
 - หลังแก้ environment ต้อง redeploy
 
 ## ลำดับตรวจและแก้ 503
@@ -92,6 +92,7 @@ GET /api/health
 GET /api/ready
   200 = database connection + SELECT 1 + schema พร้อม
   503 DATABASE_UNAVAILABLE = แก้ database config/network/credential/TLS/schema/migration
+  503 SUPER_ADMIN_PIN_MISSING = มี super_admin ที่ยังไม่ตั้ง PIN (เฉพาะ production) ตั้งด้วย pnpm db:set-pin:env ห้ามใช้ db:set-pin เพราะจะโหลด .env.local แล้วชี้ฐานข้อมูลในเครื่อง
 
 GET /api/auth/me
   401 = database ผ่านแล้วแต่ไม่มี session (ยังไม่ล็อกอินหรือหมดอายุ)
@@ -135,7 +136,7 @@ vercel --prod
 3. ข้อความแจ้งข้อผิดพลาดต้องเป็นข้อความทั่วไปเหมือนกันทุกกรณี เพื่อไม่ให้ตรวจสอบว่ามีบัญชีนั้นอยู่หรือไม่
 4. session อยู่ในตาราง `user_sessions` ต้องตรวจ expiry และ `revokedAt` ทุกครั้งที่ใช้
 5. พยายามผิดครบตามจำนวนที่กำหนดต้องล็อกบัญชีชั่วคราว
-6. บัญชีแรกที่เป็น `super_admin` สร้างโดย `bootstrapDatabase()` ผ่าน `DEFAULT_SUPER_ADMIN_PIN` ต้องเตือนให้เปลี่ยน PIN ก่อนนำขึ้นใช้งานจริง
+6. `DEFAULT_SUPER_ADMIN_PIN` เป็นค่าคงที่ในซอร์สโค้ด ระบบจึง seed เฉพาะฐานข้อมูล PGlite ในเครื่องเท่านั้น ห้าม seed ลงฐานข้อมูล remote หรือ production และ `/api/ready` ต้องตอบ `503 SUPER_ADMIN_PIN_MISSING` จนกว่าทุกบัญชี `super_admin` จะมี PIN
 
 ## UI preservation rules
 

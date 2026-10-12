@@ -50,14 +50,29 @@ remote drivers only migrate when `DB_AUTO_MIGRATE=true` or when `pnpm db:migrate
 ## User provisioning
 
 There is no external identity provider and no user-sync webhook. Accounts are
-rows in the `users` table. The first `super_admin` is seeded by
-`bootstrapDatabase()` (`server/db/bootstrap.ts`) using the PIN in
-`DEFAULT_SUPER_ADMIN_PIN` (`server/lib/firstPartyAuth.ts`), and further admins
-are created from inside the app or with `pnpm db:set-pin`. Changing a user's
-status or role is done through the app's admin screens, not a webhook.
+rows in the `users` table, and admins are created from inside the app or with
+`pnpm db:set-pin`. Changing a user's status or role is done through the app's
+admin screens, not a webhook.
 
-> Before promoting the bootstrap PIN account anywhere reachable from the
-> internet, set a new PIN for it. The default is a constant in source.
+**The starter PIN is never written to a real database.**
+`DEFAULT_SUPER_ADMIN_PIN` (`server/lib/firstPartyAuth.ts`) is a constant in this
+repository, so `ensureDefaultSuperAdminPins()` (`server/db/bootstrap.ts`) writes
+it only to the local embedded PGlite data directory. Under
+`NODE_ENV=production`, or on any remote driver, it refuses and logs a warning
+instead. A `super_admin` row with a NULL `pin_hash` cannot authenticate at all,
+so while one exists in production `/api/ready` answers:
+
+```text
+503 SUPER_ADMIN_PIN_MISSING
+```
+
+Fix it by assigning a PIN — `/api/health` deliberately stays 200 so the
+deployment is still diagnosable. Use the `:env` variant, because the plain
+`db:set-pin` loads `.env.local` and would target the local PGlite database:
+
+```bash
+DATABASE_DRIVER=neon DATABASE_URL=... pnpm db:set-pin:env -- admin@example.com 123456
+```
 
 ## Vercel environment setup
 

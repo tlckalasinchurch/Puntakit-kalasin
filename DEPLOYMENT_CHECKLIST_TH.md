@@ -88,6 +88,7 @@ GET /api/auth/me  # ต้องใช้ session จากการล็อก
 | `/api/auth/me` = 503 | API ยังใช้ database ไม่ได้ จึงทดสอบ login แบบสมบูรณ์ไม่ได้ |
 | `/api/auth/me` = 401 | Database ผ่านแล้ว แต่ยังไม่มี session (ยังไม่ได้ล็อกอิน หรือ session หมดอายุ) |
 | `/api/auth/me` = 200 | Login และ database ทำงานร่วมกันแล้ว |
+| `/api/ready` = 503 `SUPER_ADMIN_PIN_MISSING` | มีบัญชี `super_admin` ที่ยังไม่ได้ตั้ง PIN จึงล็อกอินไม่ได้ — ตั้งด้วย `pnpm db:set-pin` (เฉพาะ production เท่านั้น) |
 
 ### ตรวจค่า driver
 
@@ -186,10 +187,9 @@ NODE_ENV=production pnpm db:migrate:env
 
 ระบบไม่มีผู้ให้บริการยืนยันตัวตนภายนอก และไม่มี webhook สำหรับซิงก์ผู้ใช้ บัญชีทั้งหมดเป็นแถวในตาราง `users` และผู้ใช้ล็อกอินด้วย PIN 6 หลัก
 
-- บัญชีแรกที่เป็น `super_admin` ถูกสร้างโดย `bootstrapDatabase()` (`server/db/bootstrap.ts`) ด้วยค่า PIN ใน `DEFAULT_SUPER_ADMIN_PIN` (`server/lib/firstPartyAuth.ts`)
-- ก่อนนำบัญชีเริ่มต้นนี้ไปใช้งานจริงบนอินเทอร์เน็ต ให้เปลี่ยน PIN ด้วย `pnpm db:set-pin` ก่อน เพราะค่าเริ่มต้นเป็นค่าคงที่ที่อยู่ในซอร์สโค้ด
-- บัญชี `admin` เพิ่มเติมสร้างผ่านหน้าจอจัดการผู้ใช้ในระบบ หรือใช้ `pnpm db:set-pin`
+- บัญชี `admin` และ `super_admin` สร้างผ่านหน้าจอจัดการผู้ใช้ในระบบ หรือใช้ `pnpm db:set-pin`
 - การเปลี่ยนสถานะหรือสิทธิ์ของผู้ใช้ทำผ่านระบบโดยตรง ไม่มีการซิงก์จากภายนอก
+- **PIN เริ่มต้น `DEFAULT_SUPER_ADMIN_PIN` ถูกเขียนเฉพาะฐานข้อมูล PGlite ในเครื่องเท่านั้น** ระบบจะไม่ seed ลงฐานข้อมูล remote หรือ production แม้ตั้ง `DB_AUTO_MIGRATE=true` ก็ตาม (`server/db/bootstrap.ts`) ดังนั้นบัญชี `super_admin` บน production ต้องตั้ง PIN เองด้วย `pnpm db:set-pin` — ถ้ายังไม่มี ระบบจะตอบ `/api/ready` ด้วย `503 SUPER_ADMIN_PIN_MISSING` (แต่ `/api/health` ยังเป็น `200` เพื่อให้ตรวจสอบปัญหาได้)
 
 หมายเหตุ: ถ้าเคยตั้งค่า `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SIGNING_SECRET` หรือ `VITE_CLERK_PUBLISHABLE_KEY` ไว้ใน Vercel ค่าเหล่านั้นไม่ถูกอ่านแล้ว สามารถลบออกได้
 
@@ -255,7 +255,8 @@ curl -i "$BASE_URL/login"
 - [ ] Production มี `DATABASE_URL` จริงและเชื่อมต่อได้
 - [ ] `DATABASE_DRIVER` ตรงกับ provider
 - [ ] migration ถูก apply แล้ว
-- [ ] บัญชี `super_admin` ตั้ง PIN ใหม่แล้ว (ไม่ใช่ค่า `DEFAULT_SUPER_ADMIN_PIN`)
+- [ ] ทุกบัญชี `super_admin` บน production ตั้ง PIN แล้ว ด้วย `DATABASE_DRIVER=neon DATABASE_URL=... pnpm db:set-pin:env -- <email> <pin>` (`/api/ready` ไม่ตอบ `503 SUPER_ADMIN_PIN_MISSING`)
+  - ห้ามใช้ `pnpm db:set-pin` ตังแต่ตั้งแล้ว เพราะคำสั่งนี้โหลด `.env.local` ซึ่งชี้ฐานข้อมูล PGlite ในเครื่อง ไม่ใช่ production
 - [ ] `pnpm check` ผ่าน
 - [ ] `pnpm test` ผ่าน
 - [ ] `pnpm build` ผ่าน
