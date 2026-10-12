@@ -13,7 +13,7 @@ interface SecondaryCard {
 
 const CARDS: SecondaryCard[] = [
   {
-    href: "/app/group/invite",
+    href: "/app/group",
     icon: UserPlus,
     title: "ชวนเข้ากลุ่ม",
     detail: "ชวนสมาชิกใหม่มาร่วมพันธกิจด้วยกัน",
@@ -27,7 +27,7 @@ const CARDS: SecondaryCard[] = [
     detail: "กลุ่มของเรา",
   },
   {
-    href: "/app/support",
+    href: "tel:043811800",
     icon: Headset,
     title: "ช่วยเหลือ",
     detail: "ติดต่อทีมงาน",
@@ -56,7 +56,7 @@ export function LambSecondaryCards() {
                 <Icon size={20} aria-hidden="true" />
                 {title}
               </span>
-              <span className="mt-1 block text-sm text-slate-600">
+              <span className="mt-1 block text-sm text-[var(--color-body-muted)]">
                 {detail}
               </span>
             </span>

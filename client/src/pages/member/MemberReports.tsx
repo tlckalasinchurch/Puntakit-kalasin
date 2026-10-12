@@ -24,10 +24,10 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-slate-100 text-slate-600",
-  submitted: "bg-teal-50 text-teal-700",
-  published: "bg-green-50 text-green-700",
-  rejected: "bg-red-50 text-red-600",
+  draft: "bg-[var(--color-canvas-soft)] text-[var(--color-body-muted)]",
+  submitted: "bg-[var(--color-info-soft)] text-[var(--color-info-ink)]",
+  published: "bg-[var(--color-success-soft)] text-[var(--color-success-ink)]",
+  rejected: "bg-[var(--color-error-soft)] text-[var(--color-error-ink)]",
 };
 
 /**
@@ -84,8 +84,8 @@ export default function MemberReports() {
     <MemberAppLayout>
       <div className="lamb-theme space-y-4 bg-[#F8F7F1]">
         <header>
-          <h1 className="text-2xl font-extrabold text-slate-800">รายงานพันธกิจ</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-2xl font-extrabold text-[var(--color-ink)]">รายงานพันธกิจ</h1>
+          <p className="mt-1 text-sm text-[var(--color-body-muted)]">
             บันทึกและติดตามรายงานกิจกรรมพันธกิจของกลุ่ม
           </p>
         </header>
@@ -110,16 +110,16 @@ export default function MemberReports() {
                     <ClipboardList size={22} aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-slate-800">
+                    <span className="block truncate text-sm font-semibold text-[var(--color-ink)]">
                       {sub.submittedByLabel || "รายงานพันธกิจ"}
                     </span>
-                    <span className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
+                    <span className="mt-0.5 flex items-center gap-2 text-xs text-[var(--color-body-muted)]">
                       <CalendarDays size={12} aria-hidden="true" />
                       {new Date(sub.createdAt).toLocaleDateString("th-TH", {
                         dateStyle: "medium",
                       })}
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_COLORS[sub.status] ?? STATUS_COLORS.draft}`}
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLORS[sub.status] ?? STATUS_COLORS.draft}`}
                       >
                         {STATUS_LABELS[sub.status] ?? sub.status}
                       </span>
@@ -128,7 +128,7 @@ export default function MemberReports() {
                   <ChevronRight
                     size={18}
                     aria-hidden="true"
-                    className="shrink-0 text-slate-300"
+                    className="shrink-0 text-[var(--color-text-quaternary)]"
                   />
                 </Link>
               </li>

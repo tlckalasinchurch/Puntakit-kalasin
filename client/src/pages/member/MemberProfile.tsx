@@ -8,6 +8,7 @@ import {
   Lock,
   FileText,
   Bell,
+  ChevronLeft,
   LogOut,
   Save,
   Loader2,
@@ -189,13 +190,23 @@ export default function MemberProfile() {
   };
 
   const pageHeading = (
-    <header>
-      <h1 className="type-lead font-semibold text-[var(--color-ink)]">
-        โปรไฟล์และข้อมูลส่วนตัว
-      </h1>
-      <p className="type-caption mt-1 text-[var(--color-body-muted)]">
-        จัดการข้อมูลติดต่อ การแจ้งเตือน และความเป็นส่วนตัวของคุณ
-      </p>
+    <header className="flex items-start gap-3">
+      <Link
+        href="/app"
+        aria-label="กลับไปหน้าแรก"
+        className="mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-[#0C7C82] shadow-sm transition hover:bg-[#E4F7F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
+      >
+        <ChevronLeft size={20} aria-hidden="true" />
+      </Link>
+      <div>
+        <p className="text-sm font-semibold text-[#0C7C82]">ตั้งค่าบัญชี</p>
+        <h1 className="mt-0.5 text-2xl font-extrabold tracking-tight text-[var(--color-ink)] sm:text-3xl">
+          โปรไฟล์และข้อมูลส่วนตัว
+        </h1>
+        <p className="mt-1 text-sm text-[var(--color-body-muted)]">
+          จัดการข้อมูลติดต่อ การแจ้งเตือน และความเป็นส่วนตัวของคุณ
+        </p>
+      </div>
     </header>
   );
 
@@ -220,7 +231,7 @@ export default function MemberProfile() {
       {pageHeading}
 
       {/* Identity */}
-      <section className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5">
+      <section className="rounded-3xl border border-[#D8EEE7] bg-[#E4F7F2] p-5 shadow-sm sm:p-6">
         <div className="flex items-center gap-4">
           {profile?.avatarUrl ? (
             <img
@@ -316,7 +327,7 @@ export default function MemberProfile() {
               )}
             </Field>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="เบอร์โทรศัพท์">
                 {fieldProps => (
                   <div className="relative">
@@ -395,7 +406,7 @@ export default function MemberProfile() {
                   )}
                 </Field>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field label="เบอร์โทรฉุกเฉิน">
                     {fieldProps => (
                       <input
@@ -469,7 +480,7 @@ export default function MemberProfile() {
       )}
 
       {/* Push notifications */}
-      <section className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5">
+      <section className="rounded-3xl border border-[var(--color-divider)] bg-white p-5 shadow-sm sm:p-6">
         <h2 className="type-body-strong flex items-center gap-2 text-[var(--color-ink)]">
           <Bell
             size={ICON_SIZE.sm}
@@ -510,7 +521,7 @@ export default function MemberProfile() {
 
       {/* Privacy & legal */}
       <section
-        className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5"
+        className="rounded-3xl border border-[var(--color-divider)] bg-white p-5 shadow-sm sm:p-6"
         data-testid="privacy-links"
       >
         <h2 className="type-body-strong flex items-center gap-2 text-[var(--color-ink)]">

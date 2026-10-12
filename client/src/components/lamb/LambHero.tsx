@@ -21,20 +21,20 @@ export function LambHero() {
       <div className="relative z-10 max-w-md">
         <p
           id="lamb-hero-title"
-          className="text-2xl font-bold text-slate-800 sm:text-3xl"
+          className="text-2xl font-bold text-[var(--color-ink)] sm:text-3xl"
         >
           ยินดีต้อนรับสู่
         </p>
         <p className="mt-1 text-4xl font-extrabold text-[#0C7C82] sm:text-5xl">
           Puntakit
         </p>
-        <p className="mt-3 text-slate-600">
+        <p className="mt-3 text-[var(--color-body-muted)]">
           ร่วมออกไป สร้างชีวิต เปลี่ยนชุมชน ด้วยพันธกิจบ้าน
         </p>
         <ul className="mt-4 space-y-2">
           {CHECKLIST.map(item => (
-            <li key={item} className="flex items-center gap-2 text-slate-700">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
+            <li key={item} className="flex items-center gap-2 text-[var(--color-text-secondary)]">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-success-soft)] text-[var(--color-success-ink)]">
                 <Check size={14} aria-hidden="true" />
               </span>
               {item}

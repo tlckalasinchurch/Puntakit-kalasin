@@ -2,9 +2,9 @@ import { Link } from "wouter";
 import {
   Bell,
   ChevronRight,
-  FileImage,
-  NotebookPen,
+  FileText,
   Settings,
+  UsersRound,
 } from "lucide-react";
 
 interface QuickAction {
@@ -17,22 +17,22 @@ interface QuickAction {
 
 const ACTIONS: QuickAction[] = [
   {
-    href: "/app/notifications",
+    href: "/app/events",
     icon: Bell,
-    title: "แจ้งเตือน",
-    detail: "ข่าวสารและกิจกรรม",
+    title: "ข่าวสาร",
+    detail: "ประกาศและกิจกรรม",
   },
   {
-    href: "/app/notes",
-    icon: NotebookPen,
-    title: "โน้ต / บันทึก",
-    detail: "บันทึกส่วนตัวของฉัน",
+    href: "/app/reports",
+    icon: FileText,
+    title: "รายงาน",
+    detail: "บันทึกและติดตามงาน",
   },
   {
-    href: "/app/files",
-    icon: FileImage,
-    title: "ไฟล์ / รูป",
-    detail: "รูปภาพจากพันธกิจ",
+    href: "/app/group",
+    icon: UsersRound,
+    title: "กลุ่มของฉัน",
+    detail: "สมาชิกและการเติบโต",
   },
   {
     href: "/app/profile",
@@ -62,27 +62,27 @@ export function LambQuickActions({
             >
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#E4F7F2] text-[#0C7C82]">
                 <Icon size={22} aria-hidden="true" />
-                {title === "แจ้งเตือน" && notificationCount > 0 && (
+                {title === "ข่าวสาร" && notificationCount > 0 && (
                   <span
                     aria-label={`${notificationCount} การแจ้งเตือนใหม่`}
-                    className="absolute top-2 right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white"
+                    className="absolute top-2 right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-error)] px-1 text-xs font-bold text-white"
                   >
                     {notificationCount > 9 ? "9+" : notificationCount}
                   </span>
                 )}
               </span>
               <span>
-                <span className="block font-semibold text-slate-800">
+                <span className="block font-semibold text-[var(--color-ink)]">
                   {title}
                 </span>
-                <span className="mt-0.5 block text-xs text-slate-500">
+                <span className="mt-0.5 block text-xs text-[var(--color-body-muted)]">
                   {detail}
                 </span>
               </span>
               <ChevronRight
                 size={16}
                 aria-hidden="true"
-                className="absolute right-3 bottom-3 text-slate-300"
+                className="absolute right-3 bottom-3 text-[var(--color-text-quaternary)]"
               />
             </Link>
           </li>

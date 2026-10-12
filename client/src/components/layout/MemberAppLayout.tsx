@@ -114,7 +114,7 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
       </header>
 
       {/* Main content — bottom padding clears the fixed nav + safe area. */}
-      <main id="member-app-main" className="flex flex-1 flex-col gap-3.5 px-4 pb-[88px] pt-4 sm:px-6 lg:px-10 lg:pt-6">
+      <main id="member-app-main" className="flex flex-1 flex-col gap-3.5 bg-[#F8F7F1] px-4 pb-[88px] pt-4 sm:px-6 lg:px-10 lg:pt-6">
         <RouteErrorBoundary>{children}</RouteErrorBoundary>
       </main>
 
