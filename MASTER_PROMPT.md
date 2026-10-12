@@ -11,8 +11,8 @@
 1. React/Vite frontend แสดงผลได้จริงและเรียก backend ได้จริง
 2. Express API backend ทำงานกับ Drizzle ORM และ PostgreSQL/Neon ได้จริง
 3. Local development ใช้ PGlite ได้โดยไม่ต้องมี production secret
-4. Production ใช้ Clerk authentication จริง ไม่ใช้ demo auth และไม่ fallback ไป PGlite
-5. Clerk webhook ตรวจ Svix signature ก่อนเขียน database และ sync user แบบ idempotent
+4. Production ใช้การยืนยันตัวตนด้วย PIN จริง ไม่ใช้ demo auth และไม่ fallback ไป PGlite
+5. PIN ถูก hash ด้วย scrypt, session ถูกตรวจ expiry/revocation และไม่มีการเขียนข้อมูลจากแหล่งภายนอก
 6. `/api/health`, `/api/ready`, `/api/auth/me` และ business endpoints มี response contract ที่ตรวจสอบได้
 7. ทุกการแก้ไข UI ต้องคงภาษาไทย, Prompt typography, graphite sidebar, existing layout, spacing, colors, cards และ navigation ที่มีอยู่
 
@@ -32,17 +32,16 @@
 
 ## กฎสำคัญด้านความปลอดภัย
 
-- ห้ามแสดงหรือ commit `DATABASE_URL`, `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SIGNING_SECRET`, JWT secret หรือ token ใด ๆ
+- ห้ามแสดงหรือ commit `DATABASE_URL`, JWT secret หรือ token ใด ๆ
 - ห้ามเปิด `PUNTAKIT_DEMO_MODE` หรือ `VITE_PUNTAKIT_DEMO_MODE` ใน production
 - ห้ามใช้ PGlite เป็น production fallback
-- ห้ามปิด Clerk middleware ใน production
-- ห้ามเขียนข้อมูลจาก webhook ก่อนตรวจ `svix-id`, `svix-timestamp`, `svix-signature`
-- ห้ามใช้ `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` เพราะโปรเจกต์นี้เป็น Vite และต้องใช้ `VITE_CLERK_PUBLISHABLE_KEY`
+- ห้ามเก็บ PIN เป็นค่าตรงหรือใช้ hash ที่อ่อนกว่า scrypt
+- ห้ามตอบกลับข้อความแจ้งข้อผิดพลาดที่บอกว่ามีบัญชีนั้นอยู่หรือไม่
 - ใช้ค่าจริงจาก secret store เท่านั้น และแชร์ผลตรวจเป็นเพียง presence, driver, status code และ error code
 
 ## Local development contract
 
-เมื่อไม่มี Clerk key ให้ใช้ local demo mode เฉพาะ development:
+ระบบไม่ต้องใช้ credential ของผู้ให้บริการภายนอก จึงใช้ local demo mode เฉพาะ development ได้เลย:
 
 ```env
 NODE_ENV=development
@@ -61,7 +60,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Local demo mode ต้องสร้างหรือ reuse ผู้ใช้ตัวอย่างใน local database และทำให้ frontend โหลด `/api/auth/me` ได้โดยไม่ต้องมี Clerk provider แต่ต้องไม่เปลี่ยนเส้นทาง production auth
+Local demo mode ต้องสร้างหรือ reuse ผู้ใช้ตัวอย่างใน local database และทำให้ frontend โหลด `/api/auth/me` ได้โดยไม่ต้องมี provider ภายนอก แต่ต้องไม่เปลี่ยนเส้นทาง production auth
 
 ## Production environment contract
 
@@ -71,9 +70,6 @@ Production ต้องมี environment variables ต่อไปนี้ใ�
 NODE_ENV=production
 DATABASE_DRIVER=neon
 DATABASE_URL=postgresql://...
-VITE_CLERK_PUBLISHABLE_KEY=pk_live_...
-CLERK_SECRET_KEY=sk_live_...
-CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
 DB_AUTO_MIGRATE=false
 ```
 
@@ -82,7 +78,7 @@ DB_AUTO_MIGRATE=false
 - `DATABASE_DRIVER` ตรงกับ provider
 - `DATABASE_URL` ไม่ถูกครอบด้วย quote และใช้ scheme ที่รองรับ
 - schema/migrations ถูก apply แล้ว
-- Production Clerk instance ตรงกับ `pk_live_...` และ `sk_live_...`
+- บัญชี `super_admin` เปลี่ยน PIN แล้ว ไม่ใช่ค่า `DEFAULT_SUPER_ADMIN_PIN`
 - หลังแก้ environment ต้อง redeploy
 
 ## ลำดับตรวจและแก้ 503
@@ -98,9 +94,9 @@ GET /api/ready
   503 DATABASE_UNAVAILABLE = แก้ database config/network/credential/TLS/schema/migration
 
 GET /api/auth/me
-  401 = database ผ่านแล้วแต่ไม่มี Clerk session
+  401 = database ผ่านแล้วแต่ไม่มี session (ยังไม่ล็อกอินหรือหมดอายุ)
   403 = session มีแต่ user ถูกระงับหรือไม่มีสิทธิ์
-  200 = Clerk และ local user mapping ทำงานร่วมกัน
+  200 = session และ local user ทำงานร่วมกัน
   503 = database/bootstrap ยังไม่พร้อม
 ```
 
@@ -128,31 +124,18 @@ vercel --prod
 
 ห้ามพิมพ์ไฟล์ env หรือค่า secret ออกหน้าจอ
 
-## Clerk Webhook contract
+## สัญญาการยืนยันตัวตน (PIN)
 
-สร้าง endpoint ใน Clerk Production instance:
+ระบบยืนยันตัวตนด้วย PIN ของผู้ใช้เอง ไม่มีผู้ให้บริการภายนอกและไม่มี webhook
 
-```text
-POST https://<production-domain>/api/webhooks/clerk
-```
+ต้องรักษา:
 
-เลือก events:
-
-- `user.created`
-- `user.updated`
-- `user.deleted`
-
-Handler ต้อง:
-
-1. รับ raw request body ก่อน global JSON parser
-2. ตรวจ Svix signature จาก headers ที่เกี่ยวข้อง
-3. `user.created`: สร้างหรือ link local user ด้วย `clerk_id`
-4. `user.updated`: sync name/email อย่าง idempotent
-5. `user.deleted`: เปลี่ยน local status เป็น `suspended` และไม่ลบข้อมูลจริง
-6. invalid signature/payload → `400`
-7. missing webhook secret หรือ database unavailable → `503`
-8. sync สำเร็จ → `200`
-9. ทดสอบ signed delivery ผ่าน Clerk Dashboard Send Example/Test
+1. PIN ถูก hash ด้วย scrypt เท่านั้น ห้ามเก็บเป็นค่าตรงหรือ hash ที่อ่อน
+2. PIN ต้องระบุได้บัญชีเดียวเท่านั้น ถ้ามี PIN ซ้ำให้ fail closed
+3. ข้อความแจ้งข้อผิดพลาดต้องเป็นข้อความทั่วไปเหมือนกันทุกกรณี เพื่อไม่ให้ตรวจสอบว่ามีบัญชีนั้นอยู่หรือไม่
+4. session อยู่ในตาราง `user_sessions` ต้องตรวจ expiry และ `revokedAt` ทุกครั้งที่ใช้
+5. พยายามผิดครบตามจำนวนที่กำหนดต้องล็อกบัญชีชั่วคราว
+6. บัญชีแรกที่เป็น `super_admin` สร้างโดย `bootstrapDatabase()` ผ่าน `DEFAULT_SUPER_ADMIN_PIN` ต้องเตือนให้เปลี่ยน PIN ก่อนนำขึ้นใช้งานจริง
 
 ## UI preservation rules
 
@@ -178,7 +161,7 @@ Handler ต้อง:
 GET  /api/health
 GET  /api/ready
 GET  /api/auth/me
-POST /api/webhooks/clerk
+POST /api/auth/login
 GET  /api/dashboard/summary
 GET  /api/reports/summary
 GET  /api/members
@@ -223,14 +206,14 @@ GET  /api/church-profile
 - [ ] `pnpm check` ผ่าน
 - [ ] test suite ผ่านทั้งหมด
 - [ ] `pnpm build` ผ่านทั้ง client และ server
-- [ ] local frontend render ได้โดยไม่เกิด Clerk provider error
+- [ ] local frontend render ได้โดยไม่เกิด provider error
 - [ ] local `/api/health` ได้ `200`
 - [ ] local `/api/ready` ได้ `200`
 - [ ] local `/api/auth/me` ได้ `200` ใน demo mode
 - [ ] production `/api/health` ได้ `200`
 - [ ] production `/api/ready` ได้ `200` หลังใส่ DB env และ migration แล้ว
 - [ ] production `/api/auth/me` ได้ `401` เมื่อไม่มี session และ `200` หลัง login
-- [ ] Clerk webhook signed delivery ได้ `200`
+- [ ] การล็อกอินด้วย PIN ที่ถูกต้องได้ `200` และ PIN ผิดได้ข้อความทั่วไปพร้อมล็อกชั่วคราว
 - [ ] UI เดิมยัง render ครบและไม่มี console error ใหม่
 - [ ] ไม่มี secret อยู่ใน git diff, logs หรือเอกสาร
 
@@ -241,7 +224,7 @@ GET  /api/church-profile
 1. **Implemented** — ไฟล์และ behavior ที่แก้จริง
 2. **UI preserved** — หน้า/เมนู/design ที่คงไว้
 3. **Verified** — commands, tests, endpoint statuses และ browser check
-4. **Production setup remaining** — สิ่งที่ต้องทำใน Vercel/Neon/Clerk ซึ่งต้องใช้ credentials ของเจ้าของระบบ
+4. **Production setup remaining** — สิ่งที่ต้องทำใน Vercel/Neon ซึ่งต้องใช้ credentials ของเจ้าของระบบ
 5. **Rollback** — commit ที่ย้อนกลับได้และ environment changes ที่เกี่ยวข้อง
 
 อย่าอ้างว่า production พร้อมใช้งาน หาก `/api/ready` หรือ `/api/auth/me` ยังไม่ได้รับผลตาม acceptance criteria

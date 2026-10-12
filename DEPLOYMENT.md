@@ -35,35 +35,29 @@ Fail-fast rules:
 | `POSTGRES_IDLE_TIMEOUT_SECONDS` | optional | default `20` |
 | `POSTGRES_CONNECT_TIMEOUT_SECONDS` | optional | default `10` |
 | `POSTGRES_SSL` | optional | `require` \| `allow` \| `prefer` \| `verify-full` \| `no-verify` \| `disable` |
-| `VITE_CLERK_PUBLISHABLE_KEY` | yes | Clerk publishable key used by the browser |
-| `CLERK_SECRET_KEY` | yes | Clerk secret used by the API to verify sessions |
-| `CLERK_WEBHOOK_SIGNING_SECRET` | yes for webhooks | Svix signing secret for the Clerk webhook endpoint |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | no | Next.js name; not read by this Vite app |
+
+That is the complete list. Authentication is first-party PIN sign-in
+(`server/lib/firstPartyAuth.ts`): PINs are hashed with scrypt and sessions live
+in the `user_sessions` table, so **no identity-provider secret is required in
+production**. `JWT_SECRET` is read lazily inside `verifyAuthToken()` and only
+matters for the legacy test-only cookie path (`PUNTAKIT_TEST_AUTH=1`), which
+production never enables.
 
 Real values must stay in the hosting provider's secret store and must never be committed.
 `.env.example` is a placeholder only. PGlite (embedded) is always migrated on startup;
 remote drivers only migrate when `DB_AUTO_MIGRATE=true` or when `pnpm db:migrate` runs.
 
-## Clerk user synchronization webhook
+## User provisioning
 
-The API exposes a signed webhook endpoint:
+There is no external identity provider and no user-sync webhook. Accounts are
+rows in the `users` table. The first `super_admin` is seeded by
+`bootstrapDatabase()` (`server/db/bootstrap.ts`) using the PIN in
+`DEFAULT_SUPER_ADMIN_PIN` (`server/lib/firstPartyAuth.ts`), and further admins
+are created from inside the app or with `pnpm db:set-pin`. Changing a user's
+status or role is done through the app's admin screens, not a webhook.
 
-```text
-POST https://<production-domain>/api/webhooks/clerk
-```
-
-In the Clerk Dashboard:
-
-1. Open **Webhooks** and create an endpoint with the URL above.
-2. Subscribe to `user.created`, `user.updated`, and `user.deleted`.
-3. Copy the endpoint's signing secret into `CLERK_WEBHOOK_SIGNING_SECRET`.
-4. Redeploy the application after adding the variable.
-
-The handler verifies Svix headers before changing the database. Created and
-updated users are linked by `clerk_id` (or matched to an existing email) and
-deleted users are marked `suspended` rather than physically removed, preserving
-relationships and audit history. Repeated deliveries are safe because the sync
-operation is idempotent.
+> Before promoting the bootstrap PIN account anywhere reachable from the
+> internet, set a new PIN for it. The default is a constant in source.
 
 ## Vercel environment setup
 
@@ -71,13 +65,12 @@ For this React/Vite project, add the following variables in the Vercel project
 settings for **Production** (and Preview/Development if those environments are used):
 
 ```text
-VITE_CLERK_PUBLISHABLE_KEY=pk_live_...
-CLERK_SECRET_KEY=sk_live_...
-CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
+NODE_ENV=production
+DATABASE_DRIVER=neon
+DATABASE_URL=postgresql://...
 ```
 
-After changing environment variables, redeploy. `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-is a Next.js convention and is intentionally ignored by this frontend.
+After changing environment variables, redeploy.
 
 
 ## Local development with PGlite
@@ -100,8 +93,6 @@ pnpm dev            # Vite client + Express API; server migrates automatically
 NODE_ENV=production
 DATABASE_DRIVER=neon
 DATABASE_URL=postgresql://<user>:<password>@<endpoint>.neon.tech/<db>?sslmode=require
-VITE_CLERK_PUBLISHABLE_KEY=pk_live_<your-key>
-CLERK_SECRET_KEY=sk_live_<your-key>
 
 pnpm install --frozen-lockfile
 pnpm check

@@ -1,8 +1,8 @@
-# เช็คลิสต์ Production: Database, Clerk Webhook และ Vercel
+# เช็คลิสต์ Production: Database และ Vercel
 
 โปรเจกต์นี้ประกอบด้วย React/Vite frontend, Express API, Drizzle ORM และ PostgreSQL/Neon บน Vercel
 
-> **ห้าม commit ค่า secret** เช่น `DATABASE_URL`, `CLERK_SECRET_KEY` และ `CLERK_WEBHOOK_SIGNING_SECRET`
+> **ห้าม commit ค่า secret** เช่น `DATABASE_URL`
 
 ## 1. ตรวจว่าใช้ Vercel project ถูกตัว
 
@@ -39,9 +39,6 @@ Production ต้องใช้ target `production` ส่วน Preview ต้
 NODE_ENV=production
 DATABASE_DRIVER=neon
 DATABASE_URL=postgresql://...
-VITE_CLERK_PUBLISHABLE_KEY=pk_live_...
-CLERK_SECRET_KEY=sk_live_...
-CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
 ```
 
 เพิ่มหรือแก้ทีละค่าแบบ interactive:
@@ -50,9 +47,6 @@ CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
 vercel env add NODE_ENV production
 vercel env add DATABASE_DRIVER production
 vercel env add DATABASE_URL production
-vercel env add VITE_CLERK_PUBLISHABLE_KEY production
-vercel env add CLERK_SECRET_KEY production
-vercel env add CLERK_WEBHOOK_SIGNING_SECRET production
 ```
 
 กรณีต้องแก้ค่าที่มีอยู่ ให้ลบแล้วเพิ่มใหม่ หรือใช้ Vercel Dashboard เพื่อแก้ค่าโดยตรง:
@@ -62,7 +56,7 @@ vercel env rm DATABASE_URL production
 vercel env add DATABASE_URL production
 ```
 
-> `pk_live_...` เป็นค่าที่เปิดเผยใน browser ได้ แต่ `sk_live_...`, `DATABASE_URL` และ `whsec_...` ต้องเก็บเป็น secret
+> `DATABASE_URL` ต้องเก็บเป็น secret ไม่ใช่ค่าที่เปิดเผยได้ ระบบยืนยันตัวตนด้วย PIN ของผู้ใช้เอง (เก็บ PIN เป็น hash แบบ scrypt และเก็บ session ในตาราง `user_sessions`) จึงไม่ต้องตั้งค่า secret ของผู้ให้บริการยืนยันตัวตนใด ๆ
 
 ### Preview
 
@@ -71,12 +65,7 @@ vercel env add DATABASE_URL production
 ```bash
 vercel env add DATABASE_DRIVER preview
 vercel env add DATABASE_URL preview
-vercel env add VITE_CLERK_PUBLISHABLE_KEY preview
-vercel env add CLERK_SECRET_KEY preview
-vercel env add CLERK_WEBHOOK_SIGNING_SECRET preview
 ```
-
-อย่าใส่ `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` เพราะโปรเจกต์นี้เป็น Vite และอ่านเฉพาะ `VITE_CLERK_PUBLISHABLE_KEY`
 
 ---
 
@@ -87,7 +76,7 @@ Endpoint ที่ใช้ตรวจ:
 ```text
 GET /api/health   # ตรวจว่า function ยังทำงานอยู่ ไม่แตะ database
 GET /api/ready    # ตรวจ connection และรัน SELECT 1
-GET /api/auth/me  # ต้องใช้ Clerk session และ database
+GET /api/auth/me  # ต้องใช้ session จากการล็อกอินด้วย PIN และ database
 ```
 
 ความหมายของผลลัพธ์:
@@ -97,7 +86,7 @@ GET /api/auth/me  # ต้องใช้ Clerk session และ database
 | `/api/health` = 200 | Vercel function ทำงาน |
 | `/api/ready` = 503 | Database URL/driver/สิทธิ์/เครือข่าย หรือ database ไม่พร้อม |
 | `/api/auth/me` = 503 | API ยังใช้ database ไม่ได้ จึงทดสอบ login แบบสมบูรณ์ไม่ได้ |
-| `/api/auth/me` = 401 | Database ผ่านแล้ว แต่ยังไม่มี Clerk session |
+| `/api/auth/me` = 401 | Database ผ่านแล้ว แต่ยังไม่มี session (ยังไม่ได้ล็อกอิน หรือ session หมดอายุ) |
 | `/api/auth/me` = 200 | Login และ database ทำงานร่วมกันแล้ว |
 
 ### ตรวจค่า driver
@@ -193,55 +182,16 @@ NODE_ENV=production pnpm db:migrate:env
 
 ---
 
-## 4. ตั้งค่า Clerk Webhook
+## 4. จัดการบัญชีผู้ใช้และสิทธิ์
 
-### สร้าง endpoint ใน Clerk Dashboard
+ระบบไม่มีผู้ให้บริการยืนยันตัวตนภายนอก และไม่มี webhook สำหรับซิงก์ผู้ใช้ บัญชีทั้งหมดเป็นแถวในตาราง `users` และผู้ใช้ล็อกอินด้วย PIN 6 หลัก
 
-1. เข้า [Clerk Dashboard](https://dashboard.clerk.com/)
-2. เลือก **Production instance** ให้ตรงกับ `pk_live_...` และ `sk_live_...`
-3. ไปที่ **Webhooks**
-4. กด **Add Endpoint**
-5. ใส่ URL:
+- บัญชีแรกที่เป็น `super_admin` ถูกสร้างโดย `bootstrapDatabase()` (`server/db/bootstrap.ts`) ด้วยค่า PIN ใน `DEFAULT_SUPER_ADMIN_PIN` (`server/lib/firstPartyAuth.ts`)
+- ก่อนนำบัญชีเริ่มต้นนี้ไปใช้งานจริงบนอินเทอร์เน็ต ให้เปลี่ยน PIN ด้วย `pnpm db:set-pin` ก่อน เพราะค่าเริ่มต้นเป็นค่าคงที่ที่อยู่ในซอร์สโค้ด
+- บัญชี `admin` เพิ่มเติมสร้างผ่านหน้าจอจัดการผู้ใช้ในระบบ หรือใช้ `pnpm db:set-pin`
+- การเปลี่ยนสถานะหรือสิทธิ์ของผู้ใช้ทำผ่านระบบโดยตรง ไม่มีการซิงก์จากภายนอก
 
-```text
-https://puntakit-kalasin.vercel.app/api/webhooks/clerk
-```
-
-6. เลือก events:
-   - `user.created`
-   - `user.updated`
-   - `user.deleted`
-7. กดสร้าง endpoint
-8. คัดลอก **Signing Secret** ที่ขึ้นต้นด้วย `whsec_`
-9. เพิ่มลง Vercel Production:
-
-```bash
-vercel env add CLERK_WEBHOOK_SIGNING_SECRET production
-```
-
-10. Redeploy หลังเพิ่ม secret
-
-```bash
-vercel --prod
-```
-
-Webhook handler จะ:
-
-- ตรวจสอบ Svix signature จาก `svix-id`, `svix-timestamp`, `svix-signature`
-- สร้างหรือ link user ด้วย `clerk_id`
-- อัปเดตชื่อและ email เมื่อ `user.updated`
-- เปลี่ยน local account เป็น `suspended` เมื่อ `user.deleted`
-- ไม่ลบข้อมูลทางกายภาพ เพื่อรักษาความสัมพันธ์ใน database
-
-ทดสอบ request ที่ไม่มี signature ได้ผลลัพธ์ `400` หลัง database พร้อมแล้ว:
-
-```bash
-curl -i -X POST https://puntakit-kalasin.vercel.app/api/webhooks/clerk \
-  -H 'content-type: application/json' \
-  --data '{"type":"user.created","data":{"id":"probe"}}'
-```
-
-Clerk Dashboard มีปุ่ม **Send Example** หรือ **Test** สำหรับส่ง signed delivery จริง ควรใช้วิธีนั้นเพื่อทดสอบ end-to-end
+หมายเหตุ: ถ้าเคยตั้งค่า `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SIGNING_SECRET` หรือ `VITE_CLERK_PUBLISHABLE_KEY` ไว้ใน Vercel ค่าเหล่านั้นไม่ถูกอ่านแล้ว สามารถลบออกได้
 
 ---
 
@@ -287,14 +237,14 @@ curl -i "$BASE_URL/login"
 ## 6. ทดสอบ Login และข้อมูลจริง
 
 1. เปิด `https://puntakit-kalasin.vercel.app/login`
-2. Login ผ่าน Clerk Production instance
+2. Login ด้วย PIN ของบัญชีทดสอบ
 3. เปิด Browser DevTools → Network
 4. ตรวจ request:
    - `/api/auth/me` ต้องเป็น `200`
    - API dashboard/members/reports ต้องเป็น `200`
-5. ถ้า `/api/auth/me` เป็น `401` ให้ตรวจ Clerk session หรือ domain configuration
+5. ถ้า `/api/auth/me` เป็น `401` ให้ตรวจว่า session หมดอายุหรือยังไม่ได้ล็อกอิน
 6. ถ้าเป็น `503` ให้ตรวจ `/api/ready` และ `DATABASE_URL` ก่อน
-7. ตรวจใน Clerk Webhooks ว่า delivery สำเร็จและ response เป็น `200`
+7. ทดสอบ PIN ผิดแล้วต้องได้ข้อความผิดพลาดทั่วไป และบัญชีต้องถูกล็อกชั่วคราวเมื่อพยายามผิดครบตามที่กำหนด
 
 ---
 
@@ -302,14 +252,10 @@ curl -i "$BASE_URL/login"
 
 - [ ] Vercel CLI login แล้ว
 - [ ] `vercel link` ชี้ไป `puntakit-kalasin`
-- [ ] Production ใช้ `pk_live_...` และ `sk_live_...` คู่กัน
 - [ ] Production มี `DATABASE_URL` จริงและเชื่อมต่อได้
 - [ ] `DATABASE_DRIVER` ตรงกับ provider
 - [ ] migration ถูก apply แล้ว
-- [ ] มี `CLERK_WEBHOOK_SIGNING_SECRET`
-- [ ] Clerk webhook ใช้ Production instance
-- [ ] Webhook URL เป็น `/api/webhooks/clerk`
-- [ ] เลือก events ครบ 3 รายการ
+- [ ] บัญชี `super_admin` ตั้ง PIN ใหม่แล้ว (ไม่ใช่ค่า `DEFAULT_SUPER_ADMIN_PIN`)
 - [ ] `pnpm check` ผ่าน
 - [ ] `pnpm test` ผ่าน
 - [ ] `pnpm build` ผ่าน
