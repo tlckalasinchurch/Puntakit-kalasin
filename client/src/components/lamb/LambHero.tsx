@@ -19,7 +19,7 @@ export function LambHero() {
       className="lamb-hero relative isolate min-h-[340px] overflow-hidden rounded-[28px] border border-white bg-white p-6 shadow-[0_10px_28px_rgba(29,29,31,0.08)] sm:p-8 lg:min-h-[420px] lg:p-10"
     >
       {/* Soft illustrated landscape keeps the hero warm without obscuring content. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] overflow-hidden rounded-r-[28px] bg-gradient-to-b from-sky-100 via-cyan-50 to-lime-100 lg:block">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] overflow-hidden rounded-r-[28px] bg-sky-100 lg:block">
         <div className="absolute -right-12 top-2 h-52 w-72 rounded-full bg-sky-200/80" />
         <div className="absolute right-12 top-14 h-8 w-24 rounded-full bg-white/70 blur-sm" />
         <div className="absolute -left-10 bottom-16 h-44 w-[120%] rounded-[50%] bg-[#CBE9A1]" />
