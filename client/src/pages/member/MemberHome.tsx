@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Megaphone,
   QrCode,
+  Sprout,
   UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -194,13 +195,11 @@ export default function MemberHome() {
         {/* Lamb header — logo, tagline, greeting */}
         <header className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <img
-              src="/lamb/lamb-welcome.webp"
-              alt="มาสคอต Puntakit"
-              className="h-12 w-12 rounded-full object-cover"
-            />
+            <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#DDF7F0] text-[#0C7C82]">
+              <Sprout size={32} strokeWidth={2.2} />
+            </span>
             <div>
-              <p className="text-xl font-extrabold text-[#0C7C82]">Puntakit</p>
+              <p className="text-2xl font-extrabold tracking-tight text-[#075B5D] sm:text-3xl">Puntakit</p>
               <p className="text-xs text-slate-500">
                 พันธกิจ · กลุ่ม · คน · เติบโตไปด้วยกัน
               </p>
@@ -223,13 +222,13 @@ export default function MemberHome() {
           </Link>
         </header>
 
-        {/* Hero */}
-        <LambHero />
+        {/* Desktop: reference-style hero + supporting cards. Mobile: stacked, readable flow. */}
+        <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(340px,1fr)] xl:gap-5">
+          <LambHero />
+          <LambSecondaryCards />
+        </div>
 
-        {/* Secondary cards */}
-        <LambSecondaryCards />
-
-        {/* Quick actions */}
+        {/* Four quick actions — four columns on desktop, two on small screens. */}
         <LambQuickActions notificationCount={announcements.length} />
 
         {/* Digital member pass */}
