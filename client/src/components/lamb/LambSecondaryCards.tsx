@@ -47,7 +47,7 @@ export function LambSecondaryCards() {
           <Link
             key={href}
             href={href}
-            className={`relative flex flex-col justify-between overflow-hidden rounded-[24px] border border-white bg-gradient-to-br from-[#F0FBF8] to-[#DDF7F0] p-4 shadow-[0_8px_24px_rgba(29,29,31,0.06)] transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] ${
+            className={`relative flex flex-col justify-between overflow-hidden rounded-[24px] border border-white bg-[#E4F7F2] p-4 shadow-[0_8px_24px_rgba(29,29,31,0.06)] transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] ${
               wide ? "col-span-2 min-h-[150px] sm:min-h-[160px] lg:min-h-0" : "min-h-[150px] lg:min-h-0"
             }`}
           >
