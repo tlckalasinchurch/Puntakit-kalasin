@@ -75,6 +75,8 @@ interface PortalData {
   };
 }
 
+const PORTAL_REFRESH_INTERVAL_MS = 30_000;
+
 /**
  * Lamb Edition home — warm, friendly member home following the
  * Puntakit Lamb Edition design reference.
@@ -114,6 +116,16 @@ export default function MemberHome() {
 
   useEffect(() => {
     fetchPortalData();
+  }, []);
+
+  // Keep the Dashboard badge current without interrupting the member's view.
+  // The portal endpoint already scopes announcements to the signed-in member.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") void fetchPortalData();
+    };
+    const interval = window.setInterval(refresh, PORTAL_REFRESH_INTERVAL_MS);
+    return () => window.clearInterval(interval);
   }, []);
 
   const handleRegisterEvent = async (eventId: string, isRegistered: boolean) => {
