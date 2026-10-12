@@ -16,16 +16,24 @@ export function LambHero() {
   return (
     <section
       aria-labelledby="lamb-hero-title"
-      className="lamb-hero relative overflow-hidden rounded-3xl bg-white p-6 shadow-sm sm:p-8"
+      className="lamb-hero relative isolate min-h-[340px] overflow-hidden rounded-[28px] border border-white bg-white p-6 shadow-[0_10px_28px_rgba(29,29,31,0.08)] sm:p-8 lg:min-h-[420px] lg:p-10"
     >
-      <div className="relative z-10 max-w-md">
+      {/* Soft illustrated landscape keeps the hero warm without obscuring content. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] overflow-hidden rounded-r-[28px] bg-[#E4F7FC] lg:block">
+        <div className="absolute -right-12 top-2 h-52 w-72 rounded-full bg-sky-200/80" />
+        <div className="absolute right-12 top-14 h-8 w-24 rounded-full bg-white/70 blur-sm" />
+        <div className="absolute -left-10 bottom-16 h-44 w-[120%] rounded-[50%] bg-[#CBE9A1]" />
+        <div className="absolute -left-8 bottom-5 h-40 w-[115%] rounded-[50%] bg-[#78C99A]" />
+        <div className="absolute -right-12 -bottom-20 h-48 w-[90%] rounded-[50%] bg-[#37A978]" />
+      </div>
+      <div className="relative z-10 max-w-md lg:max-w-[52%]">
         <p
           id="lamb-hero-title"
           className="text-2xl font-bold text-[var(--color-ink)] sm:text-3xl"
         >
           ยินดีต้อนรับสู่
         </p>
-        <p className="mt-1 text-4xl font-extrabold text-[#0C7C82] sm:text-5xl">
+        <p className="mt-1 text-4xl font-extrabold tracking-tight text-[#087477] sm:text-5xl lg:text-6xl">
           Puntakit
         </p>
         <p className="mt-3 text-[var(--color-body-muted)]">
@@ -51,7 +59,7 @@ export function LambHero() {
       </div>
       <LambMascot
         pose="map"
-        className="pointer-events-none absolute -right-4 -bottom-4 w-48 select-none sm:w-64"
+        className="pointer-events-none absolute -right-4 bottom-0 z-10 w-40 select-none sm:w-52 lg:-right-2 lg:bottom-2 lg:w-[min(42%,300px)]"
       />
     </section>
   );

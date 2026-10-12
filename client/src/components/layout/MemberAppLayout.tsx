@@ -44,6 +44,7 @@ const NAV_ITEMS = [
 
 export function MemberAppLayout({ children }: MemberAppLayoutProps) {
   const [location] = useLocation();
+  const isMemberHome = location === "/app";
   const { user } = useAuth();
   const [canInstall, setCanInstall] = useState(false);
 
@@ -70,7 +71,7 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
   };
 
   return (
-    <div className="relative mx-auto flex min-h-screen w-full max-w-[1536px] flex-col bg-[var(--color-canvas-soft)] shadow-[var(--shadow)]">
+    <div className={`relative mx-auto flex min-h-screen w-full flex-col bg-[var(--color-canvas-soft)] shadow-[var(--shadow)] ${isMemberHome ? "max-w-[1440px]" : "max-w-[600px]"}`}>
       <a
         href="#member-app-main"
         className="type-caption-strong sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-[var(--radius-sm)] focus:bg-[var(--color-canvas)] focus:px-4 focus:py-3 focus:text-[var(--color-ink)] focus:shadow-[var(--shadow)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-focus)]"
@@ -79,7 +80,7 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
       </a>
 
       {/* Mobile app header — 60px sticky, token surfaces, no blue tint. */}
-      <header className="sticky top-0 z-40 flex h-[calc(60px+env(safe-area-inset-top,0px))] items-center pt-[env(safe-area-inset-top,0px)] justify-between gap-2 border-b border-[var(--color-divider)] bg-[var(--color-canvas)] px-4">
+      <header className={`${isMemberHome ? "hidden" : "sticky top-0 z-40 flex h-[calc(60px+env(safe-area-inset-top,0px))] items-center pt-[env(safe-area-inset-top,0px)] justify-between gap-2 border-b border-[var(--color-divider)] bg-[var(--color-canvas)] px-4"}`}>
         <Link
           href="/app"
           aria-label="กลับไปหน้าแรกของแอพสมาชิก"
@@ -114,32 +115,35 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
       </header>
 
       {/* Main content — bottom padding clears the fixed nav + safe area. */}
-      <main id="member-app-main" className="flex flex-1 flex-col gap-3.5 bg-[#F8F7F1] px-4 pb-[88px] pt-4 sm:px-6 lg:px-10 lg:pt-6">
+      <main id="member-app-main" className={`flex flex-1 flex-col gap-3.5 px-4 pb-[88px] pt-4 ${isMemberHome ? "sm:px-6 lg:px-8 lg:pt-6" : ""}`}>
         <RouteErrorBoundary>{children}</RouteErrorBoundary>
       </main>
 
       {/* Bottom navigation — 5 real links, >= 44px tall each. */}
       <nav
         aria-label="เมนูหลักของแอพสมาชิก"
-        className="fixed bottom-0 left-1/2 z-30 w-full max-w-[1536px] -translate-x-1/2 border-t border-[var(--color-divider)] bg-[var(--color-canvas)] pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_18px_rgba(29,29,31,0.06)]"
+        className={`fixed bottom-0 left-1/2 z-30 w-full ${isMemberHome ? "max-w-[1440px]" : "max-w-[600px]"} -translate-x-1/2 border-t border-[var(--color-divider)] bg-[var(--color-canvas)] pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_18px_rgba(29,29,31,0.06)]`}
       >
         <ul className="flex items-stretch justify-around">
           {NAV_ITEMS.map(item => {
-            const isActive = location === item.path;
+            // Treat nested destinations as part of their parent tab (e.g. /app/reports/123).
+            const isActive =
+              location === item.path ||
+              (item.path !== "/app" && location.startsWith(`${item.path}/`));
             const Icon = item.icon;
             return (
               <li key={item.path} className="flex-1">
                 <Link
                   href={item.path}
                   aria-current={isActive ? "page" : undefined}
-                  className={`flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-1 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none ${
+                  className={`relative flex min-h-[64px] flex-col items-center justify-center gap-0.5 px-1 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none after:absolute after:bottom-0 after:left-1/2 after:h-1 after:w-0 after:-translate-x-1/2 after:rounded-full after:bg-[var(--color-primary)] after:transition-[width] after:content-[''] motion-reduce:after:transition-none ${
                     isActive
-                      ? "text-[var(--color-primary)]"
-                      : "text-[var(--color-body-muted)]"
+                      ? "font-semibold text-[var(--color-primary)] after:w-14"
+                      : "text-[var(--color-body-muted)] hover:text-[var(--color-ink)]"
                   }`}
                 >
                   <span
-                    className={`flex h-8 w-12 items-center justify-center rounded-[var(--radius-md)] ${
+                    className={`flex h-8 w-12 items-center justify-center rounded-[var(--radius-md)] transition-colors motion-reduce:transition-none ${
                       isActive ? "bg-[var(--color-accent-soft)]" : ""
                     }`}
                   >

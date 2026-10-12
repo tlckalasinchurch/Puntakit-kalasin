@@ -207,12 +207,12 @@ export default function MemberHome() {
         {/* Lamb header — logo, tagline, greeting */}
         <header className="flex items-start justify-between gap-3 rounded-2xl bg-[#F8F7F1] py-1">
           <div className="flex items-center gap-3">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center text-[#0C7C82]" aria-hidden="true">
-              <Sprout size={48} strokeWidth={1.7} />
+            <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#DDF7F0] text-[#0C7C82]">
+              <Sprout size={32} strokeWidth={2.2} />
             </span>
             <div>
-              <p className="text-2xl font-extrabold leading-none text-[#0C7C82]">Puntakit</p>
-              <p className="mt-1 text-xs text-[var(--color-body-muted)] sm:text-sm">
+              <p className="text-2xl font-extrabold tracking-tight text-[#075B5D] sm:text-3xl">Puntakit</p>
+              <p className="text-xs text-[var(--color-body-muted)]">
                 พันธกิจ · กลุ่ม · คน · เติบโตไปด้วยกัน
               </p>
             </div>
@@ -223,7 +223,7 @@ export default function MemberHome() {
             aria-label={`โปรไฟล์ของ${greetingName}`}
           >
             <span className="text-right">
-              <span className="block text-sm font-semibold text-[var(--color-text-secondary)]">
+              <span className="block text-sm font-semibold text-[var(--color-ink)]">
                 สวัสดีครับ
               </span>
               <span className="block max-w-24 truncate text-xs text-[var(--color-body-muted)]">
@@ -234,13 +234,13 @@ export default function MemberHome() {
           </Link>
         </header>
 
-        {/* Editorial dashboard: large welcome card beside the two-level action rail. */}
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.58fr)_minmax(360px,0.95fr)] lg:items-stretch">
+        {/* Desktop: reference-style hero + supporting cards. Mobile: stacked, readable flow. */}
+        <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(340px,1fr)] xl:gap-5">
           <LambHero />
           <LambSecondaryCards />
         </div>
 
-        {/* Quick actions */}
+        {/* Four quick actions — four columns on desktop, two on small screens. */}
         <LambQuickActions notificationCount={announcements.length} />
 
         {/* Digital member pass */}
@@ -277,7 +277,7 @@ export default function MemberHome() {
                 <QrCode
                   size={ICON_SIZE["2xl"]}
                   aria-hidden="true"
-                  className="text-[var(--color-dark-surface)]"
+                  className="text-[var(--color-ink)]"
                 />
               )}
             </div>

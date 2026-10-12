@@ -42,13 +42,13 @@ const CARDS: SecondaryCard[] = [
 export function LambSecondaryCards() {
   return (
     <section aria-label="เมนูเสริม">
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:h-full lg:grid-rows-[1fr_1fr]">
         {CARDS.map(({ href, icon: Icon, title, detail, mascot, wide }) => (
           <Link
             key={href}
             href={href}
-            className={`relative flex min-h-[140px] flex-col justify-between overflow-hidden rounded-2xl bg-[#E4F7F2] p-4 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] ${
-              wide ? "col-span-2" : ""
+            className={`relative flex flex-col justify-between overflow-hidden rounded-[24px] border border-white bg-[#E4F7F2] p-4 shadow-[0_8px_24px_rgba(29,29,31,0.06)] transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] ${
+              wide ? "col-span-2 min-h-[150px] sm:min-h-[160px] lg:min-h-0" : "min-h-[150px] lg:min-h-0"
             }`}
           >
             <span>
