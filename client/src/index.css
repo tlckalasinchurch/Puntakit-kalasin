@@ -2047,3 +2047,27 @@
 .pin-login__help { margin: 1rem 0 0; color: rgba(247, 255, 254, .68); text-align: center; line-height: 1.6; }
 @media (prefers-reduced-motion: reduce) { .pin-login__dots span, .pin-login__keypad button, .pin-login__submit, .pin-login__identity input { transition: none; } }
 @media (min-width: 900px) { .pin-login { grid-template-columns: minmax(0, 1fr) minmax(30rem, 38rem); } .pin-login__brand { display: block; } .pin-login__panel { padding: 3rem clamp(3rem, 6vw, 7rem); } .pin-login__card { padding: 2.5rem 2rem 1.6rem; } .pin-login__mobile-logo { display: none; } }
+
+/* ------------------------------------------------------------------ */
+/* Lamb Edition — scoped theme for the member app (/app).              */
+/* Does NOT replace global tokens; staff dashboard is unaffected.      */
+/* ------------------------------------------------------------------ */
+.lamb-theme {
+  --lamb-primary: #0C7C82;
+  --lamb-primary-dark: #0a6b70;
+  --lamb-primary-soft: #35B4B0;
+  --lamb-mint: #E4F7F2;
+  --lamb-canvas: #F8F7F1;
+  --lamb-surface: #FFFFFF;
+}
+
+.lamb-theme .lamb-hero {
+  background: linear-gradient(135deg, #FFFFFF 0%, #E4F7F2 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lamb-theme * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

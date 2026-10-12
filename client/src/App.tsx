@@ -51,6 +51,7 @@ const MemberEvents = lazy(() => import("./pages/member/MemberEvents"));
 const MemberGroup = lazy(() => import("./pages/member/MemberGroup"));
 const MemberAttendance = lazy(() => import("./pages/member/MemberAttendance"));
 const MemberProfile = lazy(() => import("./pages/member/MemberProfile"));
+const MemberReports = lazy(() => import("./pages/member/MemberReports"));
 
 /** Page-content loading → skeleton (design.md §8); never "..." text. */
 function RouteSkeleton() {
@@ -96,6 +97,11 @@ function Router() {
       <Route path="/app/group">
         <ProtectedRoute>
           <MemberGroup />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/app/reports">
+        <ProtectedRoute>
+          <MemberReports />
         </ProtectedRoute>
       </Route>
       <Route path="/app/attendance">

@@ -4,10 +4,10 @@ import { Link, useLocation } from "wouter";
 import {
   CalendarDays,
   Download,
+  FileText,
   Home as HomeIcon,
   LayoutDashboard,
   User,
-  UserCheck,
   UsersRound,
 } from "lucide-react";
 import { Logo } from "./Logo";
@@ -36,10 +36,10 @@ interface MemberAppLayoutProps {
 
 const NAV_ITEMS = [
   { label: "หน้าแรก", path: "/app", icon: HomeIcon },
+  { label: "รายงาน", path: "/app/reports", icon: FileText },
+  { label: "กลุ่ม", path: "/app/group", icon: UsersRound },
   { label: "กิจกรรม", path: "/app/events", icon: CalendarDays },
-  { label: "พันธกิจ", path: "/app/group", icon: UsersRound },
-  { label: "เข้าโบสถ์", path: "/app/attendance", icon: UserCheck },
-  { label: "โปรไฟล์", path: "/app/profile", icon: User },
+  { label: "ฉัน", path: "/app/profile", icon: User },
 ] as const;
 
 export function MemberAppLayout({ children }: MemberAppLayoutProps) {
