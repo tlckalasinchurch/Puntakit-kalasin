@@ -6,13 +6,13 @@ import { logAudit } from "./audit.js";
 
 /**
  * First-admin bootstrap. The app has no role-management screen yet, and a new
- * Clerk user is provisioned as `member`, so nobody could become the first
- * admin without editing the database.
+ * account is provisioned as `member`, so nobody could become the first admin
+ * without editing the database.
  *
  * `BOOTSTRAP_ADMIN_EMAILS` (comma-separated) names the email addresses that
  * become `super_admin` on sign-in. Guards:
- *  - the email must be the Clerk PRIMARY address AND verified by Clerk, so a
- *    stranger cannot claim it by typing it into a sign-up form;
+ *  - the email must belong to an existing account, so a stranger cannot claim
+ *    it by typing it into a sign-in form;
  *  - it only promotes: an account that is already admin or super_admin is
  *    left alone, and nothing is ever demoted;
  *  - empty or unset means the feature is off.

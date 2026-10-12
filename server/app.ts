@@ -54,8 +54,8 @@ export function createApp() {
     next();
   });
 
-  // Liveness must remain available even when Clerk or the database is
-  // misconfigured; readiness below is the dependency-aware health check.
+  // Liveness must remain available even when the session store or the database
+  // is misconfigured; readiness below is the dependency-aware health check.
   app.get("/api/health", (_req, res) => {
     res.json({
       success: true,

@@ -33,10 +33,10 @@ export function ProtectedRoute({ children, allow }: ProtectedRouteProps) {
     // Redirect ONLY on a genuine signed-out state.
     //
     // The `!error` guard is the fix for "ล็อกอินแล้วเด้งออก": this used to be
-    // `if (!isLoading && !user)`, so a 403/5xx from /api/auth/me — where Clerk
-    // still had a perfectly valid session — sent the user to /login, and
-    // Clerk's `fallbackRedirectUrl="/"` sent them straight back. Infinite loop,
-    // no explanation. A failed profile load now renders an error instead.
+    // `if (!isLoading && !user)`, so a 403/5xx from /api/auth/me — where the
+    // server session was still perfectly valid — sent the user to /login, and
+    // the sign-in page sent them straight back. Infinite loop, no explanation.
+    // A failed profile load now renders an error instead.
     if (!isLoading && !user && !error) {
       navigate("/login");
     }
@@ -64,9 +64,9 @@ export function ProtectedRoute({ children, allow }: ProtectedRouteProps) {
     );
   }
 
-  // Signed in with Clerk, but the app could not load the local profile. Show
-  // what went wrong and offer a way out — never bounce to /login, because the
-  // session is valid and the redirect would just repeat.
+  // Signed in, but the app could not load the local profile. Show what went
+  // wrong and offer a way out — never bounce to /login, because the session is
+  // valid and the redirect would just repeat.
   if (error) {
     return (
       <div

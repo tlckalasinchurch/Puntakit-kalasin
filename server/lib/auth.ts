@@ -1,6 +1,7 @@
 /**
  * Test-only credential helper used by route integration fixtures.
- * Production requests are authenticated exclusively by Clerk middleware.
+ * Production requests are authenticated exclusively by the server session
+ * (PIN sign-in), never by this cookie helper.
  */
 import jwt from "jsonwebtoken";
 import type { UserRole } from "../../shared/schema.js";

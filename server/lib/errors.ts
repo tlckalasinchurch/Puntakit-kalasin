@@ -7,8 +7,8 @@ export type ErrorCode =
   // Authentication succeeded but the account cannot be used. These are split
   // out from FORBIDDEN because the browser has to tell them apart to show the
   // right next step: a suspended account needs an administrator, while a link
-  // conflict needs a one-off repair (see `pnpm db:relink-clerk`). A bare 403
-  // cannot carry that distinction, and guessing produced a redirect loop.
+  // conflict needs a one-off repair. A bare 403 cannot carry that distinction,
+  // and guessing produced a redirect loop.
   | "ACCOUNT_SUSPENDED"
   | "ACCOUNT_LINK_CONFLICT"
   | "NOT_FOUND"
@@ -64,10 +64,9 @@ export class AccountSuspendedError extends AppError {
 }
 
 /**
- * The email already belongs to a *different* Clerk user id. This is a
- * permanent, data-level condition (typically the account signed in through a
- * previous Clerk instance), not something a retry can fix, so it must not look
- * like a generic permission failure.
+ * The email already belongs to a *different* account id. This is a permanent,
+ * data-level condition, not something a retry can fix, so it must not look like
+ * a generic permission failure.
  */
 export class AccountLinkConflictError extends AppError {
   constructor(message: string = "อีเมลนี้ถูกเชื่อมไว้กับบัญชีอื่นแล้ว กรุณาติดต่อผู้ดูแลระบบเพื่อแก้ไข") {

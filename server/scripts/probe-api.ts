@@ -13,7 +13,6 @@ const probes: Probe[] = [
   { method: "GET", path: "/api/health", expected: [200] },
   { method: "GET", path: "/api/ready", expected: [200, 503] },
   { method: "GET", path: "/api/auth/me", expected: [200, 401, 503] },
-  { method: "POST", path: "/api/webhooks/clerk", expected: [200, 400, 503], body: JSON.stringify({ type: "probe", data: {} }), headers: { "content-type": "application/json" } },
   { method: "GET", path: "/api/dashboard/summary", expected: [200, 401, 503] },
   { method: "GET", path: "/api/reports/summary", expected: [200, 401, 503] },
   { method: "GET", path: "/api/members", expected: [200, 401, 503] },

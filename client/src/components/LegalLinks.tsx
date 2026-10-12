@@ -5,8 +5,8 @@ const LEGAL_LINK_CLASS =
 
 /**
  * design.md §8: every login and profile page must link `/privacy` and
- * `/terms`. Rendered under the Clerk card so the requirement holds on every
- * auth branch — demo notice, session error, and the hosted Clerk widget.
+ * `/terms`. Rendered on the sign-in surface so the requirement holds on every
+ * auth branch — demo notice, session error, and the PIN sign-in form.
  */
 export function LegalLinks() {
   return (
