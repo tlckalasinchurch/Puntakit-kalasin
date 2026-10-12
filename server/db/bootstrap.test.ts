@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { resolveDefaultSuperAdminPinPolicy } from "./bootstrap.js";
 
 /**
  * Real embedded-PostgreSQL (PGlite) bootstrap tests: migrations are applied to a
@@ -158,4 +159,138 @@ describe("remote driver bootstrap policy", () => {
 
     await client.closeDatabase();
   }, 60_000);
+});
+
+/**
+ * P0: `DEFAULT_SUPER_ADMIN_PIN` is a constant in source. It may only ever reach
+ * the local embedded PGlite directory, never a remote or production database.
+ */
+describe("starter super-admin PIN policy", () => {
+  it("seeds only on the local embedded database outside production", () => {
+    expect(resolveDefaultSuperAdminPinPolicy({ driver: "pglite", isProduction: false }).mode).toBe("seed");
+  });
+
+  it("refuses under NODE_ENV=production regardless of driver", () => {
+    for (const driver of ["pglite", "postgres", "neon"] as const) {
+      const policy = resolveDefaultSuperAdminPinPolicy({ driver, isProduction: true });
+      expect(policy.mode).toBe("refuse");
+      expect(policy.reason).toContain("production");
+    }
+  });
+
+  it("refuses on a remote driver even outside production", () => {
+    for (const driver of ["postgres", "neon"] as const) {
+      const policy = resolveDefaultSuperAdminPinPolicy({ driver, isProduction: false });
+      expect(policy.mode).toBe("refuse");
+      expect(policy.reason).toContain(driver);
+    }
+  });
+
+  it("writes the starter PIN for a super admin that has none, on PGlite", async () => {
+    setEnv({
+      NODE_ENV: "development",
+      DATABASE_DRIVER: "pglite",
+      PGLITE_DATA_DIR: makeTempDataDir(),
+    });
+    const { client, bootstrap, schema } = await loadModules();
+    const auth = await import("../lib/firstPartyAuth.js");
+    await bootstrap.bootstrapDatabase({ logger: silentLogger });
+    const db = client.getDb();
+
+    const [admin] = await db
+      .insert(schema.users)
+      .values({ email: "seed-me@p0.local", passwordHash: "x", name: "seed", role: "super_admin" })
+      .returning();
+    expect(admin.pinHash).toBeNull();
+    expect(await bootstrap.countSuperAdminsWithoutPin()).toBe(1);
+
+    const warnings: string[] = [];
+    const audit = await bootstrap.ensureDefaultSuperAdminPins(
+      { log: () => {}, warn: (m: string) => warnings.push(m) },
+      { driver: "pglite", isProduction: false },
+    );
+
+    expect(audit.mode).toBe("seed");
+    expect(audit.missingPins).toBe(1);
+    expect(audit.seeded).toBe(1);
+    expect(await bootstrap.countSuperAdminsWithoutPin()).toBe(0);
+    expect(warnings.join("\n")).toContain("starter PIN");
+
+    const [after] = await db.select().from(schema.users).where(eq(schema.users.id, admin.id)).limit(1);
+    expect(await auth.verifyPin("999999", after.pinHash)).toBe(true);
+
+    await client.closeDatabase();
+  }, 120_000);
+
+  it("never overwrites a PIN that is already set", async () => {
+    setEnv({
+      NODE_ENV: "development",
+      DATABASE_DRIVER: "pglite",
+      PGLITE_DATA_DIR: makeTempDataDir(),
+    });
+    const { client, bootstrap, schema } = await loadModules();
+    const auth = await import("../lib/firstPartyAuth.js");
+    await bootstrap.bootstrapDatabase({ logger: silentLogger });
+    const db = client.getDb();
+
+    const chosen = await auth.hashPin("314159");
+    const [admin] = await db
+      .insert(schema.users)
+      .values({
+        email: "already-set@p0.local",
+        passwordHash: "x",
+        name: "chosen",
+        role: "super_admin",
+        pinHash: chosen,
+      })
+      .returning();
+
+    const audit = await bootstrap.ensureDefaultSuperAdminPins(silentLogger, { driver: "pglite", isProduction: false });
+
+    expect(audit.missingPins).toBe(0);
+    expect(audit.seeded).toBe(0);
+    expect(await auth.verifyPin("314159", admin.pinHash)).toBe(true);
+
+    const [after] = await db.select().from(schema.users).where(eq(schema.users.id, admin.id)).limit(1);
+    expect(after.pinHash).toBe(chosen);
+    expect(await auth.verifyPin("999999", after.pinHash)).toBe(false);
+
+    await client.closeDatabase();
+  }, 120_000);
+
+  it("reports without writing when the policy refuses", async () => {
+    setEnv({
+      NODE_ENV: "development",
+      DATABASE_DRIVER: "pglite",
+      PGLITE_DATA_DIR: makeTempDataDir(),
+    });
+    const { client, bootstrap, schema } = await loadModules();
+    await bootstrap.bootstrapDatabase({ logger: silentLogger });
+    const db = client.getDb();
+
+    const [admin] = await db
+      .insert(schema.users)
+      .values({ email: "production-like@p0.local", passwordHash: "x", name: "prod", role: "super_admin" })
+      .returning();
+    expect(admin.pinHash).toBeNull();
+
+    const warnings: string[] = [];
+    // Same embedded database, but the audit is told it is production: it must
+    // warn and leave the row untouched rather than seed the starter PIN.
+    const audit = await bootstrap.ensureDefaultSuperAdminPins(
+      { log: () => {}, warn: (m: string) => warnings.push(m) },
+      { driver: "pglite", isProduction: true },
+    );
+
+    expect(audit.mode).toBe("refuse");
+    expect(audit.missingPins).toBe(1);
+    expect(audit.seeded).toBe(0);
+    expect(warnings.join("\n")).toContain("pnpm db:set-pin:env");
+
+    const [after] = await db.select().from(schema.users).where(eq(schema.users.id, admin.id)).limit(1);
+    expect(after.pinHash).toBeNull();
+    expect(await bootstrap.countSuperAdminsWithoutPin()).toBe(1);
+
+    await client.closeDatabase();
+  }, 120_000);
 });

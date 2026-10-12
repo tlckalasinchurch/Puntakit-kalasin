@@ -1,11 +1,11 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, count, eq, isNull, sql } from "drizzle-orm";
 import { migrate as migrateNeon } from "drizzle-orm/neon-http/migrator";
 import { migrate as migratePostgres } from "drizzle-orm/postgres-js/migrator";
 import { migrate as migratePglite } from "drizzle-orm/pglite/migrator";
 import * as path from "node:path";
 import * as schema from "../../shared/schema.js";
 import { getDatabaseConfig, getDatabaseHandle, getDb } from "./client.js";
-import type { DatabaseDriver } from "./config.js";
+import type { DatabaseConfig, DatabaseDriver } from "./config.js";
 import { DEFAULT_SUPER_ADMIN_PIN, hashPin } from "../lib/firstPartyAuth.js";
 
 /**
@@ -50,6 +50,10 @@ export async function bootstrapDatabase(options: BootstrapOptions = {}): Promise
   const shouldMigrate = force || config.driver === "pglite" || config.autoMigrate;
 
   if (!shouldMigrate) {
+    // Deliberately does NOT audit super-admin PINs here. This branch must not
+    // open a connection to a remote database — `server/db/bootstrap.test.ts`
+    // pins that with an unreachable port. The production signal lives in
+    // `/api/ready`, which already runs on a connected database.
     return {
       driver: config.driver,
       ranMigrations: false,
@@ -77,31 +81,130 @@ export async function bootstrapDatabase(options: BootstrapOptions = {}): Promise
   }
 
   const verification = await verifyDatabaseSchema();
-  await ensureDefaultSuperAdminPins();
+  await ensureDefaultSuperAdminPins(logger);
 
   return { driver: config.driver, ranMigrations: true, verification };
 }
 
+export type DefaultSuperAdminPinMode = "seed" | "refuse";
+
+export interface DefaultSuperAdminPinPolicy {
+  mode: DefaultSuperAdminPinMode;
+  /** Operator-facing explanation, logged whenever the audit finds anything. */
+  reason: string;
+}
+
 /**
- * Give existing super admins the agreed starter PIN once. The NULL guard is
- * intentional: a PIN chosen later by an admin must never be replaced on boot.
+ * Decides whether the starter PIN may be written to this database at all.
+ *
+ * `DEFAULT_SUPER_ADMIN_PIN` is a constant committed to this repository, so it may
+ * only ever reach the local embedded PGlite data directory. A remote driver can
+ * be a real deployment, and seeding it would hand a super_admin login to anyone
+ * who can read the source. `resolveDatabaseConfig()` already rejects PGlite
+ * under `NODE_ENV=production`, so the driver check below is the second lock on
+ * the same door rather than the only one.
  */
-async function ensureDefaultSuperAdminPins(): Promise<void> {
+export function resolveDefaultSuperAdminPinPolicy(
+  config: Pick<DatabaseConfig, "driver" | "isProduction">,
+): DefaultSuperAdminPinPolicy {
+  if (config.isProduction) {
+    return {
+      mode: "refuse",
+      reason:
+        "NODE_ENV=production — the starter PIN is public in source and is never written to a production database",
+    };
+  }
+  if (config.driver !== "pglite") {
+    return {
+      mode: "refuse",
+      reason: `driver=${config.driver} is not the local embedded database — the starter PIN is never written to a remote database`,
+    };
+  }
+  return { mode: "seed", reason: "local embedded PGlite database" };
+}
+
+export interface SuperAdminPinAudit {
+  /** Super admins that cannot sign in because they have no PIN. */
+  missingPins: number;
+  /** Rows written by the starter-PIN seed; always 0 when the policy refuses. */
+  seeded: number;
+  mode: DefaultSuperAdminPinMode;
+  reason: string;
+}
+
+/**
+ * Super admins with a NULL `pin_hash` can never authenticate: `authenticateWithPin`
+ * only considers rows where `pin_hash IS NOT NULL`. Used by `/api/ready` to keep
+ * production out of rotation until the operator assigns one.
+ */
+export async function countSuperAdminsWithoutPin(): Promise<number> {
+  const [row] = await getDb()
+    .select({ value: count() })
+    .from(schema.users)
+    .where(and(eq(schema.users.role, "super_admin"), isNull(schema.users.pinHash)));
+  return Number(row?.value ?? 0);
+}
+
+/**
+ * Gives super admins without a PIN the local starter PIN, but only on the local
+ * embedded database. On any other database it reports instead of writing.
+ *
+ * The NULL guard is intentional and must not be relaxed: it appears both in the
+ * scan and in the UPDATE's WHERE clause, so a PIN chosen later by an admin is
+ * never replaced on boot, and a row that gained a PIN between the two statements
+ * is left alone.
+ */
+export async function ensureDefaultSuperAdminPins(
+  logger: Pick<Console, "log" | "warn"> = console,
+  /** Overridable so the refusal path is testable without a remote database. */
+  config: Pick<DatabaseConfig, "driver" | "isProduction"> = getDatabaseConfig(),
+): Promise<SuperAdminPinAudit> {
+  const policy = resolveDefaultSuperAdminPinPolicy(config);
+  const missingPins = await countSuperAdminsWithoutPin();
+  const audit: SuperAdminPinAudit = { missingPins, seeded: 0, mode: policy.mode, reason: policy.reason };
+
+  if (missingPins === 0) return audit;
+
+  if (policy.mode === "refuse") {
+    logger.warn(
+      `[db] ${missingPins} super_admin account(s) have no PIN and cannot sign in (${policy.reason}). ` +
+        'Assign one with "pnpm db:set-pin:env <email> <pin>" against this environment — the plain ' +
+        '"db:set-pin" loads .env.local and would target a different database.',
+    );
+    return audit;
+  }
+
   const db = getDb();
   const candidates = await db
     .select({ id: schema.users.id })
     .from(schema.users)
     .where(and(eq(schema.users.role, "super_admin"), isNull(schema.users.pinHash)))
     .limit(100);
-  if (candidates.length === 0) return;
-
   const pinHash = await hashPin(DEFAULT_SUPER_ADMIN_PIN);
+  let seeded = 0;
   for (const candidate of candidates) {
-    await db
+    // `returning()` makes `seeded` reflect rows actually written, so a PIN set
+    // between the scan and the update is not counted.
+    const written = await db
       .update(schema.users)
       .set({ pinHash, pinFailedAttempts: 0, pinLockedUntil: null, pinUpdatedAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(schema.users.id, candidate.id), isNull(schema.users.pinHash)));
+      .where(and(eq(schema.users.id, candidate.id), isNull(schema.users.pinHash)))
+      .returning({ id: schema.users.id });
+    seeded += written.length;
   }
+
+  if (seeded > 1) {
+    logger.warn(
+      `[db] seeded the local starter PIN for ${seeded} super_admin account(s). A PIN must identify exactly ` +
+        "one account, so these accounts now share one PIN and cannot all sign in — set distinct PINs before use.",
+    );
+  } else if (seeded === 1) {
+    logger.warn(
+      `[db] seeded the local starter PIN for 1 super_admin account. Change it before sharing this database.`,
+    );
+  }
+
+  return { ...audit, seeded };
 }
 
 /**

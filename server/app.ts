@@ -28,6 +28,7 @@ import { isDemoModeEnabled, isLegacyTestAuthEnabled } from "./middleware/auth.js
 import { csrfProtection } from "./lib/firstPartyAuth.js";
 import { AppError } from "./lib/errors.js";
 import { getDb } from "./db/client.js";
+import { countSuperAdminsWithoutPin } from "./db/bootstrap.js";
 
 export function createApp() {
   const app = express();
@@ -103,6 +104,24 @@ export function createApp() {
     try {
       const db = getDb();
       await db.execute(sql`SELECT 1`);
+      // Production only. A super admin with no PIN cannot authenticate at all,
+      // so the deployment is not actually ready to serve logins; this is what
+      // stops the starter PIN from ever being the reason someone gets in.
+      if (process.env.NODE_ENV === "production") {
+        const missingAdminPins = await countSuperAdminsWithoutPin();
+        if (missingAdminPins > 0) {
+          return res.status(503).json({
+            success: false,
+            error: {
+              code: "SUPER_ADMIN_PIN_MISSING",
+              message:
+                `${missingAdminPins} super_admin account(s) have no PIN and cannot sign in. ` +
+                'Run "pnpm db:set-pin:env <email> <pin>" against the production environment ' +
+                "(the plain db:set-pin loads .env.local and would target the local PGlite database).",
+            },
+          });
+        }
+      }
       res.json({
         success: true,
         data: {
