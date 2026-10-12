@@ -70,7 +70,7 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
   };
 
   return (
-    <div className="relative mx-auto flex min-h-screen w-full max-w-[600px] flex-col bg-[var(--color-canvas-soft)] shadow-[var(--shadow)]">
+    <div className="relative mx-auto flex min-h-screen w-full max-w-[1536px] flex-col bg-[var(--color-canvas-soft)] shadow-[var(--shadow)]">
       <a
         href="#member-app-main"
         className="type-caption-strong sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-[var(--radius-sm)] focus:bg-[var(--color-canvas)] focus:px-4 focus:py-3 focus:text-[var(--color-ink)] focus:shadow-[var(--shadow)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-focus)]"
@@ -114,14 +114,14 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
       </header>
 
       {/* Main content — bottom padding clears the fixed nav + safe area. */}
-      <main id="member-app-main" className="flex flex-1 flex-col gap-3.5 px-4 pb-[88px] pt-4">
+      <main id="member-app-main" className="flex flex-1 flex-col gap-3.5 px-4 pb-[88px] pt-4 sm:px-6 lg:px-10 lg:pt-6">
         <RouteErrorBoundary>{children}</RouteErrorBoundary>
       </main>
 
       {/* Bottom navigation — 5 real links, >= 44px tall each. */}
       <nav
         aria-label="เมนูหลักของแอพสมาชิก"
-        className="fixed bottom-0 left-1/2 z-30 w-full max-w-[600px] -translate-x-1/2 border-t border-[var(--color-divider)] bg-[var(--color-canvas)] pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_18px_rgba(29,29,31,0.06)]"
+        className="fixed bottom-0 left-1/2 z-30 w-full max-w-[1536px] -translate-x-1/2 border-t border-[var(--color-divider)] bg-[var(--color-canvas)] pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_18px_rgba(29,29,31,0.06)]"
       >
         <ul className="flex items-stretch justify-around">
           {NAV_ITEMS.map(item => {

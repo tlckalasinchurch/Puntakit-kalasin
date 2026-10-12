@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Megaphone,
   QrCode,
+  Sprout,
   UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -192,16 +193,14 @@ export default function MemberHome() {
     <MemberAppLayout>
       <div className="lamb-theme space-y-4 bg-[#F8F7F1] sm:space-y-6">
         {/* Lamb header — logo, tagline, greeting */}
-        <header className="flex items-start justify-between gap-3">
+        <header className="flex items-start justify-between gap-3 rounded-2xl bg-[#F8F7F1] py-1">
           <div className="flex items-center gap-3">
-            <img
-              src="/lamb/lamb-welcome.webp"
-              alt="มาสคอต Puntakit"
-              className="h-12 w-12 rounded-full object-cover"
-            />
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center text-[#0C7C82]" aria-hidden="true">
+              <Sprout size={48} strokeWidth={1.7} />
+            </span>
             <div>
-              <p className="text-xl font-extrabold text-[#0C7C82]">Puntakit</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-2xl font-extrabold leading-none text-[#0C7C82]">Puntakit</p>
+              <p className="mt-1 text-xs text-slate-500 sm:text-sm">
                 พันธกิจ · กลุ่ม · คน · เติบโตไปด้วยกัน
               </p>
             </div>
@@ -223,11 +222,11 @@ export default function MemberHome() {
           </Link>
         </header>
 
-        {/* Hero */}
-        <LambHero />
-
-        {/* Secondary cards */}
-        <LambSecondaryCards />
+        {/* Editorial dashboard: large welcome card beside the two-level action rail. */}
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.58fr)_minmax(360px,0.95fr)] lg:items-stretch">
+          <LambHero />
+          <LambSecondaryCards />
+        </div>
 
         {/* Quick actions */}
         <LambQuickActions notificationCount={announcements.length} />
