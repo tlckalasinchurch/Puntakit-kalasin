@@ -73,13 +73,16 @@ describe("auth: signed-out and failed-profile-load stay distinct", () => {
 });
 
 describe("auth: the server names why an account cannot be used", () => {
-  it("errors.ts declares the two account-level codes", () => {
+  it("errors.ts declares the account-level code and no Clerk link conflict", () => {
     const source = readFileSync(
       path.join(REPO_ROOT, "server", "lib", "errors.ts"),
       "utf8"
     );
     expect(source).toContain("ACCOUNT_SUSPENDED");
-    expect(source).toContain("ACCOUNT_LINK_CONFLICT");
+    // The link-conflict error only existed because a Clerk identity could be
+    // shared by two accounts. PIN sign-in has no external identity, so the code
+    // was removed; this assertion keeps it from creeping back in as prose.
+    expect(source).not.toContain("ACCOUNT_LINK_CONFLICT");
   });
 
   it("firstParty auth keeps credential failures generic", () => {
@@ -94,6 +97,6 @@ describe("auth: the server names why an account cannot be used", () => {
   it("the client has a Thai message for each code", () => {
     const source = read("lib/api.ts");
     expect(source).toMatch(/case\s+"ACCOUNT_SUSPENDED"/);
-    expect(source).toMatch(/case\s+"ACCOUNT_LINK_CONFLICT"/);
+    expect(source).not.toMatch(/ACCOUNT_LINK_CONFLICT/);
   });
 });

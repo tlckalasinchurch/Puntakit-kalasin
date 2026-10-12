@@ -33,7 +33,6 @@ describe("group_leader tenant scope (real PGlite Postgres)", () => {
   let baseUrl: string;
   let db: Awaited<ReturnType<typeof import("../db/client.js").getDb>>;
   let schema: typeof import("../../shared/schema.js");
-  let bootstrap: typeof import("../lib/bootstrapAdmin.js");
   type Actor = { id: string; cookie: string };
   let superA: Actor, adminA: Actor, staffA: Actor, viewerA: Actor, memberU: Actor, leaderA: Actor, leaderB: Actor, lonely: Actor;
   let careA: string, careB: string, mA1: string, mA2: string, mB1: string, mFree: string;
@@ -47,7 +46,6 @@ describe("group_leader tenant scope (real PGlite Postgres)", () => {
     const client = await import("../db/client.js");
     const dbBootstrap = await import("../db/bootstrap.js");
     schema = await import("../../shared/schema.js");
-    bootstrap = await import("../lib/bootstrapAdmin.js");
     const authLib = await import("../lib/auth.js");
     const { createApp } = await import("../app.js");
     await dbBootstrap.bootstrapDatabase({ logger: { log: () => {}, warn: () => {} } });
@@ -285,24 +283,6 @@ describe("group_leader tenant scope (real PGlite Postgres)", () => {
     expect((await json(await call(leaderA, "GET", "/api/members?limit=100"))).data).toHaveLength(0);
     // assigning a group a user already leads is not a conflict
     expect((await call(superA, "PUT", `/api/admin/users/${lonely.id}/care-groups`, { groupIds: [careA] })).status).toBe(200);
-  });
-
-  it("10. bootstrap promotes only a verified primary listed email, never demotes, never touches admins", async () => {
-    const allowList = new Set(["boss@scope-test.local"]);
-    const mkUser = async (email: string, role: "member" | "group_leader" | "admin" | "super_admin") =>
-      (await db.insert(schema.users).values({ email, passwordHash: "x", name: email, role }).returning())[0];
-    const verified = await bootstrap.applyBootstrapAdmin(await mkUser("boss@scope-test.local", "member"), { emailVerified: true, allowList });
-    expect(verified.role).toBe("super_admin");
-    const unverified = await bootstrap.applyBootstrapAdmin(await mkUser("boss2@scope-test.local", "member"), { emailVerified: false, allowList: new Set(["boss2@scope-test.local"]) });
-    expect(unverified.role).toBe("member");
-    const stranger = await bootstrap.applyBootstrapAdmin(await mkUser("someone@scope-test.local", "member"), { emailVerified: true, allowList });
-    expect(stranger.role).toBe("member");
-    const alreadyAdmin = await bootstrap.applyBootstrapAdmin(await mkUser("boss3@scope-test.local", "admin"), { emailVerified: true, allowList: new Set(["boss3@scope-test.local"]) });
-    expect(alreadyAdmin.role).toBe("admin");
-    const leader = await bootstrap.applyBootstrapAdmin(await mkUser("boss4@scope-test.local", "group_leader"), { emailVerified: true, allowList: new Set(["boss4@scope-test.local"]) });
-    expect(leader.role).toBe("super_admin");
-    const keeps = await bootstrap.applyBootstrapAdmin(await mkUser("keeps@scope-test.local", "super_admin"), { emailVerified: true, allowList: new Set() });
-    expect(keeps.role).toBe("super_admin");
   });
 
   // ---- follow-up review: F1 (duplicate-contact privacy) and F2 (co-leader scope) ----
