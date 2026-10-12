@@ -126,21 +126,24 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
       >
         <ul className="flex items-stretch justify-around">
           {NAV_ITEMS.map(item => {
-            const isActive = location === item.path;
+            // Treat nested destinations as part of their parent tab (e.g. /app/reports/123).
+            const isActive =
+              location === item.path ||
+              (item.path !== "/app" && location.startsWith(`${item.path}/`));
             const Icon = item.icon;
             return (
               <li key={item.path} className="flex-1">
                 <Link
                   href={item.path}
                   aria-current={isActive ? "page" : undefined}
-                  className={`flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-1 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none ${
+                  className={`relative flex min-h-[64px] flex-col items-center justify-center gap-0.5 px-1 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none after:absolute after:bottom-0 after:left-1/2 after:h-1 after:w-0 after:-translate-x-1/2 after:rounded-full after:bg-[var(--color-primary)] after:transition-[width] after:content-[''] motion-reduce:after:transition-none ${
                     isActive
-                      ? "text-[var(--color-primary)]"
-                      : "text-[var(--color-body-muted)]"
+                      ? "font-semibold text-[var(--color-primary)] after:w-14"
+                      : "text-[var(--color-body-muted)] hover:text-[var(--color-ink)]"
                   }`}
                 >
                   <span
-                    className={`flex h-8 w-12 items-center justify-center rounded-[var(--radius-md)] ${
+                    className={`flex h-8 w-12 items-center justify-center rounded-[var(--radius-md)] transition-colors motion-reduce:transition-none ${
                       isActive ? "bg-[var(--color-accent-soft)]" : ""
                     }`}
                   >
