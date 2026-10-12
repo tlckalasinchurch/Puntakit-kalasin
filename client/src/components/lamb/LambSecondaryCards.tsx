@@ -56,7 +56,7 @@ export function LambSecondaryCards() {
                 <Icon size={20} aria-hidden="true" />
                 {title}
               </span>
-              <span className="mt-1 block text-sm text-slate-600">
+              <span className="mt-1 block text-sm text-[var(--color-body-muted)]">
                 {detail}
               </span>
             </span>
