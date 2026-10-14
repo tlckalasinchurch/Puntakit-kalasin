@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import QRCode from "qrcode";
 import {
@@ -89,6 +89,8 @@ export default function MemberHome() {
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [prayerModalOpen, setPrayerModalOpen] = useState(false);
   const [subscribingPush, setSubscribingPush] = useState(false);
+  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
+  const pendingEventIdRef = useRef<string | null>(null);
 
   const fetchPortalData = async () => {
     setError(null);
@@ -129,6 +131,10 @@ export default function MemberHome() {
   }, []);
 
   const handleRegisterEvent = async (eventId: string, isRegistered: boolean) => {
+    // The ref closes the gap before React disables the button after a tap.
+    if (pendingEventIdRef.current !== null) return;
+    pendingEventIdRef.current = eventId;
+    setPendingEventId(eventId);
     try {
       if (isRegistered) {
         await api.delete(`/api/me/events/${eventId}/register`);
@@ -137,9 +143,12 @@ export default function MemberHome() {
         await api.post(`/api/me/events/${eventId}/register`, {});
         toast.success("ลงทะเบียนเข้าร่วมกิจกรรมเรียบร้อยแล้ว");
       }
-      fetchPortalData();
+      await fetchPortalData();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "ดำเนินการไม่สำเร็จ");
+    } finally {
+      pendingEventIdRef.current = null;
+      setPendingEventId(null);
     }
   };
 
@@ -415,22 +424,33 @@ export default function MemberHome() {
                   </p>
                   <button
                     type="button"
+                    disabled={pendingEventId !== null}
+                    aria-busy={pendingEventId === evt.id}
+                    aria-label={
+                      pendingEventId === evt.id
+                        ? "กำลังบันทึกการลงทะเบียนกิจกรรม " + evt.title
+                        : evt.isRegistered
+                          ? "ยกเลิกการลงทะเบียนกิจกรรม " + evt.title
+                          : "ลงทะเบียนเข้าร่วมกิจกรรม " + evt.title
+                    }
                     onClick={() =>
                       handleRegisterEvent(evt.id, Boolean(evt.isRegistered))
                     }
-                    className={`mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] ${
+                    className={`mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] disabled:opacity-60 motion-reduce:transition-none ${
                       evt.isRegistered
                         ? "border border-[var(--color-divider)] bg-white text-[var(--color-error-ink)] hover:bg-[var(--color-canvas-soft)]"
                         : "bg-[#0C7C82] text-white hover:bg-[#0a6b70]"
                     }`}
                   >
-                    {evt.isRegistered && (
+                    {pendingEventId !== evt.id && evt.isRegistered && (
                       <CheckCircle2 size={ICON_SIZE.sm} aria-hidden="true" />
                     )}
                     <span>
-                      {evt.isRegistered
-                        ? "ลงทะเบียนแล้ว • ยกเลิก"
-                        : "ลงทะเบียนเข้าร่วม"}
+                      {pendingEventId === evt.id
+                        ? "กำลังบันทึก…"
+                        : evt.isRegistered
+                          ? "ยกเลิกการลงทะเบียน"
+                          : "ลงทะเบียนเข้าร่วมกิจกรรม"}
                     </span>
                   </button>
                 </li>

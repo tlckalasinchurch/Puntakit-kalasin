@@ -638,3 +638,21 @@ describe("UX audit P1 fixes — interaction race and accessibility guards", () =
     expect(src).toMatch(/onClick=\{handleClose\}/);
   });
 });
+
+describe("UX follow-up — review shortcut and member event registration", () => {
+  it("links the pending-review count to Inbox with an accessible name", () => {
+    const src = read("client/src/components/layout/Topbar.tsx");
+    expect(src).toContain("canReviewSubmissions");
+    expect(src).toContain('href="/inbox"');
+    expect(src).toContain("aria-label={");
+    expect(src).toContain("unreadCount > 0");
+  });
+
+  it("prevents repeated registration requests from the member home card", () => {
+    const src = read("client/src/pages/member/MemberHome.tsx");
+    expect(src).toContain("pendingEventIdRef.current !== null");
+    expect(src).toContain("disabled={pendingEventId !== null}");
+    expect(src).toContain("aria-busy={pendingEventId === evt.id}");
+    expect(src).toContain("กำลังบันทึก…");
+  });
+});
