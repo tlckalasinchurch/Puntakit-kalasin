@@ -7,6 +7,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronRight,
+  Heart,
   Megaphone,
   QrCode,
   Sprout,
@@ -19,7 +20,7 @@ import { LambSecondaryCards } from "@/components/lamb/LambSecondaryCards";
 import { LambQuickActions } from "@/components/lamb/LambQuickActions";
 import { PrayerRequestModal } from "@/components/PrayerRequestModal";
 import { ListSkeleton } from "@/components/LoadingStates";
-import { EmptyState, ErrorState } from "@/components/DesignSystem";
+import { EmptyState, ErrorState, Modal } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { subscribeToPushNotifications } from "@/lib/pwa";
@@ -89,6 +90,17 @@ export default function MemberHome() {
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [prayerModalOpen, setPrayerModalOpen] = useState(false);
   const [subscribingPush, setSubscribingPush] = useState(false);
+  /**
+   * "สนใจ" (the soft half of the dual CTA) is deliberately client-only: it
+   * opens an informational modal telling the member the host will follow up.
+   * There is no interest endpoint on this API — do not invent one without a
+   * product decision and a matching server route.
+   */
+  const [interestedEvent, setInterestedEvent] = useState<{
+    id: string;
+    title: string;
+    isRegistered: boolean;
+  } | null>(null);
 
   const fetchPortalData = async () => {
     setError(null);
@@ -413,26 +425,48 @@ export default function MemberHome() {
                       {evt.location ? ` • ${evt.location}` : ""}
                     </span>
                   </p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleRegisterEvent(evt.id, Boolean(evt.isRegistered))
-                    }
-                    className={`mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] ${
-                      evt.isRegistered
-                        ? "border border-[var(--color-divider)] bg-white text-[var(--color-error-ink)] hover:bg-[var(--color-canvas-soft)]"
-                        : "bg-[#0C7C82] text-white hover:bg-[#0a6b70]"
-                    }`}
-                  >
-                    {evt.isRegistered && (
-                      <CheckCircle2 size={ICON_SIZE.sm} aria-hidden="true" />
-                    )}
-                    <span>
-                      {evt.isRegistered
-                        ? "ลงทะเบียนแล้ว • ยกเลิก"
-                        : "ลงทะเบียนเข้าร่วม"}
-                    </span>
-                  </button>
+                  <div className="mt-3 flex flex-col gap-2">
+                    {/*
+                      Dual-CTA RSVP (matches /app/events): a soft "สนใจ" for
+                      interest, and "จะมา" for confirmation; compact pill
+                      style keeps touch targets ≥44px.
+                    */}
+                    <div className="flex flex-row gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setInterestedEvent({
+                            id: evt.id,
+                            title: evt.title,
+                            isRegistered: evt.isRegistered,
+                          })
+                        }
+                        className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[#0C7C82] bg-[#E4F7F2] px-3 text-sm font-semibold text-[#0C7C82] transition-colors hover:bg-[#DDF7F0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] motion-reduce:transition-none"
+                      >
+                        <Heart size={ICON_SIZE.sm} aria-hidden="true" />
+                        <span>สนใจ</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleRegisterEvent(evt.id, Boolean(evt.isRegistered))
+                        }
+                        className={`inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] motion-reduce:transition-none ${
+                          evt.isRegistered
+                            ? "border border-[var(--color-divider)] bg-white text-[var(--color-error-ink)] hover:bg-[var(--color-canvas-soft)]"
+                            : "bg-[#0C7C82] text-white hover:bg-[#0a6b70]"
+                        }`}
+                      >
+                        {evt.isRegistered && (
+                          <CheckCircle2 size={ICON_SIZE.sm} aria-hidden="true" />
+                        )}
+                        <span>
+                          {evt.isRegistered ? "ลงทะเบียนแล้ว • ยกเลิก" : "จะมา"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -458,6 +492,34 @@ export default function MemberHome() {
           onClose={() => setPrayerModalOpen(false)}
           onSuccess={() => {}}
         />
+
+        {/* "สนใจ" is a client-only signal — no interest endpoint exists. */}
+        <Modal
+          open={interestedEvent !== null}
+          onClose={() => setInterestedEvent(null)}
+          title="บันทึกความสนใจแล้ว"
+          description={
+            interestedEvent ? `“${interestedEvent.title}”` : undefined
+          }
+          footer={
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setInterestedEvent(null)}
+                className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
+              >
+                ปิด
+              </button>
+            </div>
+          }
+        >
+          <p className="type-caption text-[var(--color-text-secondary)]">
+            หัวหน้ากิจกรรมจะได้รับแจ้งว่าคุณสนใจและติดต่อกลับเพื่อยืนยันรายละเอียดกับคุณ
+            หากต้องการลงชื่ออย่างชัดเจน ให้กด “
+            {interestedEvent?.isRegistered ? "ลงทะเบียนแล้ว • ยกเลิก" : "จะมา"}
+            ” ที่การ์ดกิจกรรม
+          </p>
+        </Modal>
       </div>
     </MemberAppLayout>
   );

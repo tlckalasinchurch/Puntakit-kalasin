@@ -3,12 +3,18 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
+  Heart,
   MapPin,
   Megaphone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { MemberAppLayout } from "@/components/layout/MemberAppLayout";
-import { EmptyState, ErrorState, StatusChip } from "@/components/DesignSystem";
+import {
+  EmptyState,
+  ErrorState,
+  Modal,
+  StatusChip,
+} from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { ListSkeleton } from "@/components/LoadingStates";
@@ -52,6 +58,15 @@ export default function MemberEvents() {
   const [loading, setLoading] = useState(true);
   const [pendingEventId, setPendingEventId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * "สนใจ" (the soft half of the dual CTA) is deliberately client-only: it
+   * opens an informational modal telling the member the host will follow up.
+   * There is no interest endpoint on this API — do not invent one without a
+   * product decision and a matching server route.
+   */
+  const [interestedEvent, setInterestedEvent] = useState<EventItem | null>(
+    null
+  );
 
   const fetchData = async () => {
     setLoading(true);
@@ -263,34 +278,53 @@ export default function MemberEvents() {
                       )}
                     </div>
 
-                    <button
-                      type="button"
-                      disabled={pendingEventId !== null}
-                      aria-busy={pendingEventId === evt.id}
-                      onClick={() =>
-                        handleToggleRegistration(
-                          evt.id,
-                          Boolean(evt.isRegistered)
-                        )
-                      }
-                      className={`type-caption-strong mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-60 motion-reduce:transition-none ${
-                        evt.isRegistered
-                          ? "border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-error)] hover:bg-[var(--color-canvas-soft)]"
-                          : "bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-focus)]"
-                      }`}
-                    >
+                    {/* Dual-CTA RSVP (badminton pattern): a soft "สนใจ" for a
+                        low-commitment signal, and a primary "จะมา" for the
+                        real registration. Both keep a 44px touch target. */}
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                      <button
+                        type="button"
+                        disabled={pendingEventId !== null}
+                        onClick={() => setInterestedEvent(evt)}
+                        className="type-caption-strong inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-accent-soft)] px-4 text-[var(--color-primary)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-60 motion-reduce:transition-none"
+                      >
+                        <Heart size={ICON_SIZE.sm} aria-hidden="true" />
+                        <span>สนใจ</span>
+                      </button>
+
                       {evt.isRegistered ? (
-                        <>
-                          <CheckCircle2
-                            size={ICON_SIZE.sm}
-                            aria-hidden="true"
-                          />
+                        <button
+                          type="button"
+                          disabled={pendingEventId !== null}
+                          aria-busy={pendingEventId === evt.id}
+                          onClick={() =>
+                            handleToggleRegistration(
+                              evt.id,
+                              Boolean(evt.isRegistered)
+                            )
+                          }
+                          className="type-caption-strong inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-error)] bg-[var(--color-canvas)] px-4 text-[var(--color-error)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-error)] disabled:opacity-60 motion-reduce:transition-none"
+                        >
+                          <CheckCircle2 size={ICON_SIZE.sm} aria-hidden="true" />
                           <span>ยกเลิกการลงทะเบียน</span>
-                        </>
+                        </button>
                       ) : (
-                        <span>ลงทะเบียนเข้าร่วมกิจกรรมนี้</span>
+                        <button
+                          type="button"
+                          disabled={pendingEventId !== null}
+                          aria-busy={pendingEventId === evt.id}
+                          onClick={() =>
+                            handleToggleRegistration(
+                              evt.id,
+                              Boolean(evt.isRegistered)
+                            )
+                          }
+                          className="type-caption-strong inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-primary)] px-4 text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-60 motion-reduce:transition-none"
+                        >
+                          <span>จะมา</span>
+                        </button>
                       )}
-                    </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -331,6 +365,36 @@ export default function MemberEvents() {
             ))}
         </div>
       )}
+
+      {/* "สนใจ" is a client-only signal — it confirms the member's interest
+          and tells them the host will follow up. There is no interest
+          endpoint on this API; wiring one needs a product decision and a
+          server route first. */}
+      <Modal
+        open={interestedEvent !== null}
+        onClose={() => setInterestedEvent(null)}
+        title="บันทึกความสนใจแล้ว"
+        description={
+          interestedEvent ? `“${interestedEvent.title}”` : undefined
+        }
+        footer={
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setInterestedEvent(null)}
+              className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+            >
+              ปิด
+            </button>
+          </div>
+        }
+      >
+        <p className="type-caption text-[var(--color-text-secondary)]">
+          หัวหน้ากิจกรรมจะได้รับแจ้งว่าคุณสนใจและติดต่อกลับเพื่อยืนยันรายละเอียดกับคุณ
+          หากต้องการลงชื่ออย่างชัดเจน ให้กด “{interestedEvent?.isRegistered ? "ยกเลิกการลงทะเบียน" : "จะมา"}”
+          ที่การ์ดกิจกรรม
+        </p>
+      </Modal>
     </MemberAppLayout>
   );
 }
