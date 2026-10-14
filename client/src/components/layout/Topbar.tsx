@@ -1,4 +1,5 @@
 import { Bell, Menu, Moon, Sun } from "lucide-react";
+import { Link } from "wouter";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useState, useEffect } from "react";
@@ -56,11 +57,12 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
 
-  // Real pending-work count for the bell badge (submissions awaiting review).
-  // Reviewers only — other roles keep a quiet bell with no badge.
+  // Pending submissions are review work, not general notifications. Only roles
+  // that can review them see the shortcut; it opens the matching Inbox screen.
   const REVIEW_ROLES = ["super_admin", "admin", "staff", "ministry_leader"];
+  const canReviewSubmissions = Boolean(user && REVIEW_ROLES.includes(user.role));
   const unreadCount = useUnreadCount(
-    user && REVIEW_ROLES.includes(user.role) ? "/api/submissions?status=new&limit=50" : null
+    canReviewSubmissions ? "/api/submissions?status=new&limit=50" : null
   );
 
   return (
@@ -101,19 +103,26 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
             <Moon size={ICON_SIZE.md} aria-hidden="true" />
           )}
         </button>
-        {/* Notification bell: badge only renders when there is a real count. */}
-        <button
-          type="button"
-          className="relative flex size-11 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-hairline)] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-          aria-label="การแจ้งเตือน"
-        >
-          <Bell size={ICON_SIZE.md} aria-hidden="true" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[var(--color-error)] px-1 type-fine font-bold text-white">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </button>
+        {/* Pending-review shortcut. Its count and destination both refer to Inbox. */}
+        {canReviewSubmissions && (
+          <Link
+            href="/inbox"
+            title="เปิดกล่องข้อมูลที่รอตรวจสอบ"
+            aria-label={
+              unreadCount > 0
+                ? "เปิดกล่องข้อมูลที่รอตรวจสอบ มี " + unreadCount + " รายการ"
+                : "เปิดกล่องข้อมูลที่รอตรวจสอบ"
+            }
+            className="relative flex size-11 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-hairline)] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+          >
+            <Bell size={ICON_SIZE.md} aria-hidden="true" />
+            {unreadCount > 0 && (
+              <span aria-hidden="true" className="absolute -top-1 -right-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[var(--color-error)] px-1 type-fine font-bold text-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </Link>
+        )}
         <button
           type="button"
           onClick={() => void logout()}
