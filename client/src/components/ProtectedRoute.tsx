@@ -108,6 +108,7 @@ export function ProtectedRoute({ children, allow }: ProtectedRouteProps) {
       <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-4 px-4 py-10" data-testid="route-denied">
         <EmptyState
           icon={Lock}
+          headingLevel={1}
           title="คุณไม่มีสิทธิ์เปิดหน้านี้"
           description="หน้านี้ใช้ได้เฉพาะบางบทบาท หากต้องการใช้งาน กรุณาติดต่อผู้ดูแลระบบ"
         />

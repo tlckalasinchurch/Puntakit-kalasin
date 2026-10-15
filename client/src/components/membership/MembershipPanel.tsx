@@ -288,7 +288,7 @@ export function MembershipPanel({ memberId, onChanged }: { memberId: string; onC
               </label>
             )}
             {formError && (
-              <p role="alert" className="type-caption text-[var(--color-error)]">
+              <p role="alert" className="type-caption text-[var(--color-error-ink)]">
                 {formError}
               </p>
             )}

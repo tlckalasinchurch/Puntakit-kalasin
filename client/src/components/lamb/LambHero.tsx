@@ -1,5 +1,5 @@
-import { Link } from "wouter";
-import { ArrowRight, Check } from "lucide-react";
+import { Check } from "lucide-react";
+import { StatusChip } from "@/components/DesignSystem";
 import { LambMascot } from "./LambMascot";
 
 const CHECKLIST = [
@@ -16,7 +16,7 @@ export function LambHero() {
   return (
     <section
       aria-labelledby="lamb-hero-title"
-      className="lamb-hero relative isolate min-h-[340px] overflow-hidden rounded-[28px] border border-white bg-white p-6 shadow-[0_10px_28px_rgba(29,29,31,0.08)] sm:p-8 lg:min-h-[420px] lg:p-10"
+      className="lamb-hero relative isolate min-h-[340px] overflow-hidden rounded-[28px] border border-[var(--lamb-surface)] bg-[var(--lamb-surface)] p-6 shadow-[0_10px_28px_rgba(29,29,31,0.08)] sm:p-8 lg:min-h-[420px] lg:p-10"
     >
       {/* Soft illustrated landscape keeps the hero warm without obscuring content. */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] overflow-hidden rounded-r-[28px] bg-[#E4F7FC] lg:block">
@@ -27,15 +27,15 @@ export function LambHero() {
         <div className="absolute -right-12 -bottom-20 h-48 w-[90%] rounded-[50%] bg-[#37A978]" />
       </div>
       <div className="relative z-10 max-w-md lg:max-w-[52%]">
-        <p
+        <h1
           id="lamb-hero-title"
           className="text-2xl font-bold text-[var(--color-ink)] sm:text-3xl"
         >
           ยินดีต้อนรับสู่
-        </p>
-        <p className="mt-1 text-4xl font-extrabold tracking-tight text-[#087477] sm:text-5xl lg:text-6xl">
-          Puntakit
-        </p>
+          <span className="mt-1 block text-4xl font-extrabold tracking-tight text-[var(--lamb-primary)] sm:text-5xl lg:text-6xl">
+            Puntakit
+          </span>
+        </h1>
         <p className="mt-3 text-[var(--color-body-muted)]">
           ร่วมออกไป สร้างชีวิต เปลี่ยนชุมชน ด้วยพันธกิจบ้าน
         </p>
@@ -49,13 +49,19 @@ export function LambHero() {
             </li>
           ))}
         </ul>
-        <Link
-          href="/app/reports/new"
-          className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-full bg-[#0C7C82] px-6 py-3 font-semibold text-white transition-colors hover:bg-[#0a6b70] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] focus-visible:ring-offset-2"
-        >
-          เริ่มบันทึกรายงาน
-          <ArrowRight size={18} aria-hidden="true" />
-        </Link>
+        {/* The report form for members is not built yet (POST /api/submissions is limited to CREATE_ROLES),
+            so this is shown as unavailable instead of linking to a page that does not exist. */}
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled
+            title="ฟอร์มบันทึกรายงานกำลังจัดเตรียม ยังไม่เปิดให้ใช้งาน"
+            className="inline-flex min-h-12 cursor-not-allowed items-center gap-2 rounded-full bg-[var(--color-canvas-soft)] px-6 py-3 font-semibold text-[var(--color-body-muted)]"
+          >
+            เริ่มบันทึกรายงาน
+          </button>
+          <StatusChip tone="neutral">เร็วๆ นี้</StatusChip>
+        </div>
       </div>
       <LambMascot
         pose="map"

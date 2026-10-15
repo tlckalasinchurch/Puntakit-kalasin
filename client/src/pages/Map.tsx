@@ -433,7 +433,7 @@ export default function MapPage() {
               <AlertCircle
                 size={ICON_SIZE.lg}
                 aria-hidden="true"
-                className="mt-0.5 shrink-0 text-[var(--color-error)]"
+                className="mt-0.5 shrink-0 text-[var(--color-error-ink)]"
               />
               <div>
                 <p className="type-body-strong text-[var(--color-ink)]">

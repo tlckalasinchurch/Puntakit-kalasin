@@ -210,7 +210,7 @@ function PinEditor({ user, onClose, onSaved }: { user: UserRow | null; onClose: 
               placeholder="กรอกซ้ำอีกครั้ง"
             />
           </label>
-          {confirmPin.length > 0 && pin !== confirmPin && <p className="type-caption text-[var(--color-error)]">PIN ไม่ตรงกัน</p>}
+          {confirmPin.length > 0 && pin !== confirmPin && <p className="type-caption text-[var(--color-error-ink)]">PIN ไม่ตรงกัน</p>}
         </div>
         <div className="flex items-center justify-end gap-3 border-t border-[var(--color-hairline)] p-4">
           <button type="button" onClick={onClose} className="min-h-11 rounded-[var(--radius-pill)] px-4 text-sm font-semibold text-[var(--color-body-muted)] hover:bg-[var(--color-canvas-soft)]">ยกเลิก</button>

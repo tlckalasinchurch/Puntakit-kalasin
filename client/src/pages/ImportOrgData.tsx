@@ -156,7 +156,7 @@ export default function ImportOrgData() {
           </button>
         </div>
         {error && (
-          <p role="alert" className="type-caption mt-3 text-[var(--color-error)]">
+          <p role="alert" className="type-caption mt-3 text-[var(--color-error-ink)]">
             {error}
           </p>
         )}

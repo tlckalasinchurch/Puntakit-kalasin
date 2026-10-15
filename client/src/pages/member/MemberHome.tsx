@@ -228,15 +228,15 @@ export default function MemberHome() {
 
   return (
     <MemberAppLayout>
-      <div className="lamb-theme space-y-4 bg-[#F8F7F1] sm:space-y-6">
+      <div className="lamb-theme space-y-4 bg-[var(--lamb-canvas)] sm:space-y-6">
         {/* Lamb header — logo, tagline, greeting */}
-        <header className="flex items-start justify-between gap-3 rounded-2xl bg-[#F8F7F1] py-1">
+        <header className="flex items-start justify-between gap-3 rounded-2xl bg-[var(--lamb-canvas)] py-1">
           <div className="flex items-center gap-3">
-            <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#DDF7F0] text-[#0C7C82]">
+            <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#DDF7F0] text-[var(--lamb-primary)]">
               <Sprout size={32} strokeWidth={2.2} />
             </span>
             <div>
-              <p className="text-2xl font-extrabold tracking-tight text-[#075B5D] sm:text-3xl">Puntakit</p>
+              <p className="text-2xl font-extrabold tracking-tight text-[var(--lamb-ink)] sm:text-3xl">Puntakit</p>
               <p className="text-xs text-[var(--color-body-muted)]">
                 พันธกิจ · กลุ่ม · คน · เติบโตไปด้วยกัน
               </p>
@@ -244,7 +244,7 @@ export default function MemberHome() {
           </div>
           <Link
             href="/app/profile"
-            className="flex min-h-11 items-center gap-2 rounded-full bg-white px-4 py-2 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
+            className="flex min-h-11 items-center gap-2 rounded-full bg-[var(--lamb-surface)] px-4 py-2 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
             aria-label={`โปรไฟล์ของ${greetingName}`}
           >
             <span className="text-right">
@@ -320,7 +320,7 @@ export default function MemberHome() {
                 type="button"
                 onClick={handleEnablePush}
                 disabled={subscribingPush}
-                className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-full bg-white/10 px-4 text-xs font-semibold transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-on-dark)] disabled:opacity-50"
+                className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-xs font-semibold transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-on-dark)] disabled:opacity-50"
               >
                 <Bell size={14} aria-hidden="true" />
                 เปิดรับการแจ้งเตือน
@@ -332,7 +332,7 @@ export default function MemberHome() {
         {/* Announcements */}
         <section
           aria-labelledby="member-announcements-heading"
-          className="rounded-3xl bg-white p-5 shadow-sm"
+          className="rounded-3xl bg-[var(--lamb-surface)] p-5 shadow-sm"
         >
           <div className="flex items-center justify-between gap-2">
             <h2
@@ -342,14 +342,14 @@ export default function MemberHome() {
               <Megaphone
                 size={ICON_SIZE.sm}
                 aria-hidden="true"
-                className="shrink-0 text-[#0C7C82]"
+                className="shrink-0 text-[var(--lamb-primary)]"
               />
               <span className="truncate">ประกาศจากคริสตจักร</span>
             </h2>
             {announcements.length > 0 && (
               <Link
                 href="/app/events"
-                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-sm font-semibold text-[#0C7C82] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-sm font-semibold text-[var(--lamb-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
               >
                 ดูทั้งหมด
               </Link>
@@ -391,7 +391,7 @@ export default function MemberHome() {
         {/* Upcoming events */}
         <section
           aria-labelledby="member-events-heading"
-          className="rounded-3xl bg-white p-5 shadow-sm"
+          className="rounded-3xl bg-[var(--lamb-surface)] p-5 shadow-sm"
         >
           <div className="flex items-center justify-between gap-2">
             <h2
@@ -401,14 +401,14 @@ export default function MemberHome() {
               <Calendar
                 size={ICON_SIZE.sm}
                 aria-hidden="true"
-                className="shrink-0 text-[#0C7C82]"
+                className="shrink-0 text-[var(--lamb-primary)]"
               />
               <span className="truncate">กิจกรรมที่กำลังจะมาถึง</span>
             </h2>
             {events.length > 0 && (
               <Link
                 href="/app/events"
-                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-sm font-semibold text-[#0C7C82] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-sm font-semibold text-[var(--lamb-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
               >
                 ดูทั้งหมด
               </Link>
@@ -454,7 +454,7 @@ export default function MemberHome() {
                             isRegistered: evt.isRegistered,
                           })
                         }
-                        className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[#0C7C82] bg-[#E4F7F2] px-3 text-sm font-semibold text-[#0C7C82] transition-colors hover:bg-[#DDF7F0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] motion-reduce:transition-none"
+                        className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[#0C7C82] bg-[var(--lamb-mint)] px-3 text-sm font-semibold text-[var(--lamb-primary)] transition-colors hover:bg-[#DDF7F0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] motion-reduce:transition-none"
                       >
                         <Heart size={ICON_SIZE.sm} aria-hidden="true" />
                         <span>สนใจ</span>
@@ -476,7 +476,7 @@ export default function MemberHome() {
                         }
                         className={`inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] disabled:opacity-60 motion-reduce:transition-none ${
                           evt.isRegistered
-                            ? "border border-[var(--color-divider)] bg-white text-[var(--color-error-ink)] hover:bg-[var(--color-canvas-soft)]"
+                            ? "border border-[var(--color-divider)] bg-[var(--lamb-surface)] text-[var(--color-error-ink)] hover:bg-[var(--color-canvas-soft)]"
                             : "bg-[#0C7C82] text-white hover:bg-[#0a6b70]"
                         }`}
                       >

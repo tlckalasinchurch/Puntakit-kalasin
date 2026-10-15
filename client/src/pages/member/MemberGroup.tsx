@@ -17,6 +17,7 @@ import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { ListSkeleton } from "@/components/LoadingStates";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { CATEGORY_LABELS } from "@/components/groups/types";
 
 interface GroupMember {
   id: string;
@@ -159,8 +160,8 @@ export default function MemberGroup() {
       {!loading && !error && group && (
         <>
           <section className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5">
-            <span className="type-fine inline-flex items-center rounded-[var(--radius-xs)] bg-[var(--color-accent-soft)] px-2 py-1 font-semibold text-[var(--color-primary)]">
-              {group.category || "พันธกิจ"}
+            <span className="type-fine inline-flex items-center rounded-[var(--radius-xs)] bg-[var(--color-accent-soft)] px-2 py-1 font-semibold text-[var(--color-primary-ink)]">
+              {(CATEGORY_LABELS as Record<string, string>)[group.category] ?? (group.category || "พันธกิจ")}
             </span>
             <h2 className="type-body-strong mt-2 text-[var(--color-ink)]">
               {group.groupName}

@@ -206,3 +206,38 @@ describe("text on a primary fill", () => {
     expect(offenders.map((f) => path.relative(REPO_ROOT, f))).toEqual([]);
   });
 });
+
+describe("primary as text on its own soft tint", () => {
+  const lum = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const cr = (a: string, b: string) => {
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  const mix = (fg: string, bg: string, t: number) =>
+    "#" +
+    [1, 3, 5]
+      .map((i) =>
+        Math.round(parseInt(fg.slice(i, i + 2), 16) * t + parseInt(bg.slice(i, i + 2), 16) * (1 - t))
+          .toString(16)
+          .padStart(2, "0")
+      )
+      .join("");
+
+  it("--color-primary-ink equals --color-primary in light mode, so light pages do not change", () => {
+    expect(tokens.get("--color-primary-ink")).toBe("var(--color-primary)");
+  });
+
+  it("dark --color-primary-ink is >= 4.5:1 on the dark accent-soft tint over the dark canvas", () => {
+    const dark = css.slice(css.indexOf("\n.dark {"));
+    const ink = dark.match(/--color-primary-ink:\s*(#[0-9a-f]{6})/i)![1];
+    const canvas = dark.match(/--color-canvas:\s*(#[0-9a-f]{6})/i)![1];
+    const tint = dark.match(/--color-accent-soft:\s*rgba\(127,\s*175,\s*114,\s*([\d.]+)\)/)![1];
+    expect(cr(ink, mix("#7faf72", canvas, Number(tint)))).toBeGreaterThanOrEqual(4.5);
+  });
+});

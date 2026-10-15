@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, hasRole } from "@shared/roles";
+import { mergeHomeLinks, type HomeLink } from "@/lib/homeLinks";
 import { MissionPhotoSheet } from "./MissionPhotoSheet";
 
 interface Overview {
@@ -78,7 +79,7 @@ function Tile({
  * rows that exist inside the role's scope — there is no weekly-report data in
  * the system yet, so none is implied.
  */
-export function HomeMyWork() {
+export function HomeMyWork({ extraLinks = [] }: { extraLinks?: HomeLink[] }) {
   const { user } = useAuth();
   const [data, setData] = useState<Overview | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
@@ -107,6 +108,9 @@ export function HomeMyWork() {
   }
 
   const attention = data?.membership?.attention ?? 0;
+  // Destinations already shown as tiles above; the rest of the role shortcuts join the "ดูทั้งหมด" list.
+  const tileHrefs = new Set<string>(["/follow-up", ...(canCheckIn ? ["/care"] : []), ...(canSeeMembership ? ["/memberships"] : [])]);
+  const moreLinks = mergeHomeLinks(SECONDARY_LINKS, extraLinks, tileHrefs);
 
   return (
     <div className="space-y-8">
@@ -141,7 +145,7 @@ export function HomeMyWork() {
         </div>
         {moreOpen && (
           <ul id="home-more-links" className="mt-3 flex flex-wrap gap-2" aria-label="ทางลัดอื่น ๆ">
-            {SECONDARY_LINKS.map((l) => (
+            {moreLinks.map((l) => (
               <li key={l.href}>
                 <Link
                   href={l.href}

@@ -58,9 +58,9 @@ export function LambQuickActions({
           <li key={href}>
             <Link
               href={href}
-              className="group relative flex min-h-[120px] flex-col justify-between rounded-2xl bg-white p-4 shadow-sm transition-[transform,box-shadow,background-color] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
+              className="group relative flex min-h-[120px] flex-col justify-between rounded-2xl bg-[var(--lamb-surface)] p-4 shadow-sm transition-[transform,box-shadow,background-color] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#E4F7F2] text-[#0C7C82] transition-transform duration-200 ease-out group-hover:scale-105 group-active:scale-95 motion-reduce:transition-none motion-reduce:group-hover:scale-100 motion-reduce:group-active:scale-100">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--lamb-mint)] text-[var(--lamb-primary)] transition-transform duration-200 ease-out group-hover:scale-105 group-active:scale-95 motion-reduce:transition-none motion-reduce:group-hover:scale-100 motion-reduce:group-active:scale-100">
                 <Icon size={22} aria-hidden="true" />
                 {title === "ข่าวสาร" && notificationCount > 0 && (
                   <span

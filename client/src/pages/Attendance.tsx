@@ -781,7 +781,7 @@ export default function Attendance() {
                           aria-label={`${opt.label}: ${m.name}`}
                           onClick={() => handleSetStatus(m.id, opt.value)}
                           disabled={pendingStatus[m.id] !== undefined}
-                          className={`inline-flex min-h-11 items-center justify-center rounded-[var(--radius-sm)] border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] ${
+                          className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-sm)] border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] ${
                             st === opt.value ? opt.active : opt.idle
                           }`}
                         >

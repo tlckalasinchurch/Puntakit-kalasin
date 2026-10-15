@@ -145,7 +145,7 @@ export default function AdminUsers() {
                     <p className="type-body-strong truncate text-[var(--color-ink)]">
                       {u.name}
                       {isMe && <span className="type-caption ml-2 font-normal text-[var(--color-body-muted)]">(คุณ)</span>}
-                      {u.status === "suspended" && <span className="type-caption ml-2 font-normal text-[var(--color-error)]">ถูกระงับ</span>}
+                      {u.status === "suspended" && <span className="type-caption ml-2 font-normal text-[var(--color-error-ink)]">ถูกระงับ</span>}
                     </p>
                     <p className="type-caption truncate text-[var(--color-body-muted)]">{u.email}</p>
                     {u.ledGroups.length > 0 && (
@@ -310,7 +310,7 @@ function PinSheet({ user, onClose, onSaved }: { user: UserRow | null; onClose: (
               placeholder="กรอกซ้ำอีกครั้ง"
             />
           </label>
-          {confirmPin.length > 0 && pin !== confirmPin && <p className="type-caption text-[var(--color-error)]">PIN ไม่ตรงกัน</p>}
+          {confirmPin.length > 0 && pin !== confirmPin && <p className="type-caption text-[var(--color-error-ink)]">PIN ไม่ตรงกัน</p>}
         </div>
         <div className="flex items-center justify-end gap-3 border-t border-[var(--color-hairline)] p-4">
           <button

@@ -246,7 +246,7 @@ export function MissionPhotoSheet({
           </p>
         )}
         {error && (
-          <p role="alert" className="type-caption text-[var(--color-error)]">
+          <p role="alert" className="type-caption text-[var(--color-error-ink)]">
             {error}
           </p>
         )}

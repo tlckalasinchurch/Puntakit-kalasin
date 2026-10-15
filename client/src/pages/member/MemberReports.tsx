@@ -4,7 +4,7 @@ import { CalendarDays, ChevronRight, ClipboardList, Plus } from "lucide-react";
 import { MemberAppLayout } from "@/components/layout/MemberAppLayout";
 import { LambMascot } from "@/components/lamb/LambMascot";
 import { ListSkeleton } from "@/components/LoadingStates";
-import { EmptyState, ErrorState } from "@/components/DesignSystem";
+import { EmptyState, ErrorState, StatusChip } from "@/components/DesignSystem";
 import { api, ApiError } from "@/lib/api";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -82,7 +82,7 @@ export default function MemberReports() {
 
   return (
     <MemberAppLayout>
-      <div className="lamb-theme space-y-4 bg-[#F8F7F1]">
+      <div className="lamb-theme space-y-4 bg-[var(--lamb-canvas)]">
         <header>
           <h1 className="text-2xl font-extrabold text-[var(--color-ink)]">รายงานพันธกิจ</h1>
           <p className="mt-1 text-sm text-[var(--color-body-muted)]">
@@ -90,13 +90,19 @@ export default function MemberReports() {
           </p>
         </header>
 
-        <Link
-          href="/app/reports/new"
-          className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#0C7C82] px-6 py-4 font-semibold text-white shadow-sm transition-colors hover:bg-[#0a6b70] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] focus-visible:ring-offset-2"
-        >
-          <Plus size={20} aria-hidden="true" />
-          เริ่มบันทึกรายงานใหม่
-        </Link>
+        {/* Member report form not built yet: shown as unavailable instead of a link to a missing page. */}
+        <div className="flex items-center justify-center gap-3 rounded-2xl bg-[var(--color-canvas-soft)] px-6 py-4">
+          <button
+            type="button"
+            disabled
+            title="ฟอร์มบันทึกรายงานกำลังจัดเตรียม ยังไม่เปิดให้ใช้งาน"
+            className="flex min-h-11 cursor-not-allowed items-center justify-center gap-2 font-semibold text-[var(--color-body-muted)]"
+          >
+            <Plus size={20} aria-hidden="true" />
+            เริ่มบันทึกรายงานใหม่
+          </button>
+          <StatusChip tone="neutral">เร็วๆ นี้</StatusChip>
+        </div>
 
         {submissions.length > 0 ? (
           <ul className="space-y-3">
@@ -106,7 +112,7 @@ export default function MemberReports() {
                   href={`/app/reports/${sub.id}`}
                   className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
                 >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#E4F7F2] text-[#0C7C82]">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#E4F7F2] text-[var(--lamb-primary)]">
                     <ClipboardList size={22} aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -138,11 +144,7 @@ export default function MemberReports() {
           <EmptyState
             icon={ClipboardList}
             title="ยังไม่มีรายงาน"
-            description="เริ่มบันทึกรายงานพันธกิจแรกของกลุ่มได้เลย"
-            action={{
-              label: "เริ่มบันทึกรายงาน",
-              href: "/app/reports/new",
-            }}
+            description="ยังไม่มีรายงานที่บันทึกไว้ ฟอร์มบันทึกรายงานสำหรับสมาชิกกำลังจัดเตรียม"
           />
         )}
 

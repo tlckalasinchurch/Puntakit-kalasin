@@ -660,7 +660,7 @@ export default function Feed() {
                         {canDeleteActivity(activity) && (
                           <button
                             type="button"
-                            className={`${ROW_BUTTON_CLASS} text-[var(--color-error)]`}
+                            className={`${ROW_BUTTON_CLASS} text-[var(--color-error-ink)]`}
                             disabled={deleteBusyId === activity.id}
                             onClick={() => askDelete(activity)}
                           >

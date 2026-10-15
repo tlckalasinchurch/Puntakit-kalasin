@@ -264,7 +264,7 @@ export default function CareToday() {
               </ul>
               <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-10 -mx-1 flex flex-col gap-2 bg-[var(--clay-ground)] px-1 py-3 lg:bottom-0">
                 {saveError && (
-                  <p role="alert" className="type-caption rounded-[var(--radius-sm)] bg-[var(--color-error)]/10 p-3 text-[var(--color-error)]">
+                  <p role="alert" className="type-caption rounded-[var(--radius-sm)] bg-[var(--color-error)]/10 p-3 text-[var(--color-error-ink)]">
                     {saveError}
                   </p>
                 )}

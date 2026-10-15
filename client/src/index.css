@@ -35,6 +35,8 @@
   --color-warning-ink: #8a5410;
   --color-info-ink: #1f5aa6;
   --color-error-ink: #c23b4d;
+  /* Primary as TEXT on its own soft tint; dark mode lightens it (#7faf72 on the 16% tint is 4.27:1). */
+  --color-primary-ink: var(--color-primary);
 
   /* Radius grammar */
   --radius-none: 0px;
@@ -1056,7 +1058,8 @@
 }
 .login-card p.login-sub {
   font-size: 12px;
-  color: var(--muted);
+  /* --muted is a surface tone in dark mode (1.07:1 on the card); body-muted is the text token. */
+  color: var(--color-body-muted);
   margin: 0 0 22px;
 }.ministry-grid,
 .event-grid {
@@ -1424,6 +1427,7 @@
   --color-warning-ink: #f2b867;
   --color-info-ink: #9cc4f5;
   --color-error-ink: #f4a3ac;
+  --color-primary-ink: #a5cd9a;
   --background: var(--color-canvas);
   --foreground: var(--color-ink);
   --card: var(--color-canvas);
@@ -2052,16 +2056,27 @@
 /* Does NOT replace global tokens; staff dashboard is unaffected.      */
 /* ------------------------------------------------------------------ */
 .lamb-theme {
-  --lamb-primary: #0C7C82;
+  --lamb-primary: #0A767C; /* AA (>=4.78:1) on white, mint and canvas; was #0C7C82 (4.47:1 on mint) */
   --lamb-primary-dark: #0a6b70;
   --lamb-primary-soft: #35B4B0;
   --lamb-mint: #E4F7F2;
   --lamb-canvas: #F8F7F1;
   --lamb-surface: #FFFFFF;
+  --lamb-ink: #075B5D; /* headline teal */
+}
+
+/* Dark mode: the member canvas follows the app canvas so theme-aware text stays readable. */
+.dark .lamb-theme {
+  --lamb-canvas: var(--color-canvas);
+  --lamb-surface: var(--color-canvas);
+  --lamb-mint: var(--color-canvas-soft);
+  /* teal text on the dark canvas: 7.8:1 (the light-mode #0C7C82 is 1.0-3.1:1 there) */
+  --lamb-primary: #5fd0d3;
+  --lamb-ink: #8fe0e2;
 }
 
 .lamb-theme .lamb-hero {
-  background: linear-gradient(135deg, #FFFFFF 0%, #E4F7F2 100%);
+  background: linear-gradient(135deg, var(--lamb-surface) 0%, var(--lamb-mint) 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {

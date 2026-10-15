@@ -384,7 +384,8 @@ describe("UX audit Batch F — pages added after the first audit", () => {
     const src = read("client/src/pages/ImportOrgData.tsx");
     expect(src).not.toMatch(/--color-danger/);
     expect(src).not.toMatch(/#b42318/);
-    expect(src).toMatch(/var\(--color-error\)/);
+    // error text uses the dark-aware -ink variant (same hex as --color-error in light mode)
+    expect(src).toMatch(/var\(--color-error(-ink)?\)/);
   });
 
   it("ErrorState gets a friendly Thai title with the raw message behind technical", () => {

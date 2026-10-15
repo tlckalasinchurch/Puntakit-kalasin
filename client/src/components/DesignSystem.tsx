@@ -233,6 +233,8 @@ interface EmptyStateProps {
   action?: PageAction;
   /** Render without the surrounding card border (inside an existing card). */
   inset?: boolean;
+  /** Render the title as a heading (use 1 when the empty state is the whole page). Default: plain paragraph. */
+  headingLevel?: 1 | 2 | 3;
 }
 
 export function EmptyState({
@@ -241,7 +243,9 @@ export function EmptyState({
   description,
   action,
   inset = false,
+  headingLevel,
 }: EmptyStateProps) {
+  const Title = headingLevel ? (`h${headingLevel}` as "h1" | "h2" | "h3") : "p";
   return (
     <div
       className={`flex flex-col items-center gap-3 px-6 py-10 text-center ${
@@ -257,7 +261,7 @@ export function EmptyState({
           className="text-[var(--color-body-muted)]"
         />
       )}
-      <p className="type-body-strong text-[var(--color-ink)]">{title}</p>
+      <Title className="type-body-strong text-[var(--color-ink)]">{title}</Title>
       {description && (
         <p className="type-caption max-w-sm text-[var(--color-body-muted)]">
           {description}
@@ -312,7 +316,7 @@ export function ErrorState({
         <AlertCircle
           size={ICON_SIZE.lg}
           aria-hidden="true"
-          className="mt-0.5 shrink-0 text-[var(--color-error)]"
+          className="mt-0.5 shrink-0 text-[var(--color-error-ink)]"
         />
         <div className="min-w-0">
           <p className="type-body-strong text-[var(--color-ink)]">{title}</p>
@@ -366,7 +370,7 @@ export function ErrorState({
 export function FieldError({ children }: { children: React.ReactNode }) {
   if (!children) return null;
   return (
-    <p className="type-caption mt-1.5 text-[var(--color-error)]" role="alert">
+    <p className="type-caption mt-1.5 text-[var(--color-error-ink)]" role="alert">
       {children}
     </p>
   );
@@ -382,7 +386,7 @@ export function FormError({ children }: { children: React.ReactNode }) {
     <div
       role="alert"
       aria-live="polite"
-      className="type-caption flex items-start gap-2 rounded-[var(--radius-sm)] bg-[var(--color-error)]/10 p-3 text-[var(--color-error)]"
+      className="type-caption flex items-start gap-2 rounded-[var(--radius-sm)] bg-[var(--color-error)]/10 p-3 text-[var(--color-error-ink)]"
     >
       <AlertCircle size={ICON_SIZE.sm} aria-hidden="true" className="mt-0.5" />
       <span>{children}</span>
@@ -434,7 +438,7 @@ export function Field({
       >
         {label}
         {required && (
-          <span className="ml-1 text-[var(--color-error)]" aria-hidden="true">
+          <span className="ml-1 text-[var(--color-error-ink)]" aria-hidden="true">
             *
           </span>
         )}
@@ -458,7 +462,7 @@ export function Field({
         </p>
       )}
       {error && (
-        <p id={errorId} className="type-caption mt-1.5 text-[var(--color-error)]">
+        <p id={errorId} className="type-caption mt-1.5 text-[var(--color-error-ink)]">
           {error}
         </p>
       )}
