@@ -52,3 +52,9 @@ describe("page-level headings", () => {
     expect(read("client/src/components/lamb/LambHero.tsx")).toMatch(/<h1\s+id="lamb-hero-title"/);
   });
 });
+
+describe("user-facing copy", () => {
+  it("import page buttons do not expose database table names", () => {
+    expect(read("client/src/pages/ImportData.tsx")).not.toMatch(/ตรวจสอบ group_members/);
+  });
+});
