@@ -9,7 +9,7 @@ Branch `redesign/full-app-claude-20261015`. Measured against the local PGlite da
 - Per run: horizontal overflow, interactive targets under 44 x 44 px, text contrast under WCAG AA, console errors, page errors, and HTTP 4xx/5xx responses.
 - Admin results below come from a fresh sweep of all 36 paths after the last commit (`ce1f2bc`): 180 runs, 0 failures, 0 overflow, 0 small targets, 0 contrast findings, 0 errors.
 - `group_leader` and `member` were swept earlier on 32 paths each (160 runs each) and re-scanned after the fixes on the affected routes only. They were not fully re-swept after `ce1f2bc`.
-- `staff`, `ministry_leader`, `viewer` and `super_admin` were not run in a browser. Their access is derived from `shared/roles.ts` and `client/src/App.tsx` only (ASSUMPTION: the server enforces the same sets).
+- `staff`, `ministry_leader`, `viewer` and `super_admin` were swept on 29 paths each (145 runs each, local PGlite test users, real PIN sign-in). Layout results: 0 failures, 0 overflow, 0 small targets, 0 contrast findings for all four. In-page denials matched the role sets: staff denied on `/admin/pins` and `/import/org`; ministry_leader also denied on `/memberships`; viewer denied on `/memberships`, `/import`, `/org`, `/import/duplicates` and `/reports`; super_admin saw no denials. Exception: viewer on `/care`, see BLOCKER 3.
 
 ## Role sets (from `shared/roles.ts`)
 
@@ -75,5 +75,8 @@ Browser-verified column: A = admin (fresh sweep), L = group_leader, M = member (
 
 - BLOCKER 1: `/admin/users` and `/import/merge-approvals` have no `allow=`, so a `member` sees the admin sidebar there. Pages show an in-page denial and fetch no data. Fixing it changes authorization, so it is an owner decision.
 - BLOCKER 2: there is no member report form, and `POST /api/submissions` excludes members (`CREATE_ROLES`).
-- Not yet done: import upload flow, `/map` interactions, `staff`/`ministry_leader`/`viewer`/`super_admin` in a browser, 200% zoom on forms, Thai line-wrapping review, per-file review of the `--color-error` to `--color-error-ink` diff.
+- BLOCKER 3: `/care` allows `ADMIN_SHELL_ROLES` (includes `viewer`) in `App.tsx`, but `server/routes/care.ts` requires `CREATE_ROLES` (no `viewer`). A viewer opens the page and sees "โหลดรายชื่อพันธกิจไม่สำเร็จ / คุณไม่มีสิทธิ์ดำเนินการนี้" with a useless retry button (HTTP 403 on `/api/care/groups`). Aligning the route to `CREATE_ROLES` is an authorization change, so it is an owner decision. `/members` makes the same call for the care picker as a viewer; it catches the 403 silently (console noise only).
+- Reflow: all admin pages and the five create dialogs checked at 320 px wide show no horizontal overflow (WCAG reflow proxy for 400% zoom).
+- Keyboard: skip link, visible focus ring (box-shadow) on nav links and buttons, dialog focus trap, Escape closes and focus returns to the trigger (tested on `/announcements`).
+- Not yet done: import upload flow, `/map` interactions beyond load, Thai line-wrapping review, per-file review of the `--color-error` to `--color-error-ink` diff.
 - Known and left alone: the calendar caption shows a Gregorian year ("ตุลาคม 2026") by design (`DateField.tsx` comment), while other screens show the Buddhist year. Browser Thai word-break can split "พัน/ธกิจ" (engine behavior). CSV export gives no toast.
