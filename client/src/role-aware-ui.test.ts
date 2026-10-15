@@ -26,6 +26,22 @@ describe("role-aware member UI", () => {
   });
 });
 
+describe("toasts", () => {
+  it("mobile toasts are lifted above the fixed bottom nav", () => {
+    expect(read("client/src/App.tsx")).toMatch(/<Toaster mobileOffset=\{\{ bottom: "calc\(env\(safe-area-inset-bottom\) \+ 80px\)"/);
+  });
+});
+
+describe("date picker", () => {
+  it("overrides rdp's blue chevrons and 36px nav so the calendar is 44px and on-brand", () => {
+    expect(read("client/src/index.css")).toMatch(/\.rdp-root \.rdp-chevron\s*\{\s*fill:\s*none;/);
+    const field = read("client/src/components/DateField.tsx");
+    for (const v of ["--rdp-nav_button-width", "--rdp-day_button-height", "--rdp-today-color"]) {
+      expect(field).toContain(v);
+    }
+  });
+});
+
 describe("page-level headings", () => {
   it("the route-denied screen renders its title as an h1", () => {
     expect(read("client/src/components/ProtectedRoute.tsx")).toMatch(/headingLevel=\{1\}/);

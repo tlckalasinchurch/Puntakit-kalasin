@@ -263,7 +263,7 @@ function App() {
         <Suspense fallback={<RouteSkeleton />}>
           <Router />
         </Suspense>
-        <Toaster />
+        <Toaster mobileOffset={{ bottom: "calc(env(safe-area-inset-bottom) + 80px)", left: 16, right: 16 }} />
       </AuthProvider>
     </ThemeProvider>
   );

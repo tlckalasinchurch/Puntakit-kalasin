@@ -2085,3 +2085,8 @@
     animation: none !important;
   }
 }
+
+/* react-day-picker's stylesheet fills .rdp-chevron with its accent (pure blue); our chevrons are stroke icons. */
+.rdp-root .rdp-chevron {
+  fill: none;
+}
