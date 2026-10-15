@@ -37,13 +37,16 @@ Branch `redesign/full-app-claude-20261015`, based on `f515860`. Read `docs/super
 1. `/admin/users` and `/import/merge-approvals` have no `allow=` in `App.tsx`, so a `member` sees the admin sidebar there. No data leaks; the pages show an in-page denial. Fixing it is an authorization change.
 2. No member report form exists, and `POST /api/submissions` is limited to `CREATE_ROLES` (members excluded).
 
-## Remaining
-1. Write `docs/UI_ROUTE_TRACKER.md` from measured results (route, page, roles, layout/components, UI state, issues, fix, browser-verified, regression test). Routes are in `client/src/App.tsx`; role sets in `shared/roles.ts`.
-2. Investigate `/import/duplicates`: `page.goto(..., networkidle)` timed out at 390 dark (cause unknown, may just be slow).
-3. Interaction testing on the remaining admin pages (forms, confirm dialogs, success/error toasts, double-submit): `/follow-up` status buttons, `/import*`, `/church`, `/ministries`, `/announcements`, `/reports`, `/map`, `/settings`, `/media`.
-4. Roles not yet checked: `staff`, `ministry_leader`, `viewer`, `super_admin` (create local users only, with `DATABASE_URL` unset and the API stopped first). Checked so far: admin, group_leader, member.
-5. Keyboard/focus, Thai text wrapping, tablet 768 and 200% zoom on forms. Look at real screenshots, not just numbers.
-6. Review `git diff` per file for the mechanical `--color-error` to `--color-error-ink` swap (Events, Map, Feed, Members, Ministries, Announcements, Inbox, CareToday and others).
+## Update (later the same day)
+Commits after `ffed134`: `ce1f2bc` (toast above bottom nav, date picker chevrons and 44 px targets), `e6faf0d` + later docs commits (`docs/UI_ROUTE_TRACKER.md`), `98ff8b8` (import button no longer shows a table name). All local, not pushed. Gates after the last code change: `pnpm check` 0, `pnpm build` 0, `pnpm test` 63 files / 768 tests passed (full test run was before `98ff8b8`; that commit only changed one string and added one test, `role-aware-ui.test.ts` re-run: 7 passed).
+
+Done since the earlier remaining-work list (now replaced by this section): `/import/duplicates` timeout did not reproduce; interaction tests on `/church`, `/announcements`, `/ministries`, `/follow-up`, `/reports`, `/map`, `/import` (bad file rejected, no writes); fresh 36-path admin sweep clean; staff, ministry_leader, viewer, super_admin swept (29 paths each); 320 px reflow clean; keyboard focus and dialog trap fine; `--color-error-ink` diff reviewed. Details and numbers are in `docs/UI_ROUTE_TRACKER.md`.
+
+Local PGlite now also has `staff-test`, `minleader-test`, `viewer-test`, `superadmin-test` users (`@puntakit.local`). Their PINs were random and were never written to the repo; set new ones with `db:set-pin` if you need them.
+
+New BLOCKER 3: viewer can open `/care` (route allows ADMIN_SHELL_ROLES) but the API requires CREATE_ROLES, so the page shows an error with a useless retry. Fixing it changes `App.tsx` authorization; owner decision.
+
+Still open: Thai line-wrapping review with screenshots, import upload happy path (needs a real .xlsx, writes data), `/map` with real coordinates, push to GitHub (blocked by the Claude Code permission rule; run `git push -u origin redesign/full-app-claude-20261015` yourself).
 
 ## Per-batch routine and report
 Identify route + issue, fix, review diff, check in the browser (390/768/1280, light + dark, console and network), test the interaction, run `pnpm check` plus the relevant vitest files (add or update a test with every behaviour change; never weaken one to make it pass), update the tracker, report: phase/batch, routes inspected / fixed / browser-verified out of total, issues, files changed, test/build results, preview URL, blockers, next step.
