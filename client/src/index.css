@@ -128,6 +128,26 @@
   --color-success-soft: rgba(30, 142, 90, 0.12);
   --color-warning-soft: rgba(199, 120, 25, 0.12);
   --color-error-soft: rgba(194, 59, 77, 0.1);
+
+  /* --- App shell (Batch 1) --------------------------------------------------
+     One vocabulary shared by the admin shell (AppLayout) and the member shell
+     (MemberAppLayout). The two are deliberately different DENSITIES, not
+     different systems: the admin topbar keeps the 76px brand-spec.md §Composition
+     height, while phone chrome is shorter. Everything else — the surface, the
+     hairline, the indicator, the active pill, the touch target — is one value
+     used by both, so the two shells read as the same product. */
+  --shell-chrome-h: 76px;
+  --shell-chrome-h-compact: 64px;
+  --shell-nav-item-h: 64px;
+  --shell-nav-indicator-w: 56px;
+  --shell-nav-surface: var(--color-canvas);
+  --shell-nav-line: var(--color-hairline);
+  --shell-nav-active-bg: var(--color-accent-soft);
+  --shell-nav-active-ink: var(--color-primary);
+  --shell-nav-ink: var(--color-body-muted);
+  /* The bar that marks the current destination. Shape, not hue, carries it —
+     the pill and the weight below carry it a second and third time. */
+  --shell-nav-indicator: var(--color-primary);
 }
 @supports (height: 100dvh) {
   :root {
@@ -1688,6 +1708,86 @@
   border-color: var(--pk-glass-line);
   -webkit-backdrop-filter: blur(var(--pk-glass-blur)) saturate(1.15);
   backdrop-filter: blur(var(--pk-glass-blur)) saturate(1.15);
+}
+
+/* ---------------------------------------------------------------------------
+   Bottom navigation — shared by the admin shell (MobileBottomNav) and the
+   member shell (MemberAppLayout), so "which page am I on" is answered the same
+   way in both.
+
+   The bar is FLAT, not glass. It sits over scrolling content, and a blurred
+   panel there puts the content behind a second surface it does not belong to;
+   a solid canvas fill plus one hairline separates it just as well and keeps the
+   content readable underneath.
+
+   The active destination is signalled THREE ways — a tinted pill behind the
+   glyph, a bar at the bottom edge, and heavier type. Colour alone is never the
+   carrier (design.md §8.1 status rule applied to navigation).
+   --------------------------------------------------------------------------- */
+.pk-nav {
+  background: var(--shell-nav-surface);
+  border-top: 1px solid var(--shell-nav-line);
+}
+
+.pk-nav-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  min-height: var(--shell-nav-item-h);
+  padding: 0.5rem 0.25rem;
+  color: var(--shell-nav-ink);
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+.pk-nav-item:hover {
+  color: var(--color-ink);
+}
+.pk-nav-item:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--color-primary-focus);
+}
+.pk-nav-item::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 3px;
+  transform: translateX(-50%);
+  border-radius: var(--radius-pill);
+  background: var(--shell-nav-indicator);
+  transition: width 0.18s ease;
+}
+.pk-nav-item[aria-current="page"] {
+  color: var(--shell-nav-active-ink);
+  font-weight: 700;
+}
+.pk-nav-item[aria-current="page"]::after {
+  width: var(--shell-nav-indicator-w);
+}
+
+.pk-nav-item__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+  transition: background-color 0.15s ease;
+}
+.pk-nav-item[aria-current="page"] .pk-nav-item__icon {
+  background: var(--shell-nav-active-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-nav-item,
+  .pk-nav-item::after,
+  .pk-nav-item__icon {
+    transition: none;
+  }
 }
 
 /* Atmosphere: a lifted highlight top-left and an olive tint kept inside the

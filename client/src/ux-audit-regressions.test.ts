@@ -434,9 +434,21 @@ describe("UX audit Batch F — pages added after the first audit", () => {
     expect(src).not.toMatch(/size-9/);
   });
 
-  it("MobileBottomNav marks the active item with a shape cue, not colour alone", () => {
+  it("MobileBottomNav marks the active item with shape cues, not colour alone", () => {
     const src = read("client/src/components/layout/MobileBottomNav.tsx");
-    expect(src).toMatch(/bg-\[var\(--color-accent-soft\)\]/);
+    // The component no longer inlines the cue — it opts into the shared class
+    // the member bottom bar also uses, which is what keeps the two shells
+    // answering "which page am I on" identically.
+    expect(src).toMatch(/pk-nav-item/);
+    expect(src).toMatch(/pk-nav-item__icon/);
+
+    // The cue itself must still exist, and it must be a SHAPE: a tinted pill
+    // behind the glyph plus a bar at the bottom edge. Two cues, not one.
+    const css = read("client/src/index.css");
+    expect(css).toMatch(
+      /\.pk-nav-item\[aria-current="page"\]\s\.pk-nav-item__icon\s*\{[^}]*background:/
+    );
+    expect(css).toMatch(/\.pk-nav-item\[aria-current="page"\]::after\s*\{[^}]*width:/);
   });
 
   it("Sidebar drawer closes on Escape with focus moved in and restored", () => {
@@ -535,9 +547,17 @@ describe("Audit 2026-10-04 — permissions, error states and mobile forms", () =
 
   it("the bottom-nav menu button lines up with its siblings", () => {
     const src = read("client/src/components/layout/MobileBottomNav.tsx");
-    expect(src).toMatch(
-      /<span aria-hidden="true" className="flex size-9 items-center justify-center">\s*<Menu/
-    );
+    // Alignment used to depend on two near-identical class literals being kept
+    // in step by hand. It now depends on both the links and the เมนู button
+    // using the same icon wrapper, so assert exactly that: one icon class in
+    // the file, used by both.
+    const iconSpans = src.match(/className="pk-nav-item__icon"/g) ?? [];
+    expect(iconSpans).toHaveLength(2);
+    // The เมนู button is not a destination, so it must never claim to be the
+    // current page — it carries no aria-current at all.
+    const button = src.slice(src.indexOf("<button"));
+    expect(button).not.toMatch(/aria-current/);
+    expect(button).toMatch(/aria-controls="app-sidebar"/);
   });
 
   it("index.css has a global :focus-visible fallback and no dangling design-doc reference", () => {

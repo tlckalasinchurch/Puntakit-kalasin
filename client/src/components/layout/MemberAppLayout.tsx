@@ -42,6 +42,20 @@ const NAV_ITEMS = [
   { label: "ฉัน", path: "/app/profile", icon: User },
 ] as const;
 
+/**
+ * The width the member app is allowed to occupy, as one value used by BOTH the
+ * scroll container and the fixed bottom nav. They used to be written out twice;
+ * on a tablet that let the nav drift narrower than the content.
+ *
+ * Phone 600 → tablet widens so the content is not a thin ribbon on an 8" screen
+ * → desktop caps again, because this is a member PWA, not a dashboard.
+ */
+function shellWidthClass(isMemberHome: boolean): string {
+  return isMemberHome
+    ? "max-w-[1440px]"
+    : "max-w-[600px] sm:max-w-[680px] md:max-w-[760px] lg:max-w-[720px]";
+}
+
 export function MemberAppLayout({ children }: MemberAppLayoutProps) {
   const [location] = useLocation();
   const isMemberHome = location === "/app";
@@ -72,7 +86,9 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
 
   return (
     <div
-      className={`lamb-theme relative mx-auto flex min-h-[var(--app-vh)] w-full flex-col bg-[var(--color-canvas-soft)] shadow-[var(--shadow)] ${isMemberHome ? "max-w-[1440px]" : "max-w-[600px]"}`}
+      className={`lamb-theme relative mx-auto flex min-h-[var(--app-vh)] w-full flex-col bg-[var(--color-canvas)] ${
+        shellWidthClass(isMemberHome)
+      }`}
       style={{
         // Notch-safe on every edge when the shell runs edge-to-edge
         // (`viewport-fit=cover` + black-translucent status bar).
@@ -87,8 +103,16 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
         ข้ามไปที่เนื้อหาหลัก
       </a>
 
-      {/* Mobile app header — 60px sticky, token surfaces, no blue tint. */}
-      <header className={`${isMemberHome ? "hidden" : "sticky top-0 z-40 flex h-[calc(60px+env(safe-area-inset-top,0px))] items-center pt-[env(safe-area-inset-top,0px)] justify-between gap-2 border-b border-[var(--color-divider)] bg-[var(--color-canvas)] px-4"}`}>
+      {/* Mobile app header — compact chrome, the same height the admin bottom
+          nav uses, so both shells share one vertical rhythm. */}
+      <header
+        className={`${
+          isMemberHome
+            ? "hidden"
+            : "sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-[var(--shell-nav-line)] bg-[var(--shell-nav-surface)] px-4 pt-[var(--safe-t)]"
+        }`}
+        style={{ height: "calc(var(--shell-chrome-h-compact) + var(--safe-t))" }}
+      >
         <Link
           href="/app"
           aria-label="กลับไปหน้าแรกของแอพสมาชิก"
@@ -130,7 +154,7 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
       {/* Bottom navigation — 5 real links, >= 44px tall each. */}
       <nav
         aria-label="เมนูหลักของแอพสมาชิก"
-        className={`fixed bottom-0 left-1/2 z-30 w-full ${isMemberHome ? "max-w-[1440px]" : "max-w-[600px]"} -translate-x-1/2 border-t border-[var(--color-divider)] bg-[var(--color-canvas)] pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_18px_rgba(29,29,31,0.06)]`}
+        className={`pk-nav fixed bottom-0 left-1/2 z-30 w-full ${shellWidthClass(isMemberHome)} -translate-x-1/2 pb-[var(--safe-b)]`}
       >
         <ul className="flex items-stretch justify-around">
           {NAV_ITEMS.map(item => {
@@ -144,30 +168,12 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
                 <Link
                   href={item.path}
                   aria-current={isActive ? "page" : undefined}
-                  className={`relative flex min-h-[64px] flex-col items-center justify-center gap-0.5 px-1 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none after:absolute after:bottom-0 after:left-1/2 after:h-1 after:w-0 after:-translate-x-1/2 after:rounded-full after:bg-[var(--color-primary)] after:transition-[width] after:content-[''] motion-reduce:after:transition-none ${
-                    isActive
-                      ? "font-semibold text-[var(--color-primary)] after:w-14"
-                      : "text-[var(--color-body-muted)] hover:text-[var(--color-ink)]"
-                  }`}
+                  className="pk-nav-item"
                 >
-                  <span
-                    className={`flex h-8 w-12 items-center justify-center rounded-[var(--radius-md)] transition-colors motion-reduce:transition-none ${
-                      isActive ? "bg-[var(--color-accent-soft)]" : ""
-                    }`}
-                  >
-                    <Icon
-                      size={ICON_SIZE.lg}
-                      strokeWidth={isActive ? 2.5 : 2}
-                      aria-hidden="true"
-                    />
+                  <span aria-hidden="true" className="pk-nav-item__icon">
+                    <Icon size={ICON_SIZE.lg} strokeWidth={isActive ? 2.5 : 2} />
                   </span>
-                  <span
-                    className={`type-fine ${
-                      isActive ? "font-bold" : "font-medium"
-                    }`}
-                  >
-                    {item.label}
-                  </span>
+                  <span className="type-fine">{item.label}</span>
                 </Link>
               </li>
             );

@@ -66,7 +66,10 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
   );
 
   return (
-    <header className="sticky top-0 z-30 flex min-h-19 w-full items-center justify-between gap-3 overflow-hidden border-b border-[var(--color-hairline)] pk-glass px-4 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] sm:px-6 lg:px-8">
+    <header
+      className="sticky top-0 z-30 flex w-full items-center justify-between gap-3 overflow-hidden border-b border-[var(--color-hairline)] pk-glass px-4 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] sm:px-6 lg:px-8"
+      style={{ minHeight: "calc(var(--shell-chrome-h) + var(--safe-t))" }}
+    >
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <button
           type="button"
@@ -126,7 +129,11 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
         <button
           type="button"
           onClick={() => void logout()}
-          className="type-caption-strong flex size-11 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-primary)] text-[var(--color-on-primary)]"
+          // Deliberately NOT a solid primary fill. This avatar sits in the
+          // chrome on every single admin page; painting it in the interactive
+          // colour would make it the loudest thing on screen and compete with
+          // the page's one primary action (design.md §8.2 action hierarchy).
+          className="type-caption-strong flex size-11 items-center justify-center rounded-[var(--radius-circle)] border border-[var(--color-hairline)] bg-[var(--color-canvas-soft)] text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-primary-focus)] hover:text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
           title="ออกจากระบบ"
           aria-label="ออกจากระบบ"
         >

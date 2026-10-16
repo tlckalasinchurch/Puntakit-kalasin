@@ -37,13 +37,10 @@ export function MobileBottomNav({ onMenu, menuOpen }: MobileBottomNavProps) {
         { label: "พันธกิจ", path: "/groups", icon: UsersRound },
       ];
 
-  const base =
-    "type-fine flex min-h-14 flex-1 pb-1 flex-col items-center justify-center gap-1 px-1 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-focus)]";
-
   return (
     <nav
       aria-label="เมนูล่าง"
-      className="fixed inset-x-0 bottom-0 z-30 flex border-t border-[var(--color-hairline)] pk-glass pb-[var(--safe-b)] pl-[var(--safe-l)] pr-[var(--safe-r)] lg:hidden"
+      className="pk-nav fixed inset-x-0 bottom-0 z-30 flex pb-[var(--safe-b)] pl-[var(--safe-l)] pr-[var(--safe-r)] lg:hidden"
     >
       {items.map(({ label, path, icon: Icon }) => {
         const active = location === path;
@@ -52,19 +49,14 @@ export function MobileBottomNav({ onMenu, menuOpen }: MobileBottomNavProps) {
             key={path}
             href={path}
             aria-current={active ? "page" : undefined}
-            className={`${base} ${active ? "text-[var(--color-primary)]" : "text-[var(--color-body-muted)]"}`}
+            className="pk-nav-item flex-1"
           >
             {/* Shape cue (icon pill), so the active item is never carried by
                 colour alone — design.md §8.1 status rule, applied to nav. */}
-            <span
-              aria-hidden="true"
-              className={`flex size-9 items-center justify-center rounded-[var(--radius-md)] transition-colors motion-reduce:transition-none ${
-                active ? "bg-[var(--color-accent-soft)]" : ""
-              }`}
-            >
+            <span aria-hidden="true" className="pk-nav-item__icon">
               <Icon size={ICON_SIZE.md} />
             </span>
-            <span>{label}</span>
+            <span className="type-fine">{label}</span>
           </Link>
         );
       })}
@@ -73,12 +65,12 @@ export function MobileBottomNav({ onMenu, menuOpen }: MobileBottomNavProps) {
         onClick={onMenu}
         aria-expanded={menuOpen}
         aria-controls="app-sidebar"
-        className={`${base} text-[var(--color-body-muted)]`}
+        className="pk-nav-item flex-1"
       >
-        <span aria-hidden="true" className="flex size-9 items-center justify-center">
+        <span aria-hidden="true" className="pk-nav-item__icon">
           <Menu size={ICON_SIZE.md} />
         </span>
-        <span>เมนู</span>
+        <span className="type-fine">เมนู</span>
       </button>
     </nav>
   );
