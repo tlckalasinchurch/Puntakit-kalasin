@@ -194,7 +194,7 @@ export default function MemberProfile() {
       <Link
         href="/app"
         aria-label="กลับไปหน้าแรก"
-        className="mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--lamb-surface)] text-[var(--lamb-primary)] shadow-sm transition hover:bg-[var(--lamb-mint)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
+        className="mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--lamb-surface)] text-[var(--lamb-primary)] shadow-sm transition hover:bg-[var(--lamb-mint)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
       >
         <ChevronLeft size={20} aria-hidden="true" />
       </Link>
@@ -231,7 +231,7 @@ export default function MemberProfile() {
       {pageHeading}
 
       {/* Identity */}
-      <section className="rounded-3xl border border-[#D8EEE7] bg-[var(--lamb-mint)] p-5 shadow-sm sm:p-6">
+      <section className="rounded-3xl border border-[var(--glass-line)] bg-[var(--lamb-mint)] p-5 shadow-sm sm:p-6">
         <div className="flex items-center gap-4">
           {profile?.avatarUrl ? (
             <img

@@ -232,7 +232,7 @@ export default function MemberHome() {
         {/* Lamb header — logo, tagline, greeting */}
         <header className="flex items-start justify-between gap-3 rounded-2xl bg-[var(--lamb-canvas)] py-1">
           <div className="flex items-center gap-3">
-            <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#DDF7F0] text-[var(--lamb-primary)]">
+            <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--lamb-mint)] text-[var(--lamb-primary)]">
               <Sprout size={32} strokeWidth={2.2} />
             </span>
             <div>
@@ -244,7 +244,7 @@ export default function MemberHome() {
           </div>
           <Link
             href="/app/profile"
-            className="flex min-h-11 items-center gap-2 rounded-full bg-[var(--lamb-surface)] px-4 py-2 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
+            className="flex min-h-11 items-center gap-2 rounded-full bg-[var(--lamb-surface)] px-4 py-2 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
             aria-label={`โปรไฟล์ของ${greetingName}`}
           >
             <span className="text-right">
@@ -349,7 +349,7 @@ export default function MemberHome() {
             {announcements.length > 0 && (
               <Link
                 href="/app/events"
-                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-sm font-semibold text-[var(--lamb-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-sm font-semibold text-[var(--lamb-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
               >
                 ดูทั้งหมด
               </Link>
@@ -408,7 +408,7 @@ export default function MemberHome() {
             {events.length > 0 && (
               <Link
                 href="/app/events"
-                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-sm font-semibold text-[var(--lamb-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-sm font-semibold text-[var(--lamb-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
               >
                 ดูทั้งหมด
               </Link>
@@ -454,7 +454,7 @@ export default function MemberHome() {
                             isRegistered: evt.isRegistered,
                           })
                         }
-                        className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[#0C7C82] bg-[var(--lamb-mint)] px-3 text-sm font-semibold text-[var(--lamb-primary)] transition-colors hover:bg-[#DDF7F0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] motion-reduce:transition-none"
+                        className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--lamb-primary)] bg-[var(--lamb-mint)] px-3 text-sm font-semibold text-[var(--lamb-primary)] transition-colors hover:bg-[var(--lamb-mint)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none"
                       >
                         <Heart size={ICON_SIZE.sm} aria-hidden="true" />
                         <span>สนใจ</span>
@@ -474,10 +474,10 @@ export default function MemberHome() {
                         onClick={() =>
                           handleRegisterEvent(evt.id, Boolean(evt.isRegistered))
                         }
-                        className={`inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] disabled:opacity-60 motion-reduce:transition-none ${
+                        className={`inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-60 motion-reduce:transition-none ${
                           evt.isRegistered
                             ? "border border-[var(--color-divider)] bg-[var(--lamb-surface)] text-[var(--color-error-ink)] hover:bg-[var(--color-canvas-soft)]"
-                            : "bg-[#0C7C82] text-white hover:bg-[#0a6b70]"
+                            : "border border-transparent bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-focus)]"
                         }`}
                       >
                         {pendingEventId !== evt.id && evt.isRegistered && (
@@ -532,7 +532,7 @@ export default function MemberHome() {
               <button
                 type="button"
                 onClick={() => setInterestedEvent(null)}
-                className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
+                className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
               >
                 ปิด
               </button>

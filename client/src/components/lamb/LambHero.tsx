@@ -16,15 +16,20 @@ export function LambHero() {
   return (
     <section
       aria-labelledby="lamb-hero-title"
-      className="lamb-hero relative isolate min-h-[340px] overflow-hidden rounded-[28px] border border-[var(--lamb-surface)] bg-[var(--lamb-surface)] p-6 shadow-[0_10px_28px_rgba(29,29,31,0.08)] sm:p-8 lg:min-h-[420px] lg:p-10"
+      className="lamb-hero relative isolate min-h-[340px] overflow-hidden rounded-[28px] border border-[var(--lamb-surface)] bg-[var(--lamb-surface)] p-6 shadow-[var(--shadow)] sm:p-8 lg:min-h-[420px] lg:p-10"
     >
-      {/* Soft illustrated landscape keeps the hero warm without obscuring content. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] overflow-hidden rounded-r-[28px] bg-[#E4F7FC] lg:block">
-        <div className="absolute -right-12 top-2 h-52 w-72 rounded-full bg-[#BAE6FD]/80" />
-        <div className="absolute right-12 top-14 h-8 w-24 rounded-full bg-white/70 blur-sm" />
-        <div className="absolute -left-10 bottom-16 h-44 w-[120%] rounded-[50%] bg-[#CBE9A1]" />
-        <div className="absolute -left-8 bottom-5 h-40 w-[115%] rounded-[50%] bg-[#78C99A]" />
-        <div className="absolute -right-12 -bottom-20 h-48 w-[90%] rounded-[50%] bg-[#37A978]" />
+      {/* Soft illustrated landscape keeps the hero warm without obscuring content.
+          The tones are tokens, not literals: on a dark canvas the old sky/leaf
+          hexes rendered as pale daytime blobs. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] overflow-hidden rounded-r-[28px] bg-[var(--lamb-sky)] lg:block"
+      >
+        <div className="absolute -right-12 top-2 h-52 w-72 rounded-full bg-[var(--lamb-sky-far)]/70" />
+        <div className="absolute right-12 top-14 h-8 w-24 rounded-full bg-[var(--lamb-surface)]/60 blur-sm" />
+        <div className="absolute -left-10 bottom-16 h-44 w-[120%] rounded-[50%] bg-[var(--lamb-leaf-far)]" />
+        <div className="absolute -left-8 bottom-5 h-40 w-[115%] rounded-[50%] bg-[var(--lamb-leaf-mid)]" />
+        <div className="absolute -right-12 -bottom-20 h-48 w-[90%] rounded-[50%] bg-[var(--lamb-leaf-near)]" />
       </div>
       <div className="relative z-10 max-w-md lg:max-w-[52%]">
         <h1

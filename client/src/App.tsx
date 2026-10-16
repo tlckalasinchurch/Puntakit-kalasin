@@ -272,7 +272,7 @@ function Router() {
 
 function App() {
   const content = (
-    <ThemeProvider defaultTheme="light" switchable>
+    <ThemeProvider defaultTheme="dark" switchable>
       <AuthProvider>
         <Suspense fallback={<RouteSkeleton />}>
           <Router />

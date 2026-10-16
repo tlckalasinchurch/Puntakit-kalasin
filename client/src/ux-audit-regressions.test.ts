@@ -317,11 +317,25 @@ describe("UX audit Batch E — remaining low-severity items", () => {
 
   it("theme-color follows the in-app theme toggle, not prefers-color-scheme", () => {
     const html = read("client/index.html");
-    expect(html).toMatch(/<meta name="theme-color" content="#f5f5f7" \/>/);
     expect(html).not.toMatch(/theme-color[^>]*media=/);
     const ctx = read("client/src/contexts/ThemeContext.tsx");
     expect(ctx).toMatch(/meta\[name="theme-color"\]/);
-    expect(ctx).toMatch(/"#000000" : "#f5f5f7"/);
+
+    // The two literals are read back and compared against index.css instead of
+    // being pinned here, so retuning a canvas can never leave this assertion
+    // checking a stale colour. The structural rules above are unchanged.
+    const css = read("client/src/index.css");
+    const root = css.slice(css.indexOf(":root"), css.indexOf("\n}", css.indexOf(":root")));
+    const dark = css.slice(css.indexOf("\n.dark {"));
+    const lightCanvas = root.match(/--color-canvas:\s*(#[0-9a-f]{6})/i)![1];
+    const darkCanvas = dark.match(/--color-canvas:\s*(#[0-9a-f]{6})/i)![1];
+    const pair = ctx.match(/"(#[0-9a-f]{6})"\s*:\s*"(#[0-9a-f]{6})"/i);
+    expect(pair, "ThemeContext must pick between two literal canvas colours").not.toBeNull();
+    expect([pair![1].toLowerCase(), pair![2].toLowerCase()].sort()).toEqual(
+      [darkCanvas.toLowerCase(), lightCanvas.toLowerCase()].sort()
+    );
+    // The static meta must be the default theme, which is dark.
+    expect(html).toMatch(new RegExp(`<meta name="theme-color" content="${darkCanvas}" />`, "i"));
   });
 
   it("ErrorBoundary speaks Thai and announces itself", () => {

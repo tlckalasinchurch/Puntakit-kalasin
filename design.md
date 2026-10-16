@@ -11,17 +11,46 @@
 
 | Token | ค่า | การใช้งาน |
 |---|---|---|
-| `--color-primary` | `#315c2b` | สีเดียวที่ interactive — ลิงก์ ปุ่มหลัก ไอคอน focus |
-| `--color-primary-focus` | `#3f7337` | hover / pressed / focus ring |
+| `--color-primary` | `#0c7c82` | สีเดียวที่ interactive — ลิงก์ ปุ่มหลัก ไอคอน focus |
+| `--color-primary-focus` | `#09696e` | hover / pressed / focus ring |
 | `--color-primary-on-dark` | `#7faf72` | ข้อความเน้นบนพื้น graphite |
-| `--color-ink` | `#1d1d1f` | สีตัวอักษรหลัก |
-| `--color-body-muted` | `#6f6f73` | สีตัวอักษรรอง |
-| `--color-canvas` | `#ffffff` | พื้นผิวการ์ด |
+| `--color-ink` | `#0f172a` | สีตัวอักษรหลัก |
+| `--color-body-muted` | `#5b6474` | สีตัวอักษรรอง |
+| `--color-canvas` | `#f8fafc` | พื้นหลังหน้า (card ใช้ `--color-surface: #ffffff`) |
 | `--color-canvas-soft` | `#f5f5f7` | พื้นหล่ม สลับแถวตาราง |
-| `--color-hairline` | `#e0e0e0` | เส้นขอบการ์ดและ input |
+| `--color-canvas-sunken` | `#f1f5f9` | พื้นจม (inset wells, hover fills) |
+| `--color-hairline` | `#e2e8f0` | เส้นขอบการ์ดและ input |
 | `--color-dark-surface` | `#272729` | sidebar, tooltip, พื้นมืด |
 
 โทน graphite (`#272729` / `#2a2a2c` / `#252527`) ใช้กับ chrome สีเข้มทั้งหมด
+
+## 1b. โหมดมืด (ค่าเริ่มต้นตั้งแต่ 2026-10-15)
+
+Dark ไม่ใช่แค่กลับสีของ light แต่เป็นพาเลตตัวเองที่วัดจากหน้า login และเป็นค่าเริ่มต้นของแอป
+(`ThemeProvider defaultTheme="dark"`) ปุ่มสลับธีมยังอยู่ · `.dark` เป็น **token remap**
+ห้ามใช้ class override + `!important`
+
+| Token | ค่า | contrast บน canvas |
+|---|---|---|
+| `--color-canvas` | `#061a1f` | — |
+| `--color-canvas-soft` | `#123033` | — |
+| `--color-surface` | `#0c2529` | — |
+| `--color-ink` | `#f4faf9` | 16.92:1 |
+| `--color-text-secondary` | `#c3d4d4` | 11.65:1 |
+| `--color-text-tertiary` | `#9db2b2` | 8.04:1 |
+| `--color-text-quaternary` | `#7e9493` | 5.57:1 |
+| `--color-primary` | `#2fc4bd` | 8.30:1 (เป็นตัวอักษร) |
+| `--color-primary-focus` | `#5fd7d1` | — |
+| `--color-on-primary` | `#04211f` | 7.85:1 บนพื้น primary |
+
+> ห้ามเขียน `color: #fff` บนพื้น primary — ขาวบน primary สีมืดได้ **2.15:1** ให้ใช้
+> `var(--color-on-primary)`
+
+**กระจก (glass)** — chrome ในโหมดมืดเป็นกระจก ไม่ใช่สีทึบ: `--glass-fill` ·
+`--glass-fill-strong` · `--glass-line` · `--glass-line-bright` · `--glass-blur`
+การ์ดดูเป็นกระจกจาก **เส้นสว่างขอบบน** ไม่ใช่เงาทิ้งอย่างเดียว
+
+**หน้า member ใช้พาเลตเดียวกัน** — `.lamb-theme` ถูกรวมเป็น alias ของ token กลางแล้ว
 
 ## 2. สี Semantic (สถานะ)
 

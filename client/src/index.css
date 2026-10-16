@@ -9,21 +9,21 @@
   text-rendering: optimizeLegibility;
 
   /* Puntakit Design System V2 brand tokens (source of truth: this file; brand-spec.md and design.md are derived from it) */
-  --color-primary: #315c2b;
-  --color-primary-focus: #3f7337;
+  --color-primary: #0c7c82;
+  --color-primary-focus: #09696e;
   --color-primary-on-dark: #7faf72;
-  --color-ink: #1d1d1f;
+  --color-ink: #0f172a;
   --color-body: #1d1d1f;
-  --color-body-muted: #6f6f73;
-  --color-canvas: #ffffff;
+  --color-body-muted: #5b6474;
+  --color-canvas: #f8fafc;
   --color-canvas-soft: #f5f5f7;
-  --color-surface: #fafafc;
+  --color-surface: #ffffff;
   --color-dark-surface: #272729;
   --color-dark-surface-2: #2a2a2c;
   --color-dark-surface-3: #252527;
   --color-black: #000000;
-  --color-divider: #f0f0f0;
-  --color-hairline: #e0e0e0;
+  --color-divider: #e2e8f0;
+  --color-hairline: #e2e8f0;
   --color-on-dark: #ffffff;
   --color-success: #1e8e5a;
   --color-warning: #c77819;
@@ -55,14 +55,14 @@
   --color-accent-soft: #e8f0e4; /* field tint, for icon chips on white */
   --color-info-soft: #e6f1ff; /* info tint, for icon chips on white */
   --color-info-strong: #2f72bf; /* info text/icon on white (AA on #ffffff) */
-  --color-canvas-sunken: #f2f2f4; /* recede a surface: inset wells, table stripes */
+  --color-canvas-sunken: #f1f5f9; /* recede a surface: inset wells, table stripes */
 
   /* Neutral text ramp. Secondary/tertiary text was inherited from the pre-V2
      blue palette and read cool against the graphite chrome; these are
      hue-free, so hierarchy comes from value and weight, never from color. */
-  --color-text-secondary: #55555a; /* table cells, run-in body copy */
-  --color-text-tertiary: #6f6f73; /* labels and meta (== --color-body-muted) */
-  --color-text-quaternary: #8e8e93; /* table headers, micro-labels, glyph icons */
+  --color-text-secondary: #475569; /* table cells, run-in body copy */
+  --color-text-tertiary: #5b6474; /* labels and meta (== --color-body-muted) */
+  --color-text-quaternary: #64748b; /* table headers, micro-labels, glyph icons */
 
   /* shadcn semantic tokens, mapped to the brand tokens above so Button/Card/Input/Skeleton
      primitives (bg-primary, bg-card, border-input, bg-accent, ...) render correctly. */
@@ -627,7 +627,7 @@
   padding: 0 20px;
   border-radius: var(--radius-md);
   background: var(--color-primary);
-  color: #ffffff;
+  color: var(--color-on-primary);
   font-size: 14px;
   font-weight: 600;
   transition: background 0.15s ease, transform 0.15s ease;
@@ -1422,37 +1422,57 @@
    dark mode. See docs/PUNTAKIT_UX_UI_AUDIT_2026-10.md §2.3. */
 .dark {
   color-scheme: dark;
+  /* Luxury Dark Glassmorphism.
+     Retuned 2026-10-15 from the V2 sage/graphite remap to the deep-teal
+     palette measured against the PIN sign-in surface. Every text pair below was
+     checked at >=4.5:1 on BOTH --color-canvas and --color-surface before it was
+     written; see docs/audits/2026-10-15-full-product-ux/MINIMAL-DESIGN-SYSTEM.md. */
   --color-canvas: #061a1f;
-  --color-canvas-soft: #252527;
-  --color-surface: #272729;
-  --color-canvas-sunken: #202022;
-  --color-ink: #ffffff;
-  --color-body: #ffffff;
-  --color-body-muted: rgba(255, 255, 255, 0.64);
-  --color-hairline: rgba(255, 255, 255, 0.14);
-  --color-divider: rgba(255, 255, 255, 0.09);
-  --color-text-secondary: rgba(255, 255, 255, 0.82);
-  --color-text-tertiary: rgba(255, 255, 255, 0.64);
-  --color-text-quaternary: rgba(255, 255, 255, 0.48);
-  --color-primary: #7faf72;
-  --color-on-primary: #1d1d1f;
-  --color-primary-focus: #7faf72;
-  --color-accent-soft: rgba(127, 175, 114, 0.16);
-  --color-info-soft: rgba(47, 111, 204, 0.24);
+  --color-canvas-soft: #123033;
+  --color-surface: #0c2529;
+  --color-canvas-sunken: #0a2126;
+  --color-ink: #f4faf9;
+  --color-body: #f4faf9;
+  --color-body-muted: #9db2b2;
+  --color-hairline: rgba(255, 255, 255, 0.13);
+  --color-divider: rgba(255, 255, 255, 0.08);
+  --color-text-secondary: #c3d4d4;
+  --color-text-tertiary: #9db2b2;
+  --color-text-quaternary: #7e9493;
+  --color-primary: #2fc4bd;
+  --color-on-primary: #04211f;
+  /* :root keeps #7faf72 (sage) because the LIGHT sidebar really is graphite.
+     In dark the chrome is teal, so leaving sage here put a green accent on a
+     teal surface — the same V2 leftover as the graphite hero. Contrast goes up,
+     not down: 5.67 -> 6.68 against the darkest surface. */
+  --color-primary-on-dark: #2fc4bd;
+  --color-primary-focus: #5fd7d1;
+  --color-primary-ink: #2fc4bd;
+  --color-accent-soft: rgba(47, 196, 189, 0.16);
+  --color-info-soft: rgba(47, 111, 204, 0.26);
   --color-info-strong: #8ab6ef;
-  --color-success-ink: #66d7a0;
-  --color-warning-ink: #f2b867;
-  --color-info-ink: #9cc4f5;
-  --color-error-ink: #f4a3ac;
-  --color-primary-ink: #a5cd9a;
+  --color-success: #2fbb7d;
+  --color-warning: #e0a23c;
+  --color-error: #e5677a;
+  --color-info: #6ba4ef;
+  --color-success-ink: #7fe0b0;
+  --color-warning-ink: #f5c884;
+  --color-info-ink: #a9cbf7;
+  --color-error-ink: #f7aab4;
+  /* Glass primitives, shared by the chrome in dark mode. */
+  --glass-fill: rgba(255, 255, 255, 0.055);
+  --glass-fill-strong: rgba(255, 255, 255, 0.09);
+  --glass-line: rgba(255, 255, 255, 0.13);
+  --glass-line-bright: rgba(255, 255, 255, 0.24);
+  --glass-blur: 22px;
   --background: var(--color-canvas);
   --foreground: var(--color-ink);
   --card: var(--color-canvas);
   --card-foreground: var(--color-ink);
-  --popover: var(--color-canvas);
+  --popover: var(--color-surface);
   --popover-foreground: var(--color-ink);
   --primary: var(--color-primary);
-  --primary-foreground: #1d1d1f;
+  --primary-foreground: var(--color-on-primary);
   --secondary: var(--color-canvas-soft);
   --secondary-foreground: var(--color-ink);
   --muted: var(--color-canvas-soft);
@@ -1462,18 +1482,38 @@
   --border: var(--color-hairline);
   --input: var(--color-hairline);
   --ring: var(--color-primary-focus);
-  --shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+  --shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  /* Chart series, lifted for a dark canvas. The light set already cleared 3:1
+     here (3.68–8.79) so it was never invisible — these are the same six hues
+     at a more usable luminance (6.34–10.22), kept in the same order. */
+  --chart-1: #6ea8f2;
+  --chart-2: #4fd3a0;
+  --chart-3: #f5b964;
+  --chart-4: #ef7a94;
+  --chart-5: #a789ee;
+  --chart-6: #5ecac4;
+  /* Activity accents: same hues, raised value for dark. */
+  --activity-orange: #f0ab4c;
+  --activity-orange-soft: #3a2a14;
+  --care-purple: #a98aef;
+  --care-purple-soft: #2a2340;
+  --relationship-pink: #f0859c;
+  --relationship-pink-soft: #3a1f26;
+  --growth-green: var(--color-primary);
+  /* Translucent status tints need a touch more alpha to read on dark. */
+  --color-success-soft: rgba(47, 187, 125, 0.2);
+  --color-warning-soft: rgba(224, 162, 60, 0.2);
+  --color-error-soft: rgba(229, 103, 122, 0.2);
 }
-
 .dark body,
-.dark #root { background: var(--color-black); color: var(--color-on-dark); }
+.dark #root { background: var(--color-canvas); color: var(--color-ink); }
 .dark .member-page-hero::after,
-.dark .events-page-hero::after { background: rgba(127, 175, 114, 0.2); }
+.dark .events-page-hero::after { background: rgba(47, 196, 189, 0.2); }
 .dark input,
 .dark select,
-.dark textarea { background-color: var(--color-dark-surface-3); border-color: var(--color-on-dark-hairline); color: var(--color-on-dark); }
+.dark textarea { background-color: var(--glass-fill); border-color: var(--glass-line); color: var(--color-ink); }
 .dark input::placeholder,
-.dark textarea::placeholder { color: rgba(255, 255, 255, 0.45); }
+.dark textarea::placeholder { color: var(--color-text-quaternary); }
 
 /* ---------------------------------------------------------------------------
    Clay surfaces (opt-in). Soft sage ground, puffy raised cards, buttons that
@@ -1503,15 +1543,18 @@
   --clay-press: inset 5px 6px 12px var(--clay-shadow-dark), inset -4px -4px 10px var(--clay-shadow-light);
 }
 .dark {
-  --clay-ground: hsl(110 14% 11%);
-  --clay-surface: hsl(110 14% 16%);
-  --clay-sunk: hsl(110 14% 13%);
-  --clay-mint: hsl(110 28% 22%);
-  --clay-mint-ink: hsl(110 45% 85%);
-  --clay-peach: hsl(18 38% 24%);
-  --clay-peach-ink: hsl(20 85% 90%);
-  --clay-butter: hsl(46 40% 22%);
-  --clay-butter-ink: hsl(48 80% 85%);
+  /* Retuned from the neutral sage (hsl 110) to the teal family so the care
+     screen belongs to the same room as the rest of the dark app. All ink/tint
+     pairs re-measured: mint 9.00, peach 9.76, butter 8.93, body ink 14.0–15.7. */
+  --clay-ground: hsl(187 20% 8%);
+  --clay-surface: hsl(187 18% 12%);
+  --clay-sunk: hsl(187 20% 10%);
+  --clay-mint: hsl(172 30% 18%);
+  --clay-mint-ink: hsl(168 55% 82%);
+  --clay-peach: hsl(20 35% 20%);
+  --clay-peach-ink: hsl(24 80% 88%);
+  --clay-butter: hsl(44 38% 19%);
+  --clay-butter-ink: hsl(46 75% 82%);
   --clay-shadow-dark: hsl(0 0% 0% / 0.55);
   --clay-shadow-light: hsl(0 0% 100% / 0.05);
   --clay-inner-light: hsl(0 0% 100% / 0.07);
@@ -1571,7 +1614,74 @@
   }
 }
 
-/* Glass: sticky/fixed chrome only (topbar, bottom nav). Content scrolls
+/* ---------------------------------------------------------------------------
+   Luxury Dark Glassmorphism — chrome (2026-10-15)
+   Opt-in to `.dark` only, so the light theme keeps its flat surfaces. The
+   `.pk-*` classes stay the premium admin shell; this block only changes how
+   they *look* when the dark tokens are active.
+   --------------------------------------------------------------------------- */
+.dark .pk-glass {
+  background: var(--glass-fill);
+  border-color: var(--glass-line);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+}
+.dark .pk-atmosphere {
+  background-color: var(--color-canvas);
+}
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .dark .pk-atmosphere {
+    background-image:
+      radial-gradient(
+        52rem 26rem at 10% -10%,
+        color-mix(in srgb, var(--color-primary) 13%, transparent),
+        transparent 72%
+      ),
+      radial-gradient(
+        34rem 12rem at 96% 0%,
+        color-mix(in srgb, var(--color-canvas-soft) 82%, transparent),
+        transparent 70%
+      );
+  }
+}
+
+/* The sidebar becomes a glass column so the page reads through it. */
+.dark .pk-premium .pk-sidebar {
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
+  border-right-color: var(--glass-line);
+}
+
+/* Cards lift off the canvas as glass rather than as flat fills. */
+.dark .pk-premium .card-surface,
+.dark .pk-premium .pk-surface {
+  background: var(--glass-fill);
+  border-color: var(--glass-line);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.05) inset,
+    0 18px 40px -22px rgb(0 0 0 / 0.7);
+}
+
+/* A hairline highlight along the top edge is what actually reads as "glass";
+   a drop shadow alone looks like a plain dark card. */
+.dark .pk-card {
+  background: var(--glass-fill);
+  border-color: var(--glass-line);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+}
+
+/* Nav rows: the active pill is glass, not a solid block. */
+.dark .pk-nav-active {
+  background: var(--glass-fill-strong);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+   /* Glass: sticky/fixed chrome only (topbar, bottom nav). Content scrolls
    underneath it, which is the only place the blur has anything to show. */
 .pk-glass {
   background: var(--pk-glass-bg);
@@ -1715,6 +1825,18 @@
    edge. Uses the existing on-dark hairline token. */
 .dark .pk-hero {
   box-shadow: inset 0 0 0 1px var(--color-on-dark-hairline);
+  /* The base rule paints the hero in the retired graphite pair
+     (--color-dark-surface-2/3) with a sage glow. On the deep-teal dark canvas
+     that reads as a warm brown card from another product, so dark gets its own
+     teal surface. Text contrast is unchanged: white 14.80, muted #a1a1a6 5.75. */
+  background: linear-gradient(135deg, #0b2c31 0%, #07222a 100%);
+}
+.dark .pk-hero::before {
+  background: radial-gradient(
+    30rem 15rem at 94% -12%,
+    color-mix(in srgb, var(--color-primary) 26%, transparent),
+    transparent 70%
+  );
 }
 
 /* Responsive variants of the layered surface (custom classes cannot take
@@ -2069,31 +2191,44 @@
 @media (min-width: 900px) { .pin-login { grid-template-columns: minmax(0, 1fr) minmax(30rem, 38rem); } .pin-login__brand { display: block; } .pin-login__panel { padding: 3rem clamp(3rem, 6vw, 7rem); } .pin-login__card { padding: 2.5rem 2rem 1.6rem; } .pin-login__mobile-logo { display: none; } }
 
 /* ------------------------------------------------------------------ */
-/* Lamb Edition — scoped theme for the member app (/app).              */
-/* Does NOT replace global tokens; staff dashboard is unaffected.      */
+/* Lamb Edition — member app (/app).                                  */
+/* CONVERGED onto the central tokens (decision D5, 2026-10-15).        */
+/* These are now pure aliases: there is no second brand left to drift. */
+/* `primary-focus` is used for the light-theme ink because #0c7c82 on */
+/* --color-accent-soft measures 4.27:1 (FAIL); #09696e measures 5.53. */
 /* ------------------------------------------------------------------ */
 .lamb-theme {
-  --lamb-primary: #0A767C; /* AA (>=4.78:1) on white, mint and canvas; was #0C7C82 (4.47:1 on mint) */
-  --lamb-primary-dark: #0a6b70;
-  --lamb-primary-soft: #35B4B0;
-  --lamb-mint: #E4F7F2;
-  --lamb-canvas: #F8F7F1;
-  --lamb-surface: #FFFFFF;
-  --lamb-ink: #075B5D; /* headline teal */
-}
-
-/* Dark mode: the member canvas follows the app canvas so theme-aware text stays readable. */
-.dark .lamb-theme {
+  --lamb-primary: var(--color-primary-focus);
+  --lamb-ink: var(--color-primary-focus);
+  --lamb-mint: var(--color-accent-soft);
   --lamb-canvas: var(--color-canvas);
-  --lamb-surface: var(--color-canvas);
+  --lamb-surface: var(--color-surface);
+  /* Member-hero illustration. Previously literals (#E4F7FC sky, #CBE9A1/#78C99A/
+     #37A978 leaves) that only ever made sense on a white canvas. */
+  --lamb-sky: #e4f7fc;
+  --lamb-sky-far: #bae6fd;
+  --lamb-leaf-far: #cbe9a1;
+  --lamb-leaf-mid: #78c99a;
+  --lamb-leaf-near: #37a978;
+}
+.dark .lamb-theme {
+  --lamb-primary: var(--color-primary);
+  --lamb-ink: var(--color-primary);
   --lamb-mint: var(--color-canvas-soft);
-  /* teal text on the dark canvas: 7.8:1 (the light-mode #0C7C82 is 1.0-3.1:1 there) */
-  --lamb-primary: #5fd0d3;
-  --lamb-ink: #8fe0e2;
+  --lamb-canvas: var(--color-canvas);
+  --lamb-surface: var(--color-surface);
+  --lamb-sky: #0d2b33;
+  --lamb-sky-far: #14414c;
+  --lamb-leaf-far: #1c4f3f;
+  --lamb-leaf-mid: #1e6b4e;
+  --lamb-leaf-near: #17553c;
 }
 
 .lamb-theme .lamb-hero {
   background: linear-gradient(135deg, var(--lamb-surface) 0%, var(--lamb-mint) 100%);
+}
+.dark .lamb-theme .lamb-hero {
+  background: linear-gradient(135deg, var(--glass-fill) 0%, var(--color-canvas-soft) 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {
