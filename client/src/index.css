@@ -98,6 +98,17 @@
   /* Chrome recedes: only elements that lift off the canvas get elevation.
      Neutral black, never a hue — a tinted shadow fights the graphite chrome. */
   --shadow: 0 10px 28px rgba(29, 29, 31, 0.08);
+  /* The height of the area the user can actually see.
+     `100vh` is the LARGE viewport on mobile browsers and in the LINE in-app
+     browser, so a full-height shell built on it is taller than the visible area:
+     the page scrolls behind the fixed bars. `dvh` tracks the real visible area
+     and shrinks/grows with the URL bar. Declared as a variable so every shell
+     agrees, with the `vh` value kept as the fallback for older webviews. */
+  --app-vh: 100vh;
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
   --radius-card: var(--radius-lg);
   --radius-tile: var(--radius-md);
   --radius-panel: var(--radius-md);
@@ -118,6 +129,12 @@
   --color-warning-soft: rgba(199, 120, 25, 0.12);
   --color-error-soft: rgba(194, 59, 77, 0.1);
 }
+@supports (height: 100dvh) {
+  :root {
+    --app-vh: 100dvh;
+  }
+}
+
 
 @theme inline {
   --font-sans: "Prompt", system-ui, sans-serif;
@@ -234,7 +251,7 @@
   flex-direction: column;
   position: sticky;
   top: 0;
-  height: 100vh;
+  height: var(--app-vh);
   overflow: hidden;
   z-index: 30;
 }
@@ -937,7 +954,7 @@
   }
 }
 .login-shell {
-  min-height: 100vh;
+  min-height: var(--app-vh);
   display: flex;
   align-items: stretch;
   background: var(--color-canvas);
@@ -1307,7 +1324,7 @@
 }
 
 .coming-soon-page {
-  min-height: calc(100vh - 125px);
+  min-height: calc(var(--app-vh) - 125px);
   display: grid;
   place-items: center;
 }
@@ -1405,7 +1422,7 @@
    dark mode. See docs/PUNTAKIT_UX_UI_AUDIT_2026-10.md §2.3. */
 .dark {
   color-scheme: dark;
-  --color-canvas: #2a2a2c;
+  --color-canvas: #061a1f;
   --color-canvas-soft: #252527;
   --color-surface: #272729;
   --color-canvas-sunken: #202022;
@@ -2006,7 +2023,7 @@
 }
 
 /* First-party PIN authentication — soft Glassmorphism */
-.pin-login { min-height: 100svh; display: grid; grid-template-columns: minmax(0, 1fr); position: relative; overflow: hidden; background: radial-gradient(circle at 12% 12%, rgba(129, 231, 218, .28), transparent 23rem), radial-gradient(circle at 88% 84%, rgba(91, 133, 255, .22), transparent 25rem), linear-gradient(135deg, #092b3a 0%, #0e5b63 48%, #182d5d 100%); color: #f7fffe; }
+.pin-login { min-height: var(--app-vh); display: grid; grid-template-columns: minmax(0, 1fr); position: relative; overflow: hidden; background: radial-gradient(circle at 12% 12%, rgba(129, 231, 218, .28), transparent 23rem), radial-gradient(circle at 88% 84%, rgba(91, 133, 255, .22), transparent 25rem), linear-gradient(135deg, #092b3a 0%, #0e5b63 48%, #182d5d 100%); color: #f7fffe; }
 .pin-login::before, .pin-login::after { content: ""; position: absolute; border-radius: 50%; filter: blur(2px); pointer-events: none; }
 .pin-login::before { width: 19rem; height: 19rem; left: 12%; bottom: -8rem; background: rgba(61, 224, 197, .24); }
 .pin-login::after { width: 24rem; height: 24rem; right: -7rem; top: -8rem; background: rgba(163, 125, 255, .24); }

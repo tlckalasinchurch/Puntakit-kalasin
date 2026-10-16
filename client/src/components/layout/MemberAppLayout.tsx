@@ -71,7 +71,15 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
   };
 
   return (
-    <div className={`lamb-theme relative mx-auto flex min-h-screen w-full flex-col bg-[var(--color-canvas-soft)] shadow-[var(--shadow)] ${isMemberHome ? "max-w-[1440px]" : "max-w-[600px]"}`}>
+    <div
+      className={`lamb-theme relative mx-auto flex min-h-[var(--app-vh)] w-full flex-col bg-[var(--color-canvas-soft)] shadow-[var(--shadow)] ${isMemberHome ? "max-w-[1440px]" : "max-w-[600px]"}`}
+      style={{
+        // Notch-safe on every edge when the shell runs edge-to-edge
+        // (`viewport-fit=cover` + black-translucent status bar).
+        paddingLeft: "var(--safe-l)",
+        paddingRight: "var(--safe-r)",
+      }}
+    >
       <a
         href="#member-app-main"
         className="type-caption-strong sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-[var(--radius-sm)] focus:bg-[var(--color-canvas)] focus:px-4 focus:py-3 focus:text-[var(--color-ink)] focus:shadow-[var(--shadow)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-focus)]"

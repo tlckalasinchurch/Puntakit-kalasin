@@ -29,7 +29,14 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
 
-      <div className="relative flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+      {/* Safe-area insets go on THIS wrapper, not on .pk-route: the route
+          carries `px-4 sm:px-6 lg:px-8`, and an inline padding-left/right here
+          would win over those classes and pin the gutter to 1rem at every
+          breakpoint. This element has no responsive padding of its own. */}
+      <div
+        className="relative flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden"
+        style={{ paddingLeft: "var(--safe-l)", paddingRight: "var(--safe-r)" }}
+      >
         <Topbar onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />
 
         <main id="app-main" className="w-full flex-1">
