@@ -273,8 +273,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         ref={drawerRef}
         id="app-sidebar"
         tabIndex={-1}
-        className={`pk-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(22rem,88vw)] lg:w-60 flex-col overflow-y-auto bg-[var(--color-dark-surface)] text-[var(--color-on-dark)] outline-none transition-transform duration-200 ease-out motion-reduce:transition-none lg:static lg:translate-x-0 ${
-          open ? "translate-x-0" : "-translate-x-full"
+        className={`pk-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(22rem,88vw)] lg:w-60 flex-col overflow-y-auto bg-[var(--color-dark-surface)] text-[var(--color-on-dark)] outline-none transition-opacity duration-150 ease-out motion-reduce:transition-none lg:static ${
+          open ? "opacity-100" : "max-lg:invisible max-lg:opacity-0"
         }`}
         aria-label="เมนูหลัก"
         role={open ? "dialog" : undefined}
