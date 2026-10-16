@@ -9,7 +9,8 @@ import * as path from "node:path";
  *   PWA (`/app/*`, still behind the Q21/Q13 acceptance gates) keeps its look
  *   even though it shares the DesignSystem primitives.
  * - Backdrop blur is reserved for sticky/fixed chrome (`.pk-glass` on the
- *   topbar and bottom nav). Blurring scrolling content costs repaint time.
+ *   topbar). Blurring scrolling content costs repaint time. The bottom nav is
+ *   a flat `.pk-nav` surface instead — see commit 1327fae.
  * - Motion is defined once as `--pk-*` tokens and goes through the global
  *   prefers-reduced-motion override.
  */
@@ -61,15 +62,18 @@ describe("premium shell contract", () => {
       .filter(file => /\bpk-glass\b/.test(read(file)))
       .map(file => file.split(path.sep).join("/"))
       .sort();
+    // 1327fae replaced the blurred bottom nav with a flat `.pk-nav` surface, so
+    // the topbar is now the only consumer. Listing the exact set — rather than
+    // just checking each file that uses it — is what stops glass creeping back
+    // into the member shell or into scrolling content.
     expect(users).toEqual([
-      "client/src/components/layout/MobileBottomNav.tsx",
       "client/src/components/layout/Topbar.tsx",
     ]);
     expect(read("client/src/components/layout/Topbar.tsx")).toMatch(
       /sticky[^"]*pk-glass|pk-glass[^"]*sticky/
     );
-    expect(read("client/src/components/layout/MobileBottomNav.tsx")).toMatch(
-      /fixed[^"]*pk-glass|pk-glass[^"]*fixed/
+    expect(read("client/src/components/layout/MobileBottomNav.tsx")).not.toMatch(
+      /\bpk-glass\b/
     );
   });
 
