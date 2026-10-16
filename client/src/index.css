@@ -2304,7 +2304,14 @@
   --lamb-canvas: var(--color-canvas);
   --lamb-surface: var(--color-surface);
   /* Member-hero illustration. Previously literals (#E4F7FC sky, #CBE9A1/#78C99A/
-     #37A978 leaves) that only ever made sense on a white canvas. */
+     #37A978 leaves) that only ever made sense on a white canvas.
+
+     Deliberately NOT re-tinted in .dark below. The four .webp drawings in
+     client/public/lamb are daylight scenes with the sky baked into the pixels
+     (VP8 with no ALPH chunk, so there is no transparency to tint). Recolouring
+     the scene for dark mode only pasted a bright rectangle of artwork onto a
+     dark sky. The scene stays daylight in both themes, which lets the drawing
+     blend into it so the two read as one picture. Read only by LambHero.tsx. */
   --lamb-sky: #e4f7fc;
   --lamb-sky-far: #bae6fd;
   --lamb-leaf-far: #cbe9a1;
@@ -2317,11 +2324,6 @@
   --lamb-mint: var(--color-canvas-soft);
   --lamb-canvas: var(--color-canvas);
   --lamb-surface: var(--color-surface);
-  --lamb-sky: #0d2b33;
-  --lamb-sky-far: #14414c;
-  --lamb-leaf-far: #1c4f3f;
-  --lamb-leaf-mid: #1e6b4e;
-  --lamb-leaf-near: #17553c;
 }
 
 .lamb-theme .lamb-hero {

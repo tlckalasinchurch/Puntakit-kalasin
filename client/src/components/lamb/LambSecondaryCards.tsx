@@ -57,14 +57,19 @@ export function LambSecondaryCards() {
           <Link
             key={href}
             href={href}
-            className={`relative flex flex-col justify-between overflow-hidden rounded-[24px] border border-[var(--lamb-surface)] bg-[var(--lamb-mint)] p-4 shadow-[var(--shadow)] transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] ${
+            className={`relative flex flex-col justify-center overflow-hidden rounded-[24px] border border-[var(--lamb-surface)] bg-[var(--lamb-mint)] p-4 shadow-[var(--shadow)] transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] ${
               wide ? "col-span-2 min-h-[150px] sm:min-h-[160px] lg:min-h-0" : "min-h-[150px] lg:min-h-0"
             }`}
           >
-            <span>
+            {/* pr-* keeps the copy clear of the lamb: the drawing is inside the
+                card now (it used to hang off -right-2/-bottom-2 and get cropped
+                by this element's own overflow-hidden), so the text has to yield
+                to the corner it now occupies. */}
+            <span className="pr-16 sm:pr-20">
               <span className="flex items-center gap-2 font-bold text-[var(--lamb-primary)]">
                 <Icon size={20} aria-hidden="true" />
                 {title}
+                <ChevronRight size={16} aria-hidden="true" className="opacity-60" />
               </span>
               <span className="mt-1 block text-sm text-[var(--color-text-secondary)]">
                 {detail}
@@ -73,14 +78,9 @@ export function LambSecondaryCards() {
             {mascot && (
               <LambMascot
                 pose={mascot}
-                className="pointer-events-none absolute -right-2 -bottom-2 w-24 select-none"
+                className="pointer-events-none absolute bottom-3 right-3 w-20 select-none sm:w-24"
               />
             )}
-            <ChevronRight
-              size={18}
-              aria-hidden="true"
-              className="absolute right-3 bottom-3 text-[var(--lamb-primary)]/40"
-            />
           </Link>
         ))}
       </div>

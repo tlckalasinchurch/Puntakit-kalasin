@@ -228,7 +228,7 @@ export default function MemberHome() {
 
   return (
     <MemberAppLayout>
-      <div className="lamb-theme space-y-4 bg-[var(--lamb-canvas)] sm:space-y-6">
+      <div className="lamb-theme space-y-5 bg-[var(--lamb-canvas)] sm:space-y-7">
         {/* Lamb header — logo, tagline, greeting */}
         <header className="flex items-start justify-between gap-3 rounded-2xl bg-[var(--lamb-canvas)] py-1">
           <div className="flex items-center gap-3">
@@ -237,7 +237,7 @@ export default function MemberHome() {
             </span>
             <div>
               <p className="text-2xl font-extrabold tracking-tight text-[var(--lamb-ink)] sm:text-3xl">Puntakit</p>
-              <p className="text-xs text-[var(--color-body-muted)]">
+              <p className="text-balance text-xs text-[var(--color-body-muted)]">
                 พันธกิจ · กลุ่ม · คน · เติบโตไปด้วยกัน
               </p>
             </div>
@@ -260,7 +260,7 @@ export default function MemberHome() {
         </header>
 
         {/* Desktop: reference-style hero + supporting cards. Mobile: stacked, readable flow. */}
-        <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(340px,1fr)] xl:gap-5">
+        <div className="grid items-stretch gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(340px,1fr)] lg:gap-6">
           <LambHero />
           <LambSecondaryCards />
         </div>

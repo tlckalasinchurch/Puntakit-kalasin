@@ -16,22 +16,34 @@ export function LambHero() {
   return (
     <section
       aria-labelledby="lamb-hero-title"
-      className="lamb-hero relative isolate min-h-[340px] overflow-hidden rounded-[28px] border border-[var(--lamb-surface)] bg-[var(--lamb-surface)] p-6 shadow-[var(--shadow)] sm:p-8 lg:min-h-[420px] lg:p-10"
+      className="lamb-hero relative isolate overflow-hidden rounded-[28px] border border-[var(--lamb-surface)] bg-[var(--lamb-surface)] p-6 pb-40 shadow-[var(--shadow)] sm:p-8 sm:pb-40 lg:min-h-[420px] lg:p-10"
     >
       {/* Soft illustrated landscape keeps the hero warm without obscuring content.
           The tones are tokens, not literals: on a dark canvas the old sky/leaf
-          hexes rendered as pale daytime blobs. */}
+          hexes rendered as pale daytime blobs.
+
+          It is ONE panel at both sizes — a band under the copy on a phone, a
+          panel beside it from lg up — so the hero reads as one object instead of
+          a text block with a picture floating over it. The lamb lives INSIDE
+          this panel at both breakpoints, which is what stops it being cropped by
+          the section's own `overflow-hidden`. Base values are the phone band;
+          the `lg` values re-tune the same five shapes for the taller panel. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] overflow-hidden rounded-r-[28px] bg-[var(--lamb-sky)] lg:block"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-36 overflow-hidden bg-[var(--lamb-sky)] lg:inset-y-0 lg:left-auto lg:right-0 lg:h-auto lg:w-[54%]"
       >
-        <div className="absolute -right-12 top-2 h-52 w-72 rounded-full bg-[var(--lamb-sky-far)]/70" />
-        <div className="absolute right-12 top-14 h-8 w-24 rounded-full bg-[var(--lamb-surface)]/60 blur-sm" />
-        <div className="absolute -left-10 bottom-16 h-44 w-[120%] rounded-[50%] bg-[var(--lamb-leaf-far)]" />
-        <div className="absolute -left-8 bottom-5 h-40 w-[115%] rounded-[50%] bg-[var(--lamb-leaf-mid)]" />
-        <div className="absolute -right-12 -bottom-20 h-48 w-[90%] rounded-[50%] bg-[var(--lamb-leaf-near)]" />
+        <div className="absolute -right-8 top-2 h-32 w-44 rounded-full bg-[var(--lamb-sky-far)]/70 lg:-right-12 lg:h-52 lg:w-72" />
+        {/* White, not --lamb-surface: the scene is daylight in both themes now,
+            so a surface-coloured cloud would be a dark smudge on a light sky. */}
+        <div className="absolute right-8 top-9 h-5 w-16 rounded-full bg-white/70 blur-sm lg:right-12 lg:top-14 lg:h-8 lg:w-24" />
+        <div className="absolute -left-8 bottom-10 h-20 w-[125%] rounded-[50%] bg-[var(--lamb-leaf-far)] lg:-left-10 lg:bottom-16 lg:h-44 lg:w-[120%]" />
+        <div className="absolute -left-6 bottom-2 h-16 w-[120%] rounded-[50%] bg-[var(--lamb-leaf-mid)] lg:-left-8 lg:bottom-5 lg:h-40 lg:w-[115%]" />
+        <div className="absolute -bottom-8 -right-8 h-24 w-[95%] rounded-[50%] bg-[var(--lamb-leaf-near)] lg:-bottom-20 lg:-right-12 lg:h-48 lg:w-[90%]" />
       </div>
-      <div className="relative z-10 max-w-md lg:max-w-[52%]">
+      {/* 42% is measured against the copy column, not the card: the panel takes the
+          card's right 54%, and at 52% the paragraph ran underneath it and went
+          unreadable against the daylight sky. */}
+      <div className="relative z-10 max-w-md lg:max-w-[42%]">
         <h1
           id="lamb-hero-title"
           className="text-2xl font-bold text-[var(--color-ink)] sm:text-3xl"
@@ -55,13 +67,21 @@ export function LambHero() {
           ))}
         </ul>
         {/* The report form for members is not built yet (POST /api/submissions is limited to CREATE_ROLES),
-            so this is shown as unavailable instead of linking to a page that does not exist. */}
-        <div className="mt-6 flex flex-wrap items-center gap-3">
+            so this is shown as unavailable instead of linking to a page that does not exist.
+
+            It still has to read as THE action on this page, so the shape is a
+            primary one — teal wash, teal edge, full width on a phone — and the
+            "soon" chip beside it is what says it is not open. Previously the fill
+            was --color-canvas-soft on a white card, which left no button edge at
+            all and made the primary action the faintest control on the screen.
+            Teal label on a teal wash follows brand-spec's rule to use
+            --color-primary-focus for teal text on a tinted surface. */}
+        <div className="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
           <button
             type="button"
             disabled
             title="ฟอร์มบันทึกรายงานกำลังจัดเตรียม ยังไม่เปิดให้ใช้งาน"
-            className="inline-flex min-h-12 cursor-not-allowed items-center gap-2 rounded-full bg-[var(--color-canvas-soft)] px-6 py-3 font-semibold text-[var(--color-body-muted)]"
+            className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-full border border-[var(--color-primary)]/45 bg-[color-mix(in_srgb,var(--color-primary)_18%,transparent)] px-6 py-3 text-center font-semibold text-[var(--color-primary-focus)] sm:w-auto"
           >
             เริ่มบันทึกรายงาน
           </button>
@@ -70,7 +90,7 @@ export function LambHero() {
       </div>
       <LambMascot
         pose="map"
-        className="pointer-events-none absolute -right-4 bottom-0 z-10 w-40 select-none sm:w-52 lg:-right-2 lg:bottom-2 lg:w-[min(42%,300px)]"
+        className="pointer-events-none absolute bottom-3 right-3 z-10 w-40 select-none lg:bottom-8 lg:right-6 lg:w-[min(34%,250px)]"
       />
     </section>
   );
