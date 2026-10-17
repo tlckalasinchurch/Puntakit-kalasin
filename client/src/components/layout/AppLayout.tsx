@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
+import { PageViewTabs } from "./PageViewTabs";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 
@@ -41,6 +42,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
         <main id="app-main" className="w-full flex-1">
           <div className="pk-route mx-auto w-full max-w-7xl px-4 pb-[var(--shell-nav-clear)] pt-6 sm:px-6 lg:px-8 lg:pb-8">
+            <PageViewTabs />
             <RouteErrorBoundary>{children}</RouteErrorBoundary>
           </div>
         </main>
