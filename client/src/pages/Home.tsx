@@ -41,6 +41,7 @@ import {
 } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
+import { initialOf } from "@/lib/initials";
 import { useAuth } from "@/contexts/AuthContext";
 import { ADMIN_ROLES, CREATE_ROLES, PRIVILEGED_ROLES as OPERATIONS_ROLES } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -791,7 +792,7 @@ function HomeContent() {
                             aria-hidden="true"
                             className="type-body-strong flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-canvas-soft)] text-[var(--color-ink)]"
                           >
-                            {member.name.slice(0, 1)}
+                            {initialOf(member.name)}
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="type-body-strong line-clamp-2 block break-words text-[var(--color-ink)]">
