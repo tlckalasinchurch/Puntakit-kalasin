@@ -26,7 +26,7 @@ Admin on desktop; leaders on mobile during and after gatherings (attendance, fol
 - Planned, not shipped: Notifications, cross-domain Search, Administration/RBAC UI.
 
 ## Brand Commitments
-Thai-first UI in the Prompt font. Dark theme is the default (since 2026-10-15), light remains available. The existing system in `DESIGN.md` and `client/src/index.css` (Design System V2, shared components in `DesignSystem.tsx`) is binding: extend it, do not introduce a new visual world. Brand palette (decided 2026-10-17): Neon Orange `#FF6115` (a fill, with charcoal text on it) on Porcelain `#FFFCF4` and Charcoal `#171717` in both themes; orange text uses the darker `--color-primary-ink`. The Puntakit logo keeps its original colours in every theme.
+Thai-first UI in the Prompt font. Dark theme is the default (since 2026-10-15), light remains available. The existing system in `DESIGN.md` and `client/src/index.css` (Design System V2, shared components in `DesignSystem.tsx`) is binding: extend it, do not introduce a new visual world. Brand palette (Premium Teal, decided 2026-10-18, replacing the 2026-10-17 Neon Orange): Teal `#0C7C82` (a fill, with white text on it; lighter `#35B4B0` with dark text in dark mode) on warm white `#FFFBF7` / deep slate `#111827`; teal text uses the darker `--color-primary-ink`; soft mint `#E6F6F5` for selected surfaces; `#FF8A3D` is a limited accent (fill or dot only). The Puntakit logo keeps its original colours in every theme.
 
 ## Evidence on Hand
 Product docs: `docs/PUNTAKIT_PRODUCT_ARCHITECTURE.md`, `docs/PUNTAKIT_IMPLEMENTATION_PLAN.md`, `brand-spec.md`, `design.md`, audits under `docs/audits/`. No testimonials, customer logos or external metrics exist; do not fabricate any.

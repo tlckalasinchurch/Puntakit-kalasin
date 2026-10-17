@@ -84,7 +84,8 @@ describe("Home heading hierarchy inside <main> (R4)", () => {
 
   it("the sidebar group labels stay in the navigation landmark, not in the page content", () => {
     expect(sidebar).toContain('aria-label="เมนูหลัก"');
-    expect(sidebar).toMatch(/<h2 className="type-fine mb-1 px-3 font-semibold/);
+    // A template literal since the rail can visually hide the heading (sr-only) without removing it.
+    expect(sidebar).toMatch(/<h2 className=\{?[`"]type-fine mb-1 px-3 font-semibold/);
     for (const source of content) expect(source).not.toContain("Sidebar");
   });
 });
