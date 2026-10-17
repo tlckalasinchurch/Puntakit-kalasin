@@ -551,8 +551,10 @@ export default function Home() {
   const canSeeOperations = Boolean(
     user && OPERATIONS_ROLES.includes(user.role)
   );
-  // Group leaders get a focused "today" header; this picks a page heading,
-  // it is not a role label (those come from ROLE_LABELS in shared/labels.ts).
+  // Group leaders get the date under the heading and no search box (their menu is
+  // short); this is a layout switch, not a role label (those come from ROLE_LABELS in
+  // shared/labels.ts). The heading itself is the same for every role: "งานวันนี้" is the
+  // nav item that opens /care, and Home must not share its name.
   const isGroupLeader = user?.role === "group_leader";
 
   // Redirect member role directly to Member PWA
@@ -574,15 +576,15 @@ export default function Home() {
     <AppLayout>
       <div className="home-editorial space-y-12 lg:space-y-20">
         {/* Greeting + search, then the organisation at a glance */}
-        {/* Phase 2: Role-aware hero. Group leaders see "งานวันนี้" (today's work)
-            with the check-in CTA as primary. Staff see the operational overview. */}
+        {/* Phase 2: Role-aware hero. The heading is the same for every role; group leaders
+            get today's date under it and the check-in tile first (see homeTiles). */}
         <section aria-labelledby="home-title" className="space-y-6">
           <div>
             <p className="type-caption-strong text-[var(--color-primary)]">
               สวัสดี {user?.name ?? "ทีมงานพันธกิจ"}
             </p>
             <h1 id="home-title" className="type-display-md mt-2 text-[var(--color-ink)]">
-              {isGroupLeader ? "งานวันนี้" : "ภาพรวมพันธกิจ"}
+              ภาพรวมพันธกิจ
             </h1>
             {isGroupLeader && (
               <p className="type-body mt-2 text-[var(--color-body-muted)]">

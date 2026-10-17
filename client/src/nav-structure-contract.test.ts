@@ -77,3 +77,42 @@ describe("admin navigation contract", () => {
     expect(bottomNav).toContain('"งานวันนี้"');
   });
 });
+
+describe("group leader can always get back to Home", () => {
+  // `{ label: "x", path: "/y" }` pairs, in source order, within a slice of a file.
+  const pairs = (src: string) => [...src.matchAll(/label:\s*"([^"]+)",\s*path:\s*"([^"]+)"/g)].map((m) => ({ label: m[1], path: m[2] }));
+  const leaderMenu = pairs(sidebar.slice(sidebar.indexOf("export const groupLeaderNavGroups"), sidebar.indexOf("interface SidebarProps")));
+  const leaderBar = pairs(bottomNav.slice(bottomNav.indexOf("const items = isGroupLeader"), bottomNav.indexOf("    : [")));
+  const home = read("client/src/pages/Home.tsx");
+
+  it("the leader's drawer lists หน้าหลัก (/) first, as every other role's menu does", () => {
+    // The installed app opens on `/` (manifest start_url); before this a leader had no menu entry for it.
+    expect(leaderMenu[0]).toEqual({ label: "หน้าหลัก", path: "/" });
+    expect(pairs(sidebar.slice(sidebar.indexOf("export const navGroups"), sidebar.indexOf("export const groupLeaderNavGroups")))[0]).toEqual({ label: "หน้าหลัก", path: "/" });
+  });
+
+  it("the leader's bottom nav leads with หน้าหลัก (/) and stays at four items plus the menu button", () => {
+    expect(leaderBar[0]).toEqual({ label: "หน้าหลัก", path: "/" });
+    expect(leaderBar.map((i) => i.path)).toEqual(["/", "/care", "/follow-up", "/members"]);
+    // four links + the "เมนู" button = five targets, the ceiling the component documents
+    expect(leaderBar.length + 1).toBeLessThanOrEqual(5);
+  });
+
+  it("the leader's weekly-work entries still go where they did", () => {
+    for (const nav of [leaderMenu, leaderBar]) {
+      expect(nav.find((i) => i.label === "งานวันนี้")?.path).toBe("/care");
+      expect(nav.find((i) => i.path === "/follow-up")).toBeDefined();
+      expect(nav.find((i) => i.path === "/members")).toBeDefined();
+    }
+  });
+
+  it("Home's heading never reuses the name of a nav item that opens another page", () => {
+    // It was "งานวันนี้" for leaders — the same words as the nav item that opens /care.
+    const h1 = home.match(/<h1 id="home-title"[^>]*>\s*([^<{]+?)\s*<\/h1>/)?.[1];
+    expect(h1, "Home must render one literal h1").toBe("ภาพรวมพันธกิจ");
+    expect(home).not.toMatch(/isGroupLeader\s*\?\s*"งานวันนี้"/);
+    for (const nav of [leaderMenu, leaderBar]) {
+      expect(nav.filter((i) => i.label === h1 && i.path !== "/")).toEqual([]);
+    }
+  });
+});
