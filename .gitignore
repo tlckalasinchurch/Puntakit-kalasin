@@ -161,3 +161,15 @@ skills-lock.json
 
 # Local dev scripts (mobile-ux-fintech-principles).
 scripts-dev/
+
+# Local PGlite backup (see .db_data/ above)
+.db_data.bak/
+
+# AI tooling installed by `npx impeccable install` (not project source).
+# .github/workflows/ is the project's CI and stays tracked.
+.impeccable/
+.cursor/
+.codex/
+.github/agents/
+.github/hooks/
+.github/skills/
