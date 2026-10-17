@@ -106,15 +106,17 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
             <Moon size={ICON_SIZE.md} aria-hidden="true" />
           )}
         </button>
-        {/* Pending-review shortcut. Its count and destination both refer to Inbox. */}
+        {/* Inbox shortcut. The badge counts submissions with status "new" only, while the home
+            attention row ("ข้อมูลที่รอตรวจสอบ") also counts reviewing and needs-info ones, so
+            the two numbers differ by design. The label says "ใหม่" so they do not read as one. */}
         {canReviewSubmissions && (
           <Link
             href="/inbox"
-            title="เปิดกล่องข้อมูลที่รอตรวจสอบ"
+            title="เปิดกล่องข้อมูล"
             aria-label={
               unreadCount > 0
-                ? "เปิดกล่องข้อมูลที่รอตรวจสอบ มี " + unreadCount + " รายการ"
-                : "เปิดกล่องข้อมูลที่รอตรวจสอบ"
+                ? "เปิดกล่องข้อมูล มีรายการใหม่ " + unreadCount + " รายการ"
+                : "เปิดกล่องข้อมูล"
             }
             className="relative flex size-11 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-hairline)] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
           >

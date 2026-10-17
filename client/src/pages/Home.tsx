@@ -286,26 +286,23 @@ function RowsSkeleton({ rows }: { rows: number }) {
  * There is no "last contacted" timestamp anywhere in the schema, so this does
  * NOT claim to show one. What it shows is what the database can actually
  * answer: how the member list splits between `ติดตามแล้ว` and `ต้องติดตาม`
- * (both are real columns on `members.status`), and — for the follow-up queue —
- * how far past `dueAt` each open item has gone, which is a real timestamp.
+ * (both are real columns on `members.status`).
+ *
+ * The overdue follow-ups are NOT drawn here: the attention card already lists
+ * them ("รายการที่เลยกำหนด", with how many days past `dueAt`), and showing the
+ * same items twice made the page look like it held more problems than it does.
  *
  * The bar length is the datum; no invented trend, no fabricated "days since".
  */
 function ContactGap({
   followedUp,
   needFollowUp,
-  overdue,
 }: {
   followedUp: number;
   needFollowUp: number;
-  overdue: OperationsFollowUp[];
 }) {
   const total = followedUp + needFollowUp;
   const needPct = total > 0 ? (needFollowUp / total) * 100 : 0;
-  const maxDays = overdue.reduce((max, item) => {
-    const days = daysOverdue(item.dueAt);
-    return days === null ? max : Math.max(max, days);
-  }, 0);
 
   return (
     <div className="px-6 py-5">
@@ -340,39 +337,6 @@ function ContactGap({
         />
       </div>
 
-      {maxDays > 0 && (
-        <>
-          <p className="type-caption-strong mt-6 text-[var(--color-ink)]">
-            เลยกำหนดนานที่สุด
-          </p>
-          <ul className="mt-3 space-y-3">
-            {overdue.slice(0, 3).map(followUp => {
-              const days = daysOverdue(followUp.dueAt);
-              if (days === null) return null;
-              return (
-                <li key={followUp.id}>
-                  <div className="flex items-baseline justify-between gap-4">
-                    <span className="type-caption truncate text-[var(--color-ink)]">
-                      {followUp.title}
-                    </span>
-                    <span className="type-fine shrink-0 font-semibold text-[var(--color-error-ink)]">
-                      {days} วัน
-                    </span>
-                  </div>
-                  {/* Bar length is proportional to how overdue, against the
-                      worst item in the queue, so the longest is always full. */}
-                  <div className="mt-1.5 h-1 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--color-canvas-soft)]">
-                    <div
-                      className="h-full rounded-[var(--radius-pill)] bg-[var(--color-ink)]"
-                      style={{ width: `${(days / maxDays) * 100}%` }}
-                    />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </>
-      )}
     </div>
   );
 }
@@ -645,8 +609,170 @@ export default function Home() {
               extraLinks={getRoleShortcuts(user.role).map(({ href, title }) => ({ href, label: title }))}
             />
           )}
-          {canSeeOperations && <OrgSnapshot />}
         </section>
+
+        {/* People and groups that need a decision come right after the greeting and
+            shortcuts, ahead of the organisation snapshot, the weekly-report note,
+            events and news: someone opening the app should reach this without
+            scrolling past those. */}
+        <section aria-labelledby="home-attention">
+          <SectionHeader
+            id="home-attention"
+            title="ผู้คนและกลุ่มที่ต้องดูแล"
+            description="รายการที่รอการตัดสินใจหรือการติดตามจากทีม"
+          />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="min-w-0 gap-0 py-0">
+              <h3 className="type-body-strong border-b border-[var(--color-divider)] px-6 py-4 text-[var(--color-ink)]">
+                สิ่งที่ต้องดูแล
+              </h3>
+              {canSeeOperations && (
+                <QueryView
+                  state={operations}
+                  retry={retryOperations}
+                  skeleton={<RowsSkeleton rows={3} />}
+                >
+                  {data => (
+                    <>
+                      <ul className="divide-y divide-[var(--color-divider)] border-b border-[var(--color-divider)]">
+                        <AttentionRow
+                          href="/inbox"
+                          icon={InboxIcon}
+                          label="ข้อมูลที่รอตรวจสอบ"
+                          count={data.pendingSubmissionsCount}
+                        />
+                        <AttentionRow
+                          href="/follow-up"
+                          icon={ListTodo}
+                          label="การติดตามที่ยังไม่เสร็จ"
+                          count={data.openFollowUpsCount}
+                          detail={
+                            data.overdueFollowUpsCount > 0
+                              ? `เลยกำหนด ${data.overdueFollowUpsCount.toLocaleString("th-TH")} รายการ`
+                              : undefined
+                          }
+                          alert={data.overdueFollowUpsCount > 0}
+                        />
+                        <AttentionRow
+                          href="/groups"
+                          icon={Clock}
+                          label="กลุ่มที่ไม่มีกิจกรรมใน 14 วัน"
+                          count={data.inactiveGroups.length}
+                        />
+                      </ul>
+                      {data.overdueFollowUps.length > 0 && (
+                        <div className="border-b border-[var(--color-divider)] px-6 py-4">
+                          <p className="type-caption-strong text-[var(--color-error-ink)]">
+                            รายการที่เลยกำหนด
+                          </p>
+                          <ul className="mt-2 space-y-2">
+                            {data.overdueFollowUps.slice(0, 4).map(followUp => (
+                              <li
+                                key={followUp.id}
+                                className="flex items-baseline justify-between gap-4"
+                              >
+                                <span className="type-caption truncate text-[var(--color-ink)]">
+                                  {followUp.title}
+                                </span>
+                                <span className="type-caption shrink-0 text-right text-[var(--color-body-muted)]">
+                                  {followUp.subjectMemberName ??
+                                    followUp.subjectGroupName ??
+                                    "-"}
+                                  {daysOverdue(followUp.dueAt) ? (
+                                    <span className="type-fine ml-2 font-semibold text-[var(--color-error-ink)]">
+                                      เลย {daysOverdue(followUp.dueAt)} วัน
+                                    </span>
+                                  ) : null}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </QueryView>
+              )}
+              <QueryView
+                state={summary}
+                retry={retrySummary}
+                skeleton={<RowsSkeleton rows={1} />}
+              >
+                {data => (
+                  <ContactGap
+                    followedUp={data.followedUp}
+                    needFollowUp={data.needFollowUp}
+                  />
+                )}
+              </QueryView>
+            </Card>
+
+            <Card className="min-w-0 gap-0 py-0">
+              <div className="flex items-center justify-between gap-4 border-b border-[var(--color-divider)] px-6 py-4">
+                <h3 className="type-body-strong text-[var(--color-ink)]">
+                  สมาชิกใหม่ล่าสุด
+                </h3>
+                <Button asChild variant="link" className="h-11 px-2">
+                  <Link href="/members">ดูทั้งหมด</Link>
+                </Button>
+              </div>
+              <QueryView
+                state={summary}
+                retry={retrySummary}
+                skeleton={<RowsSkeleton rows={4} />}
+              >
+                {data =>
+                  !data.recentMembers?.length ? (
+                    <EmptyState
+                      inset
+                      icon={UserRound}
+                      title="ยังไม่มีสมาชิกใหม่"
+                      description="สมาชิกที่ลงทะเบียนล่าสุดจะแสดงที่นี่"
+                    />
+                  ) : (
+                    <ul className="divide-y divide-[var(--color-divider)]">
+                      {data.recentMembers.map(member => (
+                        <li
+                          key={member.id}
+                          className="flex items-center gap-4 px-6 py-4"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="type-body-strong flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-canvas-soft)] text-[var(--color-ink)]"
+                          >
+                            {member.name.slice(0, 1)}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="type-body-strong line-clamp-2 block break-words text-[var(--color-ink)]">
+                              {member.name}{" "}
+                              {member.nickname ? `(${member.nickname})` : ""}
+                            </span>
+                            <span className="type-caption block truncate text-[var(--color-body-muted)]">
+                              {member.area
+                                ? `พื้นที่: ${member.area}`
+                                : member.role}
+                            </span>
+                          </span>
+                          <StatusChip
+                            tone={
+                              member.status === "ติดตามแล้ว"
+                                ? "success"
+                                : "warning"
+                            }
+                          >
+                            {member.status}
+                          </StatusChip>
+                        </li>
+                      ))}
+                    </ul>
+                  )
+                }
+              </QueryView>
+            </Card>
+          </div>
+        </section>
+
+        {canSeeOperations && <OrgSnapshot />}
 
         {/* Placeholder for the weekly report form (not built yet). The role shortcuts that
             used to sit above it now live in HomeMyWork "ทำต่อได้เลย" > "ดูทั้งหมด". */}
@@ -868,170 +994,6 @@ export default function Home() {
                             </Link>
                           </li>
                         ))}
-                    </ul>
-                  )
-                }
-              </QueryView>
-            </Card>
-          </div>
-        </section>
-
-        {/* People and groups that need a decision come first: a leader opening
-            the app on a phone should reach this without scrolling past the
-            editorial sections. */}
-        <section aria-labelledby="home-attention">
-          <SectionHeader
-            id="home-attention"
-            title="ผู้คนและกลุ่มที่ต้องดูแล"
-            description="รายการที่รอการตัดสินใจหรือการติดตามจากทีม"
-          />
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="min-w-0 gap-0 py-0">
-              <h3 className="type-body-strong border-b border-[var(--color-divider)] px-6 py-4 text-[var(--color-ink)]">
-                สิ่งที่ต้องดูแล
-              </h3>
-              {canSeeOperations && (
-                <QueryView
-                  state={operations}
-                  retry={retryOperations}
-                  skeleton={<RowsSkeleton rows={3} />}
-                >
-                  {data => (
-                    <>
-                      <ul className="divide-y divide-[var(--color-divider)] border-b border-[var(--color-divider)]">
-                        <AttentionRow
-                          href="/inbox"
-                          icon={InboxIcon}
-                          label="ข้อมูลที่รอตรวจสอบ"
-                          count={data.pendingSubmissionsCount}
-                        />
-                        <AttentionRow
-                          href="/follow-up"
-                          icon={ListTodo}
-                          label="การติดตามที่ยังไม่เสร็จ"
-                          count={data.openFollowUpsCount}
-                          detail={
-                            data.overdueFollowUpsCount > 0
-                              ? `เลยกำหนด ${data.overdueFollowUpsCount.toLocaleString("th-TH")} รายการ`
-                              : undefined
-                          }
-                          alert={data.overdueFollowUpsCount > 0}
-                        />
-                        <AttentionRow
-                          href="/groups"
-                          icon={Clock}
-                          label="กลุ่มที่ไม่มีกิจกรรมใน 14 วัน"
-                          count={data.inactiveGroups.length}
-                        />
-                      </ul>
-                      {data.overdueFollowUps.length > 0 && (
-                        <div className="border-b border-[var(--color-divider)] px-6 py-4">
-                          <p className="type-caption-strong text-[var(--color-error-ink)]">
-                            รายการที่เลยกำหนด
-                          </p>
-                          <ul className="mt-2 space-y-2">
-                            {data.overdueFollowUps.slice(0, 4).map(followUp => (
-                              <li
-                                key={followUp.id}
-                                className="flex items-baseline justify-between gap-4"
-                              >
-                                <span className="type-caption truncate text-[var(--color-ink)]">
-                                  {followUp.title}
-                                </span>
-                                <span className="type-caption shrink-0 text-[var(--color-body-muted)]">
-                                  {followUp.subjectMemberName ??
-                                    followUp.subjectGroupName ??
-                                    "-"}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </QueryView>
-              )}
-              <QueryView
-                state={summary}
-                retry={retrySummary}
-                skeleton={<RowsSkeleton rows={1} />}
-              >
-                {data => (
-                  <ContactGap
-                    followedUp={data.followedUp}
-                    needFollowUp={data.needFollowUp}
-                    /* The operations endpoint is role-gated, and the query is
-                       not even issued for other roles, so its state stays
-                       "loading" forever. The member split is still real, so
-                       render the bar and just skip the overdue list. */
-                    overdue={
-                      canSeeOperations && operations.status === "success"
-                        ? operations.data.overdueFollowUps
-                        : []
-                    }
-                  />
-                )}
-              </QueryView>
-            </Card>
-
-            <Card className="min-w-0 gap-0 py-0">
-              <div className="flex items-center justify-between gap-4 border-b border-[var(--color-divider)] px-6 py-4">
-                <h3 className="type-body-strong text-[var(--color-ink)]">
-                  สมาชิกใหม่ล่าสุด
-                </h3>
-                <Button asChild variant="link" className="h-11 px-2">
-                  <Link href="/members">ดูทั้งหมด</Link>
-                </Button>
-              </div>
-              <QueryView
-                state={summary}
-                retry={retrySummary}
-                skeleton={<RowsSkeleton rows={4} />}
-              >
-                {data =>
-                  !data.recentMembers?.length ? (
-                    <EmptyState
-                      inset
-                      icon={UserRound}
-                      title="ยังไม่มีสมาชิกใหม่"
-                      description="สมาชิกที่ลงทะเบียนล่าสุดจะแสดงที่นี่"
-                    />
-                  ) : (
-                    <ul className="divide-y divide-[var(--color-divider)]">
-                      {data.recentMembers.map(member => (
-                        <li
-                          key={member.id}
-                          className="flex items-center gap-4 px-6 py-4"
-                        >
-                          <span
-                            aria-hidden="true"
-                            className="type-body-strong flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-canvas-soft)] text-[var(--color-ink)]"
-                          >
-                            {member.name.slice(0, 1)}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="type-body-strong line-clamp-2 block break-words text-[var(--color-ink)]">
-                              {member.name}{" "}
-                              {member.nickname ? `(${member.nickname})` : ""}
-                            </span>
-                            <span className="type-caption block truncate text-[var(--color-body-muted)]">
-                              {member.area
-                                ? `พื้นที่: ${member.area}`
-                                : member.role}
-                            </span>
-                          </span>
-                          <StatusChip
-                            tone={
-                              member.status === "ติดตามแล้ว"
-                                ? "success"
-                                : "warning"
-                            }
-                          >
-                            {member.status}
-                          </StatusChip>
-                        </li>
-                      ))}
                     </ul>
                   )
                 }
