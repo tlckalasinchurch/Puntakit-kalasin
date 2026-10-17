@@ -4,7 +4,7 @@ import path from "node:path";
 
 // The sign-in screen is a restyle only: PIN authentication and its flow are unchanged,
 // the Puntakit logo sits on a white plate (it is a JPG on white), and the colours come
-// from the shared Orange & Porcelain tokens in both themes.
+// from the shared Premium Teal tokens in both themes.
 const root = path.resolve(import.meta.dirname, "..", "..");
 const read = (rel: string) => readFileSync(path.join(root, rel), "utf8");
 const page = read("client/src/pages/PinSignInPage.tsx");
@@ -42,7 +42,7 @@ describe("PIN sign-in page", () => {
     for (const retired of ["#0c7c82", "#7ff0dd", "#e8d3a8", "backdrop-filter"]) {
       expect(block.toLowerCase(), retired).not.toContain(retired);
     }
-    // The one orange fill carries charcoal text, never white.
+    // The primary fill carries --color-on-primary (never a hard-coded colour).
     expect(block).toMatch(/\.pin-login__submit \{[^}]*background:\s*var\(--color-primary\);[^}]*color:\s*var\(--color-on-primary\)/);
   });
 

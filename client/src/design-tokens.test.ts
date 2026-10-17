@@ -40,16 +40,21 @@ describe("design token source of truth", () => {
   it("declares the core V2 brand tokens", () => {
     // The values the whole UI is built on. If one of these changes, the docs
     // and every component need to change with it.
-    // Orange & Porcelain: Neon Orange fill, warm porcelain canvas, deep charcoal ink.
-    expect(tokens.get("--color-primary")).toBe("#ff6115");
-    expect(tokens.get("--color-primary-focus")).toBe("#e8560a");
-    expect(tokens.get("--color-primary-ink")).toBe("#b93800");
-    expect(tokens.get("--color-on-primary")).toBe("#171717");
-    expect(tokens.get("--color-primary-on-dark")).toBe("#ff6115");
-    expect(tokens.get("--color-ink")).toBe("#171717");
-    expect(tokens.get("--color-dark-surface")).toBe("#171717");
-    expect(tokens.get("--color-canvas")).toBe("#fffcf4");
+    // Premium Teal: teal fill with white text, a darker teal ink for text, soft mint tint,
+    // warm white canvas, slate ink.
+    expect(tokens.get("--color-primary")).toBe("#0c7c82");
+    expect(tokens.get("--color-primary-focus")).toBe("#09666b");
+    expect(tokens.get("--color-primary-ink")).toBe("#0a6a70");
+    expect(tokens.get("--color-on-primary")).toBe("#ffffff");
+    expect(tokens.get("--color-primary-on-dark")).toBe("#35b4b0");
+    expect(tokens.get("--color-secondary")).toBe("#35b4b0");
+    expect(tokens.get("--color-accent-orange")).toBe("#ff8a3d");
+    expect(tokens.get("--color-accent-soft")).toBe("#e6f6f5");
+    expect(tokens.get("--color-ink")).toBe("#1f2937");
+    expect(tokens.get("--color-dark-surface")).toBe("#111827");
+    expect(tokens.get("--color-canvas")).toBe("#fffbf7");
     expect(tokens.get("--color-surface")).toBe("#ffffff");
+    expect(tokens.get("--color-hairline")).toBe("#dce8e7");
   });
 
   it("defines a real elevation token", () => {
@@ -173,7 +178,7 @@ describe("design token source of truth", () => {
       expect(tokens.get(token), `${token} missing`).toMatch(/^#[0-9a-f]{6}$/i);
     }
     // A sunken surface is a warm neutral, not blue-white.
-    expect(tokens.get("--color-canvas-sunken")).toBe("#f1ebdd");
+    expect(tokens.get("--color-canvas-sunken")).toBe("#efe9e1");
   });
 });
 
@@ -195,8 +200,8 @@ describe("text on a primary fill", () => {
     const dark = css.slice(css.indexOf("\n.dark {"));
     const darkPrimary = dark.match(/--color-primary:\s*(#[0-9a-f]{6})/i)![1];
     const darkOnPrimary = dark.match(/--color-on-primary:\s*(#[0-9a-f]{6})/i)![1];
-    // Neon Orange is too light for white text (3.0:1), so both themes use charcoal on the fill
-    // and on the hover/pressed fill (--color-primary-focus).
+    // Light teal takes white text (4.98:1); dark mode lightens the fill, so it takes a dark text instead.
+    // Both are measured on the fill and on the hover/pressed fill (--color-primary-focus).
     const darkFocus = dark.match(/--color-primary-focus:\s*(#[0-9a-f]{6})/i)![1];
     const onPrimary = tokens.get("--color-on-primary")!;
     expect(ratio(onPrimary, tokens.get("--color-primary")!)).toBeGreaterThanOrEqual(4.5);
@@ -205,7 +210,8 @@ describe("text on a primary fill", () => {
     expect(ratio(darkOnPrimary, darkFocus)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("no page sets white text on a primary fill", () => {
+  it("no page sets the on-dark (near white) text on a primary fill; it must use --color-on-primary", () => {
+    // Dark mode lightens the fill (#35b4b0), where near-white text is 2.3:1. Only --color-on-primary follows the theme.
     const offenders = walk(path.join(REPO_ROOT, "client", "src")).filter((f) => {
       if (!f.endsWith(".tsx") || f.endsWith("Logo.tsx")) return false;
       const src = readFileSync(f, "utf8");
@@ -237,13 +243,13 @@ describe("primary as text on its own soft tint", () => {
       )
       .join("");
 
-  it("light --color-primary-ink (orange as TEXT) is >= 4.5:1 on canvas, surface and the accent-soft tint", () => {
+  it("light --color-primary-ink (teal as TEXT) is >= 4.5:1 on canvas, surface and the soft tints", () => {
     const ink = tokens.get("--color-primary-ink")!;
     for (const bg of ["--color-canvas", "--color-surface", "--color-canvas-soft", "--color-accent-soft"]) {
       expect(cr(ink, tokens.get(bg)!), bg).toBeGreaterThanOrEqual(4.5);
     }
-    // The fill orange itself is NOT a text colour on light surfaces.
-    expect(cr(tokens.get("--color-primary")!, tokens.get("--color-canvas")!)).toBeLessThan(4.5);
+    // The fill teal itself is NOT a text colour on every light surface: on the mint tint it is 4.47:1.
+    expect(cr(tokens.get("--color-primary")!, tokens.get("--color-accent-soft")!)).toBeLessThan(4.5);
   });
 
   it("dark --color-primary-ink is >= 4.5:1 on the dark accent-soft tint over the dark canvas", () => {
@@ -253,7 +259,7 @@ describe("primary as text on its own soft tint", () => {
     // The tint base is read from the sheet rather than hardcoded, so retuning
     // the dark palette cannot leave this assertion checking a stale colour.
     const tintBase = dark.match(/--color-primary:\s*(#[0-9a-f]{6})/i)![1];
-    const tint = dark.match(/--color-accent-soft:\s*rgba\(255,\s*97,\s*21,\s*([\d.]+)\)/)![1];
+    const tint = dark.match(/--color-accent-soft:\s*rgba\(\d+,\s*\d+,\s*\d+,\s*([\d.]+)\)/)![1];
     expect(cr(ink, mix(tintBase, canvas, Number(tint)))).toBeGreaterThanOrEqual(4.5);
   });
 });

@@ -3,28 +3,28 @@
 
 :root {
   font-family: "Prompt", system-ui, sans-serif;
-  color: #171717;
-  background: #fffcf4;
+  color: #1f2937;
+  background: #fffbf7;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 
   /* Puntakit Design System V2 brand tokens (source of truth: this file; brand-spec.md and design.md are derived from it) */
-  --color-primary: #ff6115;
-  --color-primary-focus: #e8560a;
-  --color-primary-on-dark: #ff6115;
-  --color-ink: #171717;
-  --color-body: #171717;
-  --color-body-muted: #5c554a;
-  --color-canvas: #fffcf4;
-  --color-canvas-soft: #f7f2e7;
+  --color-primary: #0c7c82;
+  --color-primary-focus: #09666b;
+  --color-primary-on-dark: #35b4b0;
+  --color-ink: #1f2937;
+  --color-body: #1f2937;
+  --color-body-muted: #5b6472;
+  --color-canvas: #fffbf7;
+  --color-canvas-soft: #f6f1eb;
   --color-surface: #ffffff;
-  --color-dark-surface: #171717;
-  --color-dark-surface-2: #1f1f1f;
-  --color-dark-surface-3: #141414;
+  --color-dark-surface: #111827;
+  --color-dark-surface-2: #1f2937;
+  --color-dark-surface-3: #0d1320;
   --color-black: #000000;
-  --color-divider: #ede7d9;
-  --color-hairline: #e6dfcf;
-  --color-on-dark: #fffcf4;
+  --color-divider: #e8f0ef;
+  --color-hairline: #dce8e7;
+  --color-on-dark: #f9fafb;
   --color-success: #1e8e5a;
   --color-warning: #c77819;
   --color-error: #c23b4d;
@@ -35,8 +35,13 @@
   --color-warning-ink: #8a5410;
   --color-info-ink: #1f5aa6;
   --color-error-ink: #b02a3e;
-  /* Orange as TEXT. The fill orange (#ff6115) is 2.94:1 on porcelain, so text, links and icons use this darker ink (5.64:1); dark mode lightens it. */
-  --color-primary-ink: #b93800;
+  /* Teal as TEXT. The fill teal (#0c7c82) is 4.1-4.8:1 depending on the surface, under 4.5 on the soft
+     and mint tints, so text, links and icons use this darker ink (>= 5.26:1 everywhere); dark mode lightens it. */
+  --color-primary-ink: #0a6a70;
+  /* Secondary teal: fills, icons and chart accents only. It is 2.5:1 on white, never a text colour. */
+  --color-secondary: #35b4b0;
+  /* The one limited warm accent. Fill/dot only (never text, never a primary action). */
+  --color-accent-orange: #ff8a3d;
 
   /* Radius grammar */
   --radius-none: 0px;
@@ -50,19 +55,19 @@
   /* Chrome / tints. Every value here is derived from the tokens above; the
      legacy rules further down this file used to hardcode the pre-V2 blue
      palette and are migrated onto these. */
-  --color-on-dark-muted: #a8a298; /* secondary text on graphite chrome */
-  --color-on-dark-hairline: #34312d; /* dividers on graphite chrome */
-  --color-accent-soft: #ffeadb; /* field tint, for icon chips on white */
+  --color-on-dark-muted: #9ca3af; /* secondary text on the dark chrome */
+  --color-on-dark-hairline: #2b3544; /* dividers on the dark chrome */
+  --color-accent-soft: #e6f6f5; /* soft mint: selected/active tint, for icon chips on white */
   --color-info-soft: #e6f1ff; /* info tint, for icon chips on white */
   --color-info-strong: #2f72bf; /* info text/icon on white (AA on #ffffff) */
-  --color-canvas-sunken: #f1ebdd; /* recede a surface: inset wells, table stripes */
+  --color-canvas-sunken: #efe9e1; /* recede a surface: inset wells, table stripes */
 
   /* Neutral text ramp. Secondary/tertiary text was inherited from the pre-V2
      blue palette and read cool against the graphite chrome; these are
      hue-free, so hierarchy comes from value and weight, never from color. */
-  --color-text-secondary: #4a443b; /* table cells, run-in body copy */
-  --color-text-tertiary: #5c554a; /* labels and meta (== --color-body-muted) */
-  --color-text-quaternary: #6a6256; /* table headers, micro-labels, glyph icons */
+  --color-text-secondary: #4b5563; /* table cells, run-in body copy */
+  --color-text-tertiary: #5b6472; /* labels and meta (== --color-body-muted) */
+  --color-text-quaternary: #5b6472; /* table headers, micro-labels, glyph icons */
 
   /* shadcn semantic tokens, mapped to the brand tokens above so Button/Card/Input/Skeleton
      primitives (bg-primary, bg-card, border-input, bg-accent, ...) render correctly. */
@@ -74,8 +79,8 @@
   --popover-foreground: var(--color-ink);
   --primary: var(--color-primary);
   --primary-foreground: var(--color-on-primary);
-  /* Text on a --color-primary fill. Dark mode lightens the fill, so the text darkens (>= 4.5:1). */
-  --color-on-primary: #171717;
+  /* Text on a --color-primary fill (white on the teal fill is 4.98:1). Dark mode lightens the fill, so the text darkens (>= 4.5:1). */
+  --color-on-primary: #ffffff;
   --secondary: var(--color-canvas-soft);
   --secondary-foreground: var(--color-ink);
   --muted: var(--color-canvas-soft);
@@ -86,6 +91,21 @@
   --border: var(--color-hairline);
   --input: var(--color-hairline);
   --ring: var(--color-primary-focus);
+
+  /* Premium Teal semantic vocabulary. Aliases onto the tokens above (no second source of truth), so
+     components can speak in roles and the theme swaps underneath them. */
+  --color-background: var(--color-canvas);
+  --color-surface-elevated: var(--color-surface);
+  --color-surface-selected: var(--color-accent-soft);
+  --color-text-primary: var(--color-ink);
+  --color-border: var(--color-hairline);
+  --color-focus-ring: var(--color-primary-focus);
+  --color-primary-hover: var(--color-primary-focus);
+  --color-primary-foreground: var(--color-on-primary);
+  --color-state-hover: var(--color-canvas-soft);
+  --color-state-active: var(--color-accent-soft);
+  --color-disabled: var(--color-canvas-sunken);
+  --color-disabled-ink: #737c8b; /* disabled controls are exempt from 4.5:1 but stay >= 3:1 on --color-disabled */
 
   /* legacy aliases kept so existing shared primitives (buttons, forms, tables, cards,
      chips, modals) cascade onto the V2 palette without a full rewrite of every rule */
@@ -127,9 +147,9 @@
   --care-purple-soft: #efe9fb;
   --relationship-pink: #e85d78;
   --relationship-pink-soft: #fde8ec;
-  --color-success-soft: rgba(30, 142, 90, 0.12);
-  --color-warning-soft: rgba(199, 120, 25, 0.12);
-  --color-error-soft: rgba(194, 59, 77, 0.1);
+  --color-success-soft: #dcfce7;
+  --color-warning-soft: #fef3c7;
+  --color-error-soft: #fee2e2;
 
   /* --- App shell (Batch 1) --------------------------------------------------
      One vocabulary shared by the admin shell (AppLayout) and the member shell
@@ -286,7 +306,7 @@
   height: 240px;
   background: radial-gradient(
     ellipse,
-    rgba(255, 97, 21, 0.16),
+    rgba(53, 180, 176, 0.16),
     transparent 65%
   );
   pointer-events: none;
@@ -1453,26 +1473,28 @@
      palette measured against the PIN sign-in surface. Every text pair below was
      checked at >=4.5:1 on BOTH --color-canvas and --color-surface before it was
      written; see docs/audits/2026-10-15-full-product-ux/MINIMAL-DESIGN-SYSTEM.md. */
-  --color-canvas: #171717;
-  --color-canvas-soft: #2a2a2a;
-  --color-surface: #202020;
-  --color-canvas-sunken: #121212;
-  --color-ink: #fffcf4;
-  --color-body: #fffcf4;
-  --color-body-muted: #b3aca0;
-  --color-hairline: rgba(255, 252, 244, 0.14);
-  --color-divider: rgba(255, 252, 244, 0.08);
-  --color-text-secondary: #d2ccbf;
-  --color-text-tertiary: #b3aca0;
-  --color-text-quaternary: #a59e92;
-  --color-primary: #ff6115;
-  --color-on-primary: #171717;
-  /* Accent on charcoal chrome (sidebar, hero). :root uses the fill orange
-     (#ff6115, 5.95:1 on #171717); dark lifts it to #ff7a3d (6.92:1) for text. */
-  --color-primary-on-dark: #ff7a3d;
-  --color-primary-focus: #ff8a4d;
-  --color-primary-ink: #ff7a3d;
-  --color-accent-soft: rgba(255, 97, 21, 0.16);
+  --color-canvas: #111827;
+  --color-canvas-soft: #273449;
+  --color-surface: #1f2937;
+  --color-canvas-sunken: #0d1320;
+  --color-ink: #f9fafb;
+  --color-body: #f9fafb;
+  --color-body-muted: #aab2bf;
+  --color-hairline: #374151;
+  --color-divider: #2b3544;
+  --color-text-secondary: #d1d5db;
+  --color-text-tertiary: #b6bdc9;
+  --color-text-quaternary: #a3acb9;
+  --color-primary: #35b4b0;
+  --color-on-primary: #111827;
+  /* Accent on the dark chrome (sidebar, hero). The dark fill teal is also the readable accent. */
+  --color-primary-on-dark: #5fd0cc;
+  --color-primary-focus: #4cc5c1;
+  --color-primary-ink: #5fd0cc;
+  --color-accent-soft: rgba(53, 180, 176, 0.16);
+  --color-surface-elevated: #273449;
+  --color-state-hover: #273449;
+  --color-disabled-ink: #6b7280;
   --color-info-soft: rgba(47, 111, 204, 0.26);
   --color-info-strong: #8ab6ef;
   --color-success: #2fbb7d;
@@ -1507,7 +1529,7 @@
   --input: var(--color-hairline);
   --ring: var(--color-primary-focus);
   --shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
-  --shadow-card: 0 1px 0 rgba(255, 252, 244, 0.05) inset, 0 16px 30px -16px rgba(0, 0, 0, 0.65);
+  --shadow-card: 0 1px 0 rgba(249, 250, 251, 0.05) inset, 0 16px 30px -16px rgba(0, 0, 0, 0.65);
   /* Chart series, lifted for a dark canvas. The light set already cleared 3:1
      here (3.68–8.79) so it was never invisible — these are the same six hues
      at a more usable luminance (6.34–10.22), kept in the same order. */
@@ -1529,11 +1551,12 @@
   --color-success-soft: rgba(47, 187, 125, 0.2);
   --color-warning-soft: rgba(224, 162, 60, 0.2);
   --color-error-soft: rgba(229, 103, 122, 0.2);
+  --color-secondary: #35b4b0;
 }
 .dark body,
 .dark #root { background: var(--color-canvas); color: var(--color-ink); }
 .dark .member-page-hero::after,
-.dark .events-page-hero::after { background: rgba(255, 97, 21, 0.2); }
+.dark .events-page-hero::after { background: rgba(53, 180, 176, 0.2); }
 .dark input,
 .dark select,
 .dark textarea { background-color: var(--glass-fill); border-color: var(--glass-line); color: var(--color-ink); }
@@ -1563,7 +1586,7 @@
 }
 .dark {
   /* /care surfaces are derived from the shared tokens, so only the shadows differ in dark. */
-  --clay-puff-sm: 0 1px 0 rgba(255, 252, 244, 0.05) inset, 0 8px 16px -10px rgba(0, 0, 0, 0.7);
+  --clay-puff-sm: 0 1px 0 rgba(249, 250, 251, 0.05) inset, 0 8px 16px -10px rgba(0, 0, 0, 0.7);
   --clay-press: inset 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 @layer components {
@@ -2607,8 +2630,8 @@
 /* Lamb Edition — member app (/app).                                  */
 /* CONVERGED onto the central tokens (decision D5, 2026-10-15).        */
 /* These are now pure aliases: there is no second brand left to drift. */
-/* `primary-ink` is the text/icon orange: #ff6115 on porcelain is 2.94:1  */
-/* (FAIL), #b93800 is 5.64:1. Fills use --color-primary with dark text.  */
+/* `primary-ink` is the text/icon teal: the fill #0c7c82 is under 4.5:1 on */
+/* the soft tints, #0a6a70 is >= 5.26:1. Fills use --color-primary.       */
 /* ------------------------------------------------------------------ */
 .lamb-theme {
   --lamb-primary: var(--color-primary-ink);

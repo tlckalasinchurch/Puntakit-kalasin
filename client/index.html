@@ -14,7 +14,7 @@
       page canvas, dark uses the dark canvas. Dark is the default theme, so the
       static value here matches dark and is corrected on first paint.
     -->
-    <meta name="theme-color" content="#171717" />
+    <meta name="theme-color" content="#111827" />
     <!-- Pre-paint theme: applies the stored (default dark) theme class and theme-color before the first frame,
          so a dark user never sees the light canvas while the app bundle loads. ThemeContext keeps them in step after mount. -->
     <script>
@@ -23,7 +23,7 @@
         try { var s = localStorage.getItem("theme"); if (s === "light" || s === "dark") t = s; } catch (e) {}
         if (t === "dark") d.classList.add("dark");
         var m = document.querySelector('meta[name="theme-color"]');
-        if (m) m.setAttribute("content", t === "dark" ? "#171717" : "#fffcf4");
+        if (m) m.setAttribute("content", t === "dark" ? "#111827" : "#fffbf7");
       })();
     </script>
     <meta name="color-scheme" content="dark light" />

@@ -60,8 +60,8 @@ describe("Member PWA: colours come from tokens", () => {
   });
 });
 
-describe("Member PWA: orange text on the accent tint passes AA", () => {
-  it("light --color-primary (fill orange) on --color-accent-soft fails 4.5:1, --color-primary-ink passes (why the chips use it)", () => {
+describe("Member PWA: teal text on the accent tint passes AA", () => {
+  it("light --color-primary (fill teal) on --color-accent-soft fails 4.5:1, --color-primary-ink passes (why the chips use it)", () => {
     const css = read("client/src/index.css");
     const light = (name: string) => css.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`))![1]; // first definition = :root (light)
     const tint = light("--color-accent-soft");
@@ -69,7 +69,7 @@ describe("Member PWA: orange text on the accent tint passes AA", () => {
     expect(contrast(light("--color-primary-ink"), tint)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("no member element puts --color-primary (the fill orange) as text on a plain accent-soft background", () => {
+  it("no member element puts --color-primary (the fill teal) as text on a plain accent-soft background", () => {
     const offenders: string[] = [];
     for (const rel of MEMBER_FILES) {
       for (const cls of classNames(code(rel))) {

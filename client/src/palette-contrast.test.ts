@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-// Orange & Porcelain palette: every text/UI pair the app relies on, measured per
+// Premium Teal palette: every text/UI pair the app relies on, measured per
 // theme from the real tokens in index.css (no copied results). Light = :root,
 // dark = :root with the .dark block layered over it.
 const css = readFileSync(path.join(import.meta.dirname, "index.css"), "utf8");
@@ -59,7 +59,7 @@ const ratio = (a: RGB, b: RGB) => {
 describe.each([
   ["light", light],
   ["dark", dark],
-] as const)("Orange & Porcelain contrast (%s)", (_name, theme) => {
+] as const)("Premium Teal contrast (%s)", (_name, theme) => {
   const color = (token: string, under?: RGB) => rgb(resolve(theme, token), under);
   const canvas = color("--color-canvas");
   const surface = color("--color-surface");
@@ -87,7 +87,7 @@ describe.each([
     }
   );
 
-  it("text on the primary fill (and its hover fill) is >= 4.5:1 — never white on orange", () => {
+  it("text on the primary fill (and its hover fill) is >= 4.5:1 in both themes", () => {
     const onPrimary = color("--color-on-primary");
     expect(ratio(onPrimary, color("--color-primary"))).toBeGreaterThanOrEqual(4.5);
     expect(ratio(onPrimary, color("--color-primary-focus"))).toBeGreaterThanOrEqual(4.5);
@@ -119,17 +119,43 @@ describe.each([
   });
 });
 
-describe("Orange & Porcelain identity", () => {
-  it("fills are Neon Orange in both themes and the canvases are porcelain / charcoal", () => {
-    expect(resolve(light, "--color-primary")).toBe("#ff6115");
-    expect(resolve(dark, "--color-primary")).toBe("#ff6115");
-    expect(resolve(light, "--color-canvas")).toBe("#fffcf4");
-    expect(resolve(dark, "--color-canvas")).toBe("#171717");
+describe("Premium Teal identity", () => {
+  it("fills are teal (lighter in dark) and the canvases are warm white / deep slate", () => {
+    expect(resolve(light, "--color-primary")).toBe("#0c7c82");
+    expect(resolve(dark, "--color-primary")).toBe("#35b4b0");
+    expect(resolve(light, "--color-canvas")).toBe("#fffbf7");
+    expect(resolve(dark, "--color-canvas")).toBe("#111827");
+    expect(resolve(dark, "--color-surface")).toBe("#1f2937");
+    expect(resolve(dark, "--color-surface-elevated")).toBe("#273449");
   });
 
-  it("no retired teal/sage brand literal is left in the token layer or the shell chrome", () => {
-    for (const retired of ["#0c7c82", "#09696e", "#2fc4bd", "#5fd7d1", "#7faf72", "#061a1f"]) {
+  it("no retired orange or porcelain literal is left in the token layer or the shell chrome", () => {
+    for (const retired of ["#ff6115", "#b93800", "#e8560a", "#ff7a3d", "#ff8a4d", "#fffcf4", "255, 97, 21"]) {
       expect(css.toLowerCase(), `${retired} still in index.css`).not.toContain(retired);
     }
+  });
+
+  it("the semantic vocabulary resolves onto the existing tokens in both themes", () => {
+    const expected: [string, string][] = [
+      ["--color-background", "--color-canvas"],
+      ["--color-text-primary", "--color-ink"],
+      ["--color-border", "--color-hairline"],
+      ["--color-focus-ring", "--color-primary-focus"],
+      ["--color-primary-hover", "--color-primary-focus"],
+      ["--color-primary-foreground", "--color-on-primary"],
+      ["--color-surface-selected", "--color-accent-soft"],
+    ];
+    for (const theme of [light, dark]) {
+      for (const [alias, target] of expected) expect(resolve(theme, alias), alias).toBe(resolve(theme, target));
+    }
+    expect(resolve(light, "--color-surface-elevated")).toBe(resolve(light, "--color-surface"));
+  });
+
+  it("disabled text stays >= 3:1 on the disabled surface, and secondary teal / accent orange are never text", () => {
+    for (const theme of [light, dark]) {
+      expect(ratio(rgb(resolve(theme, "--color-disabled-ink")), rgb(resolve(theme, "--color-disabled")))).toBeGreaterThanOrEqual(3);
+    }
+    // #35b4b0 is 2.5:1 on white and #ff8a3d is a limited accent: neither may colour text.
+    expect(css).not.toMatch(/(^|[;{\s])color:\s*var\(--color-(secondary|accent-orange)\)/m);
   });
 });

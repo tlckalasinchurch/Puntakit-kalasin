@@ -7,31 +7,35 @@
 
 ค่าสีทุกตัวด้านล่างอ้างอิงจาก `brand-spec.md` และ CSS custom properties ใน `index.css`
 
-## 1. สีหลัก (Brand Colors) — Neon Orange & Porcelain
+## 1. สีหลัก (Brand Colors) — Premium Teal
 
-ใช้สีส้มอย่างมีกลยุทธ์ — เฉพาะปุ่มหลัก สถานะเลือก ตัวบอกตำแหน่ง และจุดเน้น ไม่ใช้กับทุกปุ่ม ทุกไอคอน หรือทุกเส้นขอบ
-พื้นหน้าเป็นพอร์ซเลน (ครีมอุ่น) การ์ดเป็นขาว ตัวอักษรเป็นชาร์โคล
+ใช้สี Teal อย่างมีกลยุทธ์ — เฉพาะปุ่มหลัก สถานะเลือก ตัวบอกตำแหน่ง และจุดเน้น ไม่ใช้กับทุกปุ่ม ทุกไอคอน หรือทุกเส้นขอบ
+พื้นหน้าเป็นขาวอุ่น การ์ดเป็นขาว ตัวอักษรเป็นสเลตเข้ม มีสีส้ม `#ff8a3d` เป็นจุดเน้นเดียวที่ใช้จำกัด (พื้น/จุดเท่านั้น)
 
 | Token | ค่า | การใช้งาน |
 |---|---|---|
-| `--color-primary` | `#ff6115` | **พื้น (fill)** ของปุ่มหลัก/สถานะเลือก — ตัวอักษรบนพื้นนี้ใช้ `--color-on-primary` เสมอ |
-| `--color-on-primary` | `#171717` | ตัวอักษรบนพื้นส้ม **5.95:1** — ห้ามใช้สีขาว (ขาวบนส้มได้ 3.01:1 ไม่ผ่าน) |
-| `--color-primary-focus` | `#e8560a` | hover / pressed fill (ชาร์โคลบนสีนี้ 4.92:1) และ focus ring (3.55:1 บนพอร์ซเลน) |
-| `--color-primary-ink` | `#b93800` | ส้มที่เป็น **ตัวอักษร/ลิงก์/ไอคอน** บนพื้นสว่าง (5.64:1 บนพอร์ซเลน, 4.97:1 บน `--color-accent-soft`) |
-| `--color-primary-on-dark` | `#ff6115` | จุดเน้นบนพื้นชาร์โคล (sidebar) 5.95:1 |
-| `--color-accent-soft` | `#ffeadb` | พื้น chip/ไอคอนอ่อน |
-| `--color-ink` | `#171717` | สีตัวอักษรหลัก (17.49:1 บนพอร์ซเลน) |
-| `--color-body-muted` | `#5c554a` | สีตัวอักษรรอง (7.18:1) |
-| `--color-canvas` | `#fffcf4` | พื้นหลังหน้า — Porcelain (card ใช้ `--color-surface: #ffffff`) |
-| `--color-canvas-soft` | `#f7f2e7` | พื้นหล่ม สลับแถวตาราง |
-| `--color-canvas-sunken` | `#f1ebdd` | พื้นจม (inset wells, hover fills) |
-| `--color-hairline` | `#e6dfcf` | เส้นขอบการ์ดและ input |
-| `--color-dark-surface` | `#171717` | sidebar, tooltip, พื้นมืด |
+| `--color-primary` | `#0c7c82` | **พื้น (fill)** ของปุ่มหลัก/สถานะเลือก — ตัวอักษรบนพื้นนี้ใช้ `--color-on-primary` เสมอ |
+| `--color-on-primary` | `#ffffff` | ตัวอักษรบนพื้น Teal **4.98:1** (โหมดมืดใช้ `#111827` บนพื้นที่สว่างกว่า) |
+| `--color-primary-focus` (`--color-primary-hover`, `--color-focus-ring`) | `#09666b` | hover / pressed fill (ขาวบนสีนี้ 6.72:1) และ focus ring (6.53:1 บน canvas) |
+| `--color-primary-ink` | `#0a6a70` | Teal ที่เป็น **ตัวอักษร/ลิงก์/ไอคอน** บนพื้นสว่าง (6.16:1 บน canvas, ≥ 5.26:1 บนทุกพื้นอ่อน) |
+| `--color-primary-on-dark` | `#35b4b0` | จุดเน้นบนพื้นเข้ม (sidebar) 7.02:1 |
+| `--color-secondary` | `#35b4b0` | พื้น/ไอคอน/กราฟเท่านั้น (บนขาว 2.5:1 — ห้ามเป็นตัวอักษร) |
+| `--color-accent-orange` | `#ff8a3d` | จุดเน้นอุ่นแบบจำกัด — ห้ามเป็นตัวอักษรหรือปุ่มหลัก |
+| `--color-accent-soft` (`--color-surface-selected`) | `#e6f6f5` | พื้นสถานะเลือก/chip/ไอคอนอ่อน (soft mint) |
+| `--color-ink` (`--color-text-primary`) | `#1f2937` | สีตัวอักษรหลัก (14.26:1 บน canvas) |
+| `--color-body-muted` | `#5b6472` | สีตัวอักษรรอง (5.81:1) |
+| `--color-canvas` (`--color-background`) | `#fffbf7` | พื้นหลังหน้า — ขาวอุ่น (card ใช้ `--color-surface: #ffffff`) |
+| `--color-canvas-soft` | `#f6f1eb` | พื้นหล่ม สลับแถวตาราง |
+| `--color-canvas-sunken` | `#efe9e1` | พื้นจม (inset wells, hover fills) |
+| `--color-hairline` (`--color-border`) | `#dce8e7` | เส้นขอบการ์ดและ input |
+| `--color-dark-surface` | `#111827` | sidebar, tooltip, พื้นมืด |
 
-> **กฎส้ม:** `#ff6115` เป็นสีพื้นเท่านั้น ห้ามใช้เป็นสีตัวอักษรบนพื้นสว่าง (2.94:1) — ใช้ `--color-primary-ink`
-> ห้ามเขียน `color: #fff` หรือ `text-white` บนพื้นส้ม และห้ามให้ส้มเป็นตัวบอกสถานะเพียงอย่างเดียว (ใช้ไอคอนหรือข้อความคู่)
+> **กฎ Teal:** `#0c7c82` เป็นสีพื้นที่ใช้กับตัวอักษรขาว ไม่ใช่สีตัวอักษรทั่วไป (บนพื้น soft/mint ได้ 4.1–4.5:1) — ใช้ `--color-primary-ink`
+> ห้ามเขียน `color: #fff` หรือ `text-white` บนพื้น primary (โหมดมืดพื้นสว่างขึ้น ขาวจะได้ 2.3:1) ใช้ `--color-on-primary`
+> และห้ามให้ Teal เป็นตัวบอกสถานะเพียงอย่างเดียว (ใช้ไอคอนหรือข้อความคู่)
+> สีที่ Master Prompt กำหนดไว้ `#6b7280` (ตัวอักษรรอง) ได้เพียง 4.0–4.8:1 บนพื้นอ่อนบางแบบ จึงใช้ `#5b6472` แทน
 
-โทนชาร์โคล (`#171717` / `#1f1f1f` / `#141414`) ใช้กับ chrome สีเข้มทั้งหมด · โลโก้คงสีต้นฉบับ ไม่เปลี่ยนตามธีม
+โทนเข้ม (`#111827` / `#1f2937` / `#0d1320`) ใช้กับ chrome สีเข้มทั้งหมด · โลโก้คงสีต้นฉบับ ไม่เปลี่ยนตามธีม
 
 ## 1b. โหมดมืด (ค่าเริ่มต้นตั้งแต่ 2026-10-15)
 
@@ -42,19 +46,20 @@ Dark ไม่ใช่แค่กลับสีของ light แต่เ�
 
 | Token | ค่า | contrast |
 |---|---|---|
-| `--color-canvas` | `#171717` | — |
-| `--color-canvas-soft` | `#2a2a2a` | — |
-| `--color-surface` | `#202020` | — |
-| `--color-canvas-sunken` | `#121212` | — |
-| `--color-ink` | `#fffcf4` | 17.49:1 บน canvas |
-| `--color-text-secondary` | `#d2ccbf` | 11.21:1 |
-| `--color-text-tertiary` | `#b3aca0` | 7.96:1 |
-| `--color-text-quaternary` | `#a59e92` | ≥ 4.5:1 บนทุกพื้น (วัดใน `palette-contrast.test.ts`) |
-| `--color-primary` | `#ff6115` | พื้นปุ่ม 5.95:1 กับ canvas |
-| `--color-on-primary` | `#171717` | 5.95:1 บนพื้นส้ม |
-| `--color-primary-focus` | `#ff8a4d` | hover fill (ชาร์โคลบนสีนี้ 7.68:1) และ focus ring |
-| `--color-primary-ink` | `#ff7a3d` | ส้มเป็นตัวอักษร 6.92:1 บน canvas |
-| `--color-accent-soft` | `rgba(255,97,21,0.16)` | พื้น chip |
+| `--color-canvas` | `#111827` | — |
+| `--color-canvas-soft` (`--color-surface-elevated`) | `#273449` | — |
+| `--color-surface` | `#1f2937` | — |
+| `--color-canvas-sunken` | `#0d1320` | — |
+| `--color-hairline` | `#374151` | — |
+| `--color-ink` | `#f9fafb` | 16.98:1 บน canvas |
+| `--color-text-secondary` | `#d1d5db` | 12.04:1 |
+| `--color-text-tertiary` | `#b6bdc9` | 9.39:1 |
+| `--color-text-quaternary` | `#a3acb9` | ≥ 4.5:1 บนทุกพื้น (วัดใน `palette-contrast.test.ts`) |
+| `--color-primary` | `#35b4b0` | พื้นปุ่ม 7.02:1 กับ canvas |
+| `--color-on-primary` | `#111827` | 7.02:1 บนพื้น |
+| `--color-primary-focus` | `#4cc5c1` | hover fill (8.50:1 บน canvas) และ focus ring |
+| `--color-primary-ink` | `#5fd0cc` | Teal เป็นตัวอักษร 9.61:1 บน canvas |
+| `--color-accent-soft` | `rgba(53,180,176,0.16)` | พื้น chip |
 
 > ทุกคู่สีข้างต้นถูกวัดจาก token จริงใน `client/src/palette-contrast.test.ts` ทั้งสองธีม
 

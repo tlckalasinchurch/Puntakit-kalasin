@@ -42,7 +42,7 @@ export function ThemeProvider({
     // by prefers-color-scheme, which never learns about this toggle.
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", theme === "dark" ? "#171717" : "#fffcf4");
+      ?.setAttribute("content", theme === "dark" ? "#111827" : "#fffbf7");
 
     if (switchable) {
       localStorage.setItem("theme", theme);

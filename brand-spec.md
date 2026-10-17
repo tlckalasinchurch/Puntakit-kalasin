@@ -6,11 +6,13 @@
 
 ## Visual direction
 
-Neon Orange and warm Porcelain: charcoal chrome, white cards on a porcelain canvas, and
-one strategic orange. The interface stays warm and people-centered; orange marks the
-primary action and the current place, not every control. Church blue, deep navy, olive
-green and teal were earlier identities and are retired. The Puntakit logo keeps its
-original colours in every theme.
+Premium Teal, soft mint and warm white: slate chrome, white cards on a warm-white canvas,
+and one strategic teal. The interface stays calm, minimal and people-centered; teal marks
+the primary action and the current place, not every control. A single limited warm accent
+(`#ff8a3d`) exists as a fill or dot only. Church blue, deep navy, olive green and Neon
+Orange (decided 2026-10-17, replaced 2026-10-18) were earlier identities and are retired.
+The Puntakit logo keeps its original colours in every theme (it is a multicolour mark on a
+white plate).
 
 ## Assets
 
@@ -19,54 +21,65 @@ original colours in every theme.
 
 ## Tokens
 
-**Primary (Neon Orange, used strategically)**
+**Primary (Premium Teal, used strategically)**
 
 | Token | Hex | Use |
 |---|---|---|
-| Primary | `#ff6115` | fill of primary buttons, selected state, current-page indicator. Text on it is `#171717` (5.95:1) |
-| On primary | `#171717` | text/icons on the orange fill. Never white (3.01:1) |
-| Primary hover / ring | `#e8560a` | hover / pressed fill and focus ring (3.55:1 on porcelain) |
-| Primary ink | `#b93800` | orange as text, link or icon on light surfaces (5.64:1 on porcelain) |
-| Primary on dark | `#ff6115` | accent on charcoal chrome (5.95:1) |
-| Primary tint | `#ffeadb` | soft chip background |
+| Primary | `#0c7c82` | fill of primary buttons, selected state, current-page indicator. White text on it is 4.98:1 |
+| On primary | `#ffffff` | text/icons on the teal fill (dark mode: `#111827` on the lighter fill) |
+| Primary hover / ring | `#09666b` | hover / pressed fill (6.72:1 with white) and focus ring (6.53:1 on canvas) |
+| Primary ink | `#0a6a70` | teal as text, link or icon on light surfaces (6.16:1 on canvas, >= 5.26:1 on every tint) |
+| Primary on dark | `#35b4b0` | accent on the dark chrome (7.02:1) |
+| Primary tint (soft mint) | `#e6f6f5` | selected/active surface, soft chip background |
+| Secondary | `#35b4b0` | fills, icons and chart accents only (2.5:1 on white, never text) |
+| Accent orange | `#ff8a3d` | the one limited warm accent: a dot or fill, never text or a primary action |
 
-> **Contrast rule for orange.** `#ff6115` is 2.94:1 on porcelain and 3.01:1 on white,
-> so it is a *fill* colour only: it carries charcoal text, never white, and it is never
-> body text. Orange text and links use `--color-primary-ink`. Status is never carried
-> by orange alone (icon or label as well). All pairs are measured from the real tokens
-> in `palette-contrast.test.ts`.
+> **Contrast rule for teal.** `#0c7c82` is 4.83:1 on canvas but 4.13-4.47:1 on the soft
+> and mint tints, so as *text* it is not safe everywhere: it is a fill colour that carries
+> white text, and teal text and links use `--color-primary-ink`. The secondary `#35b4b0`
+> is never a text colour. Status is never carried by teal alone (icon or label as well).
+> All pairs are measured from the real tokens in `palette-contrast.test.ts`.
 
 **Chrome & surfaces** (a three-step neutral ladder)
 
 | Token | Hex | Use |
 |---|---|---|
-| Ink | `#171717` | headings and body text |
-| Ink muted | `#5c554a` | secondary text, labels, metadata |
-| Canvas | `#fffcf4` | the page background (Porcelain) |
-| Canvas soft | `#f7f2e7` | wells, table stripes, `secondary` / `muted` / `accent` |
+| Ink | `#1f2937` | headings and body text |
+| Ink muted | `#5b6472` | secondary text, labels, metadata |
+| Canvas (`--color-background`) | `#fffbf7` | the page background (warm white) |
+| Canvas soft | `#f6f1eb` | wells, table stripes, `secondary` / `muted` / `accent` |
 | Surface | `#ffffff` | card surfaces |
-| Sunken | `#f1ebdd` | recessed areas only — inset wells, hover fills |
-| Divider | `#ede7d9` | hairlines inside a card |
-| Hairline | `#e6dfcf` | card borders, inputs (`--border`, `--input`) |
+| Sunken | `#efe9e1` | recessed areas only: inset wells, hover fills |
+| Divider | `#e8f0ef` | hairlines inside a card |
+| Hairline (`--color-border`) | `#dce8e7` | card borders, inputs (`--border`, `--input`) |
 
 **Neutral text ramp** (for secondary and muted copy on canvas)
 
 | Token | Hex | Use | On canvas |
 |---|---|---|---|
-| Text secondary | `#4a443b` | supporting copy, descriptions | 7.24:1 |
-| Text tertiary | `#5c554a` | metadata, helper text | 6.4:1 |
-| Text quaternary | `#6a6256` | the quietest legible text | 4.55:1 |
+| Text secondary | `#4b5563` | supporting copy, descriptions | 7.34:1 |
+| Text tertiary | `#5b6472` | metadata, helper text | 5.81:1 |
+| Text quaternary | `#5b6472` | the quietest legible text (>= 4.96:1 on every surface) | 5.81:1 |
 
-**Graphite (dark chrome)**
+> The Master Prompt's `#6b7280` for secondary text measures 4.0-4.8:1 and fails on the soft,
+> sunken and mint surfaces, so the ramp above is used instead.
+
+**Semantic aliases** (no second source of truth; they resolve onto the tokens above):
+`--color-background`, `--color-text-primary`, `--color-border`, `--color-focus-ring`,
+`--color-primary-hover`, `--color-primary-foreground`, `--color-surface-elevated`,
+`--color-surface-selected`, `--color-state-hover`, `--color-state-active`, `--color-disabled`,
+`--color-disabled-ink`.
+
+**Dark chrome**
 
 | Token | Hex | Use |
 |---|---|---|
-| Charcoal | `#171717` | sidebar, dark surfaces, tooltips |
-| Charcoal 2 | `#1f1f1f` | gradient start / raised dark surface |
-| Charcoal 3 | `#141414` | gradient end / recessed dark surface |
-| On dark | `#fffcf4` | text on graphite |
-| On dark muted | `#a8a298` | secondary text on graphite |
-| On dark hairline | `#34312d` | dividers on graphite |
+| Chrome | `#111827` | sidebar, dark surfaces, tooltips |
+| Chrome 2 | `#1f2937` | raised dark surface |
+| Chrome 3 | `#0d1320` | recessed dark surface |
+| On dark | `#f9fafb` | text on the chrome |
+| On dark muted | `#9ca3af` | secondary text on the chrome (6.99:1) |
+| On dark hairline | `#2b3544` | dividers on the chrome |
 | Black | `#000000` | dark-mode page background |
 
 **Status (fixed meaning — never repurpose these)**
@@ -100,21 +113,22 @@ rules are banned by `design-system-consistency.test.ts`).
 
 | Token | Hex | On canvas |
 |---|---|---|
-| Canvas | `#171717` | — |
-| Canvas soft | `#2a2a2a` | — |
-| Surface | `#202020` | — |
-| Sunken | `#121212` | — |
-| Ink | `#fffcf4` | 17.49:1 |
-| Text secondary | `#d2ccbf` | 11.21:1 |
-| Text tertiary | `#b3aca0` | 7.96:1 |
-| Text quaternary | `#a59e92` | >= 4.5:1 on every surface |
-| Primary (fill) | `#ff6115` | 5.95:1 against canvas |
-| Primary hover / ring | `#ff8a4d` | 7.68:1 on canvas |
-| Primary ink (text) | `#ff7a3d` | 6.92:1 as text |
-| On primary | `#171717` | 5.95:1 on the fill |
+| Canvas | `#111827` | - |
+| Canvas soft / elevated surface | `#273449` | - |
+| Surface | `#1f2937` | - |
+| Sunken | `#0d1320` | - |
+| Border / hairline | `#374151` | - |
+| Ink | `#f9fafb` | 16.98:1 |
+| Text secondary | `#d1d5db` | 12.04:1 |
+| Text tertiary | `#b6bdc9` | 9.39:1 |
+| Text quaternary | `#a3acb9` | >= 4.5:1 on every surface |
+| Primary (fill) | `#35b4b0` | 7.02:1 against canvas |
+| Primary hover / ring | `#4cc5c1` | 8.50:1 on canvas |
+| Primary ink (text) | `#5fd0cc` | 9.61:1 as text |
+| On primary | `#111827` | 7.02:1 on the fill |
 
-> **Do not write `color: #fff` on a primary fill.** White on Neon Orange
-> measures **3.01:1**. Use `var(--color-on-primary)`.
+> **Do not write `color: #fff` on a primary fill.** It is 4.98:1 in light mode but 2.3:1
+> on the lighter dark-mode fill. Use `var(--color-on-primary)`, which follows the theme.
 
 **Glass.** Chrome in dark mode is glass, not flat fill: `--glass-fill`,
 `--glass-fill-strong`, `--glass-line`, `--glass-line-bright`, `--glass-blur`.
