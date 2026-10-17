@@ -21,7 +21,7 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { runAtomically } from "../lib/atomicWrites.js";
 import { careGroupsOf, careMembershipStatements, requireCareGroup } from "../lib/careMembership.js";
-import { getScopedMemberIds, isScopedRole } from "../lib/careScope.js";
+import { getScopedMemberIds, getViewableMemberIds, isScopedRole } from "../lib/careScope.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 
 export const membersRouter = Router();
@@ -166,9 +166,9 @@ membersRouter.get("/", async (req, res, next) => {
       );
     }
 
-    // A group_leader sees only members of the groups they lead; an empty
+    // A group_leader sees only members of the groups they lead (and care groups under a body they lead); an empty
     // scope means "nothing". Other roles are unscoped (null).
-    const scope = isScopedRole(req.user!.role) ? await getScopedMemberIds(req.user!.id) : null;
+    const scope = isScopedRole(req.user!.role) ? await getViewableMemberIds(req.user!.id) : null;
     if (scope) conditions.push(scope.length ? inArray(members.id, scope) : sql`false`);
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -281,7 +281,7 @@ membersRouter.get(
     try {
       const db = getDb();
       // A group_leader exports only members of the groups they lead.
-      const scope = isScopedRole(req.user!.role) ? await getScopedMemberIds(req.user!.id) : null;
+      const scope = isScopedRole(req.user!.role) ? await getViewableMemberIds(req.user!.id) : null;
       const rows = await db
         .select()
         .from(members)
@@ -372,7 +372,7 @@ membersRouter.get("/:id", async (req, res, next) => {
 
     // Out of scope looks the same as missing, so ids cannot be probed.
     if (isScopedRole(req.user!.role)) {
-      const scope = await getScopedMemberIds(req.user!.id);
+      const scope = await getViewableMemberIds(req.user!.id);
       if (!scope.includes(row.id)) throw new NotFoundError("ไม่พบข้อมูลสมาชิกที่ต้องการ");
     }
 

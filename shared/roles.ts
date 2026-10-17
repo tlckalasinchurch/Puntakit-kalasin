@@ -123,5 +123,10 @@ export const MEMBERSHIP_VIEW_ROLES: readonly UserRole[] = ["super_admin", "admin
 export const MEMBERSHIP_DECIDE_ROLES: readonly UserRole[] = ["super_admin", "admin", "staff", "group_leader"];
 export const MEMBERSHIP_PAYMENT_ROLES: readonly UserRole[] = ["super_admin", "admin", "staff"];
 
-/** Upload a member photo or a mission photo (`/api/media`). */
-export const MEDIA_UPLOAD_ROLES: readonly UserRole[] = [...MEMBER_UPDATE_ROLES];
+/**
+ * Replace a member's photo (`POST /api/media?kind=member_avatar`). Same as
+ * MEMBER_UPDATE_ROLES minus `ministry_leader`: the ministry-team role is not
+ * part of the care hierarchy, and docs/features/membership-lifecycle.md says
+ * it may not change member photos.
+ */
+export const MEMBER_AVATAR_ROLES: readonly UserRole[] = MEMBER_UPDATE_ROLES.filter((r) => r !== "ministry_leader");

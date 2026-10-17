@@ -2,7 +2,7 @@ import express, { Router, type Request } from "express";
 import { and, eq, isNull } from "drizzle-orm";
 import { getDb } from "../db/client.js";
 import { groups, mediaAssets, members, missionActivities, missionActivityMedia, type MediaAsset } from "../../shared/schema.js";
-import { ADMIN_SHELL_ROLES, CREATE_ROLES, MEMBER_UPDATE_ROLES, PRIVILEGED_ROLES } from "../../shared/roles.js";
+import { ADMIN_SHELL_ROLES, CREATE_ROLES, MEMBER_AVATAR_ROLES, PRIVILEGED_ROLES } from "../../shared/roles.js";
 import { requireAuth } from "../middleware/auth.js";
 import { canViewMember, resolveMembershipScope } from "../lib/membershipScope.js";
 import { logAudit } from "../lib/audit.js";
@@ -55,7 +55,7 @@ mediaRouter.post("/", rawImage, async (req, res, next) => {
     const db = getDb();
     if (kind === "member_avatar") {
       if (!memberId || !UUID.test(memberId)) throw new ValidationError("ต้องระบุสมาชิก");
-      if (!MEMBER_UPDATE_ROLES.includes(user.role)) throw new ForbiddenError("คุณไม่มีสิทธิ์เปลี่ยนรูปสมาชิก");
+      if (!MEMBER_AVATAR_ROLES.includes(user.role)) throw new ForbiddenError("คุณไม่มีสิทธิ์เปลี่ยนรูปสมาชิก");
       await assertMembersInScope(req, [memberId]);
       const [member] = await db
         .select({ id: members.id, avatarUrl: members.avatarUrl })

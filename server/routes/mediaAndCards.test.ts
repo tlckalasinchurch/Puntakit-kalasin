@@ -128,6 +128,7 @@ describe("media upload, member cards", () => {
     it("rejects unauthenticated, viewer and ministry_leader uploads", async () => {
       expect((await upload(null, `kind=member_avatar&memberId=${ids.m1}`, JPEG)).status).toBe(401);
       expect((await upload("viewer", `kind=member_avatar&memberId=${ids.m1}`, JPEG)).status).toBe(403);
+      expect((await upload("ministry", `kind=member_avatar&memberId=${ids.m1}`, JPEG)).status).toBe(403);
     });
 
     it("rejects a file that is not an image even when it claims to be one", async () => {
