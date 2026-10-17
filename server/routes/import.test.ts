@@ -122,7 +122,7 @@ describe("Mission import API — Phase 2 L1/L2 (real PGlite Postgres)", () => {
 
     const [admin] = await db
       .insert(schema.users)
-      .values({ email: "admin@import-test.local", passwordHash: "x", name: "Admin", role: "admin" })
+      .values({ email: "admin@import-test.local", passwordHash: "x", name: "Admin", role: "super_admin" })
       .returning();
     const [staff] = await db
       .insert(schema.users)
@@ -133,7 +133,7 @@ describe("Mission import API — Phase 2 L1/L2 (real PGlite Postgres)", () => {
       .values({ email: "member@import-test.local", passwordHash: "x", name: "Member", role: "member" })
       .returning();
 
-    adminCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: admin.id, email: admin.email, role: "admin" })}`;
+    adminCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: admin.id, email: admin.email, role: "super_admin" })}`;
     staffCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: staff.id, email: staff.email, role: "staff" })}`;
     outsiderCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: outsider.id, email: outsider.email, role: "member" })}`;
 
@@ -163,7 +163,7 @@ describe("Mission import API — Phase 2 L1/L2 (real PGlite Postgres)", () => {
       expect((await fetch(`${baseUrl}/api/import/batches`)).status).toBe(401);
     });
 
-    it("rejects upload from a non-admin (staff is a reader, not an importer)", async () => {
+    it("rejects upload from a non-super_admin (staff is a reader, not an importer)", async () => {
       const res = await upload(staffCookie);
       expect(res.status).toBe(403);
     });
@@ -310,8 +310,8 @@ describe("Mission import API — Phase 2 L1/L2 (real PGlite Postgres)", () => {
     });
   });
 
-  describe("rule confirmation (admin only)", () => {
-    it("rejects confirmation from a non-admin", async () => {
+  describe("rule confirmation (super_admin only)", () => {
+    it("rejects confirmation from a non-super_admin", async () => {
       const [rule] = await db.select().from(schema.normalizationRules).limit(1);
       const res = await fetch(`${baseUrl}/api/import/rules/${rule!.id}/confirm`, {
         method: "POST",

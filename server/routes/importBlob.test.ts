@@ -123,9 +123,9 @@ describe("import via Vercel Blob", () => {
       });
     });
 
-    const [admin] = await db.insert(schema.users).values({ email: "admin@blob-test.local", passwordHash: "x", name: "Admin", role: "admin" }).returning();
+    const [admin] = await db.insert(schema.users).values({ email: "admin@blob-test.local", passwordHash: "x", name: "Admin", role: "super_admin" }).returning();
     const [staff] = await db.insert(schema.users).values({ email: "staff@blob-test.local", passwordHash: "x", name: "Staff", role: "staff" }).returning();
-    adminCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: admin.id, email: admin.email, role: "admin" })}`;
+    adminCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: admin.id, email: admin.email, role: "super_admin" })}`;
     staffCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: staff.id, email: staff.email, role: "staff" })}`;
     workbookBytes = await buildWorkbookBytes();
   }, 120_000);

@@ -132,8 +132,8 @@ describe("import integrity", () => {
       });
     });
 
-    const [admin] = await db.insert(schema.users).values({ email: "admin@integrity-test.local", passwordHash: "x", name: "Admin", role: "admin" }).returning();
-    adminCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: admin.id, email: admin.email, role: "admin" })}`;
+    const [admin] = await db.insert(schema.users).values({ email: "admin@integrity-test.local", passwordHash: "x", name: "Admin", role: "super_admin" }).returning();
+    adminCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: admin.id, email: admin.email, role: "super_admin" })}`;
   }, 120_000);
 
   afterAll(async () => {

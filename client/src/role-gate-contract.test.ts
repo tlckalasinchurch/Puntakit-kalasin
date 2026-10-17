@@ -88,6 +88,8 @@ describe("role-gate contract (client ↔ server single source)", () => {
 const ROUTE_GATES: ReadonlyArray<readonly [string, string]> = [
   ["/admin/users", "SUPER_ADMIN_ROLES"],
   ["/import/merge-approvals", "PRIVILEGED_ROLES"],
+  // `orgDataRouter` takes `requireImportWriter` (super_admin) on every call.
+  ["/import/org", "SUPER_ADMIN_ROLES"],
   ["/care", "CREATE_ROLES"],
   ["/inbox", "CREATE_ROLES"],
 ];
