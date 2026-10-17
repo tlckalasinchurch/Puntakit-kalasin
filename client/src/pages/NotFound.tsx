@@ -8,7 +8,7 @@ export default function NotFound() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--color-canvas-soft)] p-5">
+    <main className="flex min-h-[var(--app-vh)] items-center justify-center bg-[var(--color-canvas-soft)] p-5">
       <div className="w-full max-w-[420px] rounded-[var(--radius-card)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-10 text-center shadow-[var(--shadow)]">
         <p className="type-display-lg text-[var(--color-ink)]">404</p>
 
@@ -27,6 +27,6 @@ export default function NotFound() {
           กลับหน้าหลัก
         </button>
       </div>
-    </div>
+    </main>
   );
 }

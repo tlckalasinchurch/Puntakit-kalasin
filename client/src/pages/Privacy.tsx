@@ -50,7 +50,7 @@ const sections = [
 export default function Privacy() {
   usePageTitle("นโยบายความเป็นส่วนตัว");
   return (
-    <div className="login-shell" style={{ alignItems: "flex-start", overflowY: "auto", padding: "32px 16px" }}>
+    <main className="login-shell" style={{ alignItems: "flex-start", overflowY: "auto", padding: "32px 16px" }}>
       <article
         className="login-card"
         style={{ width: "min(760px, 100%)", textAlign: "left", maxHeight: "none" }}
@@ -91,6 +91,6 @@ export default function Privacy() {
           </Link>
         </div>
       </article>
-    </div>
+    </main>
   );
 }

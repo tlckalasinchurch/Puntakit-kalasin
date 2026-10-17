@@ -35,6 +35,7 @@ import type { AttendanceStatus, ServiceType } from "@shared/schema";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useAuth } from "@/contexts/AuthContext";
 import { MEMBER_CONTACT_ROLES, hasRole } from "@shared/roles";
+import { downloadFile } from "@/lib/download";
 import { initialOf } from "@/lib/initials";
 
 interface MemberItem {
@@ -510,7 +511,7 @@ export default function Attendance() {
 
   // Export CSV
   const handleExportCsv = () => {
-    window.open("/api/attendance/export", "_blank");
+    downloadFile("/api/attendance/export");
   };
 
   // Filter members list for live roster

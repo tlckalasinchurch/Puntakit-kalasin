@@ -19,6 +19,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { LocationPicker } from "@/components/map/LocationPicker";
+import { Button } from "@/components/ui/button";
+import { formatCoordinate, toLatLng } from "@/lib/geo";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CardGridSkeleton, TableSkeleton } from "@/components/LoadingStates";
 import {
@@ -231,6 +234,7 @@ export default function Groups() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<GroupItem | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -1060,6 +1064,13 @@ export default function Groups() {
                 )}
               </Field>
             </div>
+            <div>
+              <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>
+                <MapPin size={ICON_SIZE.sm} aria-hidden="true" />
+                ปักหมุดบนแผนที่
+              </Button>
+              <p className="type-fine mt-1 text-[var(--color-body-muted)]">ใช้ตำแหน่งปัจจุบัน แตะบนแผนที่ หรือวางลิงก์ Google Maps แล้วระบบกรอกละติจูด/ลองจิจูดให้</p>
+            </div>
             <label className="flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] p-3">
               <input
                 type="checkbox"
@@ -1286,6 +1297,14 @@ export default function Groups() {
           onCancel={() => setRemoveTarget(null)}
         />
       )}
+      <LocationPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        title="ปักหมุดตำแหน่งพันธกิจ"
+        initial={toLatLng(form.latitude, form.longitude)}
+        confirmLabel="ใช้ตำแหน่งนี้"
+        onConfirm={(point) => setForm((f) => ({ ...f, latitude: formatCoordinate(point.lat), longitude: formatCoordinate(point.lng) }))}
+      />
     </AppLayout>
   );
 }

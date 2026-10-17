@@ -135,14 +135,19 @@ export function HomeMyWork() {
     followUp: { icon: ListTodo, title: "การติดตาม", hint: "ที่ต้องดูแลต่อ", badge: openFollowUps > 0 ? `${openFollowUps} รายการ` : undefined },
   };
 
+  // A role with no quick-action tile (a viewer) has nothing to "continue": show its shortcuts as a
+  // plain list under their own heading instead of an empty "ทำต่อได้เลย" row with a lone toggle.
+  const noTiles = tiles.length === 0;
+  const linksVisible = noTiles || moreOpen;
+
   return (
     <div className="space-y-8">
       <section aria-labelledby="home-quick">
         <div className="mb-3 flex items-end justify-between gap-3">
           <h2 id="home-quick" className="type-lead text-[var(--color-ink)]">
-            ทำต่อได้เลย
+            {noTiles ? "ทางลัด" : "ทำต่อได้เลย"}
           </h2>
-          {moreLinks.length > 0 && (
+          {!noTiles && moreLinks.length > 0 && (
             <button
               type="button"
               aria-expanded={moreOpen}
@@ -155,13 +160,15 @@ export function HomeMyWork() {
             </button>
           )}
         </div>
-        <div className="pk-home-tiles" data-count={tiles.length}>
-          {tiles.map((id) => (
-            <Tile key={id} {...tileView[id]} href={HOME_TILE_HREF[id] ?? undefined} />
-          ))}
-        </div>
-        {moreOpen && moreLinks.length > 0 && (
-          <ul id="home-more-links" className="mt-3 flex flex-wrap gap-2" aria-label="ทางลัดอื่น ๆ">
+        {!noTiles && (
+          <div className="pk-home-tiles" data-count={tiles.length}>
+            {tiles.map((id) => (
+              <Tile key={id} {...tileView[id]} href={HOME_TILE_HREF[id] ?? undefined} />
+            ))}
+          </div>
+        )}
+        {linksVisible && moreLinks.length > 0 && (
+          <ul id="home-more-links" className={`flex flex-wrap gap-2 ${noTiles ? "" : "mt-3"}`} aria-label="ทางลัดอื่น ๆ">
             {moreLinks.map((l) => (
               <li key={l.href}>
                 <Link

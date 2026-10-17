@@ -1,21 +1,28 @@
 /**
- * LEAFLET + OPENSTREETMAP-FAMILY MAP WRAPPER
+ * LEAFLET MAP WRAPPER (no API key, no billing, no external script)
  *
- * Renders a map with no API key, no billing, and no external script load —
- * Leaflet initializes synchronously against the DOM, and tiles are plain
- * <img> requests to a public tile CDN (see TILE_PROVIDERS below, with
- * automatic failover to the next entry if one stops serving tiles).
+ * Leaflet initialises synchronously against the DOM; tiles are plain <img>
+ * requests to public tile servers (listed in `vercel.json` img-src).
+ *
+ *   street  OpenStreetMap standard tiles (Thai place and road names), with the
+ *           OSM France "HOT" style as a one-way fallback. In dark mode the street
+ *           tiles are inverted by CSS (`.pk-map-dark`) so the map never blinds a
+ *           dark-mode user at night.
+ *   satellite  Esri World Imagery (for finding a real roof)
+ *
+ * CARTO Voyager / Dark Matter were tried first and rejected: the unauthenticated
+ * `basemaps.cartocdn.com` tiles now come back stamped "API KEY REQUIRED". If
+ * traffic ever outgrows OSM's tile usage policy, switch `STREET` to a keyed
+ * provider (the key would have to live in a build-time env var).
  *
  * USAGE FROM PARENT COMPONENT:
- * ======
- * const mapRef = useRef<L.Map | null>(null);
  *
  * <MapView
+ *   basemap={satellite ? "satellite" : "street"}
+ *   theme={theme}
  *   initialCenter={{ lat: 16.4322, lng: 103.5061 }}
- *   initialZoom={12}
- *   onMapReady={(map) => {
- *     mapRef.current = map; // Leaflet itself owns re-rendering, not React state.
- *   }}
+ *   initialZoom={11}
+ *   onMapReady={(map) => { mapRef.current = map; }}
  * />
  */
 
@@ -28,60 +35,70 @@ import { cn } from "@/lib/utils";
 const OSM_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors';
 
-// CartoDB's Positron tiles are the primary provider: no key, CDN-backed and
-// meant for exactly this (embedding in a third-party app, unlike OSM's own
-// tile servers, which ask high-traffic apps not to hotlink them directly),
-// and its muted light style fits the V2 quiet aesthetic better than OSM's
-// default saturated one. OSM is the automatic fallback if tiles fail to load
-// (e.g. a network that blocks CartoDB specifically) — swapping the whole
-// layer on repeated tileerror, not per-tile, to avoid flicker.
-const TILE_PROVIDERS = [
-  {
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    attribution: `${OSM_ATTRIBUTION} &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>`,
-    subdomains: "abcd",
-  },
-  {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution: OSM_ATTRIBUTION,
-    subdomains: "abc",
-  },
-] as const;
-const TILE_LAYER_MAX_ZOOM = 19;
-// How many tile load failures on the current provider before failing over —
+export type Basemap = "street" | "satellite";
+export type MapTheme = "light" | "dark";
+
+interface TileProvider {
+  url: string;
+  attribution: string;
+  subdomains?: string;
+  maxZoom: number;
+}
+
+const STREET: TileProvider = {
+  url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  attribution: OSM_ATTRIBUTION,
+  subdomains: "abc",
+  maxZoom: 19,
+};
+const STREET_FALLBACK: TileProvider = {
+  url: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+  attribution: `${OSM_ATTRIBUTION}, tiles by <a href="https://www.hotosm.org/" target="_blank" rel="noreferrer">HOT</a>`,
+  subdomains: "abc",
+  maxZoom: 19,
+};
+const SATELLITE: TileProvider = {
+  url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  attribution: "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+  maxZoom: 19,
+};
+
+/** The provider chain for a base map: the first entry is used, the rest are one-way fallbacks. */
+export function providersFor(basemap: Basemap): TileProvider[] {
+  return basemap === "satellite" ? [SATELLITE] : [STREET, STREET_FALLBACK];
+}
+
+// How many tile load failures on the current provider before failing over:
 // low enough to react quickly, high enough that a few edge/ocean tiles
 // (which some providers omit) don't trigger a false failover.
 const TILE_ERROR_FAILOVER_THRESHOLD = 6;
 
-// Adds a tile layer for TILE_PROVIDERS[providerIndex] and wires up failover:
-// once TILE_ERROR_FAILOVER_THRESHOLD tiles from this layer fail, it's
-// replaced with the next provider in the list (a one-way trip — no bouncing
-// back and forth if both are having a bad day).
-function addTileLayer(map: L.Map, providerIndex: number) {
-  const provider = TILE_PROVIDERS[providerIndex];
+/** Adds the provider at `chain[index]` and wires failover to the next one. */
+function addTileLayer(map: L.Map, chain: TileProvider[], index: number, onLayer: (layer: L.TileLayer) => void) {
+  const provider = chain[index];
   const layer = L.tileLayer(provider.url, {
-    maxZoom: TILE_LAYER_MAX_ZOOM,
+    maxZoom: provider.maxZoom,
     attribution: provider.attribution,
-    subdomains: provider.subdomains,
+    ...(provider.subdomains ? { subdomains: provider.subdomains } : {}),
   }).addTo(map);
+  onLayer(layer);
 
-  const nextProviderIndex = providerIndex + 1;
-  if (nextProviderIndex >= TILE_PROVIDERS.length) return layer;
-
+  if (index + 1 >= chain.length) return;
   let errorCount = 0;
   layer.on("tileerror", () => {
     errorCount += 1;
     if (errorCount < TILE_ERROR_FAILOVER_THRESHOLD) return;
     map.removeLayer(layer);
-    addTileLayer(map, nextProviderIndex);
+    addTileLayer(map, chain, index + 1, onLayer);
   });
-  return layer;
 }
 
 interface MapViewProps {
   className?: string;
   initialCenter?: L.LatLngLiteral;
   initialZoom?: number;
+  basemap?: Basemap;
+  theme?: MapTheme;
   onMapReady?: (map: L.Map) => void;
 }
 
@@ -89,10 +106,13 @@ export function MapView({
   className,
   initialCenter = { lat: 16.4322, lng: 103.5061 },
   initialZoom = 12,
+  basemap = "street",
+  theme = "light",
   onMapReady,
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
+  const tileLayer = useRef<L.TileLayer | null>(null);
 
   const init = usePersistFn(() => {
     if (!mapContainer.current || map.current) return;
@@ -100,9 +120,10 @@ export function MapView({
     const instance = L.map(mapContainer.current, {
       center: initialCenter,
       zoom: initialZoom,
+      // Set explicitly: the base layer is added after the map exists (it follows the theme), and
+      // plugins such as marker clustering read the max zoom before any layer is present.
+      maxZoom: 19,
     });
-    addTileLayer(instance, 0);
-
     map.current = instance;
     onMapReady?.(instance);
   });
@@ -112,10 +133,21 @@ export function MapView({
     return () => {
       map.current?.remove();
       map.current = null;
+      tileLayer.current = null;
     };
   }, [init]);
 
-  return (
-    <div ref={mapContainer} className={cn("w-full h-[500px]", className)} />
-  );
+  // (Re)draw the base map whenever the style or the theme changes.
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance) return;
+    if (tileLayer.current) instance.removeLayer(tileLayer.current);
+    addTileLayer(instance, providersFor(basemap), 0, (layer) => {
+      tileLayer.current = layer;
+    });
+  }, [basemap]);
+
+  // Dark street map = the light OSM tiles inverted in CSS; imagery is left as photographed.
+  const dark = theme === "dark" && basemap === "street";
+  return <div ref={mapContainer} className={cn("w-full h-[500px]", dark && "pk-map-dark", className)} />;
 }

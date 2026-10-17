@@ -30,7 +30,7 @@ export function LambMascot({
     <img
       src={POSE_SRC[pose]}
       alt={POSE_ALT[pose]}
-      className={className}
+      className={`lamb-art ${className}`.trim()}
       loading="lazy"
       draggable={false}
     />

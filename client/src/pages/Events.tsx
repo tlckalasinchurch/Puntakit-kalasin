@@ -304,7 +304,8 @@ export default function Events() {
       <PageHeader
         title="กิจกรรม"
         description="ดูกิจกรรมล่าสุดและวางแผนการมีส่วนร่วมของคริสตจักรในมุมมองเดียว"
-        primaryAction={isAdmin ? { label: "เพิ่มกิจกรรม", icon: Plus, onClick: openCreate } : undefined}
+        // The empty state carries its own create button, so the header one is hidden while the list is empty.
+        primaryAction={isAdmin && (isLoading || error || items.length > 0) ? { label: "เพิ่มกิจกรรม", icon: Plus, onClick: openCreate } : undefined}
       />
 
       {!isLoading && !error && items.length > 0 && (

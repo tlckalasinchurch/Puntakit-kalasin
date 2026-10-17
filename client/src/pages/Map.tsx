@@ -1,13 +1,17 @@
 /// <reference types="leaflet.markercluster" />
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, ListTree, MapPin, RotateCw, Users } from "lucide-react";
+import { AlertCircle, ListTree, MapPin, Navigation, RotateCw, Users } from "lucide-react";
+import { toast } from "sonner";
 import { Link } from "wouter";
 import L from "leaflet";
 import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { MapView } from "@/components/Map";
+import { MapView, type Basemap } from "@/components/Map";
+import { BasemapToggle } from "@/components/map/BasemapToggle";
+import { LocationPicker } from "@/components/map/LocationPicker";
+import { pinDivIcon } from "@/components/map/pins";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,7 +25,11 @@ import {
 } from "@/components/ui/sheet";
 import { StatusChip } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { api, ApiError } from "@/lib/api";
+import { bodyColor, googleMapsDirectionsUrl, KALASIN_CENTER, NO_BODY_COLOR, toLatLng, formatCoordinate, type LatLng } from "@/lib/geo";
+import { GROUP_MANAGE_ANY_ROLES, hasRole } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 // Same labels the Groups page uses, so a group reads the same way everywhere.
@@ -51,56 +59,25 @@ const STATUS_LABELS: Record<
   closed: { label: "ปิดกลุ่ม", tone: "neutral" },
 };
 
-// Chalasin, Thailand — used only to center the map when no group has coordinates yet.
-const FALLBACK_CENTER: L.LatLngLiteral = { lat: 16.4322, lng: 103.5061 };
-
-// A visible V2-styled dot wrapped in an invisible, larger hit area so the marker
-// reads as a normal map pin but still meets the 44px touch-target minimum.
-const PIN_HIT_SIZE = 44;
-
-function pinHtml({
-  visibleSize,
-  label,
-}: {
-  visibleSize: number;
-  label?: string;
-}) {
-  const hitSize = Math.max(PIN_HIT_SIZE, visibleSize);
-  const fontSize = visibleSize >= 40 ? 13 : 11;
-  // Plain inline styles, not Tailwind classes: this HTML string is handed to
-  // Leaflet, which mounts it outside Tailwind's stylesheet scan. CSS custom
-  // properties still cascade to it normally since it's appended into the
-  // page's DOM tree.
-  return `
-    <div style="width:${hitSize}px;height:${hitSize}px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
-      <div style="width:${visibleSize}px;height:${visibleSize}px;border-radius:var(--radius-circle);background:var(--color-primary);border:2px solid var(--color-on-dark);box-shadow:0 1px 4px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:var(--color-on-dark);font-family:'Prompt',system-ui,sans-serif;font-weight:600;font-size:${fontSize}px;line-height:1;">
-        ${label ?? ""}
-      </div>
-    </div>
-  `;
-}
-
-function pinDivIcon(options: { visibleSize: number; label?: string }) {
-  const hitSize = Math.max(PIN_HIT_SIZE, options.visibleSize);
-  return L.divIcon({
-    html: pinHtml(options),
-    className: "", // clear Leaflet's default divIcon class (white box + border)
-    iconSize: [hitSize, hitSize],
-    iconAnchor: [hitSize / 2, hitSize / 2],
-  });
-}
+// Kalasin province centre — used only when no group has coordinates yet.
+const FALLBACK_CENTER = KALASIN_CENTER;
 
 // Custom cluster icon so clusters use V2 tokens instead of a generic plugin look.
 function createClusterIcon(cluster: L.MarkerCluster) {
   const count = cluster.getChildCount();
   const label = count > 99 ? "99+" : String(count);
   const visibleSize = Math.min(56, 32 + Math.log2(count) * 6);
-  return pinDivIcon({ visibleSize, label });
+  return pinDivIcon({ visibleSize, label, color: "#171717" });
 }
 
 interface MapGroup {
   id: string;
   name: string;
+  orgLevel: string | null;
+  parentGroupId: string | null;
+  leaderId: string | null;
+  coLeaderId: string | null;
+  leaderMemberName: string | null;
   category: string;
   status: string;
   privacy: string;
@@ -154,10 +131,40 @@ function CategoryChip({
   );
 }
 
-function GroupDetailBody({ group }: { group: MapGroup }) {
+function BodyPill({ label, color, active, onClick }: { label: string; color: string | null; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`type-caption-strong flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-[var(--radius-pill)] px-4 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] ${
+        active
+          ? "border border-[var(--color-ink)] bg-[var(--color-canvas-soft)] font-bold text-[var(--color-ink)]"
+          : "border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-body-muted)] hover:bg-[var(--color-canvas-soft)]"
+      }`}
+    >
+      {color && <span aria-hidden="true" className="inline-block size-3 rounded-full" style={{ background: color }} />}
+      {label}
+    </button>
+  );
+}
+
+function GroupDetailBody({
+  group,
+  body,
+  canEdit,
+  onPin,
+}: {
+  group: MapGroup;
+  body: { name: string; color: string } | null;
+  canEdit: boolean;
+  onPin: () => void;
+}) {
   const schedule = [group.meetingDay, group.meetingTime]
     .filter(Boolean)
     .join(" ");
+  const point = toLatLng(group.latitude, group.longitude);
+  const leader = group.leaderMemberName ?? group.leaderName;
   return (
     <div className="space-y-4 px-4 pb-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -180,13 +187,20 @@ function GroupDetailBody({ group }: { group: MapGroup }) {
             </dd>
           </div>
         )}
-        {group.leaderName && (
+        <div className="flex items-baseline justify-between gap-4">
+          <dt className="type-caption text-[var(--color-body-muted)]">บอดี้</dt>
+          <dd className="type-caption-strong flex items-center gap-2 text-[var(--color-ink)]">
+            <span aria-hidden="true" className="inline-block size-3 rounded-full" style={{ background: body?.color ?? NO_BODY_COLOR }} />
+            {body?.name ?? "ไม่ระบุบอดี้"}
+          </dd>
+        </div>
+        {leader && (
           <div className="flex items-baseline justify-between gap-4">
             <dt className="type-caption text-[var(--color-body-muted)]">
-              ผู้นำกลุ่ม
+              หัวหน้าพันธกิจ
             </dt>
             <dd className="type-caption-strong text-[var(--color-ink)]">
-              {group.leaderName}
+              {leader}
             </dd>
           </div>
         )}
@@ -219,7 +233,23 @@ function GroupDetailBody({ group }: { group: MapGroup }) {
           </div>
         )}
       </dl>
-      <Button asChild className="w-full">
+      {point ? (
+        <Button asChild className="w-full">
+          <a href={googleMapsDirectionsUrl(point)} target="_blank" rel="noopener noreferrer">
+            <Navigation aria-hidden="true" />
+            นำทางด้วย Google Maps
+          </a>
+        </Button>
+      ) : (
+        <p className="type-caption text-[var(--color-body-muted)]">พันธกิจนี้ยังไม่มีพิกัดบนแผนที่</p>
+      )}
+      {canEdit && (
+        <Button type="button" variant="outline" className="w-full" onClick={onPin}>
+          <MapPin aria-hidden="true" />
+          {point ? "แก้ไขพิกัดบนแผนที่" : "ปักพิกัดบนแผนที่"}
+        </Button>
+      )}
+      <Button asChild variant="ghost" className="w-full">
         <Link href="/groups">ดูรายละเอียดพันธกิจ</Link>
       </Button>
     </div>
@@ -234,6 +264,12 @@ export default function MapPage() {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"map" | "list">("map");
   const [selectedGroup, setSelectedGroup] = useState<MapGroup | null>(null);
+  const { theme } = useTheme();
+  const { user } = useAuth();
+  const [basemap, setBasemap] = useState<Basemap>("street");
+  // A body's group id, "none" (groups with no body), or null (all).
+  const [bodyFilter, setBodyFilter] = useState<string | null>(null);
+  const [pickerGroup, setPickerGroup] = useState<MapGroup | null>(null);
   // Toggling to list view unmounts <MapView>; switching back mounts a fresh map
   // instance. An incrementing id (not a boolean) makes the marker effect below
   // re-run on every such remount, not just the first one.
@@ -268,6 +304,34 @@ export default function MapPage() {
 
   const groups = state.status === "success" ? state.data : [];
 
+  // A body (บอดี้) is a group at org level "body"; a care group belongs to the body that is its parent.
+  const bodies = useMemo(
+    () => groups.filter(g => g.orgLevel === "body").sort((a, b) => a.name.localeCompare(b.name, "th")),
+    [groups]
+  );
+  const bodyOf = useCallback(
+    (g: MapGroup) => {
+      if (g.orgLevel === "body") return g;
+      return bodies.find(b => b.id === g.parentGroupId) ?? null;
+    },
+    [bodies]
+  );
+  const colorOf = useCallback(
+    (g: MapGroup) => {
+      const body = bodyOf(g);
+      return body ? bodyColor(bodies.indexOf(body)) : NO_BODY_COLOR;
+    },
+    [bodyOf, bodies]
+  );
+  const hasUnassigned = useMemo(() => groups.some(g => bodyOf(g) === null), [groups, bodyOf]);
+
+  const canEditPoint = useCallback(
+    (g: MapGroup) =>
+      hasRole(user?.role, GROUP_MANAGE_ANY_ROLES) ||
+      (user?.role === "group_leader" && (g.leaderId === user.id || g.coLeaderId === user.id)),
+    [user]
+  );
+
   const categoriesInUse = useMemo(() => {
     const seen = new Set<string>();
     for (const g of groups) seen.add(g.category);
@@ -278,6 +342,7 @@ export default function MapPage() {
     const q = query.trim().toLowerCase();
     return groups.filter(g => {
       if (category && g.category !== category) return false;
+      if (bodyFilter === "none" ? bodyOf(g) !== null : bodyFilter ? bodyOf(g)?.id !== bodyFilter : false) return false;
       if (!q) return true;
       return (
         g.name.toLowerCase().includes(q) ||
@@ -285,7 +350,7 @@ export default function MapPage() {
         (g.meetingLocation ?? "").toLowerCase().includes(q)
       );
     });
-  }, [groups, category, query]);
+  }, [groups, category, query, bodyFilter, bodyOf]);
 
   const withCoordinates = useMemo(
     () => filtered.filter(g => g.latitude && g.longitude),
@@ -324,7 +389,7 @@ export default function MapPage() {
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
 
       const marker = L.marker([lat, lng], {
-        icon: pinDivIcon({ visibleSize: 28 }),
+        icon: pinDivIcon({ visibleSize: 28, color: colorOf(group) }),
         title: group.name,
         alt: group.name,
       });
@@ -342,7 +407,24 @@ export default function MapPage() {
     } else {
       map.setView(FALLBACK_CENTER, 11);
     }
-  }, [withCoordinates, mapInstanceId]);
+  }, [withCoordinates, mapInstanceId, colorOf]);
+
+  const savePoint = async (group: MapGroup, point: LatLng) => {
+    const latitude = formatCoordinate(point.lat);
+    const longitude = formatCoordinate(point.lng);
+    try {
+      await api.put(`/api/groups/${group.id}`, { latitude, longitude });
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "บันทึกพิกัดไม่สำเร็จ");
+      throw err;
+    }
+    setState(prev =>
+      prev.status === "success"
+        ? { status: "success", data: prev.data.map(g => (g.id === group.id ? { ...g, latitude, longitude } : g)) }
+        : prev
+    );
+    toast.success("บันทึกพิกัดพันธกิจแล้ว");
+  };
 
   return (
     <AppLayout>
@@ -399,6 +481,17 @@ export default function MapPage() {
             aria-label="ค้นหาพันธกิจ"
             className="rounded-[var(--radius-pill)] bg-[var(--color-canvas)]"
           />
+          {bodies.length > 0 && (
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-label="กรองตามบอดี้">
+              <BodyPill label="ทุกบอดี้" color={null} active={bodyFilter === null} onClick={() => setBodyFilter(null)} />
+              {bodies.map((b, i) => (
+                <BodyPill key={b.id} label={b.name} color={bodyColor(i)} active={bodyFilter === b.id} onClick={() => setBodyFilter(b.id)} />
+              ))}
+              {hasUnassigned && (
+                <BodyPill label="ไม่ระบุบอดี้" color={NO_BODY_COLOR} active={bodyFilter === "none"} onClick={() => setBodyFilter("none")} />
+              )}
+            </div>
+          )}
           {categoriesInUse.length > 0 && (
             <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
               <CategoryChip
@@ -484,12 +577,17 @@ export default function MapPage() {
             )}
             {view === "map" && withCoordinates.length > 0 && (
               <>
-                <MapView
-                  className="h-[420px] rounded-[var(--radius-lg)] border border-[var(--color-hairline)] sm:h-[520px]"
-                  initialCenter={FALLBACK_CENTER}
-                  initialZoom={11}
-                  onMapReady={handleMapReady}
-                />
+                <div className="relative">
+                  <MapView
+                    className="h-[420px] rounded-[var(--radius-card)] border border-[var(--color-hairline)] sm:h-[520px]"
+                    initialCenter={FALLBACK_CENTER}
+                    initialZoom={11}
+                    basemap={basemap}
+                    theme={theme}
+                    onMapReady={handleMapReady}
+                  />
+                  <BasemapToggle value={basemap} onChange={setBasemap} />
+                </div>
                 {withoutCoordinates > 0 && (
                   <p className="type-caption text-[var(--color-body-muted)]">
                     มี {withoutCoordinates.toLocaleString("th-TH")}{" "}
@@ -561,11 +659,29 @@ export default function MapPage() {
                   รายละเอียดพันธกิจ {selectedGroup.name}
                 </SheetDescription>
               </SheetHeader>
-              <GroupDetailBody group={selectedGroup} />
+              <GroupDetailBody
+                group={selectedGroup}
+                body={(() => {
+                  const body = bodyOf(selectedGroup);
+                  return body ? { name: body.name, color: colorOf(selectedGroup) } : null;
+                })()}
+                canEdit={canEditPoint(selectedGroup)}
+                onPin={() => {
+                  setPickerGroup(selectedGroup);
+                  setSelectedGroup(null);
+                }}
+              />
             </>
           )}
         </SheetContent>
       </Sheet>
+      <LocationPicker
+        open={pickerGroup !== null}
+        onOpenChange={open => !open && setPickerGroup(null)}
+        title={pickerGroup ? `ปักพิกัด: ${pickerGroup.name}` : "ปักพิกัด"}
+        initial={pickerGroup ? toLatLng(pickerGroup.latitude, pickerGroup.longitude) : null}
+        onConfirm={point => (pickerGroup ? savePoint(pickerGroup, point) : undefined)}
+      />
     </AppLayout>
   );
 }
