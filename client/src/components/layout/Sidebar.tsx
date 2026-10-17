@@ -318,7 +318,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                         aria-current={isActive ? "page" : undefined}
                         className={`type-caption-strong flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-on-dark)] max-lg:min-h-[4.5rem] max-lg:flex-col max-lg:justify-center max-lg:gap-1.5 max-lg:px-2 max-lg:text-center ${
                           isActive
-                            ? "pk-nav-active bg-[var(--color-primary-on-dark)]/15 text-[var(--color-primary-on-dark)] max-lg:font-semibold max-lg:ring-2 max-lg:ring-inset max-lg:ring-[var(--color-primary-on-dark)]"
+                            ? "pk-nav-active bg-[var(--color-primary-on-dark)]/15 text-[var(--color-on-dark)] max-lg:font-semibold max-lg:ring-2 max-lg:ring-inset max-lg:ring-[var(--color-primary-on-dark)]"
                             : "text-[var(--color-on-dark-muted)] hover:bg-[var(--color-on-dark)]/5 hover:text-[var(--color-on-dark)]"
                         }`}
                       >
