@@ -19,7 +19,9 @@
     "db:migrate": "dotenv -e .env.local -- tsx server/scripts/migrate.ts",
     "db:migrate:env": "tsx server/scripts/migrate.ts",
     "db:set-pin": "dotenv -e .env.local -- tsx server/scripts/set-pin.ts",
-    "db:set-pin:env": "tsx server/scripts/set-pin.ts"
+    "db:set-pin:env": "tsx server/scripts/set-pin.ts",
+    "db:seed": "dotenv -e .env.local -- tsx server/scripts/seed.ts",
+    "db:seed:env": "tsx server/scripts/seed.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
