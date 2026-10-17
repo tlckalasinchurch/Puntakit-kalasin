@@ -7,8 +7,6 @@ import {
   Inbox as InboxIcon,
   ListTodo,
   Megaphone,
-  RotateCw,
-  ShieldCheck,
   UserRound,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
