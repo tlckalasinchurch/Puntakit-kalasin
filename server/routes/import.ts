@@ -27,6 +27,7 @@ import {
 } from "../../shared/import.js";
 import { PRIVILEGED_ROLES } from "../../shared/roles.js";
 import { requireAdmin, requireAuth, requireRole } from "../middleware/auth.js";
+import { requireImportWriter } from "../middleware/importAccess.js";
 import { logAudit } from "../lib/audit.js";
 import { runAtomically } from "../db/atomic.js";
 import { isUniqueViolation, KNOWN_UNIQUE_CONSTRAINTS } from "../lib/dbErrors.js";
@@ -408,16 +409,18 @@ async function importWorkbookBytesUnchecked(
   };
 }
 
-// 1. POST /upload — parse a workbook into L1 + L2 (admin only)
+// 1. POST /upload — parse a workbook into L1 + L2 (super_admin only)
 // Raw body path. Vercel caps a function request at 4.5 MB, so real workbooks
 // go through /upload/token + /upload/from-blob below; this path stays for
 // small files, self-hosted deployments and tests.
 importRouter.post(
   "/upload",
+  // The role check runs before the body parser so a refused caller never makes the
+  // server buffer an upload of up to IMPORT_UPLOAD_MAX_BYTES.
+  requireImportWriter,
   // The workbook bytes ARE the request body (application/octet-stream). No
   // multipart dependency, and the file never passes through JSON parsing.
   express.raw({ type: "application/octet-stream", limit: IMPORT_UPLOAD_MAX_BYTES }),
-  requireAdmin,
   async (req, res, next) => {
     try {
       const fileName = sanitizeFileName(req.headers[IMPORT_UPLOAD_FILENAME_HEADER] as string | undefined);
@@ -432,9 +435,9 @@ importRouter.post(
   }
 );
 
-// 1b. POST /upload/token — Vercel Blob client-upload handshake (admin only).
+// 1b. POST /upload/token — Vercel Blob client-upload handshake (super_admin only).
 // The browser uploads straight to a PRIVATE blob; only a short token passes here.
-importRouter.post("/upload/token", requireAdmin, async (req, res, next) => {
+importRouter.post("/upload/token", requireImportWriter, async (req, res, next) => {
   try {
     res.json(await createImportUploadToken(req));
   } catch (err) {
@@ -442,13 +445,13 @@ importRouter.post("/upload/token", requireAdmin, async (req, res, next) => {
   }
 });
 
-// 1c. POST /upload/from-blob — import a workbook the browser put in Blob (admin only).
+// 1c. POST /upload/from-blob — import a workbook the browser put in Blob (super_admin only).
 //
 // Retention: the blob is deleted as soon as its bytes are fully in memory, before
 // parsing and writing. So a failed import needs a re-upload (the file is gone).
 // Deletion is not guaranteed: a timeout, a failed read or a failed delete leaves
 // the blob in storage; those cases are recorded in the audit log (never silent).
-importRouter.post("/upload/from-blob", requireAdmin, async (req, res, next) => {
+importRouter.post("/upload/from-blob", requireImportWriter, async (req, res, next) => {
   try {
     const parsedBody = importFromBlobBodySchema.safeParse(req.body);
     if (!parsedBody.success) {
@@ -761,9 +764,9 @@ importRouter.get("/duplicates", requireImportReader, async (req, res, next) => {
   }
 });
 
-// 5b. POST /duplicates/decisions — record a human decision on a candidate group (admin).
+// 5b. POST /duplicates/decisions — record a human decision on a candidate group (super_admin).
 // Append-only; it never merges, edits or promotes any row (§8).
-importRouter.post("/duplicates/decisions", requireAdmin, async (req, res, next) => {
+importRouter.post("/duplicates/decisions", requireImportWriter, async (req, res, next) => {
   try {
     const parsed = importDuplicateDecisionBodySchema.safeParse(req.body);
     if (!parsed.success) {
@@ -831,8 +834,8 @@ importRouter.post("/duplicates/decisions", requireAdmin, async (req, res, next) 
   }
 });
 
-// 6. POST /rules/:id/confirm — a human confirms a normalization rule (admin)
-importRouter.post("/rules/:id/confirm", requireAdmin, async (req, res, next) => {
+// 6. POST /rules/:id/confirm — a human confirms a normalization rule (super_admin)
+importRouter.post("/rules/:id/confirm", requireImportWriter, async (req, res, next) => {
   try {
     const id = requireUuidParam(req);
     if (!importRuleConfirmSchema.safeParse(req.body ?? {}).success) {

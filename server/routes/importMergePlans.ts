@@ -20,7 +20,8 @@ import {
   type ImportMergeField,
 } from "../../shared/importMerge.js";
 import { PRIVILEGED_ROLES } from "../../shared/roles.js";
-import { requireAdmin, requireRole } from "../middleware/auth.js";
+import { requireRole } from "../middleware/auth.js";
+import { requireImportWriter } from "../middleware/importAccess.js";
 import { logAudit } from "../lib/audit.js";
 import { duplicateGroupFingerprint } from "../lib/missionImport.js";
 import { isUniqueViolation, KNOWN_UNIQUE_CONSTRAINTS } from "../lib/dbErrors.js";
@@ -172,8 +173,8 @@ mergePlansRouter.get("/", requireReader, async (req, res, next) => {
   }
 });
 
-// POST / — propose a merge plan for a group decided "same person" (admin)
-mergePlansRouter.post("/", requireAdmin, async (req, res, next) => {
+// POST / — propose a merge plan for a group decided "same person" (super_admin)
+mergePlansRouter.post("/", requireImportWriter, async (req, res, next) => {
   try {
     const parsed = importMergePlanBodySchema.safeParse(req.body);
     if (!parsed.success) throw new ValidationError("ข้อมูลแผนรวมไม่ถูกต้อง", zodDetails(parsed.error.issues));
@@ -268,8 +269,8 @@ async function loadOpenPlan(id: string): Promise<ImportMergePlanRow> {
   return plan;
 }
 
-// POST /:id/review — a second admin approves or rejects (admin)
-mergePlansRouter.post("/:id/review", requireAdmin, async (req, res, next) => {
+// POST /:id/review — a second super_admin approves or rejects (super_admin)
+mergePlansRouter.post("/:id/review", requireImportWriter, async (req, res, next) => {
   try {
     const id = planIdParam(req);
     const parsed = importMergeReviewBodySchema.safeParse(req.body);
@@ -317,8 +318,8 @@ mergePlansRouter.post("/:id/review", requireAdmin, async (req, res, next) => {
   }
 });
 
-// POST /:id/withdraw — the proposer takes back an open plan (admin)
-mergePlansRouter.post("/:id/withdraw", requireAdmin, async (req, res, next) => {
+// POST /:id/withdraw — the proposer takes back an open plan (super_admin)
+mergePlansRouter.post("/:id/withdraw", requireImportWriter, async (req, res, next) => {
   try {
     const id = planIdParam(req);
     const plan = await loadOpenPlan(id);

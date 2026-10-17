@@ -109,12 +109,12 @@ describe("merge plans (four-eyes approval, no merge executed)", () => {
       });
     });
 
-    const make = async (email: string, name: string, role: "admin" | "staff") => {
+    const make = async (email: string, name: string, role: "super_admin" | "staff") => {
       const [row] = await db.insert(schema.users).values({ email, passwordHash: "x", name, role }).returning();
       return `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: row.id, email: row.email, role })}`;
     };
-    admin1 = await make("a1@merge-test.local", "Admin One", "admin");
-    admin2 = await make("a2@merge-test.local", "Admin Two", "admin");
+    admin1 = await make("a1@merge-test.local", "Admin One", "super_admin");
+    admin2 = await make("a2@merge-test.local", "Admin Two", "super_admin");
     staff = await make("s@merge-test.local", "Staff", "staff");
 
     const upload = await fetch(`${baseUrl}/api/import/upload`, {

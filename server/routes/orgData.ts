@@ -1,19 +1,19 @@
 import { Router } from "express";
 import { z } from "zod";
 import { getDb } from "../db/client.js";
-import { ADMIN_ROLES } from "../../shared/roles.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth } from "../middleware/auth.js";
+import { requireImportWriter } from "../middleware/importAccess.js";
 import { logAudit } from "../lib/audit.js";
 import { ValidationError } from "../lib/errors.js";
 import { applyOrgLoad, buildOrgRows, describeOrgLoad, orgDatasetSchema, rollbackOrgLoad } from "../lib/orgDataset.js";
 
 /**
- * Admin-only loader for the prepared org dataset (body -> care group -> member).
- * The dataset is uploaded by the admin from the browser. It is never stored in
+ * Super-admin-only loader for the prepared org dataset (body -> care group -> member).
+ * The dataset is uploaded by the super admin from the browser. It is never stored in
  * the repository and never logged: audit details carry counts only.
  */
 export const orgDataRouter = Router();
-orgDataRouter.use(requireAuth, requireRole(...ADMIN_ROLES));
+orgDataRouter.use(requireAuth, requireImportWriter);
 
 const bodySchema = z.object({ dataset: orgDatasetSchema, confirm: z.boolean().optional() });
 

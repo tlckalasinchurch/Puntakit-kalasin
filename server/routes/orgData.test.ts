@@ -92,9 +92,9 @@ describe("Org dataset loader (real PGlite Postgres)", () => {
         resolve();
       });
     });
-    const [admin] = await db.insert(schema.users).values({ email: "a@org.local", passwordHash: "x", name: "A", role: "admin" }).returning();
+    const [admin] = await db.insert(schema.users).values({ email: "a@org.local", passwordHash: "x", name: "A", role: "super_admin" }).returning();
     const [staff] = await db.insert(schema.users).values({ email: "s@org.local", passwordHash: "x", name: "S", role: "staff" }).returning();
-    adminCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: admin.id, email: admin.email, role: "admin" })}`;
+    adminCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: admin.id, email: admin.email, role: "super_admin" })}`;
     staffCookie = `${authLib.AUTH_COOKIE_NAME}=${authLib.signAuthToken({ sub: staff.id, email: staff.email, role: "staff" })}`;
   }, 120_000);
 
@@ -111,7 +111,7 @@ describe("Org dataset loader (real PGlite Postgres)", () => {
     gm: (await db.select({ c: sqlCount() }).from(schema.groupMembers))[0].c,
   });
 
-  it("is admin-only and requires a session", async () => {
+  it("is super_admin-only and requires a session", async () => {
     expect((await fetch(`${baseUrl}/api/org-data/dry-run`, { method: "POST" })).status).toBe(401);
     expect((await post("/dry-run", { dataset }, staffCookie)).status).toBe(403);
   });
