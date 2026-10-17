@@ -470,7 +470,7 @@ describe("Audit 2026-10-04 — permissions, error states and mobile forms", () =
       /<Route path="\/reports">\s*<ProtectedRoute allow=\{PRIVILEGED_ROLES\}>/
     );
     expect(app).toMatch(
-      /<Route path="\/import\/org">\s*<ProtectedRoute allow=\{ADMIN_ROLES\}>/
+      /<Route path="\/import\/org">\s*<ProtectedRoute allow=\{SUPER_ADMIN_ROLES\}>/
     );
     // The member PWA stays open to every signed-in role.
     expect(app).toMatch(/<Route path="\/app">\s*<ProtectedRoute>/);

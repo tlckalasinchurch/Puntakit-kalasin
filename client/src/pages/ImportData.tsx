@@ -8,7 +8,7 @@ import { ListSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
-import { ADMIN_ROLES, PRIVILEGED_ROLES, hasRole } from "@shared/roles";
+import { PRIVILEGED_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { IMPORT_BLOB_PREFIX, IMPORT_UPLOAD_FILENAME_HEADER, IMPORT_UPLOAD_MAX_BYTES } from "@shared/importUpload";
 
@@ -75,7 +75,8 @@ export default function ImportData() {
   usePageTitle("นำเข้าข้อมูลจาก Excel");
   const { user } = useAuth();
   const canRead = hasRole(user?.role, PRIVILEGED_ROLES);
-  const canImport = hasRole(user?.role, ADMIN_ROLES);
+  // Writing import data is super_admin only (server: requireImportWriter); reading stays PRIVILEGED_ROLES.
+  const canImport = hasRole(user?.role, SUPER_ADMIN_ROLES);
 
   const [batches, setBatches] = useState<BatchRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -166,7 +167,7 @@ export default function ImportData() {
         description="อัปโหลดทะเบียนพันธกิจ (.xlsx) เพื่อตรวจสอบก่อน ข้อมูลยังไม่ถูกส่งเข้าทะเบียนสมาชิกหรือกลุ่ม"
         secondaryActions={[
           { label: "ตรวจสอบข้อมูลซ้ำ", href: "/import/duplicates" },
-          { label: "โหลดข้อมูลผังองค์กร", href: "/import/org" },
+          ...(canImport ? [{ label: "โหลดข้อมูลผังองค์กร", href: "/import/org" }] : []),
           { label: "รีเฟรช", icon: RefreshCw, onClick: () => void loadBatches() },
         ]}
       />

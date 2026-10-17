@@ -7,7 +7,7 @@ import { EmptyState, ErrorState, Field, PageHeader, StatusChip, type StatusTone 
 import { ListSkeleton } from "@/components/LoadingStates";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
-import { ADMIN_ROLES, PRIVILEGED_ROLES, hasRole } from "@shared/roles";
+import { PRIVILEGED_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
 import {
   IMPORT_MERGE_FIELDS,
   IMPORT_MERGE_FIELD_LABELS,
@@ -206,7 +206,7 @@ function PlanCard({ plan, userId, canAct, onDone }: { plan: Plan; userId: string
 export default function ImportMergeApprovals() {
   const { user } = useAuth();
   const canRead = hasRole(user?.role, PRIVILEGED_ROLES);
-  const canAct = hasRole(user?.role, ADMIN_ROLES);
+  const canAct = hasRole(user?.role, SUPER_ADMIN_ROLES);
 
   const [status, setStatus] = useState<StatusFilter>("proposed");
   const [data, setData] = useState<PlansResponse | null>(null);
@@ -263,7 +263,7 @@ export default function ImportMergeApprovals() {
           )}
         </Field>
         {IMPORT_MERGE_REQUIRES_SECOND_REVIEWER && (
-          <p className="type-fine mt-3 text-[var(--color-body-muted)]">ผู้เสนอแผนอนุมัติแผนของตัวเองไม่ได้ ต้องมีผู้ดูแลระบบอย่างน้อย 2 คน</p>
+          <p className="type-fine mt-3 text-[var(--color-body-muted)]">ผู้เสนอแผนอนุมัติแผนของตัวเองไม่ได้ ต้องมีผู้ดูแลระบบสูงสุดอย่างน้อย 2 คน</p>
         )}
       </section>
 

@@ -6,7 +6,7 @@ import { EmptyState, PageHeader } from "@/components/DesignSystem";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
-import { ADMIN_ROLES, hasRole } from "@shared/roles";
+import { SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 /**
@@ -42,7 +42,7 @@ const OUTLINE = `${BUTTON} border border-[var(--color-hairline)] text-[var(--col
 
 export default function ImportOrgData() {
   const { user } = useAuth();
-  const isAdmin = hasRole(user?.role, ADMIN_ROLES);
+  const isSuperAdmin = hasRole(user?.role, SUPER_ADMIN_ROLES);
   usePageTitle("โหลดข้อมูลผังองค์กร");
   const [dataset, setDataset] = useState<unknown>(null);
   const [fileName, setFileName] = useState("");
@@ -53,11 +53,11 @@ export default function ImportOrgData() {
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<"apply" | "rollback" | null>(null);
 
-  if (!isAdmin) {
+  if (!isSuperAdmin) {
     return (
       <AppLayout>
         <PageHeader title="โหลดข้อมูลผังองค์กร" description="โหลดบอดี้ พันธกิจ และสมาชิกจากไฟล์ข้อมูลที่เตรียมไว้" />
-        <EmptyState icon={Lock} title="ไม่มีสิทธิ์เข้าถึง" description="หน้านี้จำกัดเฉพาะผู้ดูแลระบบ" />
+        <EmptyState icon={Lock} title="ไม่มีสิทธิ์เข้าถึง" description="หน้านี้จำกัดเฉพาะผู้ดูแลระบบสูงสุด" />
       </AppLayout>
     );
   }
