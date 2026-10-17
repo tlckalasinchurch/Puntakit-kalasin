@@ -39,6 +39,7 @@ import type { Gender, MembershipStatus } from "@shared/schema";
 import { MEMBERSHIP_STATUS_LABELS } from "@shared/labels";
 import {
   ADMIN_ROLES,
+  CREATE_ROLES,
   MEMBER_CREATE_ROLES,
   MEMBER_UPDATE_ROLES,
   hasRole,
@@ -274,12 +275,19 @@ export default function Members() {
   // Without options the picker simply hides.
   const [careOptions, setCareOptions] = useState<{ body: string; cares: { id: string; name: string }[] }[]>([]);
   const [careFilter, setCareFilter] = useState("");
+  const canLoadCareGroups = hasRole(user?.role, CREATE_ROLES);
+  const isGroupLeader = user?.role === "group_leader";
   useEffect(() => {
+    // viewer reads the directory but not /api/care/groups (403 in the console).
+    if (!canLoadCareGroups) {
+      setCareOptions([]);
+      return;
+    }
     api
       .get<{ bodies: { name: string; careGroups: { id: string; name: string }[] }[] }>("/api/care/groups")
       .then((o) => setCareOptions(o.bodies.map((b) => ({ body: b.name, cares: b.careGroups }))))
       .catch(() => setCareOptions([]));
-  }, []);
+  }, [canLoadCareGroups]);
 
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -739,8 +747,12 @@ export default function Members() {
         ) : (
           <EmptyState
             icon={Users}
-            title="ยังไม่มีสมาชิกในระบบ"
-            description="เพิ่มสมาชิกคนแรกเพื่อเริ่มบันทึกการดูแลและติดตาม"
+            title={isGroupLeader ? "ยังไม่มีสมาชิกในขอบเขตของคุณ" : "ยังไม่มีสมาชิกในระบบ"}
+            description={
+              isGroupLeader
+                ? "คุณเห็นเฉพาะสมาชิกของพันธกิจที่คุณดูแล (และแคร์ที่อยู่ใต้บอดี้ของคุณ) หากควรมีสมาชิกอยู่ ให้แจ้งเจ้าหน้าที่ตรวจการมอบหมาย"
+                : "เพิ่มสมาชิกคนแรกเพื่อเริ่มบันทึกการดูแลและติดตาม"
+            }
             action={
               canCreate
                 ? { label: "เพิ่มสมาชิก", icon: UserPlus, onClick: openCreate }
