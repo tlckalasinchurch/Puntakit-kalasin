@@ -69,6 +69,15 @@ export function usePageWideFailure(): boolean {
 /** The single alert for a page-wide failure, with one retry for every failed query. */
 export function HomeFailureBanner() {
   const ctx = useContext(HomeFailuresContext);
+  // A retry that has been asked for but whose queries have not yet left the failed state: a second
+  // activation would send every request twice. The ref covers two clicks before React re-renders.
+  const retryingRef = useRef(false);
+  const [retrying, setRetrying] = useState(false);
+  const failedKeys = ctx ? Object.keys(ctx.failures).join(",") : "";
+  useEffect(() => {
+    retryingRef.current = false;
+    setRetrying(false);
+  }, [failedKeys]);
   if (!ctx || !isPageWideFailure(Object.keys(ctx.failures))) return null;
 
   const failed = Object.values(ctx.failures);
@@ -79,7 +88,13 @@ export function HomeFailureBanner() {
       description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ ส่วนที่โหลดไม่ได้จะแสดงข้อความสั้น ๆ แทน กรุณาลองอีกครั้ง"
       technical={technical || undefined}
       retryLabel="ลองอีกครั้งทั้งหมด"
-      onRetry={() => failed.forEach((f) => f.retry())}
+      retryDisabled={retrying}
+      onRetry={() => {
+        if (retryingRef.current) return;
+        retryingRef.current = true;
+        setRetrying(true);
+        failed.forEach((f) => f.retry());
+      }}
     />
   );
 }

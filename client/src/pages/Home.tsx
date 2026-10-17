@@ -572,10 +572,9 @@ function HomeContent() {
   const canSeeOperations = Boolean(
     user && OPERATIONS_ROLES.includes(user.role)
   );
-  // Group leaders get the date under the heading and no search box (their menu is
-  // short); this is a layout switch, not a role label (those come from ROLE_LABELS in
-  // shared/labels.ts). The heading itself is the same for every role: "งานวันนี้" is the
-  // nav item that opens /care, and Home must not share its name.
+  // Group leaders get the date under the heading and no search box; this is a layout switch,
+  // not a role label (those come from ROLE_LABELS in shared/labels.ts). The heading itself is
+  // the same for every role: "งานวันนี้" is the nav item that opens /care, and Home must not share its name.
   const isGroupLeader = user?.role === "group_leader";
 
   // Redirect member role directly to Member PWA
@@ -600,7 +599,6 @@ function HomeContent() {
       <div className="home-editorial space-y-12 lg:space-y-20">
         {/* Only renders when two or more of the page's queries have failed together. */}
         <HomeFailureBanner />
-        {/* Greeting + search, then the organisation at a glance */}
         {/* Phase 2: Role-aware hero. The heading is the same for every role; group leaders
             get today's date under it and the check-in tile first (see homeTiles). */}
         <section aria-labelledby="home-title" className="space-y-6">
@@ -639,7 +637,7 @@ function HomeContent() {
         </section>
 
         {/* People and groups that need a decision come right after the greeting and
-            shortcuts, ahead of the organisation snapshot, the weekly-report note,
+            shortcuts, ahead of the organisation snapshot,
             events and news: someone opening the app should reach this without
             scrolling past those. */}
         <section aria-labelledby="home-attention">

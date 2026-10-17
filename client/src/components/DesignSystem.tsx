@@ -288,6 +288,8 @@ interface ErrorStateProps {
   /** The underlying technical message, shown only behind a disclosure. */
   technical?: string;
   onRetry?: () => void;
+  /** Disables the retry button, e.g. while a retry is already in flight. */
+  retryDisabled?: boolean;
   retryLabel?: string;
   inset?: boolean;
 }
@@ -297,6 +299,7 @@ export function ErrorState({
   description = "ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง",
   technical,
   onRetry,
+  retryDisabled = false,
   retryLabel = "ลองอีกครั้ง",
   inset = false,
 }: ErrorStateProps) {
@@ -357,7 +360,8 @@ export function ErrorState({
         <button
           type="button"
           onClick={onRetry}
-          className="inline-flex min-h-11 shrink-0 items-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+          disabled={retryDisabled}
+          className="inline-flex min-h-11 shrink-0 items-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
         >
           {retryLabel}
         </button>

@@ -72,4 +72,13 @@ describe("Home failures: one banner for several failures, section errors for one
     expect(failures).toMatch(/current\[key\]\.technical === failure\.technical\) return current;/);
     expect(failures).toMatch(/if \(!\(key in current\)\) return current;/);
   });
+
+  it("retry-all cannot fire twice before the queries leave the failed state", () => {
+    const banner = failures.slice(failures.indexOf("export function HomeFailureBanner"));
+    expect(banner).toContain("retryingRef");
+    expect(banner).toMatch(/if \(retryingRef\.current\) return;\s*retryingRef\.current = true;\s*setRetrying\(true\);\s*failed\.forEach/);
+    expect(banner).toContain("retryDisabled={retrying}");
+    // re-armed when the set of failed queries changes
+    expect(banner).toMatch(/retryingRef\.current = false;\s*setRetrying\(false\);\s*\}, \[failedKeys\]\)/);
+  });
 });

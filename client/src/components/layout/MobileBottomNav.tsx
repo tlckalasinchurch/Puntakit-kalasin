@@ -13,7 +13,8 @@ interface MobileBottomNavProps {
  * Bottom navigation for phones (hidden from `lg`, where the sidebar is
  * always visible). It carries only the destinations used every week: home,
  * care-group check-in (for roles that can record attendance), members and
- * groups, plus a button that opens the full menu. Reports and everything else
+ * groups (group leaders: home, today's work, follow-ups and members), plus a
+ * button that opens the full menu. Reports and everything else
  * stay in the drawer so this bar never grows past five targets.
  */
 export function MobileBottomNav({ onMenu, menuOpen }: MobileBottomNavProps) {

@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { ICON_SIZE } from "@/lib/icon-sizes";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -50,8 +50,8 @@ function useUnreadCount(path: string | null): number {
 /**
  * Sticky chrome. 76px tall per brand-spec.md §Composition.
  *
- * The notification bell reports a real pending-work count (submissions
- * awaiting review) for reviewer roles, and stays badge-free otherwise —
+ * The notification bell reports a real pending-work count (new submissions,
+ * `status=new`) for reviewer roles, and stays badge-free otherwise —
  * never the old hard-coded "0" badge.
  */
 export function Topbar({ onMenu, menuOpen }: TopbarProps) {
@@ -60,6 +60,8 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
   // The avatar used to log out on a single tap, right beside the theme and inbox buttons. It now asks first.
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  // `loggingOut` only disables the button after a re-render; the ref stops a second activation before that.
+  const loggingOutRef = useRef(false);
 
   // Pending submissions are review work, not general notifications. Only roles
   // that can review them see the shortcut; it opens the matching Inbox screen.
@@ -164,11 +166,14 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
             if (!loggingOut) setConfirmingLogout(false);
           }}
           onConfirm={() => {
+            if (loggingOutRef.current) return;
+            loggingOutRef.current = true;
             setLoggingOut(true);
             // logout() never rejects (an expired session already counts as signed out). Normally the
             // app moves to /login and this unmounts; if the session survives, do not leave the
             // dialog stuck on "กำลังออกจากระบบ…".
             void logout().finally(() => {
+              loggingOutRef.current = false;
               setLoggingOut(false);
               setConfirmingLogout(false);
             });

@@ -39,7 +39,7 @@ describe("Topbar avatar: asking before logging out", () => {
     const cancel = topbar.slice(topbar.indexOf("onCancel={"), topbar.indexOf("onConfirm={"));
     expect(cancel).toContain("setConfirmingLogout(false)");
     expect(cancel).not.toContain("logout");
-    expect(topbar).toMatch(/void logout\(\)\.finally\(\(\) => \{\s*setLoggingOut\(false\);\s*setConfirmingLogout\(false\);/);
+    expect(topbar).toMatch(/void logout\(\)\.finally\(\(\) => \{\s*(?:loggingOutRef\.current = false;\s*)?setLoggingOut\(false\);\s*setConfirmingLogout\(false\);/);
   });
 
   it("the dialog is a sibling of the header, never inside it (the header clips overflow and has a backdrop filter)", () => {
@@ -52,5 +52,11 @@ describe("Topbar avatar: asking before logging out", () => {
     expect(button).toContain('type="button"');
     expect(button).toContain('aria-label="ออกจากระบบ"');
     expect(button).toContain("focus-visible:ring-2");
+  });
+
+  it("a second confirm while logout is in flight is ignored, and the guard is released afterwards", () => {
+    const confirm = topbar.slice(topbar.indexOf("onConfirm={"));
+    expect(confirm).toMatch(/if \(loggingOutRef\.current\) return;\s*loggingOutRef\.current = true;\s*setLoggingOut\(true\);/);
+    expect(confirm).toMatch(/\.finally\(\(\) => \{\s*loggingOutRef\.current = false;/);
   });
 });
