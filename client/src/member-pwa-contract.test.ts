@@ -100,6 +100,56 @@ describe("Member PWA: text on lifted dark tiles", () => {
   });
 });
 
+describe("Member PWA: no dead links", () => {
+  /** Route patterns declared in App.tsx, `:param` segments matching any one segment. */
+  const routes = [...read("client/src/App.tsx").matchAll(/<Route path="([^"]+)"/g)].map((m) => m[1]).filter((p) => p !== "*");
+  const matches = (p: string) =>
+    routes.some((r) => new RegExp(`^${r.replace(/:[^/]+/g, "[^/]+")}$`).test(p));
+
+  /** Internal destinations written in a file: href="/x", href: "/x", href={`/x/${id}`} (a ${…} is one segment). */
+  const hrefs = (rel: string) =>
+    [...code(rel).matchAll(/href(?:=\{?|: )\s*[`"'](\/[^`"'?#]*)/g)].map((m) => m[1].replace(/\$\{[^}]*\}/g, "x"));
+
+  it("knows the member routes, so the check below is not vacuous", () => {
+    expect(routes).toContain("/app/reports");
+    expect(matches("/app/reports")).toBe(true);
+    expect(matches("/app/reports/123")).toBe(false); // the page that never existed
+  });
+
+  it("every internal link in the member PWA resolves to a route in App.tsx", () => {
+    const dead: string[] = [];
+    for (const rel of MEMBER_FILES) for (const href of hrefs(rel)) if (!matches(href)) dead.push(`${rel}: ${href}`);
+    expect(dead).toEqual([]);
+  });
+
+  it("report rows are read-only cards that carry their own detail, and the list reads the unwrapped API result", () => {
+    const src = read("client/src/pages/member/MemberReports.tsx");
+    expect(src).not.toMatch(/<Link\b/);
+    expect(src).toMatch(/<article\b/);
+    expect(src).toContain("sub.rawText");
+    // api.get resolves to res.data already; reading `.data` again made the list always empty
+    expect(src).toMatch(/api\.get<Submission\[\]>\("\/api\/submissions/);
+    expect(src).not.toMatch(/api\.get<\{ data:/);
+  });
+});
+
+describe("Member reports: statuses", () => {
+  it("labels and tones every real submission status, with the same wording as the staff Inbox", async () => {
+    const { MISSION_SUBMISSION_STATUSES } = await import("../../shared/schema");
+    const body = (rel: string, name: string) => read(rel).match(new RegExp(`const ${name}[^=]*= \\{([\\s\\S]*?)\\n\\};`))![1];
+    const pairs = (b: string) => Object.fromEntries([...b.matchAll(/(\w+):\s*"([^"]+)"/g)].map((m) => [m[1], m[2]]));
+
+    const member = pairs(body("client/src/pages/member/MemberReports.tsx", "STATUS_LABELS"));
+    const staff = pairs(body("client/src/pages/Inbox.tsx", "STATUS_LABELS"));
+    const tones = pairs(body("client/src/pages/member/MemberReports.tsx", "STATUS_TONE"));
+    expect(Object.keys(member).sort()).toEqual([...MISSION_SUBMISSION_STATUSES].sort());
+    expect(Object.keys(tones).sort()).toEqual([...MISSION_SUBMISSION_STATUSES].sort());
+    expect(member).toEqual(staff);
+    // the old map (draft/submitted/published) matched only "rejected" and showed raw codes for the rest
+    expect(read("client/src/pages/member/MemberReports.tsx")).not.toMatch(/\b(draft|submitted|published):/);
+  });
+});
+
 describe("Member home: the report CTA that is not available yet", () => {
   const hero = read("client/src/components/lamb/LambHero.tsx");
 

@@ -1,33 +1,36 @@
 import { useEffect, useState } from "react";
-import { Link } from "wouter";
-import { CalendarDays, ChevronRight, ClipboardList, Plus } from "lucide-react";
+import { CalendarDays, ClipboardList, Plus } from "lucide-react";
 import { MemberAppLayout } from "@/components/layout/MemberAppLayout";
 import { LambMascot } from "@/components/lamb/LambMascot";
 import { ListSkeleton } from "@/components/LoadingStates";
-import { EmptyState, ErrorState, StatusChip } from "@/components/DesignSystem";
+import { EmptyState, ErrorState, StatusChip, type StatusTone } from "@/components/DesignSystem";
 import { api, ApiError } from "@/lib/api";
+import type { MissionSubmissionStatus } from "@shared/schema";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface Submission {
   id: string;
-  status: string;
+  status: MissionSubmissionStatus;
   rawText: string | null;
   submittedByLabel: string | null;
   createdAt: string;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "ร่าง",
-  submitted: "ส่งแล้ว",
-  published: "เผยแพร่แล้ว",
-  rejected: "ตีกลับ",
+// Same wording and tones as the staff Inbox (pages/Inbox.tsx), keyed by the real database statuses.
+const STATUS_LABELS: Record<MissionSubmissionStatus, string> = {
+  new: "ใหม่",
+  reviewing: "กำลังตรวจสอบ",
+  needs_info: "ต้องการข้อมูลเพิ่ม",
+  approved: "อนุมัติแล้ว",
+  rejected: "ปฏิเสธ",
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-[var(--color-canvas-soft)] text-[var(--color-body-muted)]",
-  submitted: "bg-[var(--color-info-soft)] text-[var(--color-info-ink)]",
-  published: "bg-[var(--color-success-soft)] text-[var(--color-success-ink)]",
-  rejected: "bg-[var(--color-error-soft)] text-[var(--color-error-ink)]",
+const STATUS_TONE: Record<MissionSubmissionStatus, StatusTone> = {
+  new: "info",
+  reviewing: "warning",
+  needs_info: "warning",
+  approved: "success",
+  rejected: "neutral",
 };
 
 /**
@@ -42,8 +45,9 @@ export default function MemberReports() {
   const fetchSubmissions = async () => {
     setError(null);
     try {
-      const res = await api.get<{ data: Submission[] }>("/api/submissions?limit=20");
-      setSubmissions(res.data ?? []);
+      // api.get already unwraps the { success, data } envelope: it resolves to the array itself.
+      const rows = await api.get<Submission[]>("/api/submissions?limit=20");
+      setSubmissions(rows ?? []);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "โหลดรายงานไม่สำเร็จ");
     } finally {
@@ -108,35 +112,34 @@ export default function MemberReports() {
           <ul className="space-y-3">
             {submissions.map(sub => (
               <li key={sub.id}>
-                <Link
-                  href={`/app/reports/${sub.id}`}
-                  className="flex items-center gap-4 rounded-2xl bg-[var(--color-surface)] p-4 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-                >
+                {/* Read-only on purpose: there is no /app/reports/:id page, so this is not a link.
+                    Everything the member needs is on the card. */}
+                <article className="flex items-start gap-4 rounded-2xl bg-[var(--color-surface)] p-4 shadow-sm">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-accent-soft)] text-[var(--lamb-primary)]">
                     <ClipboardList size={22} aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-[var(--color-ink)]">
-                      {sub.submittedByLabel || "รายงานพันธกิจ"}
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-[var(--color-ink)]">
+                        {sub.submittedByLabel || "รายงานพันธกิจ"}
+                      </span>
+                      <StatusChip tone={STATUS_TONE[sub.status] ?? "neutral"}>
+                        {STATUS_LABELS[sub.status] ?? "ไม่ระบุสถานะ"}
+                      </StatusChip>
                     </span>
-                    <span className="mt-0.5 flex items-center gap-2 text-xs text-[var(--color-body-muted)]">
+                    {sub.rawText?.trim() && (
+                      <span className="mt-1 line-clamp-3 block whitespace-pre-line text-sm text-[var(--color-text-secondary)]">
+                        {sub.rawText.trim()}
+                      </span>
+                    )}
+                    <span className="mt-1 flex items-center gap-1.5 text-xs text-[var(--color-body-muted)]">
                       <CalendarDays size={12} aria-hidden="true" />
                       {new Date(sub.createdAt).toLocaleDateString("th-TH", {
                         dateStyle: "medium",
                       })}
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLORS[sub.status] ?? STATUS_COLORS.draft}`}
-                      >
-                        {STATUS_LABELS[sub.status] ?? sub.status}
-                      </span>
                     </span>
                   </span>
-                  <ChevronRight
-                    size={18}
-                    aria-hidden="true"
-                    className="shrink-0 text-[var(--color-text-quaternary)]"
-                  />
-                </Link>
+                </article>
               </li>
             ))}
           </ul>
