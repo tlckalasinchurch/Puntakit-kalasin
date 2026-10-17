@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
+import { getBrowserStorage, readStoredCollapsed, writeStoredCollapsed } from "@/lib/sidebarState";
 import { PageViewTabs } from "./PageViewTabs";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
@@ -17,7 +18,26 @@ interface AppLayoutProps {
  * 15-item sidebar in one tab.
  */
 export function AppLayout({ children }: AppLayoutProps) {
+  // Two separate states: `menuOpen` is the off-canvas drawer below lg, `collapsed` is the desktop
+  // icon rail from lg up. Neither feeds the other.
   const [menuOpen, setMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => readStoredCollapsed(getBrowserStorage()));
+
+  useEffect(() => {
+    writeStoredCollapsed(getBrowserStorage(), collapsed);
+  }, [collapsed]);
+
+  // Rotating a tablet or widening a window to desktop while the drawer is open would leave it
+  // (and its scroll lock) on screen behind the permanent sidebar, so close it.
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(min-width: 1024px)");
+    const onChange = (event: MediaQueryListEvent) => {
+      if (event.matches) setMenuOpen(false);
+    };
+    query.addEventListener?.("change", onChange);
+    return () => query.removeEventListener?.("change", onChange);
+  }, []);
 
   return (
     <div className="pk-premium pk-atmosphere flex h-dvh overflow-hidden font-sans text-[var(--color-ink)] antialiased">
@@ -28,7 +48,12 @@ export function AppLayout({ children }: AppLayoutProps) {
         ข้ามไปที่เนื้อหาหลัก
       </a>
 
-      <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <Sidebar
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        collapsed={collapsed}
+        onToggleCollapsed={() => setCollapsed(value => !value)}
+      />
 
       {/* Safe-area insets go on THIS wrapper, not on .pk-route: the route
           carries `px-4 sm:px-6 lg:px-8`, and an inline padding-left/right here

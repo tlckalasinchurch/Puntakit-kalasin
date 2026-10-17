@@ -5,7 +5,7 @@ import { Cross } from "lucide-react";
  * each layout override it — the admin sidebar sits on graphite, the member PWA
  * header sits on white, and hardcoded `text-white` was unreadable on the latter.
  */
-export function Logo({ tone = "onDark" }: { tone?: "onDark" | "onLight" }) {
+export function Logo({ tone = "onDark", textClassName }: { tone?: "onDark" | "onLight"; textClassName?: string }) {
   const wordmark =
     tone === "onDark" ? "text-[var(--color-on-dark)]" : "text-[var(--color-ink)]";
   const sub =
@@ -21,7 +21,7 @@ export function Logo({ tone = "onDark" }: { tone?: "onDark" | "onLight" }) {
       >
         <Cross size={22} strokeWidth={2.6} />
       </span>
-      <span className="min-w-0">
+      <span className={`min-w-0 ${textClassName ?? ""}`}>
         <strong className={`type-body-strong block leading-tight ${wordmark}`}>
           Puntakit
         </strong>
