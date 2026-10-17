@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { GroupPhotoField } from "@/components/groups/GroupPhotoField";
 import { LocationPicker } from "@/components/map/LocationPicker";
 import { Button } from "@/components/ui/button";
 import { formatCoordinate, toLatLng } from "@/lib/geo";
@@ -235,6 +236,7 @@ export default function Groups() {
   const [editingGroup, setEditingGroup] = useState<GroupItem | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -334,6 +336,7 @@ export default function Groups() {
 
   const openEditModal = (grp: GroupItem) => {
     setEditingGroup(grp);
+    setPhotoUrl(grp.coverUrl);
     setForm({
       name: grp.name,
       leaderId: grp.leaderId || "",
@@ -950,13 +953,13 @@ export default function Groups() {
                 </select>
               )}
             </Field>
-            <Field label="คำอธิบายหรือเป้าหมายของกลุ่ม">
+            <Field label="รายละเอียดและจุดสังเกต" hint="แสดงบนการ์ดแผนที่ เช่น วัน-เวลาประชุม เส้นทางเข้าบ้าน จุดสังเกต">
               {fieldProps => (
                 <textarea
                   {...fieldProps}
                   rows={3}
                   className={`${INPUT_CLASS} py-2`}
-                  placeholder="รายละเอียดเพิ่มเติมของกลุ่ม…"
+                  placeholder="เช่น ประชุมทุกวันพุธ 19:00 ตรงข้ามร้านค้า ซอยข้างวัด บ้านรั้วสีขาว…"
                   value={form.description}
                   onChange={(e) =>
                     setForm({ ...form, description: e.target.value })
@@ -1071,6 +1074,23 @@ export default function Groups() {
               </Button>
               <p className="type-fine mt-1 text-[var(--color-body-muted)]">ใช้ตำแหน่งปัจจุบัน แตะบนแผนที่ หรือวางลิงก์ Google Maps แล้วระบบกรอกละติจูด/ลองจิจูดให้</p>
             </div>
+            {editingGroup ? (
+              <div>
+                <p className="type-caption-strong mb-2 text-[var(--color-ink)]">รูปสถานที่</p>
+                <GroupPhotoField
+                  groupId={editingGroup.id}
+                  groupName={editingGroup.name}
+                  url={photoUrl}
+                  canEdit
+                  onChange={(url) => {
+                    setPhotoUrl(url);
+                    fetchGroups();
+                  }}
+                />
+              </div>
+            ) : (
+              <p className="type-fine text-[var(--color-body-muted)]">เพิ่มรูปสถานที่ได้หลังสร้างกลุ่มแล้ว (เปิดกลุ่มนี้อีกครั้งเพื่อแก้ไข)</p>
+            )}
             <label className="flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] p-3">
               <input
                 type="checkbox"

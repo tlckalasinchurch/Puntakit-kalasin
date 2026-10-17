@@ -1,19 +1,15 @@
 /**
- * LEAFLET MAP WRAPPER (no API key, no billing, no external script)
+ * MAPLIBRE GL JS MAP WRAPPER
  *
- * Leaflet initialises synchronously against the DOM; tiles are plain <img>
- * requests to public tile servers (listed in `vercel.json` img-src).
+ * Vector map rendered with WebGL by MapLibre, no API key and no billing:
  *
- *   street  OpenStreetMap standard tiles (Thai place and road names), with the
- *           OSM France "HOT" style as a one-way fallback. In dark mode the street
- *           tiles are inverted by CSS (`.pk-map-dark`) so the map never blinds a
- *           dark-mode user at night.
- *   satellite  Esri World Imagery (for finding a real roof)
+ *   street light  OpenFreeMap "liberty"
+ *   street dark   OpenFreeMap "dark"
+ *   satellite     Esri World Imagery (a raster source in an inline style)
  *
- * CARTO Voyager / Dark Matter were tried first and rejected: the unauthenticated
- * `basemaps.cartocdn.com` tiles now come back stamped "API KEY REQUIRED". If
- * traffic ever outgrows OSM's tile usage policy, switch `STREET` to a keyed
- * provider (the key would have to live in a build-time env var).
+ * The style follows the app theme. Pins are DOM markers (see `pins.ts`), which a
+ * `setStyle()` between light, dark and satellite does not touch. When WebGL is not
+ * available (some WebViews) the wrapper renders `MapUnavailable` instead of an empty box.
  *
  * USAGE FROM PARENT COMPONENT:
  *
@@ -26,80 +22,54 @@
  * />
  */
 
-import { useEffect, useRef } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { useEffect, useRef, useState } from "react";
+import * as maplibregl from "maplibre-gl";
+import type { StyleSpecification } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+// MapLibre 6 finds its worker next to its own file, which is wrong once Vite pre-bundles or
+// chunks it (dev: .vite/deps, production: /assets). Point it at the real worker file explicitly.
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+import { MapUnavailable } from "@/components/map/MapUnavailable";
 import { usePersistFn } from "@/hooks/usePersistFn";
+import { hasWebGL } from "@/lib/webgl";
 import { cn } from "@/lib/utils";
 
-const OSM_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors';
+maplibregl.setWorkerUrl(workerUrl);
 
 export type Basemap = "street" | "satellite";
 export type MapTheme = "light" | "dark";
 
-interface TileProvider {
-  url: string;
-  attribution: string;
-  subdomains?: string;
-  maxZoom: number;
-}
+const OPENFREEMAP = "https://tiles.openfreemap.org/styles";
 
-const STREET: TileProvider = {
-  url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-  attribution: OSM_ATTRIBUTION,
-  subdomains: "abc",
-  maxZoom: 19,
-};
-const STREET_FALLBACK: TileProvider = {
-  url: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
-  attribution: `${OSM_ATTRIBUTION}, tiles by <a href="https://www.hotosm.org/" target="_blank" rel="noreferrer">HOT</a>`,
-  subdomains: "abc",
-  maxZoom: 19,
-};
-const SATELLITE: TileProvider = {
-  url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-  attribution: "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
-  maxZoom: 19,
+/** Esri imagery has no labels or text layers, so this style needs no glyphs or sprite. */
+const SATELLITE_STYLE: StyleSpecification = {
+  version: 8,
+  sources: {
+    esri: {
+      type: "raster",
+      tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+    },
+  },
+  layers: [{ id: "esri-imagery", type: "raster", source: "esri" }],
 };
 
-/** The provider chain for a base map: the first entry is used, the rest are one-way fallbacks. */
-export function providersFor(basemap: Basemap): TileProvider[] {
-  return basemap === "satellite" ? [SATELLITE] : [STREET, STREET_FALLBACK];
-}
-
-// How many tile load failures on the current provider before failing over:
-// low enough to react quickly, high enough that a few edge/ocean tiles
-// (which some providers omit) don't trigger a false failover.
-const TILE_ERROR_FAILOVER_THRESHOLD = 6;
-
-/** Adds the provider at `chain[index]` and wires failover to the next one. */
-function addTileLayer(map: L.Map, chain: TileProvider[], index: number, onLayer: (layer: L.TileLayer) => void) {
-  const provider = chain[index];
-  const layer = L.tileLayer(provider.url, {
-    maxZoom: provider.maxZoom,
-    attribution: provider.attribution,
-    ...(provider.subdomains ? { subdomains: provider.subdomains } : {}),
-  }).addTo(map);
-  onLayer(layer);
-
-  if (index + 1 >= chain.length) return;
-  let errorCount = 0;
-  layer.on("tileerror", () => {
-    errorCount += 1;
-    if (errorCount < TILE_ERROR_FAILOVER_THRESHOLD) return;
-    map.removeLayer(layer);
-    addTileLayer(map, chain, index + 1, onLayer);
-  });
+export function styleFor(basemap: Basemap, theme: MapTheme): string | StyleSpecification {
+  if (basemap === "satellite") return SATELLITE_STYLE;
+  return `${OPENFREEMAP}/${theme === "dark" ? "dark" : "liberty"}`;
 }
 
 interface MapViewProps {
   className?: string;
-  initialCenter?: L.LatLngLiteral;
+  initialCenter?: { lat: number; lng: number };
   initialZoom?: number;
   basemap?: Basemap;
   theme?: MapTheme;
-  onMapReady?: (map: L.Map) => void;
+  /** Where the "open in Google Maps" link of the no-WebGL fallback should go. */
+  fallbackTarget?: { lat: number; lng: number } | null;
+  onMapReady?: (map: maplibregl.Map) => void;
 }
 
 export function MapView({
@@ -108,24 +78,32 @@ export function MapView({
   initialZoom = 12,
   basemap = "street",
   theme = "light",
+  fallbackTarget = null,
   onMapReady,
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<L.Map | null>(null);
-  const tileLayer = useRef<L.TileLayer | null>(null);
+  const map = useRef<maplibregl.Map | null>(null);
+  const style = useRef<string | StyleSpecification>(styleFor(basemap, theme));
+  const [unavailable, setUnavailable] = useState(() => !hasWebGL());
 
   const init = usePersistFn(() => {
-    if (!mapContainer.current || map.current) return;
-
-    const instance = L.map(mapContainer.current, {
-      center: initialCenter,
-      zoom: initialZoom,
-      // Set explicitly: the base layer is added after the map exists (it follows the theme), and
-      // plugins such as marker clustering read the max zoom before any layer is present.
-      maxZoom: 19,
-    });
-    map.current = instance;
-    onMapReady?.(instance);
+    if (unavailable || !mapContainer.current || map.current) return;
+    try {
+      const instance = new maplibregl.Map({
+        container: mapContainer.current,
+        style: style.current,
+        center: [initialCenter.lng, initialCenter.lat],
+        zoom: initialZoom,
+        maxZoom: 19,
+        attributionControl: { compact: true },
+      });
+      instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
+      map.current = instance;
+      onMapReady?.(instance);
+    } catch {
+      // A context that probed fine can still fail to initialise (low memory, lost context).
+      setUnavailable(true);
+    }
   });
 
   useEffect(() => {
@@ -133,21 +111,17 @@ export function MapView({
     return () => {
       map.current?.remove();
       map.current = null;
-      tileLayer.current = null;
     };
-  }, [init]);
+  }, [init, unavailable]);
 
-  // (Re)draw the base map whenever the style or the theme changes.
+  // Swap the base style when the theme or the street/satellite choice changes.
   useEffect(() => {
-    const instance = map.current;
-    if (!instance) return;
-    if (tileLayer.current) instance.removeLayer(tileLayer.current);
-    addTileLayer(instance, providersFor(basemap), 0, (layer) => {
-      tileLayer.current = layer;
-    });
-  }, [basemap]);
+    const next = styleFor(basemap, theme);
+    if (next === style.current) return;
+    style.current = next;
+    map.current?.setStyle(next);
+  }, [basemap, theme]);
 
-  // Dark street map = the light OSM tiles inverted in CSS; imagery is left as photographed.
-  const dark = theme === "dark" && basemap === "street";
-  return <div ref={mapContainer} className={cn("w-full h-[500px]", dark && "pk-map-dark", className)} />;
+  if (unavailable) return <MapUnavailable className={className} target={fallbackTarget} />;
+  return <div ref={mapContainer} className={cn("w-full h-[500px]", className)} />;
 }

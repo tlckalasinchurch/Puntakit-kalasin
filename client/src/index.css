@@ -195,14 +195,11 @@
   .type-fine { font-size: 12px; font-weight: 400; line-height: 1.4; }
 }
 
-/* Leaflet's own zoom control buttons default to 26px (30px in its "touch" variant),
-   under the V2 44px touch-target minimum. Attribution text is left at its
-   conventional small size — that's required copyright text, not an app control. */
-.leaflet-control-zoom-in,
-.leaflet-control-zoom-out {
+/* MapLibre's zoom buttons default to 29px, under the V2 44px touch-target minimum. Attribution
+   text is left at its conventional small size — that's required copyright text, not an app control. */
+.maplibregl-ctrl-group button {
   width: 44px !important;
   height: 44px !important;
-  line-height: 44px !important;
 }
 /* Base element rules live in the base layer so Tailwind utilities on shared
    primitives (text size, weight, borders) are not overridden by unlayered CSS. */
@@ -3069,9 +3066,4 @@
 }
 .dark .lamb-art {
   box-shadow: 0 0 0 1px var(--color-hairline);
-}
-
-/* Dark street map: invert the light OSM tiles (pins and controls are in other panes and are untouched). */
-.pk-map-dark .leaflet-tile-pane {
-  filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.7);
 }

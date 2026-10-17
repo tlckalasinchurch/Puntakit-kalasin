@@ -259,6 +259,74 @@ describe("media upload, member cards", () => {
     });
   });
 
+  describe("group place photo", () => {
+    const putGroup = async (role: string, id: string, body: Record<string, unknown>) => {
+      const res = await fetch(`${baseUrl}/api/groups/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Cookie: cookies[role] },
+        body: JSON.stringify(body),
+      });
+      return { status: res.status, json: (await res.json()) as { data?: any } };
+    };
+    const groupRow = async (role: string, id: string) =>
+      ((await getJson(role, "/api/groups")).json.data as Array<Record<string, any>>).find((g) => g.id === id)!;
+    let firstUrl: string;
+
+    it("only people who may edit the group can set its photo (same rule as PUT /api/groups/:id)", async () => {
+      expect((await upload(null, `kind=group_photo&groupId=${ids.c1}`, JPEG)).status).toBe(401);
+      expect((await upload("viewer", `kind=group_photo&groupId=${ids.c1}`, JPEG)).status).toBe(403);
+      expect((await upload("staff", `kind=group_photo&groupId=${ids.c1}`, JPEG)).status).toBe(403);
+      expect((await upload("self", `kind=group_photo&groupId=${ids.c1}`, JPEG)).status).toBe(403);
+      // another group's leader may not touch this group
+      expect((await upload("careB", `kind=group_photo&groupId=${ids.c1}`, JPEG)).status).toBe(403);
+    });
+
+    it("rejects a missing or unknown group and a file that is not an image", async () => {
+      expect((await upload("admin", "kind=group_photo", JPEG)).status).toBe(400);
+      expect((await upload("admin", `kind=group_photo&groupId=${ids.c1}`, NOT_IMAGE, "image/jpeg")).status).toBe(400);
+      expect((await upload("admin", "kind=group_photo&groupId=00000000-0000-4000-8000-000000000000", JPEG)).status).toBe(404);
+    });
+
+    it("the group's own leader uploads; the photo becomes the group's coverUrl and every shell role can read it", async () => {
+      const res = await upload("careA", `kind=group_photo&groupId=${ids.c1}`, JPEG);
+      expect(res.status).toBe(201);
+      firstUrl = res.json.data!.url;
+      expect((await groupRow("admin", ids.c1)).coverUrl).toBe(firstUrl);
+      for (const role of ["admin", "careA", "viewer", "staff"]) {
+        const image = await fetchImage(role, firstUrl);
+        expect(image.status, role).toBe(200);
+        expect(image.type).toBe("image/jpeg");
+        expect(image.body.equals(JPEG)).toBe(true);
+      }
+      expect((await fetchImage("self", firstUrl)).status).toBe(404); // a plain member never reads it
+      expect((await fetchImage(null, firstUrl)).status).toBe(401);
+    });
+
+    it("a new photo replaces the old one", async () => {
+      const res = await upload("admin", `kind=group_photo&groupId=${ids.c1}`, JPEG2);
+      expect(res.status).toBe(201);
+      expect((await groupRow("admin", ids.c1)).coverUrl).toBe(res.json.data!.url);
+      expect((await fetchImage("admin", firstUrl)).status).toBe(404);
+      expect((await fetchImage("admin", res.json.data!.url)).body.equals(JPEG2)).toBe(true);
+    });
+
+    it("a private group's photo is hidden with its coordinates from people who do not manage it", async () => {
+      expect((await putGroup("admin", ids.c1, { privacy: "private", latitude: "16.4322", longitude: "103.5061" })).status).toBe(200);
+      const url = (await groupRow("admin", ids.c1)).coverUrl as string;
+      expect(url).toMatch(/^\/api\/media\//);
+
+      const seenByViewer = await groupRow("viewer", ids.c1);
+      expect(seenByViewer.coverUrl).toBeNull();
+      expect(seenByViewer.latitude).toBeNull();
+      expect((await fetchImage("viewer", url)).status).toBe(404);
+      expect((await fetchImage("careB", url)).status).toBe(404);
+
+      expect((await groupRow("careA", ids.c1)).coverUrl).toBe(url);
+      expect((await fetchImage("careA", url)).status).toBe(200);
+      expect((await fetchImage("admin", url)).status).toBe(200);
+    });
+  });
+
   describe("membership card data", () => {
     it("is read from the register and never carries contact details", async () => {
       const res = await getJson("admin", `/api/member-cards/${ids.m1}`);

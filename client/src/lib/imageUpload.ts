@@ -59,3 +59,10 @@ export function uploadMissionPhoto(groupId: string, image: PreparedImage): Promi
     "Content-Type": "image/jpeg",
   });
 }
+
+/** The place photo shown on the map card of a group (becomes the group's `coverUrl`). */
+export function uploadGroupPhoto(groupId: string, image: PreparedImage): Promise<UploadedImage> {
+  return api.postBody<UploadedImage>(`/api/media?kind=group_photo&groupId=${encodeURIComponent(groupId)}`, image.blob, {
+    "Content-Type": "image/jpeg",
+  });
+}

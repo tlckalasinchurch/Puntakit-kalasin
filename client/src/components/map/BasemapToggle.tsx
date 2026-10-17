@@ -24,7 +24,7 @@ export function BasemapToggle({ value, onChange }: { value: Basemap; onChange: (
     <div
       role="group"
       aria-label="รูปแบบแผนที่"
-      className="absolute right-3 top-3 z-[500] inline-flex overflow-hidden rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]"
+      className="absolute right-3 top-3 z-10 inline-flex overflow-hidden rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]"
     >
       {option("street", "แผนที่ถนน")}
       {option("satellite", "ดาวเทียม")}

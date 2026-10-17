@@ -7,31 +7,50 @@ import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..", "..");
 const read = (rel: string) => readFileSync(path.join(root, rel), "utf8");
 
-describe("map base layers", () => {
+describe("map engine and base layers", () => {
   const map = read("client/src/components/Map.tsx");
 
-  it("uses OSM for streets (inverted in dark mode) and Esri World Imagery for satellite", () => {
-    expect(map).toContain("tile.openstreetmap.org/{z}/{x}/{y}.png");
+  it("is MapLibre GL, with OpenFreeMap liberty (light) and dark styles and Esri World Imagery for satellite", () => {
+    expect(map).toContain('from "maplibre-gl"');
+    expect(map).toContain("https://tiles.openfreemap.org/styles");
+    expect(map).toMatch(/theme === "dark" \? "dark" : "liberty"/);
     expect(map).toContain("server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}");
-    expect(map).toMatch(/basemap === "satellite" \? \[SATELLITE\] : \[STREET, STREET_FALLBACK\]/);
-    expect(map).toMatch(/theme === "dark" && basemap === "street"/);
-    expect(read("client/src/index.css")).toMatch(/\.pk-map-dark \.leaflet-tile-pane \{[^}]*invert\(1\)/);
+    expect(map).toMatch(/basemap === "satellite"\) return SATELLITE_STYLE/);
+    expect(map).toContain("map.current?.setStyle(next)");
   });
 
-  it("does not use CARTO tiles, which return an API-key watermark without a key", () => {
-    expect(map).not.toMatch(/https:\/\/\{s\}\.basemaps\.cartocdn\.com/);
+  it("points MapLibre at its worker file explicitly (its default lookup breaks under Vite)", () => {
+    expect(map).toContain('from "maplibre-gl/dist/maplibre-gl-worker.mjs?url"');
+    expect(map).toContain("maplibregl.setWorkerUrl(workerUrl)");
   });
 
-  it("sets maxZoom on the map itself, because the base layer is added after the map exists", () => {
-    expect(map).toMatch(/L\.map\(mapContainer\.current,\s*\{[^}]*maxZoom:\s*19/);
-  });
-
-  it("the CSP lets every tile host load", () => {
-    const imgSrc = read("vercel.json").match(/img-src[^;]*/)![0];
-    for (const host of ["tile.openstreetmap.org", "tile.openstreetmap.fr", "server.arcgisonline.com"]) {
-      expect(imgSrc, host).toContain(host);
+  it("no longer ships Leaflet or CARTO", () => {
+    for (const rel of ["client/src/components/Map.tsx", "client/src/pages/Map.tsx", "client/src/components/map/LocationPicker.tsx", "client/src/components/map/pins.ts"]) {
+      expect(read(rel), rel).not.toMatch(/from "leaflet|leaflet\./);
     }
-    expect(imgSrc).not.toContain("cartocdn");
+    const pkg = read("package.json");
+    expect(pkg).toContain('"maplibre-gl"');
+    expect(pkg).not.toMatch(/"leaflet/);
+    expect(map).not.toContain("cartocdn");
+  });
+
+  it("falls back to a message with a Google Maps link when WebGL is missing", () => {
+    expect(map).toContain("useState(() => !hasWebGL())");
+    expect(map).toContain("<MapUnavailable");
+    const fallback = read("client/src/components/map/MapUnavailable.tsx");
+    expect(fallback).toContain("https://www.google.com/maps/");
+    expect(fallback).toContain('data-testid="map-unavailable"');
+    expect(read("client/src/lib/webgl.ts")).toMatch(/getContext\("webgl2"\)/);
+  });
+
+  it("the CSP lets the style, tiles, glyphs, imagery and workers load", () => {
+    const csp = read("vercel.json");
+    const dir = (name: string) => csp.match(new RegExp(`${name}[^;]*`))![0];
+    expect(dir("img-src")).toContain("https://tiles.openfreemap.org");
+    expect(dir("img-src")).toContain("https://server.arcgisonline.com");
+    expect(dir("connect-src")).toContain("https://tiles.openfreemap.org");
+    expect(dir("worker-src")).toContain("blob:");
+    expect(csp).not.toContain("cartocdn");
   });
 });
 
@@ -42,8 +61,15 @@ describe("/map page", () => {
     expect(page).toContain("theme={theme}");
     expect(page).toContain("basemap={basemap}");
     expect(page).toContain("<BasemapToggle");
-    expect(page).toContain("pinDivIcon({ visibleSize: 28, color: colorOf(group) })");
+    expect(page).toContain("color: colorOf(group)");
+    expect(page).toContain("clusterPoints(placed, CLUSTER_RADIUS_PX)");
     expect(page).toContain('aria-label="กรองตามบอดี้"');
+  });
+
+  it("keeps the basemap toggle below the detail sheet (isolated stacking context, low z-index)", () => {
+    expect(read("client/src/components/map/BasemapToggle.tsx")).not.toMatch(/z-\[\d{3,}\]/);
+    expect(page).toContain('className="relative isolate"');
+    expect(read("client/src/components/map/LocationPicker.tsx")).toContain('className="relative isolate"');
   });
 
   it("shows only groups that have real coordinates, and never invents any", () => {
@@ -106,5 +132,30 @@ describe("page-level fixes", () => {
     const css = read("client/src/index.css");
     expect(css).toMatch(/\.dark \.lamb-art \{[^}]*box-shadow/);
     expect(css).toMatch(/\.clay-screen \{ background: transparent/);
+  });
+});
+
+describe("group place photo and details (client)", () => {
+  it("uploads through the group_photo media kind and stores it as the group's cover", () => {
+    expect(read("client/src/lib/imageUpload.ts")).toContain("/api/media?kind=group_photo&groupId=");
+    expect(read("shared/schema.ts")).toContain('"group_photo"');
+  });
+
+  it("the map card shows the photo and the details, and editors can change the photo", () => {
+    const page = read("client/src/pages/Map.tsx");
+    expect(page).toContain("<GroupPhotoField");
+    expect(page).toContain("canEdit={canEdit}");
+    expect(page).toContain("รายละเอียดและจุดสังเกต");
+    expect(page).toContain("coverUrl: string | null");
+    const field = read("client/src/components/groups/GroupPhotoField.tsx");
+    expect(field).toContain("if (!hasPhoto && !canEdit) return null"); // no empty frame for viewers
+    expect(field).toContain("onError={() => setFailed(true)}"); // a broken image hides itself
+  });
+
+  it("the group form offers the photo (after the group exists) and the details field", () => {
+    const groups = read("client/src/pages/Groups.tsx");
+    expect(groups).toContain("<GroupPhotoField");
+    expect(groups).toContain("รายละเอียดและจุดสังเกต");
+    expect(groups).toContain("เพิ่มรูปสถานที่ได้หลังสร้างกลุ่มแล้ว");
   });
 });

@@ -1,34 +1,70 @@
-import L from "leaflet";
+import * as maplibregl from "maplibre-gl";
 
 /**
- * Map pins. A visible dot wrapped in a larger invisible hit area, so the marker
- * reads as a normal pin but still meets the 44px touch-target minimum.
+ * Map pins as real DOM buttons. A visible dot sits inside a larger invisible hit area, so a
+ * pin reads as a normal marker but still meets the 44px touch-target minimum, and being a
+ * <button> it is reachable and activatable from the keyboard.
  *
- * Plain inline styles, not Tailwind classes: the HTML string is handed to
- * Leaflet, which mounts it outside Tailwind's stylesheet scan. `color` is a
- * literal hex (a body's identity colour) because it must be identical on the
- * light, dark and satellite base maps; the white ring keeps it visible on all.
+ * Inline styles, not Tailwind classes: these elements are created outside React. `color` is a
+ * literal hex (a body's identity colour) because it must be identical on the light, dark and
+ * satellite base maps; the white ring keeps it visible on all of them.
  */
 export const PIN_HIT_SIZE = 44;
 
-export function pinHtml({ visibleSize, label, color }: { visibleSize: number; label?: string; color: string }) {
-  const hitSize = Math.max(PIN_HIT_SIZE, visibleSize);
-  const fontSize = visibleSize >= 40 ? 13 : 11;
-  return `
-    <div style="width:${hitSize}px;height:${hitSize}px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
-      <div style="width:${visibleSize}px;height:${visibleSize}px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Prompt',system-ui,sans-serif;font-weight:700;font-size:${fontSize}px;line-height:1;">
-        ${label ?? ""}
-      </div>
-    </div>
-  `;
+export interface PinOptions {
+  visibleSize: number;
+  color: string;
+  /** Short text in the dot (a cluster count). */
+  label?: string;
+  /** Accessible name. */
+  title: string;
+  onClick?: () => void;
 }
 
-export function pinDivIcon(options: { visibleSize: number; label?: string; color: string }) {
-  const hitSize = Math.max(PIN_HIT_SIZE, options.visibleSize);
-  return L.divIcon({
-    html: pinHtml(options),
-    className: "", // clear Leaflet's default divIcon class (white box + border)
-    iconSize: [hitSize, hitSize],
-    iconAnchor: [hitSize / 2, hitSize / 2],
+export function createPinElement({ visibleSize, color, label, title, onClick }: PinOptions): HTMLButtonElement {
+  const hit = Math.max(PIN_HIT_SIZE, visibleSize);
+  const button = document.createElement("button");
+  button.type = "button";
+  button.title = title;
+  button.setAttribute("aria-label", title);
+  Object.assign(button.style, {
+    width: `${hit}px`,
+    height: `${hit}px`,
+    padding: "0",
+    border: "0",
+    background: "transparent",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
   });
+
+  const dot = document.createElement("span");
+  dot.setAttribute("aria-hidden", "true");
+  Object.assign(dot.style, {
+    width: `${visibleSize}px`,
+    height: `${visibleSize}px`,
+    borderRadius: "50%",
+    background: color,
+    border: "3px solid #fff",
+    boxShadow: "0 1px 5px rgba(0,0,0,.45)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#fff",
+    fontFamily: "'Prompt', system-ui, sans-serif",
+    fontWeight: "700",
+    fontSize: visibleSize >= 40 ? "13px" : "11px",
+    lineHeight: "1",
+  });
+  if (label) dot.textContent = label;
+  button.appendChild(dot);
+  if (onClick) button.addEventListener("click", onClick);
+  return button;
+}
+
+/** A marker centred on the point. */
+export function createPinMarker(options: PinOptions & { draggable?: boolean }): maplibregl.Marker {
+  const { draggable, ...pin } = options;
+  return new maplibregl.Marker({ element: createPinElement(pin), anchor: "center", draggable: draggable ?? false });
 }

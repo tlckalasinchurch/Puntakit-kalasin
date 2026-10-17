@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import L from "leaflet";
+import type * as maplibregl from "maplibre-gl";
 import { LocateFixed, MapPin } from "lucide-react";
 import { MapView, type Basemap } from "@/components/Map";
 import { BasemapToggle } from "@/components/map/BasemapToggle";
-import { pinDivIcon } from "@/components/map/pins";
+import { createPinMarker } from "@/components/map/pins";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -43,8 +43,8 @@ export function LocationPicker({ open, onOpenChange, title, initial, confirmLabe
   const [message, setMessage] = useState<{ tone: "error" | "info"; text: string } | null>(null);
   const [locating, setLocating] = useState(false);
   const [saving, setSaving] = useState(false);
-  const mapRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markerRef = useRef<maplibregl.Marker | null>(null);
   const appliedPaste = useRef("");
 
   // A fresh start each time the dialog opens.
@@ -64,28 +64,28 @@ export function LocationPicker({ open, onOpenChange, title, initial, confirmLabe
     const map = mapRef.current;
     if (!map) return;
     if (!markerRef.current) {
-      const marker = L.marker(next, { icon: pinDivIcon({ visibleSize: 30, color: PIN_COLOR }), draggable: true, title: "ลากเพื่อปรับตำแหน่ง", alt: "หมุดตำแหน่งพันธกิจ" });
+      const marker = createPinMarker({ visibleSize: 30, color: PIN_COLOR, title: "หมุดตำแหน่งพันธกิจ (ลากเพื่อปรับตำแหน่ง)", draggable: true });
+      marker.setLngLat([next.lng, next.lat]).addTo(map);
       marker.on("dragend", () => {
-        const at = marker.getLatLng();
+        const at = marker.getLngLat();
         setPoint({ lat: at.lat, lng: at.lng });
       });
-      marker.addTo(map);
       markerRef.current = marker;
     } else {
-      markerRef.current.setLatLng(next);
+      markerRef.current.setLngLat([next.lng, next.lat]);
     }
-    if (recenter) map.setView(next, Math.max(map.getZoom(), 16));
+    if (recenter) map.easeTo({ center: [next.lng, next.lat], zoom: Math.max(map.getZoom(), 16) });
   }, []);
 
   const handleMapReady = useCallback(
-    (map: L.Map) => {
+    (map: maplibregl.Map) => {
       mapRef.current = map;
       markerRef.current = null;
-      map.on("click", (event: L.LeafletMouseEvent) => place({ lat: event.latlng.lat, lng: event.latlng.lng }, false));
+      map.on("click", (event) => place({ lat: event.lngLat.lat, lng: event.lngLat.lng }, false));
       // The dialog animates in, so the container is not final size yet.
-      window.setTimeout(() => map.invalidateSize(), 120);
+      window.setTimeout(() => map.resize(), 150);
       if (initial) {
-        map.setView(initial, 16);
+        map.jumpTo({ center: [initial.lng, initial.lat], zoom: 16 });
         place(initial, false);
       }
     },
@@ -187,13 +187,14 @@ export function LocationPicker({ open, onOpenChange, title, initial, confirmLabe
           </label>
         </div>
 
-        <div className="relative">
+        <div className="relative isolate">
           <MapView
             className="h-[300px] rounded-[var(--radius-tile)] border border-[var(--color-hairline)] sm:h-[360px]"
             initialCenter={initial ?? KALASIN_CENTER}
             initialZoom={initial ? 16 : 11}
             basemap={basemap}
             theme={theme}
+            fallbackTarget={point}
             onMapReady={handleMapReady}
           />
           <BasemapToggle value={basemap} onChange={setBasemap} />
