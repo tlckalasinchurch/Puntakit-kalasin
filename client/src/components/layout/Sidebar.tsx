@@ -5,15 +5,11 @@ import {
   Building2,
   CalendarDays,
   Camera,
-  HeartHandshake,
   KeyRound,
   Home as HomeIcon,
   Inbox as InboxIcon,
   ListChecks,
   ListTodo,
-  MapPin,
-  Megaphone,
-  Network,
   ShieldCheck,
   Sparkles,
   UserCheck,
@@ -28,6 +24,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { ADMIN_ROLES, CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, PRIVILEGED_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
 import type { UserRole } from "@shared/schema";
+import { isGroupHeadActive } from "@/lib/pageViews";
 import { Logo } from "./Logo";
 
 export interface NavGroup {
@@ -76,49 +73,29 @@ export const navGroups: NavGroup[] = [
     name: "หลัก",
     items: [
       { label: "หน้าหลัก", path: "/", icon: HomeIcon },
-      {
-        label: "ผังองค์กร",
-        path: "/org",
-        icon: Network,
-        roles: PRIVILEGED_ROLES,
-      },
+      // The heads of the page-view groups (lib/pageViews.ts): the other pages of
+      // each group (ผังองค์กร, ฝ่ายงาน, แผนที่, สถานะรายปี, เช็คชื่อกลุ่มดูแล,
+      // ข่าวประกาศ) are one tap away on the tab bar and keep their own routes.
       { label: "สมาชิก", path: "/members", icon: Users },
-      {
-        label: "สถานะสมาชิก",
-        path: "/memberships",
-        icon: BadgeCheck,
-        roles: MEMBERSHIP_VIEW_ROLES,
-      },
       { label: "พันธกิจ", path: "/groups", icon: UsersRound },
     ],
   },
   {
     name: "งานดูแล",
     items: [
-      {
-        label: "เช็คชื่อกลุ่มดูแล",
-        path: "/care",
-        icon: ListChecks,
-        roles: CREATE_ROLES,
-      },
-      { label: "เช็คชื่อวันนมัสการ", path: "/attendance", icon: UserCheck },
+      { label: "เช็คชื่อ", path: "/attendance", icon: UserCheck },
       { label: "การติดตาม", path: "/follow-up", icon: ListTodo },
       { label: "กิจกรรม", path: "/events", icon: CalendarDays },
     ],
   },
   {
     name: "สื่อสารและกิจกรรม",
-    items: [
-      { label: "ฟีดกิจกรรม", path: "/feed", icon: Camera },
-      { label: "การประกาศ", path: "/announcements", icon: Megaphone },
-      { label: "แผนที่พันธกิจ", path: "/map", icon: MapPin },
-    ],
+    items: [{ label: "ฟีดและข่าวสาร", path: "/feed", icon: Camera }],
   },
   {
     name: "คริสตจักร",
     items: [
       { label: "ข้อมูลคริสตจักร", path: "/church", icon: Building2 },
-      { label: "ฝ่ายงาน", path: "/ministries", icon: HeartHandshake },
       {
         label: "รายงาน",
         path: "/reports",
@@ -253,6 +230,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   // Phase 1: group leaders get a focused menu (their weekly work only),
   // not the full 18-item admin navigation.
   const baseGroups = user?.role === "group_leader" ? groupLeaderNavGroups : navGroups;
+  // The full menu keeps one entry per page-view group, so it reads as current on any page of the group.
+  // The focused group_leader menu lists its pages individually and matches exactly.
+  const matchGroups = baseGroups === navGroups;
   const visibleGroups = baseGroups
     .map(group => ({
       ...group,
@@ -309,7 +289,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   const isActive =
                     location === path ||
                     (path === "/events" && location === "/worship") ||
-                    (path === "/import" && location.startsWith("/import/"));
+                    (path === "/import" && location.startsWith("/import/")) ||
+                    (matchGroups && isGroupHeadActive(path, location));
                   return (
                     <li key={path}>
                       <Link

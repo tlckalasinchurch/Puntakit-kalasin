@@ -75,6 +75,7 @@ describe.each([
     ["canvas-sunken", sunken],
     ["accent-soft", accent],
     ["accent-soft on surface", accentOnSurface],
+    ["accent-soft on sunken (page-view tab)", color("--color-accent-soft", sunken)],
   ];
 
   it.each(["--color-ink", "--color-body", "--color-body-muted", "--color-text-secondary", "--color-text-tertiary", "--color-text-quaternary", "--color-primary-ink"])(

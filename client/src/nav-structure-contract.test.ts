@@ -27,9 +27,11 @@ const entry = (src: string, route: string): string => {
 };
 
 describe("admin navigation contract", () => {
-  it("uses distinct labels for the two check-in destinations", () => {
-    expect(entry(sidebar, "/care")).toContain('label: "เช็คชื่อกลุ่มดูแล"');
-    expect(entry(sidebar, "/attendance")).toContain('label: "เช็คชื่อวันนมัสการ"');
+  it("keeps the two check-in destinations distinct: one menu head, two labelled page-view tabs", () => {
+    expect(entry(sidebar, "/attendance")).toContain('label: "เช็คชื่อ"');
+    const views = read("client/src/lib/pageViews.ts");
+    expect(views).toContain('label: "เช็คชื่อกลุ่มดูแล"');
+    expect(views).toContain('label: "เช็คชื่อวันนมัสการ"');
     // The old, easily confused labels are gone from the admin menu.
     expect(sidebar).not.toContain('label: "เช็คชื่อพันธกิจ"');
     expect(sidebar).not.toContain('label: "เช็คชื่อนมัสการ"');
@@ -45,8 +47,8 @@ describe("admin navigation contract", () => {
     expect(sidebar).toMatch(/import \{[^}]*\bADMIN_ROLES\b[^}]*\} from "@shared\/roles"/);
   });
 
-  it("keeps the existing role gates on /care, /attendance and /admin/users", () => {
-    expect(entry(sidebar, "/care")).toContain("roles: CREATE_ROLES");
+  it("keeps the existing role gates on /care (now a tab), /attendance and /admin/users", () => {
+    expect(read("client/src/lib/pageViews.ts")).toMatch(/path: "\/care", label: "เช็คชื่อกลุ่มดูแล", roles: CREATE_ROLES/);
     expect(entry(sidebar, "/attendance")).not.toContain("roles:");
     expect(entry(sidebar, "/admin/users")).toContain("roles: SUPER_ADMIN_ROLES");
   });
@@ -66,6 +68,17 @@ describe("admin navigation contract", () => {
     expect(events).toContain('usePageTitle("กิจกรรม")');
     expect(events).toMatch(/<PageHeader\s+title="กิจกรรม"/);
     expect(events).not.toContain("การนมัสการ / กิจกรรม");
+  });
+
+  it("the full menu keeps one head per page-view group; the other pages are tabs", () => {
+    const full = sidebar.slice(sidebar.indexOf("export const navGroups"), sidebar.indexOf("export const groupLeaderNavGroups"));
+    for (const head of ["/members", "/groups", "/attendance", "/feed"]) expect(full).toContain(`path: "${head}"`);
+    for (const tab of ["/org", "/ministries", "/map", "/memberships", "/care", "/announcements"]) {
+      expect(full, `${tab} is a tab, not a menu entry`).not.toContain(`path: "${tab}"`);
+    }
+    // Heads read as current on any page of their group; the group_leader menu matches exactly.
+    expect(sidebar).toContain("isGroupHeadActive(path, location)");
+    expect(sidebar).toMatch(/const matchGroups = baseGroups === navGroups/);
   });
 
   it("keeps the focused group_leader menu and bottom nav", () => {
