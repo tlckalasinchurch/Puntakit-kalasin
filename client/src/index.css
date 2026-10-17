@@ -2242,128 +2242,166 @@
   }
 }
 
-/* First-party PIN authentication — Luxury Dark Glassmorphism.
-   A self-contained visual scope: this screen is always dark, in both themes,
-   because it is the one moment the product meets someone at a door.
-   It deliberately does NOT read the global light/dark tokens — see
-   `docs/audits/2026-10-15-full-product-ux/MINIMAL-DESIGN-SYSTEM.md` D9.
-   Every pairing below was measured for WCAG AA (see the audit file). */
+/* First-party PIN authentication — Orange & Porcelain.
+   The sign-in screen follows the app theme like every other page: it reads the
+   shared tokens (no local palette), so light is porcelain with a white card and
+   dark is charcoal with a lifted card. The Puntakit mark is a JPG on white, so it
+   always sits on a white plate (.pin-login__plate) in both themes. Authentication
+   itself is unchanged: PIN only. Pairs are measured in palette-contrast.test.ts. */
 .pin-login {
-  --pin-bg-0: #04161a;
-  --pin-bg-1: #072028;
-  --pin-bg-2: #0a2f33;
-  --pin-text: #f4faf9;
-  --pin-mint: #7ff0dd;
-  --pin-champagne: #e8d3a8;
-  --pin-glass: rgba(255, 255, 255, .055);
-  --pin-glass-strong: rgba(255, 255, 255, .085);
-  --pin-line: rgba(255, 255, 255, .15);
-  --pin-line-bright: rgba(255, 255, 255, .28);
+  --pin-radius-card: 28px;
   --pin-ease: cubic-bezier(.22, 1, .36, 1);
-  /* Re-point the shared light tokens at dark equivalents for this scope only.
-     `LegalLinks` is shared with the member app and paints itself from
-     --color-canvas / --color-ink / --color-hairline; without this it would
-     render as two opaque white pills at the foot of the glass card. */
-  --color-canvas: rgba(255, 255, 255, .055);
-  --color-canvas-soft: rgba(255, 255, 255, .09);
-  --color-ink: #f4faf9;
-  --color-body-muted: rgba(244, 250, 249, .68);
-  --color-hairline: rgba(255, 255, 255, .18);
-  --color-divider: rgba(255, 255, 255, .12);
-  --color-primary-focus: #7ff0dd;
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   /* var(--app-vh) = 100dvh, not 100svh. `svh` is the SHORTEST viewport (toolbar
-     shown), so on a tall phone the gradient stopped short and the page canvas
+     shown), so on a tall phone the background stopped short and the page canvas
      showed as a seam once the user scrolled and the toolbar hid. `dvh` tracks
      the real visible area, so the login is always full-bleed. */
   min-height: var(--app-vh);
-  /* `clip` on the inline axis only: it hides the aurora bleed without creating
-     a scroll container, so a short phone can still reach the legal links.
-     `hidden` here used to make the foot of the card unreachable. */
+  /* `clip` on the inline axis only: it hides the decoration bleed without creating
+     a scroll container, so a short phone can still reach the legal links. */
   overflow-x: clip;
-  background: linear-gradient(168deg, var(--pin-bg-0) 0%, var(--pin-bg-1) 52%, var(--pin-bg-2) 100%);
-  color: var(--pin-text);
+  background: var(--color-canvas);
+  color: var(--color-ink);
   isolation: isolate;
 }
-/* Two slow aurora washes — the only light source in the room. */
-.pin-login::before,
-.pin-login::after {
+/* One quiet orange disc behind the card; solid and low-opacity, no blur. */
+.pin-login::before {
   position: absolute;
+  top: -9rem;
+  right: -8rem;
+  width: 22rem;
+  height: 22rem;
   border-radius: 50%;
-  filter: blur(72px);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
   pointer-events: none;
   content: "";
 }
-.pin-login::before {
-  width: 30rem;
-  height: 30rem;
-  top: -12rem;
-  left: -10rem;
-  background: rgba(12, 124, 130, .38);
+
+/* The white plate that carries the logo image. */
+.pin-login__plate {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 24%;
+  background: #fff;
+  box-shadow: var(--shadow-card);
 }
-.pin-login::after {
-  width: 26rem;
-  height: 26rem;
-  right: -11rem;
-  bottom: -9rem;
-  background: rgba(232, 211, 168, .16);
+.pin-login__plate img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 6%;
 }
 
-/* ---- Left rail: the promise, shown only where there is room for it ---- */
+/* ---- Brand panel: the promise, shown only where there is room for it ---- */
 .pin-login__brand {
   display: none;
   position: relative;
   overflow: hidden;
-  padding: clamp(2.5rem, 6vw, 5rem);
-  border-right: 1px solid var(--pin-line);
-  /* Anchored to the left edge and faded out, so the rail has no visible right
-     seam where the panel would otherwise end in a hard rectangle. */
-  background: radial-gradient(120% 85% at 0% 50%, rgba(255, 255, 255, .055), transparent 68%);
+  margin: 1rem 0 1rem 1rem;
+  padding: clamp(2.25rem, 5vw, 4.5rem);
+  border-radius: calc(var(--pin-radius-card) + 8px);
+  background: var(--color-dark-surface);
+  color: var(--color-on-dark);
+}
+/* Orange arc, bottom-right of the panel. */
+.pin-login__brand::after {
+  position: absolute;
+  right: -7rem;
+  bottom: -9rem;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+  opacity: .18;
+  pointer-events: none;
+  content: "";
 }
 .pin-login__brand-content {
   position: relative;
   z-index: 1;
   display: grid;
   align-content: space-between;
-  gap: 2.5rem;
-  min-height: min(74vh, 42rem);
+  gap: 2.25rem;
+  min-height: min(76vh, 44rem);
+}
+.pin-login__brand-head {
+  display: grid;
+  justify-items: start;
+  gap: .35rem;
+}
+.pin-login__brand-head .pin-login__plate {
+  margin-bottom: .6rem;
+}
+.pin-login__wordmark {
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--color-on-dark);
+}
+.pin-login__church {
+  margin: 0;
+  color: var(--color-on-dark-muted);
+  font-size: .95rem;
 }
 .pin-login__brand-copy {
-  align-self: center;
   max-width: 26rem;
 }
 .pin-login__brand-copy p {
   margin: 0;
 }
 .pin-login__brand-copy .type-display-md {
-  margin: .7rem 0 1.1rem;
-  color: var(--pin-text);
-  font-size: clamp(2.1rem, 4vw, 3.4rem);
-  line-height: 1.1;
-  letter-spacing: -.02em;
+  margin: 0 0 1rem;
+  color: var(--color-on-dark);
+  font-size: clamp(2.1rem, 3.6vw, 3.2rem);
+  line-height: 1.15;
 }
 .pin-login__brand-copy .type-body {
-  color: rgba(244, 250, 249, .74);
+  color: var(--color-on-dark-muted);
   line-height: 1.8;
+}
+.pin-login__features {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pin-login__features li {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .8rem .9rem;
+  border: 1px solid var(--color-on-dark-hairline);
+  border-radius: 1rem;
+  color: var(--color-on-dark);
+  font-size: .9rem;
+  line-height: 1.35;
+}
+.pin-login__features svg {
+  flex: none;
+  color: var(--color-primary-on-dark);
 }
 .pin-login__brand-note {
   display: inline-flex;
   align-items: center;
   gap: .65rem;
   width: fit-content;
-  padding: .7rem 1.05rem;
-  border: 1px solid var(--pin-line);
+  padding: .65rem 1rem;
+  border: 1px solid var(--color-on-dark-hairline);
   border-radius: var(--radius-pill);
-  background: var(--pin-glass);
-  color: rgba(244, 250, 249, .86);
+  color: var(--color-on-dark-muted);
   font-size: .82rem;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
 }
 
-/* ---- Right: the glass card ---- */
+/* ---- The sign-in card ---- */
 .pin-login__panel {
   position: relative;
   z-index: 1;
@@ -2374,38 +2412,37 @@
 .pin-login__card {
   width: min(100%, 27rem);
   padding: 1.75rem 1.25rem 1.25rem;
-  border: 1px solid var(--pin-line);
-  border-radius: 2rem;
-  background: var(--pin-glass);
-  box-shadow: 0 32px 80px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .16);
-  backdrop-filter: blur(30px) saturate(155%);
-  -webkit-backdrop-filter: blur(30px) saturate(155%);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--pin-radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 .pin-login__mobile-logo {
-  margin-bottom: 1.6rem;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.25rem;
 }
 .pin-login__heading {
   margin-bottom: 1.5rem;
+  text-align: center;
 }
 .pin-login__eyebrow {
   margin: 0;
-  color: var(--pin-mint);
-  font-size: .78rem;
+  color: var(--color-primary-ink);
+  font-size: .82rem;
   font-weight: 700;
   /* No letter-spacing and no uppercase: Thai has no letter case, and tracking
-     breaks its word shapes — the old .16em rendered "ยินดีต้อนรับกลับ" as
-     seven disconnected clusters. The Latin brand line is spaced in its own rule. */
+     breaks its word shapes. */
 }
 .pin-login__card h1 {
-  margin: .55rem 0 .4rem;
-  color: #fff;
+  margin: .4rem 0 .35rem;
+  color: var(--color-ink);
   font-size: 1.9rem;
   line-height: 1.15;
-  letter-spacing: -.02em;
 }
 .pin-login__sub {
   margin: 0;
-  color: rgba(244, 250, 249, .72);
+  color: var(--color-body-muted);
 }
 
 /* ---- PIN readout ---- */
@@ -2414,37 +2451,36 @@
   align-items: center;
   justify-content: space-between;
   margin: 0 0 .8rem;
-  color: rgba(244, 250, 249, .82);
-  font-size: .82rem;
+  color: var(--color-text-secondary);
+  font-size: .85rem;
   font-weight: 600;
 }
 .pin-login__pin-count {
-  color: rgba(244, 250, 249, .56);
+  color: var(--color-body-muted);
   font-variant-numeric: tabular-nums;
 }
 .pin-login__dots {
   display: flex;
   justify-content: center;
   gap: .9rem;
-  margin: 0 0 1.6rem;
+  margin: 0 0 1.5rem;
   padding: .25rem 0 .5rem;
 }
 .pin-login__dots span {
-  width: .8rem;
-  height: .8rem;
-  border: 1.5px solid rgba(244, 250, 249, .45);
+  width: .85rem;
+  height: .85rem;
+  border: 2px solid var(--color-body-muted);
   border-radius: 50%;
   background: transparent;
-  transition: background .22s var(--pin-ease), box-shadow .22s var(--pin-ease), transform .22s var(--pin-ease), border-color .22s var(--pin-ease);
+  transition: background .2s var(--pin-ease), border-color .2s var(--pin-ease), transform .2s var(--pin-ease);
 }
 .pin-login__dots span.is-filled {
-  border-color: var(--pin-mint);
-  background: var(--pin-mint);
-  box-shadow: 0 0 14px rgba(127, 240, 221, .5);
-  transform: scale(1.08);
+  border-color: var(--color-primary-focus);
+  background: var(--color-primary-focus);
+  transform: scale(1.1);
 }
 
-/* ---- Keypad: glass tiles ---- */
+/* ---- Keypad ---- */
 .pin-login__keypad {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2456,42 +2492,37 @@
   justify-content: center;
   gap: .35rem;
   min-height: 3.5rem;
-  border: 1px solid var(--pin-line);
+  border: 1px solid var(--color-hairline);
   border-radius: 1.1rem;
-  background: var(--pin-glass);
-  color: #fff;
+  background: var(--color-canvas-soft);
+  color: var(--color-ink);
   font: inherit;
   font-size: 1.3rem;
   font-weight: 600;
   cursor: pointer;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: background .2s var(--pin-ease), border-color .2s var(--pin-ease), transform .16s var(--pin-ease), box-shadow .2s var(--pin-ease);
+  transition: background .18s var(--pin-ease), transform .14s var(--pin-ease);
 }
 .pin-login__keypad button span {
-  font-size: .78rem;
+  font-size: .8rem;
   font-weight: 600;
-  color: rgba(244, 250, 249, .78);
+  color: var(--color-body-muted);
 }
-.pin-login__keypad button:hover:not(:disabled),
-.pin-login__keypad button:focus-visible {
-  border-color: var(--pin-line-bright);
-  background: var(--pin-glass-strong);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, .3);
-  outline: none;
+.pin-login__keypad button:hover:not(:disabled) {
+  background: var(--color-canvas-sunken);
 }
 .pin-login__keypad button:focus-visible {
-  box-shadow: 0 0 0 3px rgba(127, 240, 221, .32), 0 10px 24px rgba(0, 0, 0, .3);
+  outline: 2px solid var(--color-primary-focus);
+  outline-offset: 2px;
 }
 .pin-login__keypad button:active:not(:disabled) {
   transform: scale(.96);
 }
 .pin-login__keypad button:disabled {
-  opacity: .4;
+  opacity: .45;
   cursor: not-allowed;
 }
 
-/* ---- Primary action: the one warm, solid moment ---- */
+/* ---- Primary action: the one orange fill on the screen ---- */
 .pin-login__submit {
   display: inline-flex;
   align-items: center;
@@ -2501,54 +2532,51 @@
   min-height: 3.5rem;
   margin-top: 1.15rem;
   border: 0;
-  border-radius: 1.1rem;
-  background: linear-gradient(135deg, #f2e2c4, var(--pin-champagne) 55%, #d9bf8c);
-  color: var(--pin-bg-0);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   font: inherit;
   font-weight: 700;
-  letter-spacing: .01em;
   cursor: pointer;
-  box-shadow: 0 14px 32px rgba(0, 0, 0, .38), inset 0 1px 0 rgba(255, 255, 255, .6);
-  transition: box-shadow .22s var(--pin-ease), transform .16s var(--pin-ease), filter .22s var(--pin-ease);
+  transition: background .18s var(--pin-ease), transform .14s var(--pin-ease);
 }
 .pin-login__submit:hover:not(:disabled) {
-  box-shadow: 0 18px 40px rgba(0, 0, 0, .46), inset 0 1px 0 rgba(255, 255, 255, .7);
-  filter: brightness(1.04);
+  background: var(--color-primary-focus);
+}
+.pin-login__submit:focus-visible {
+  outline: 2px solid var(--color-primary-focus);
+  outline-offset: 3px;
 }
 .pin-login__submit:active:not(:disabled) {
   transform: translateY(1px);
 }
 .pin-login__submit:disabled {
-  opacity: .45;
+  opacity: .5;
   cursor: not-allowed;
-  box-shadow: none;
 }
 
 /* ---- Feedback ---- */
 .pin-login__error {
   margin: .95rem 0 0;
   padding: .75rem .9rem;
-  border: 1px solid rgba(255, 138, 152, .5);
+  border: 1px solid var(--color-error);
   border-radius: 1rem;
-  background: rgba(194, 59, 77, .2);
-  color: #fff;
-  font-size: .875rem;
+  background: var(--color-error-soft);
+  color: var(--color-error-ink);
+  font-size: .9rem;
+  font-weight: 600;
   line-height: 1.5;
   text-align: center;
 }
 .pin-login__help {
   margin: 1.1rem 0 0;
-  color: rgba(244, 250, 249, .6);
+  color: var(--color-body-muted);
   text-align: center;
   line-height: 1.6;
 }
 
-/* ---- Motion: honour the OS, and never animate a static screen ---- */
+/* ---- Motion: honour the OS ---- */
 @media (prefers-reduced-motion: reduce) {
-  .pin-login::before,
-  .pin-login::after {
-    filter: blur(72px);
-  }
   .pin-login__dots span,
   .pin-login__keypad button,
   .pin-login__submit {
@@ -2556,19 +2584,19 @@
   }
 }
 
-/* ---- Wide screens: show the promise beside the card ---- */
+/* ---- Wide screens (iPad landscape, desktop): the promise beside the card ---- */
 @media (min-width: 900px) {
   .pin-login {
-    grid-template-columns: minmax(0, 1fr) minmax(30rem, 38rem);
+    grid-template-columns: minmax(0, 1.05fr) minmax(28rem, 36rem);
   }
   .pin-login__brand {
     display: block;
   }
   .pin-login__panel {
-    padding: 3rem clamp(3rem, 6vw, 6rem);
+    padding: 3rem clamp(2rem, 5vw, 5rem);
   }
   .pin-login__card {
-    padding: 2.75rem 2.1rem 1.75rem;
+    padding: 2.5rem 2.1rem 1.75rem;
   }
   .pin-login__mobile-logo {
     display: none;

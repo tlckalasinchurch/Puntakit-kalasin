@@ -1,13 +1,29 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
-import { Delete, RotateCcw, ShieldCheck } from "lucide-react";
+import { BarChart3, CalendarCheck, Delete, MapPin, RotateCcw, ShieldCheck, Users } from "lucide-react";
 import { useLocation } from "wouter";
-import { Logo } from "@/components/layout/Logo";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { LegalLinks } from "@/components/LegalLinks";
 
 const digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+
+/** What the product does, in the church's own words — one per real area of the app. */
+const FEATURES = [
+  { icon: Users, label: "จัดการสมาชิกและทีม" },
+  { icon: CalendarCheck, label: "ติดตามกิจกรรมและการรับใช้" },
+  { icon: BarChart3, label: "เห็นภาพรวมด้วยข้อมูล" },
+  { icon: MapPin, label: "เชื่อมโยงชุมชนบนแผนที่" },
+];
+
+/** The Puntakit mark. The file is a JPG on white, so it always sits on a white plate. */
+function LogoPlate({ size }: { size: number }) {
+  return (
+    <span className="pin-login__plate" style={{ width: size, height: size }}>
+      <img src="/puntakit-logo.jpg" alt="โลโก้ Puntakit" width={size} height={size} decoding="async" />
+    </span>
+  );
+}
 
 export default function PinSignInPage() {
   usePageTitle("เข้าสู่ระบบ");
@@ -56,8 +72,6 @@ export default function PinSignInPage() {
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    const target = event.target as HTMLElement;
-
     if (/^\d$/.test(event.key)) {
       event.preventDefault();
       append(event.key);
@@ -77,20 +91,34 @@ export default function PinSignInPage() {
     <main className="pin-login" onKeyDown={handleKeyDown}>
       <section className="pin-login__brand" aria-label="เกี่ยวกับ Puntakit">
         <div className="pin-login__brand-content">
-          <Logo tone="onDark" />
+          <div className="pin-login__brand-head">
+            <LogoPlate size={132} />
+            <p className="pin-login__wordmark">Puntakit</p>
+            <p className="pin-login__church">คริสตจักรชีวิตสุขสันต์กาฬสินธุ์</p>
+          </div>
+
           <div className="pin-login__brand-copy">
-            <p className="pin-login__eyebrow">Puntakit</p>
             <p className="type-display-md">
-              ดูแลสมาชิก
+              ร่วมกันดูแล
               <br />
-              ด้วยหัวใจ
+              คนและชุมชน
             </p>
             <p className="type-body">
-              ระบบจัดการสมาชิกและพันธกิจ
+              เชื่อมต่อทีม ติดตามการรับใช้
               <br />
-              คริสตจักรชีวิตสุขสันต์กาฬสินธุ์
+              สร้างผลกระทบจริงในจังหวัดกาฬสินธุ์
             </p>
           </div>
+
+          <ul className="pin-login__features">
+            {FEATURES.map(({ icon: Icon, label }) => (
+              <li key={label}>
+                <Icon size={22} aria-hidden="true" />
+                <span>{label}</span>
+              </li>
+            ))}
+          </ul>
+
           <div className="pin-login__brand-note">
             <ShieldCheck size={18} aria-hidden="true" />
             <span>ข้อมูลของคุณปลอดภัยและเป็นส่วนตัว</span>
@@ -101,13 +129,13 @@ export default function PinSignInPage() {
       <section className="pin-login__panel" aria-labelledby="login-title">
         <div className="pin-login__card">
           <div className="pin-login__mobile-logo">
-            <Logo tone="onDark" />
+            <LogoPlate size={88} />
           </div>
 
           <div className="pin-login__heading">
             <p className="pin-login__eyebrow">ยินดีต้อนรับกลับ</p>
             <h1 id="login-title">เข้าสู่ระบบ</h1>
-            <p className="type-body pin-login__sub">กรอกรหัส PIN เพื่อเข้าสู่ระบบ</p>
+            <p className="type-body pin-login__sub">กรอกรหัส PIN เพื่อเข้าสู่ระบบ Puntakit</p>
           </div>
 
           <div className="pin-login__pin-heading">
