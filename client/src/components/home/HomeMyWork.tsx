@@ -148,7 +148,7 @@ export function HomeMyWork() {
               aria-expanded={moreOpen}
               aria-controls={moreOpen ? "home-more-links" : undefined}
               onClick={() => setMoreOpen((v) => !v)}
-              className="type-caption-strong inline-flex min-h-11 items-center px-1 text-[var(--color-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+              className="type-caption-strong inline-flex min-h-11 items-center px-1 text-[var(--color-primary-ink)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
             >
               {moreOpen ? "ซ่อน" : "ดูทั้งหมด"}
               <span className="sr-only"> ทางลัดเพิ่มเติม</span>
@@ -230,7 +230,7 @@ export function HomeMyWork() {
               ภาพพันธกิจล่าสุด
             </h2>
             {data.recentPhotos.length > 0 && (
-              <Link href="/feed" className="type-caption-strong inline-flex min-h-11 items-center px-1 text-[var(--color-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]">
+              <Link href="/feed" className="type-caption-strong inline-flex min-h-11 items-center px-1 text-[var(--color-primary-ink)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]">
                 ดูทั้งหมด<span className="sr-only"> ภาพพันธกิจ</span>
               </Link>
             )}

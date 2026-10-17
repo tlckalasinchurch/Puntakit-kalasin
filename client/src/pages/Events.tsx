@@ -105,7 +105,7 @@ function countdownLabel(iso: string) {
 }
 
 const ICON_BUTTON_CLASS =
-  "flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+  "flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
 const ICON_DANGER_CLASS =
   "flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-error-soft)] hover:text-[var(--color-error-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
 
@@ -138,7 +138,7 @@ function EventRow({
         className={`flex w-14 shrink-0 flex-col items-center rounded-[var(--radius-md)] py-2 ${
           muted
             ? "bg-[var(--color-canvas-sunken)] text-[var(--color-text-secondary)]"
-            : "bg-[var(--color-accent-soft)] text-[var(--color-primary)]"
+            : "bg-[var(--color-accent-soft)] text-[var(--color-primary-ink)]"
         }`}
       >
         <span className="type-fine font-semibold text-[var(--color-ink)]">{d.weekday}</span>
@@ -439,7 +439,7 @@ export default function Events() {
                       type="button"
                       onClick={() => setShowAllPast(v => !v)}
                       aria-expanded={showAllPast}
-                      className="type-caption-strong flex min-h-11 w-full items-center justify-center gap-2 text-[var(--color-primary)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-focus)]"
+                      className="type-caption-strong flex min-h-11 w-full items-center justify-center gap-2 text-[var(--color-primary-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-focus)]"
                     >
                       {showAllPast ? "แสดงน้อยลง" : `แสดงทั้งหมด ${groups.past.length.toLocaleString("th-TH")} รายการ`}
                       <ChevronDown size={ICON_SIZE.sm} aria-hidden="true" className={showAllPast ? "rotate-180" : ""} />

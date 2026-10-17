@@ -142,7 +142,7 @@ export function PrayerRequestModal({
     >
       <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
         {formError && <FormError>{formError}</FormError>}
-        <div className="flex items-center gap-2 text-[var(--color-primary)]">
+        <div className="flex items-center gap-2 text-[var(--color-primary-ink)]">
           <HeartHandshake size={ICON_SIZE.md} aria-hidden="true" />
           <span className="type-caption-strong">
             บันทึกคำขออธิษฐานของคุณ

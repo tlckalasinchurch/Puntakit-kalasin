@@ -255,7 +255,7 @@ export default function CareToday() {
             <>
               <section aria-labelledby="ci-title" className="flex flex-col gap-3">
                 <div>
-                  <p className="type-caption-strong text-[var(--color-primary)]">
+                  <p className="type-caption-strong text-[var(--color-primary-ink)]">
                     {roster.group.name}
                     {roster.group.bodyName ? ` · ${roster.group.bodyName}` : ""}
                   </p>
@@ -296,7 +296,7 @@ export default function CareToday() {
                   </li>
                 ))}
               </ul>
-              <div className="sticky z-10 -mx-1 flex flex-col gap-2 bg-[var(--clay-ground)] px-1 py-3" style={{ bottom: navHeight }}>
+              <div className="sticky z-10 -mx-1 flex flex-col gap-2 bg-[var(--clay-ground)] px-1 py-3" style={{ bottom: navHeight ? `calc(${navHeight}px + var(--safe-b) + 18px)` : 0 }}>
                 {saveError && (
                   <p role="alert" className="type-caption rounded-[var(--radius-sm)] bg-[var(--color-error)]/10 p-3 text-[var(--color-error-ink)]">
                     {saveError}
@@ -314,7 +314,7 @@ export default function CareToday() {
           ) : (
             <>
               <section className="clay-card flex flex-col gap-3" aria-labelledby="home-title">
-                <p className="type-caption-strong text-[var(--color-primary)]">
+                <p className="type-caption-strong text-[var(--color-primary-ink)]">
                   {roster.group.bodyName ?? "พันธกิจ"}
                   {roster.group.careLeaderName ? ` · หนค. ${roster.group.careLeaderName}` : ""}
                 </p>

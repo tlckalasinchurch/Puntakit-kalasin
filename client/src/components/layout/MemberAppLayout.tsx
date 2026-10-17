@@ -126,7 +126,7 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
             <button
               type="button"
               onClick={handleInstallClick}
-              className="type-fine inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none"
+              className="type-fine inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 font-semibold text-[var(--color-primary-ink)] transition-colors hover:bg-[var(--color-accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none"
             >
               <Download size={ICON_SIZE.sm} aria-hidden="true" />
               <span>ติดตั้ง</span>
@@ -147,14 +147,14 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
       </header>
 
       {/* Main content — bottom padding clears the fixed nav + safe area. */}
-      <main id="member-app-main" className={`flex flex-1 flex-col gap-3.5 px-4 pb-[88px] pt-4 ${isMemberHome ? "sm:px-6 lg:px-8 lg:pt-6" : ""}`}>
+      <main id="member-app-main" className={`flex flex-1 flex-col gap-3.5 px-4 pb-[var(--shell-nav-clear)] pt-4 ${isMemberHome ? "sm:px-6 lg:px-8 lg:pt-6" : ""}`}>
         <RouteErrorBoundary>{children}</RouteErrorBoundary>
       </main>
 
       {/* Bottom navigation — 5 real links, >= 44px tall each. */}
       <nav
         aria-label="เมนูหลักของแอพสมาชิก"
-        className={`pk-nav fixed bottom-0 left-1/2 z-30 w-full ${shellWidthClass(isMemberHome)} -translate-x-1/2 pb-[var(--safe-b)] pl-[var(--safe-l)] pr-[var(--safe-r)]`}
+        className="pk-nav"
       >
         <ul className="flex items-stretch justify-around">
           {NAV_ITEMS.map(item => {

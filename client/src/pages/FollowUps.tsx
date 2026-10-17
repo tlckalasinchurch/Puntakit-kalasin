@@ -63,7 +63,7 @@ const ROW_PRIMARY_BUTTON_CLASS =
   "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-3 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
 
 const SUBJECT_LINK_CLASS =
-  "inline-flex min-h-11 items-center rounded-[var(--radius-xs)] font-semibold text-[var(--color-primary)] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+  "inline-flex min-h-11 items-center rounded-[var(--radius-xs)] font-semibold text-[var(--color-primary-ink)] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
 
 /**
  * Who the follow-up is about, as links: a member opens their detail dialog on /members; a care

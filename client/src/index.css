@@ -3,28 +3,28 @@
 
 :root {
   font-family: "Prompt", system-ui, sans-serif;
-  color: #1d1d1f;
-  background: #ffffff;
+  color: #171717;
+  background: #fffcf4;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 
   /* Puntakit Design System V2 brand tokens (source of truth: this file; brand-spec.md and design.md are derived from it) */
-  --color-primary: #0c7c82;
-  --color-primary-focus: #09696e;
-  --color-primary-on-dark: #7faf72;
-  --color-ink: #0f172a;
-  --color-body: #1d1d1f;
-  --color-body-muted: #5b6474;
-  --color-canvas: #f8fafc;
-  --color-canvas-soft: #f5f5f7;
+  --color-primary: #ff6115;
+  --color-primary-focus: #e8560a;
+  --color-primary-on-dark: #ff6115;
+  --color-ink: #171717;
+  --color-body: #171717;
+  --color-body-muted: #5c554a;
+  --color-canvas: #fffcf4;
+  --color-canvas-soft: #f7f2e7;
   --color-surface: #ffffff;
-  --color-dark-surface: #272729;
-  --color-dark-surface-2: #2a2a2c;
-  --color-dark-surface-3: #252527;
+  --color-dark-surface: #171717;
+  --color-dark-surface-2: #1f1f1f;
+  --color-dark-surface-3: #141414;
   --color-black: #000000;
-  --color-divider: #e2e8f0;
-  --color-hairline: #e2e8f0;
-  --color-on-dark: #ffffff;
+  --color-divider: #ede7d9;
+  --color-hairline: #e6dfcf;
+  --color-on-dark: #fffcf4;
   --color-success: #1e8e5a;
   --color-warning: #c77819;
   --color-error: #c23b4d;
@@ -34,9 +34,9 @@
   --color-success-ink: #15704a;
   --color-warning-ink: #8a5410;
   --color-info-ink: #1f5aa6;
-  --color-error-ink: #c23b4d;
-  /* Primary as TEXT on its own soft tint; dark mode lightens it (#7faf72 on the 16% tint is 4.27:1). */
-  --color-primary-ink: var(--color-primary);
+  --color-error-ink: #b02a3e;
+  /* Orange as TEXT. The fill orange (#ff6115) is 2.94:1 on porcelain, so text, links and icons use this darker ink (5.64:1); dark mode lightens it. */
+  --color-primary-ink: #b93800;
 
   /* Radius grammar */
   --radius-none: 0px;
@@ -50,19 +50,19 @@
   /* Chrome / tints. Every value here is derived from the tokens above; the
      legacy rules further down this file used to hardcode the pre-V2 blue
      palette and are migrated onto these. */
-  --color-on-dark-muted: #a1a1a6; /* secondary text on graphite chrome */
-  --color-on-dark-hairline: #3a3a3c; /* dividers on graphite chrome */
-  --color-accent-soft: #e8f0e4; /* field tint, for icon chips on white */
+  --color-on-dark-muted: #a8a298; /* secondary text on graphite chrome */
+  --color-on-dark-hairline: #34312d; /* dividers on graphite chrome */
+  --color-accent-soft: #ffeadb; /* field tint, for icon chips on white */
   --color-info-soft: #e6f1ff; /* info tint, for icon chips on white */
   --color-info-strong: #2f72bf; /* info text/icon on white (AA on #ffffff) */
-  --color-canvas-sunken: #f1f5f9; /* recede a surface: inset wells, table stripes */
+  --color-canvas-sunken: #f1ebdd; /* recede a surface: inset wells, table stripes */
 
   /* Neutral text ramp. Secondary/tertiary text was inherited from the pre-V2
      blue palette and read cool against the graphite chrome; these are
      hue-free, so hierarchy comes from value and weight, never from color. */
-  --color-text-secondary: #475569; /* table cells, run-in body copy */
-  --color-text-tertiary: #5b6474; /* labels and meta (== --color-body-muted) */
-  --color-text-quaternary: #64748b; /* table headers, micro-labels, glyph icons */
+  --color-text-secondary: #4a443b; /* table cells, run-in body copy */
+  --color-text-tertiary: #5c554a; /* labels and meta (== --color-body-muted) */
+  --color-text-quaternary: #6a6256; /* table headers, micro-labels, glyph icons */
 
   /* shadcn semantic tokens, mapped to the brand tokens above so Button/Card/Input/Skeleton
      primitives (bg-primary, bg-card, border-input, bg-accent, ...) render correctly. */
@@ -73,9 +73,9 @@
   --popover: var(--color-canvas);
   --popover-foreground: var(--color-ink);
   --primary: var(--color-primary);
-  --primary-foreground: var(--color-on-dark);
+  --primary-foreground: var(--color-on-primary);
   /* Text on a --color-primary fill. Dark mode lightens the fill, so the text darkens (>= 4.5:1). */
-  --color-on-primary: var(--color-on-dark);
+  --color-on-primary: #171717;
   --secondary: var(--color-canvas-soft);
   --secondary-foreground: var(--color-ink);
   --muted: var(--color-canvas-soft);
@@ -98,6 +98,8 @@
   /* Chrome recedes: only elements that lift off the canvas get elevation.
      Neutral black, never a hue — a tinted shadow fights the graphite chrome. */
   --shadow: 0 10px 28px rgba(29, 29, 31, 0.08);
+  /* One soft elevation for cards, floating chrome and /care surfaces (replaces the old neumorphic clay shadows). */
+  --shadow-card: 0 1px 2px rgba(23, 23, 23, 0.06), 0 14px 28px -16px rgba(23, 23, 23, 0.2);
   /* The height of the area the user can actually see.
      `100vh` is the LARGE viewport on mobile browsers and in the LINE in-app
      browser, so a full-height shell built on it is taller than the visible area:
@@ -109,9 +111,9 @@
   --safe-r: env(safe-area-inset-right, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
-  --radius-card: var(--radius-lg);
-  --radius-tile: var(--radius-md);
-  --radius-panel: var(--radius-md);
+  --radius-card: 24px;
+  --radius-tile: 16px;
+  --radius-panel: 16px;
   --chart-1: #548bd9;
   --chart-2: #44b889;
   --chart-3: #f1a73b;
@@ -139,15 +141,17 @@
   --shell-chrome-h: 76px;
   --shell-chrome-h-compact: 64px;
   --shell-nav-item-h: 64px;
+  /* Bottom padding that keeps page content clear of the floating nav pill (item height + 10px float + safe area + breathing room). */
+  --shell-nav-clear: calc(var(--shell-nav-item-h) + var(--safe-b) + 32px);
   --shell-nav-indicator-w: 56px;
   --shell-nav-surface: var(--color-canvas);
   --shell-nav-line: var(--color-hairline);
   --shell-nav-active-bg: var(--color-accent-soft);
-  --shell-nav-active-ink: var(--color-primary);
+  --shell-nav-active-ink: var(--color-primary-ink);
   --shell-nav-ink: var(--color-body-muted);
   /* The bar that marks the current destination. Shape, not hue, carries it —
      the pill and the weight below carry it a second and third time. */
-  --shell-nav-indicator: var(--color-primary);
+  --shell-nav-indicator: var(--color-primary-focus);
 }
 @supports (height: 100dvh) {
   :root {
@@ -282,7 +286,7 @@
   height: 240px;
   background: radial-gradient(
     ellipse,
-    rgba(127, 175, 114, 0.16),
+    rgba(255, 97, 21, 0.16),
     transparent 65%
   );
   pointer-events: none;
@@ -351,7 +355,7 @@
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.01em;
-  color: var(--color-primary);
+  color: var(--color-primary-ink);
 }
 .blue-eyebrow {
   color: var(--color-body-muted);
@@ -359,6 +363,7 @@
   background: var(--color-canvas);
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 .hero {
@@ -620,7 +625,7 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-primary);
+  color: var(--color-primary-ink);
 }
 .page-title {
   font-size: 22px;
@@ -645,7 +650,7 @@
   gap: 8px;
   min-height: 44px;
   padding: 0 20px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   background: var(--color-primary);
   color: var(--color-on-primary);
   font-size: 14px;
@@ -1164,7 +1169,7 @@
   display: grid;
   place-items: center;
   background: var(--color-primary);
-  color: var(--color-on-dark);
+  color: var(--color-on-primary);
   font-size: 30px;
   font-weight: 800;
 }
@@ -1198,7 +1203,7 @@
   border-radius: var(--radius-lg);
   display: grid;
   place-items: center;
-  color: var(--color-primary);
+  color: var(--color-primary-ink);
   background: var(--color-canvas);
 }
 .profile-grid {
@@ -1249,7 +1254,7 @@
   align-items: center;
   gap: 5px;
   margin-top: 20px;
-  color: var(--color-primary);
+  color: var(--color-primary-ink);
   background: none;
   font-size: 14px;
   font-weight: 700;
@@ -1360,7 +1365,7 @@
   display: grid;
   place-items: center;
   margin: 0 auto 18px;
-  color: var(--color-primary);
+  color: var(--color-primary-ink);
   background: var(--color-info-soft);
 }
 .coming-soon-card h1 {
@@ -1442,33 +1447,32 @@
    dark mode. See docs/PUNTAKIT_UX_UI_AUDIT_2026-10.md §2.3. */
 .dark {
   color-scheme: dark;
+  background: var(--color-canvas);
   /* Luxury Dark Glassmorphism.
      Retuned 2026-10-15 from the V2 sage/graphite remap to the deep-teal
      palette measured against the PIN sign-in surface. Every text pair below was
      checked at >=4.5:1 on BOTH --color-canvas and --color-surface before it was
      written; see docs/audits/2026-10-15-full-product-ux/MINIMAL-DESIGN-SYSTEM.md. */
-  --color-canvas: #061a1f;
-  --color-canvas-soft: #123033;
-  --color-surface: #0c2529;
-  --color-canvas-sunken: #0a2126;
-  --color-ink: #f4faf9;
-  --color-body: #f4faf9;
-  --color-body-muted: #9db2b2;
-  --color-hairline: rgba(255, 255, 255, 0.13);
-  --color-divider: rgba(255, 255, 255, 0.08);
-  --color-text-secondary: #c3d4d4;
-  --color-text-tertiary: #9db2b2;
-  --color-text-quaternary: #7e9493;
-  --color-primary: #2fc4bd;
-  --color-on-primary: #04211f;
-  /* :root keeps #7faf72 (sage) because the LIGHT sidebar really is graphite.
-     In dark the chrome is teal, so leaving sage here put a green accent on a
-     teal surface — the same V2 leftover as the graphite hero. Contrast goes up,
-     not down: 5.67 -> 6.68 against the darkest surface. */
-  --color-primary-on-dark: #2fc4bd;
-  --color-primary-focus: #5fd7d1;
-  --color-primary-ink: #2fc4bd;
-  --color-accent-soft: rgba(47, 196, 189, 0.16);
+  --color-canvas: #171717;
+  --color-canvas-soft: #2a2a2a;
+  --color-surface: #202020;
+  --color-canvas-sunken: #121212;
+  --color-ink: #fffcf4;
+  --color-body: #fffcf4;
+  --color-body-muted: #b3aca0;
+  --color-hairline: rgba(255, 252, 244, 0.14);
+  --color-divider: rgba(255, 252, 244, 0.08);
+  --color-text-secondary: #d2ccbf;
+  --color-text-tertiary: #b3aca0;
+  --color-text-quaternary: #a59e92;
+  --color-primary: #ff6115;
+  --color-on-primary: #171717;
+  /* Accent on charcoal chrome (sidebar, hero). :root uses the fill orange
+     (#ff6115, 5.95:1 on #171717); dark lifts it to #ff7a3d (6.92:1) for text. */
+  --color-primary-on-dark: #ff7a3d;
+  --color-primary-focus: #ff8a4d;
+  --color-primary-ink: #ff7a3d;
+  --color-accent-soft: rgba(255, 97, 21, 0.16);
   --color-info-soft: rgba(47, 111, 204, 0.26);
   --color-info-strong: #8ab6ef;
   --color-success: #2fbb7d;
@@ -1503,6 +1507,7 @@
   --input: var(--color-hairline);
   --ring: var(--color-primary-focus);
   --shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 1px 0 rgba(255, 252, 244, 0.05) inset, 0 16px 30px -16px rgba(0, 0, 0, 0.65);
   /* Chart series, lifted for a dark canvas. The light set already cleared 3:1
      here (3.68–8.79) so it was never invisible — these are the same six hues
      at a more usable luminance (6.34–10.22), kept in the same order. */
@@ -1528,7 +1533,7 @@
 .dark body,
 .dark #root { background: var(--color-canvas); color: var(--color-ink); }
 .dark .member-page-hero::after,
-.dark .events-page-hero::after { background: rgba(47, 196, 189, 0.2); }
+.dark .events-page-hero::after { background: rgba(255, 97, 21, 0.2); }
 .dark input,
 .dark select,
 .dark textarea { background-color: var(--glass-fill); border-color: var(--glass-line); color: var(--color-ink); }
@@ -1536,60 +1541,41 @@
 .dark textarea::placeholder { color: var(--color-text-quaternary); }
 
 /* ---------------------------------------------------------------------------
-   Clay surfaces (opt-in). Soft sage ground, puffy raised cards, buttons that
-   sink when pressed. Used by the care-leader screens (`/care`); the rest of the
-   app keeps the flat V2 chrome. Colours are written as hsl() so these tokens
-   stay out of the hex scans in design-tokens.test.ts, and every text/ground
-   pair keeps 4.5:1 or better (mint/peach/butter use their own dark ink).
+   Clay surfaces (opt-in). Same soft-card language as the rest of the app (large
+   radius, one soft shadow, pill buttons) on the shared tokens; kept as a class
+   family for the care-leader screens. Used by the care-leader screens (`/care`); the rest of the
+   app keeps the flat V2 chrome. Every colour here is an alias of a shared token
+   (palette-contrast.test.ts measures the underlying pairs).
    --------------------------------------------------------------------------- */
 :root {
-  --clay-ground: hsl(110 22% 88%);
-  --clay-surface: hsl(110 26% 95%);
-  --clay-sunk: hsl(110 20% 90%);
-  --clay-mint: hsl(110 36% 84%);
-  --clay-mint-ink: hsl(110 50% 18%);
-  --clay-peach: hsl(20 85% 88%);
-  --clay-peach-ink: hsl(18 70% 24%);
-  --clay-butter: hsl(48 80% 80%);
-  --clay-butter-ink: hsl(44 80% 17%);
-  --clay-shadow-dark: hsl(110 15% 35% / 0.32);
-  --clay-shadow-light: hsl(0 0% 100% / 0.9);
-  --clay-inner-light: hsl(0 0% 100% / 0.8);
-  --clay-inner-dark: hsl(110 15% 35% / 0.18);
-  --clay-puff: 7px 9px 20px var(--clay-shadow-dark), -6px -6px 16px var(--clay-shadow-light),
-    inset 2px 2px 5px var(--clay-inner-light), inset -3px -3px 7px var(--clay-inner-dark);
-  --clay-puff-sm: 4px 5px 11px var(--clay-shadow-dark), -3px -3px 9px var(--clay-shadow-light),
-    inset 1px 1px 3px var(--clay-inner-light), inset -2px -2px 4px var(--clay-inner-dark);
-  --clay-press: inset 5px 6px 12px var(--clay-shadow-dark), inset -4px -4px 10px var(--clay-shadow-light);
+  --clay-ground: var(--color-canvas-soft);
+  --clay-surface: var(--color-surface);
+  --clay-sunk: var(--color-canvas-sunken);
+  --clay-mint: var(--color-accent-soft);
+  --clay-mint-ink: var(--color-primary-ink);
+  --clay-peach: var(--color-canvas-sunken);
+  --clay-peach-ink: var(--color-text-secondary);
+  --clay-butter: var(--color-warning-soft);
+  --clay-butter-ink: var(--color-warning-ink);
+  --clay-puff: var(--shadow-card);
+  --clay-puff-sm: 0 1px 2px rgba(23, 23, 23, 0.06), 0 6px 14px -8px rgba(23, 23, 23, 0.18);
+  --clay-press: inset 0 2px 6px rgba(23, 23, 23, 0.16);
 }
 .dark {
-  /* Retuned from the neutral sage (hsl 110) to the teal family so the care
-     screen belongs to the same room as the rest of the dark app. All ink/tint
-     pairs re-measured: mint 9.00, peach 9.76, butter 8.93, body ink 14.0–15.7. */
-  --clay-ground: hsl(187 20% 8%);
-  --clay-surface: hsl(187 18% 12%);
-  --clay-sunk: hsl(187 20% 10%);
-  --clay-mint: hsl(172 30% 18%);
-  --clay-mint-ink: hsl(168 55% 82%);
-  --clay-peach: hsl(20 35% 20%);
-  --clay-peach-ink: hsl(24 80% 88%);
-  --clay-butter: hsl(44 38% 19%);
-  --clay-butter-ink: hsl(46 75% 82%);
-  --clay-shadow-dark: hsl(0 0% 0% / 0.55);
-  --clay-shadow-light: hsl(0 0% 100% / 0.05);
-  --clay-inner-light: hsl(0 0% 100% / 0.07);
-  --clay-inner-dark: hsl(0 0% 0% / 0.35);
+  /* /care surfaces are derived from the shared tokens, so only the shadows differ in dark. */
+  --clay-puff-sm: 0 1px 0 rgba(255, 252, 244, 0.05) inset, 0 8px 16px -10px rgba(0, 0, 0, 0.7);
+  --clay-press: inset 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 @layer components {
-  .clay-screen { background: var(--clay-ground); border-radius: var(--radius-lg); padding: 20px 16px 24px; display: flex; flex-direction: column; gap: 18px; }
-  .clay-card { background: var(--clay-surface); border-radius: var(--radius-lg); box-shadow: var(--clay-puff); padding: 18px; }
-  .clay-card-soft { background: var(--clay-surface); border-radius: var(--radius-md); box-shadow: var(--clay-puff-sm); padding: 14px; }
-  .clay-btn { min-height: 56px; border-radius: var(--radius-pill); padding-inline: 26px; font-weight: 700; font-size: 17px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: var(--color-primary); color: var(--color-on-primary); box-shadow: 6px 8px 16px var(--clay-shadow-dark), -4px -4px 12px var(--clay-shadow-light), inset 2px 2px 5px hsl(0 0% 100% / 0.3), inset -3px -4px 8px hsl(0 0% 0% / 0.22); transition: box-shadow 0.15s, transform 0.15s; }
-  .clay-btn:active:not(:disabled) { box-shadow: inset 4px 5px 10px hsl(0 0% 0% / 0.35); transform: translateY(1px); }
+  .clay-screen { background: var(--clay-ground); border-radius: var(--radius-card); padding: 20px 16px 24px; display: flex; flex-direction: column; gap: 18px; }
+  .clay-card { background: var(--clay-surface); border: 1px solid var(--color-hairline); border-radius: var(--radius-card); box-shadow: var(--clay-puff); padding: 18px; }
+  .clay-card-soft { background: var(--clay-surface); border: 1px solid var(--color-hairline); border-radius: var(--radius-tile); box-shadow: var(--clay-puff-sm); padding: 14px; }
+  .clay-btn { min-height: 56px; border-radius: var(--radius-pill); padding-inline: 26px; font-weight: 700; font-size: 17px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: var(--color-primary); color: var(--color-on-primary); box-shadow: var(--clay-puff-sm); transition: box-shadow 0.15s, transform 0.15s; }
+  .clay-btn:active:not(:disabled) { box-shadow: var(--clay-press); transform: translateY(1px); }
   .clay-btn:disabled { opacity: 0.55; }
   .clay-chip { min-height: 44px; border-radius: var(--radius-pill); padding-inline: 16px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; background: var(--clay-surface); color: var(--color-ink); box-shadow: var(--clay-puff-sm); }
   .clay-chip:active { box-shadow: var(--clay-press); }
-  .clay-tile { width: 100%; min-height: 64px; text-align: left; border-radius: var(--radius-md); padding: 10px 16px; display: flex; align-items: center; gap: 14px; background: var(--clay-surface); color: var(--color-ink); box-shadow: var(--clay-puff-sm); transition: box-shadow 0.15s, background 0.15s; }
+  .clay-tile { width: 100%; min-height: 64px; text-align: left; border-radius: var(--radius-tile); padding: 10px 16px; display: flex; align-items: center; gap: 14px; background: var(--clay-surface); color: var(--color-ink); box-shadow: var(--clay-puff-sm); transition: box-shadow 0.15s, background 0.15s; }
   .clay-tile[aria-pressed="true"] { background: var(--clay-mint); color: var(--clay-mint-ink); box-shadow: var(--clay-press); }
   .clay-tick { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--clay-sunk); box-shadow: var(--clay-press); color: transparent; }
   .clay-tile[aria-pressed="true"] .clay-tick { background: var(--color-primary); color: var(--color-on-primary); box-shadow: var(--clay-puff-sm); }
@@ -1725,8 +1711,19 @@
    carrier (design.md §8.1 status rule applied to navigation).
    --------------------------------------------------------------------------- */
 .pk-nav {
+  /* Floating capsule: inset from the screen edges and the home indicator, centred, never wider than 520px
+     (so five items do not spread across an iPad), and safe-area aware on all four sides. */
+  position: fixed;
+  left: calc(50% + (var(--safe-l) - var(--safe-r)) / 2);
+  bottom: calc(var(--safe-b) + 10px);
+  z-index: 30;
+  width: min(calc(100% - 24px - var(--safe-l) - var(--safe-r)), 520px);
+  transform: translateX(-50%);
+  padding: 0 6px;
   background: var(--shell-nav-surface);
-  border-top: 1px solid var(--shell-nav-line);
+  border: 1px solid var(--shell-nav-line);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-card);
 }
 
 .pk-nav-item {
@@ -1738,6 +1735,7 @@
   gap: 0.125rem;
   min-height: var(--shell-nav-item-h);
   padding: 0.5rem 0.25rem;
+  border-radius: var(--radius-pill);
   color: var(--shell-nav-ink);
   font-weight: 500;
   transition: color 0.15s ease;
@@ -1752,7 +1750,7 @@
 .pk-nav-item::after {
   content: "";
   position: absolute;
-  bottom: 0;
+  bottom: 5px;
   left: 50%;
   width: 0;
   height: 3px;
@@ -1926,10 +1924,10 @@
 .dark .pk-hero {
   box-shadow: inset 0 0 0 1px var(--color-on-dark-hairline);
   /* The base rule paints the hero in the retired graphite pair
-     (--color-dark-surface-2/3) with a sage glow. On the deep-teal dark canvas
-     that reads as a warm brown card from another product, so dark gets its own
-     teal surface. Text contrast is unchanged: white 14.80, muted #a1a1a6 5.75. */
-  background: linear-gradient(135deg, #0b2c31 0%, #07222a 100%);
+     (--color-dark-surface-2/3) with an orange glow. On the charcoal dark canvas
+     the dark gets its own warm charcoal surface. Text pairs are measured in
+     design-tokens.test.ts. */
+  background: linear-gradient(135deg, #2a2420 0%, #1c1917 100%);
 }
 .dark .pk-hero::before {
   background: radial-gradient(
@@ -2581,12 +2579,12 @@
 /* Lamb Edition — member app (/app).                                  */
 /* CONVERGED onto the central tokens (decision D5, 2026-10-15).        */
 /* These are now pure aliases: there is no second brand left to drift. */
-/* `primary-focus` is used for the light-theme ink because #0c7c82 on */
-/* --color-accent-soft measures 4.27:1 (FAIL); #09696e measures 5.53. */
+/* `primary-ink` is the text/icon orange: #ff6115 on porcelain is 2.94:1  */
+/* (FAIL), #b93800 is 5.64:1. Fills use --color-primary with dark text.  */
 /* ------------------------------------------------------------------ */
 .lamb-theme {
-  --lamb-primary: var(--color-primary-focus);
-  --lamb-ink: var(--color-primary-focus);
+  --lamb-primary: var(--color-primary-ink);
+  --lamb-ink: var(--color-primary-ink);
   --lamb-mint: var(--color-accent-soft);
   --lamb-canvas: var(--color-canvas);
   --lamb-surface: var(--color-surface);
@@ -2606,8 +2604,8 @@
   --lamb-leaf-near: #37a978;
 }
 .dark .lamb-theme {
-  --lamb-primary: var(--color-primary);
-  --lamb-ink: var(--color-primary);
+  --lamb-primary: var(--color-primary-ink);
+  --lamb-ink: var(--color-primary-ink);
   --lamb-mint: var(--color-canvas-soft);
   --lamb-canvas: var(--color-canvas);
   --lamb-surface: var(--color-surface);
@@ -2973,4 +2971,12 @@
   .pk-card::before {
     display: none;
   }
+}
+
+/* Profile: long values (an email) wrap inside their cell and the two-column grid
+   collapses to one column on phones, so nothing breaks mid-word at 390px. */
+.profile-detail > div { min-width: 0; }
+.profile-detail strong { overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .profile-details { grid-template-columns: 1fr; }
 }

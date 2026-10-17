@@ -300,7 +300,7 @@ export default function MemberProfile() {
               <User
                 size={ICON_SIZE.sm}
                 aria-hidden="true"
-                className="text-[var(--color-primary)]"
+                className="text-[var(--color-primary-ink)]"
               />
               แก้ไขข้อมูลติดต่อ
             </h2>
@@ -485,7 +485,7 @@ export default function MemberProfile() {
           <Bell
             size={ICON_SIZE.sm}
             aria-hidden="true"
-            className="text-[var(--color-primary)]"
+            className="text-[var(--color-primary-ink)]"
           />
           การแจ้งเตือน
         </h2>
@@ -528,7 +528,7 @@ export default function MemberProfile() {
           <Lock
             size={ICON_SIZE.sm}
             aria-hidden="true"
-            className="text-[var(--color-primary)]"
+            className="text-[var(--color-primary-ink)]"
           />
           ความเป็นส่วนตัวและข้อกำหนด
         </h2>

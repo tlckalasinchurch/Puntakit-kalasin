@@ -7,50 +7,65 @@
 
 ค่าสีทุกตัวด้านล่างอ้างอิงจาก `brand-spec.md` และ CSS custom properties ใน `index.css`
 
-## 1. สีหลัก (Brand Colors)
+## 1. สีหลัก (Brand Colors) — Neon Orange & Porcelain
+
+ใช้สีส้มอย่างมีกลยุทธ์ — เฉพาะปุ่มหลัก สถานะเลือก ตัวบอกตำแหน่ง และจุดเน้น ไม่ใช้กับทุกปุ่ม ทุกไอคอน หรือทุกเส้นขอบ
+พื้นหน้าเป็นพอร์ซเลน (ครีมอุ่น) การ์ดเป็นขาว ตัวอักษรเป็นชาร์โคล
 
 | Token | ค่า | การใช้งาน |
 |---|---|---|
-| `--color-primary` | `#0c7c82` | สีเดียวที่ interactive — ลิงก์ ปุ่มหลัก ไอคอน focus |
-| `--color-primary-focus` | `#09696e` | hover / pressed / focus ring |
-| `--color-primary-on-dark` | `#7faf72` | ข้อความเน้นบนพื้น graphite |
-| `--color-ink` | `#0f172a` | สีตัวอักษรหลัก |
-| `--color-body-muted` | `#5b6474` | สีตัวอักษรรอง |
-| `--color-canvas` | `#f8fafc` | พื้นหลังหน้า (card ใช้ `--color-surface: #ffffff`) |
-| `--color-canvas-soft` | `#f5f5f7` | พื้นหล่ม สลับแถวตาราง |
-| `--color-canvas-sunken` | `#f1f5f9` | พื้นจม (inset wells, hover fills) |
-| `--color-hairline` | `#e2e8f0` | เส้นขอบการ์ดและ input |
-| `--color-dark-surface` | `#272729` | sidebar, tooltip, พื้นมืด |
+| `--color-primary` | `#ff6115` | **พื้น (fill)** ของปุ่มหลัก/สถานะเลือก — ตัวอักษรบนพื้นนี้ใช้ `--color-on-primary` เสมอ |
+| `--color-on-primary` | `#171717` | ตัวอักษรบนพื้นส้ม **5.95:1** — ห้ามใช้สีขาว (ขาวบนส้มได้ 3.01:1 ไม่ผ่าน) |
+| `--color-primary-focus` | `#e8560a` | hover / pressed fill (ชาร์โคลบนสีนี้ 4.92:1) และ focus ring (3.55:1 บนพอร์ซเลน) |
+| `--color-primary-ink` | `#b93800` | ส้มที่เป็น **ตัวอักษร/ลิงก์/ไอคอน** บนพื้นสว่าง (5.64:1 บนพอร์ซเลน, 4.97:1 บน `--color-accent-soft`) |
+| `--color-primary-on-dark` | `#ff6115` | จุดเน้นบนพื้นชาร์โคล (sidebar) 5.95:1 |
+| `--color-accent-soft` | `#ffeadb` | พื้น chip/ไอคอนอ่อน |
+| `--color-ink` | `#171717` | สีตัวอักษรหลัก (17.49:1 บนพอร์ซเลน) |
+| `--color-body-muted` | `#5c554a` | สีตัวอักษรรอง (7.18:1) |
+| `--color-canvas` | `#fffcf4` | พื้นหลังหน้า — Porcelain (card ใช้ `--color-surface: #ffffff`) |
+| `--color-canvas-soft` | `#f7f2e7` | พื้นหล่ม สลับแถวตาราง |
+| `--color-canvas-sunken` | `#f1ebdd` | พื้นจม (inset wells, hover fills) |
+| `--color-hairline` | `#e6dfcf` | เส้นขอบการ์ดและ input |
+| `--color-dark-surface` | `#171717` | sidebar, tooltip, พื้นมืด |
 
-โทน graphite (`#272729` / `#2a2a2c` / `#252527`) ใช้กับ chrome สีเข้มทั้งหมด
+> **กฎส้ม:** `#ff6115` เป็นสีพื้นเท่านั้น ห้ามใช้เป็นสีตัวอักษรบนพื้นสว่าง (2.94:1) — ใช้ `--color-primary-ink`
+> ห้ามเขียน `color: #fff` หรือ `text-white` บนพื้นส้ม และห้ามให้ส้มเป็นตัวบอกสถานะเพียงอย่างเดียว (ใช้ไอคอนหรือข้อความคู่)
+
+โทนชาร์โคล (`#171717` / `#1f1f1f` / `#141414`) ใช้กับ chrome สีเข้มทั้งหมด · โลโก้คงสีต้นฉบับ ไม่เปลี่ยนตามธีม
 
 ## 1b. โหมดมืด (ค่าเริ่มต้นตั้งแต่ 2026-10-15)
 
-Dark ไม่ใช่แค่กลับสีของ light แต่เป็นพาเลตตัวเองที่วัดจากหน้า login และเป็นค่าเริ่มต้นของแอป
+Dark ไม่ใช่แค่กลับสีของ light แต่เป็นพาเลตตัวเองและเป็นค่าเริ่มต้นของแอป
 (`ThemeProvider defaultTheme="dark"`) ปุ่มสลับธีมยังอยู่ · `.dark` เป็น **token remap**
-ห้ามใช้ class override + `!important`
+ห้ามใช้ class override + `!important` · first paint ตั้ง class `dark` และ `theme-color` จากสคริปต์ใน
+`client/index.html` ก่อนโหลด bundle (`theme-boot-contract.test.ts`)
 
-| Token | ค่า | contrast บน canvas |
+| Token | ค่า | contrast |
 |---|---|---|
-| `--color-canvas` | `#061a1f` | — |
-| `--color-canvas-soft` | `#123033` | — |
-| `--color-surface` | `#0c2529` | — |
-| `--color-ink` | `#f4faf9` | 16.92:1 |
-| `--color-text-secondary` | `#c3d4d4` | 11.65:1 |
-| `--color-text-tertiary` | `#9db2b2` | 8.04:1 |
-| `--color-text-quaternary` | `#7e9493` | 5.57:1 |
-| `--color-primary` | `#2fc4bd` | 8.30:1 (เป็นตัวอักษร) |
-| `--color-primary-focus` | `#5fd7d1` | — |
-| `--color-on-primary` | `#04211f` | 7.85:1 บนพื้น primary |
+| `--color-canvas` | `#171717` | — |
+| `--color-canvas-soft` | `#2a2a2a` | — |
+| `--color-surface` | `#202020` | — |
+| `--color-canvas-sunken` | `#121212` | — |
+| `--color-ink` | `#fffcf4` | 17.49:1 บน canvas |
+| `--color-text-secondary` | `#d2ccbf` | 11.21:1 |
+| `--color-text-tertiary` | `#b3aca0` | 7.96:1 |
+| `--color-text-quaternary` | `#a59e92` | ≥ 4.5:1 บนทุกพื้น (วัดใน `palette-contrast.test.ts`) |
+| `--color-primary` | `#ff6115` | พื้นปุ่ม 5.95:1 กับ canvas |
+| `--color-on-primary` | `#171717` | 5.95:1 บนพื้นส้ม |
+| `--color-primary-focus` | `#ff8a4d` | hover fill (ชาร์โคลบนสีนี้ 7.68:1) และ focus ring |
+| `--color-primary-ink` | `#ff7a3d` | ส้มเป็นตัวอักษร 6.92:1 บน canvas |
+| `--color-accent-soft` | `rgba(255,97,21,0.16)` | พื้น chip |
 
-> ห้ามเขียน `color: #fff` บนพื้น primary — ขาวบน primary สีมืดได้ **2.15:1** ให้ใช้
-> `var(--color-on-primary)`
+> ทุกคู่สีข้างต้นถูกวัดจาก token จริงใน `client/src/palette-contrast.test.ts` ทั้งสองธีม
 
 **กระจก (glass)** — chrome ในโหมดมืดเป็นกระจก ไม่ใช่สีทึบ: `--glass-fill` ·
 `--glass-fill-strong` · `--glass-line` · `--glass-line-bright` · `--glass-blur`
 การ์ดดูเป็นกระจกจาก **เส้นสว่างขอบบน** ไม่ใช่เงาทิ้งอย่างเดียว
 
 **หน้า member ใช้พาเลตเดียวกัน** — `.lamb-theme` ถูกรวมเป็น alias ของ token กลางแล้ว
+
+**ยังไม่ย้ายมาพาเลตนี้ (เฟสถัดไป):** หน้า PIN sign-in (`--pin-*`), บัตรสมาชิก (`--card-emerald-*`, `--card-gold-*`),
+หน้า `/care` (`--clay-*`), ภาพ Lamb, ไอคอนแอป และสีกราฟ (`--chart-*`)
 
 ## 2. สี Semantic (สถานะ)
 

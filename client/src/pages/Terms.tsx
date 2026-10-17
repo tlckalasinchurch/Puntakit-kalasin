@@ -72,7 +72,7 @@ export default function Terms() {
             {s.body.map((p, i) => (
               <p key={i} className="type-caption mb-2 text-[var(--color-text-secondary)]">
                 {s.title.startsWith("4.") && i === 1 ? (
-                  <Link href="/privacy" className="type-caption-strong text-[var(--color-primary)]">
+                  <Link href="/privacy" className="type-caption-strong text-[var(--color-primary-ink)]">
                     {p}
                   </Link>
                 ) : (
@@ -86,7 +86,7 @@ export default function Terms() {
         <div style={{ marginTop: 32, paddingTop: 20, borderTop: "1px solid var(--color-hairline)" }}>
           <Link
             href="/privacy"
-            className="type-caption-strong mr-5 inline-flex min-h-11 items-center text-[var(--color-primary)] no-underline"
+            className="type-caption-strong mr-5 inline-flex min-h-11 items-center text-[var(--color-primary-ink)] no-underline"
           >
             อ่านนโยบายความเป็นส่วนตัว →
           </Link>

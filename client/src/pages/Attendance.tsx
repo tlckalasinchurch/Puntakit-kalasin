@@ -35,6 +35,7 @@ import type { AttendanceStatus, ServiceType } from "@shared/schema";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useAuth } from "@/contexts/AuthContext";
 import { MEMBER_CONTACT_ROLES, hasRole } from "@shared/roles";
+import { initialOf } from "@/lib/initials";
 
 interface MemberItem {
   id: string;
@@ -751,9 +752,9 @@ export default function Attendance() {
                     <div className="flex min-w-0 items-center gap-3">
                       <span
                         aria-hidden="true"
-                        className="type-caption-strong flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-accent-soft)] text-[var(--color-primary)]"
+                        className="type-caption-strong flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-accent-soft)] text-[var(--color-primary-ink)]"
                       >
-                        {m.name.slice(0, 1)}
+                        {initialOf(m.name)}
                       </span>
                       <div className="min-w-0">
                         <p className="type-caption-strong truncate text-[var(--color-ink)]">
@@ -975,9 +976,9 @@ export default function Attendance() {
                   <div className="flex min-w-0 items-start gap-3">
                     <span
                       aria-hidden="true"
-                      className="type-caption-strong flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-warning)]/10 text-[var(--color-warning)]"
+                      className="type-caption-strong flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-warning)]/10 text-[var(--color-warning-ink)]"
                     >
-                      {m.name.slice(0, 1)}
+                      {initialOf(m.name)}
                     </span>
                     <div className="min-w-0">
                       <p className="type-caption-strong text-[var(--color-ink)]">
@@ -1015,7 +1016,7 @@ export default function Attendance() {
                     {m.phone && (
                       <a
                         href={`tel:${m.phone}`}
-                        className="type-caption inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-[var(--color-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                        className="type-caption inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-[var(--color-primary-ink)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
                       >
                         <Phone size={ICON_SIZE.xs} aria-hidden="true" />
                         <span>{m.phone}</span>
@@ -1070,7 +1071,7 @@ export default function Attendance() {
               <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4">
                 <span
                   aria-hidden="true"
-                  className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-accent-soft)] text-[var(--color-primary)]"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-accent-soft)] text-[var(--color-primary-ink)]"
                 >
                   <Users size={ICON_SIZE.md} aria-hidden="true" />
                 </span>
@@ -1142,7 +1143,7 @@ export default function Attendance() {
                   <button
                     type="button"
                     onClick={handleExportCsv}
-                    className="type-caption-strong min-h-11 text-[var(--color-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                    className="type-caption-strong min-h-11 text-[var(--color-primary-ink)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
                   >
                     ดาวน์โหลด CSV
                   </button>
@@ -1174,7 +1175,7 @@ export default function Attendance() {
                         วันที่ {new Date(tr.date).toLocaleDateString("th-TH")}
                       </p>
                     </div>
-                    <p className="type-body-strong shrink-0 text-[var(--color-primary)]">
+                    <p className="type-body-strong shrink-0 text-[var(--color-primary-ink)]">
                       {tr.count} คน
                     </p>
                   </li>

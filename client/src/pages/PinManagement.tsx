@@ -78,7 +78,7 @@ export default function PinManagement() {
 
       <div className="mb-5 rounded-[var(--radius-lg)] border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 p-4">
         <div className="flex items-start gap-3">
-          <KeyRound className="mt-0.5 shrink-0 text-[var(--color-primary)]" size={20} aria-hidden="true" />
+          <KeyRound className="mt-0.5 shrink-0 text-[var(--color-primary-ink)]" size={20} aria-hidden="true" />
           <p className="type-caption text-[var(--color-body-muted)]">
             PIN ต้องเป็นตัวเลข 6 หลัก ระบบจะเก็บเป็นค่าที่เข้ารหัสและไม่แสดง PIN เดิมบนหน้าจอ
           </p>

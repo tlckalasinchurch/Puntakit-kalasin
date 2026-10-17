@@ -160,7 +160,7 @@ export default function MemberGroup() {
       {!loading && !error && group && (
         <>
           <section className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5">
-            <span className="type-fine inline-flex items-center rounded-[var(--radius-xs)] bg-[var(--color-accent-soft)] px-2 py-1 font-semibold text-[var(--color-primary-focus)]">
+            <span className="type-fine inline-flex items-center rounded-[var(--radius-xs)] bg-[var(--color-accent-soft)] px-2 py-1 font-semibold text-[var(--color-primary-ink)]">
               {(CATEGORY_LABELS as Record<string, string>)[group.category] ?? (group.category || "พันธกิจ")}
             </span>
             <h2 className="type-body-strong mt-2 text-[var(--color-ink)]">
@@ -178,7 +178,7 @@ export default function MemberGroup() {
                 <Calendar
                   size={ICON_SIZE.sm}
                   aria-hidden="true"
-                  className="shrink-0 text-[var(--color-primary)]"
+                  className="shrink-0 text-[var(--color-primary-ink)]"
                 />
                 <span className="type-caption text-[var(--color-body-muted)]">
                   วันนัดหมาย
@@ -191,7 +191,7 @@ export default function MemberGroup() {
                 <Clock
                   size={ICON_SIZE.sm}
                   aria-hidden="true"
-                  className="shrink-0 text-[var(--color-primary)]"
+                  className="shrink-0 text-[var(--color-primary-ink)]"
                 />
                 <span className="type-caption text-[var(--color-body-muted)]">
                   เวลา
@@ -204,7 +204,7 @@ export default function MemberGroup() {
                 <MapPin
                   size={ICON_SIZE.sm}
                   aria-hidden="true"
-                  className="shrink-0 text-[var(--color-primary)]"
+                  className="shrink-0 text-[var(--color-primary-ink)]"
                 />
                 <span className="type-caption text-[var(--color-body-muted)]">
                   สถานที่
@@ -228,7 +228,7 @@ export default function MemberGroup() {
                     <span className="type-caption-strong text-[var(--color-ink)]">
                       {group.leaderName}
                     </span>
-                    <span className="type-fine rounded-[var(--radius-xs)] bg-[var(--color-accent-soft)] px-1.5 py-0.5 font-semibold text-[var(--color-primary-focus)]">
+                    <span className="type-fine rounded-[var(--radius-xs)] bg-[var(--color-accent-soft)] px-1.5 py-0.5 font-semibold text-[var(--color-primary-ink)]">
                       หัวหน้ากลุ่ม
                     </span>
                   </div>
@@ -249,7 +249,7 @@ export default function MemberGroup() {
                 <UserCheck
                   size={ICON_SIZE.sm}
                   aria-hidden="true"
-                  className="text-[var(--color-primary)]"
+                  className="text-[var(--color-primary-ink)]"
                 />
                 สมาชิกในกลุ่ม
               </h2>
@@ -274,7 +274,7 @@ export default function MemberGroup() {
                     ) : (
                       <span
                         aria-hidden="true"
-                        className="type-caption-strong flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-accent-soft)] text-[var(--color-primary-focus)]"
+                        className="type-caption-strong flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-accent-soft)] text-[var(--color-primary-ink)]"
                       >
                         {getInitials(m.memberName)}
                       </span>
@@ -297,7 +297,7 @@ export default function MemberGroup() {
               <ShieldCheck
                 size={ICON_SIZE.sm}
                 aria-hidden="true"
-                className="mt-0.5 shrink-0 text-[var(--color-primary)]"
+                className="mt-0.5 shrink-0 text-[var(--color-primary-ink)]"
               />
               <p className="type-fine text-[var(--color-body-muted)]">
                 เพื่อความปลอดภัยและปฏิบัติตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล

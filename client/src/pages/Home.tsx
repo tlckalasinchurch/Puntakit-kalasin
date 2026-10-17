@@ -386,7 +386,7 @@ function IconBadge({
       className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-canvas-soft)] ${
         tone === "alert"
           ? "text-[var(--color-error-ink)]"
-          : "text-[var(--color-primary)]"
+          : "text-[var(--color-primary-ink)]"
       }`}
     >
       <Icon size={ICON_SIZE.lg} aria-hidden="true" />
@@ -501,7 +501,7 @@ function HomeContent() {
             get today's date under it and the check-in tile first (see homeTiles). */}
         <section aria-labelledby="home-title" className="space-y-6">
           <div>
-            <p className="type-caption-strong text-[var(--color-primary)]">
+            <p className="type-caption-strong text-[var(--color-primary-ink)]">
               สวัสดี {user?.name ?? "ทีมงานพันธกิจ"}
             </p>
             <h1 id="home-title" className="type-display-md mt-2 text-[var(--color-ink)]">
@@ -735,7 +735,7 @@ function HomeContent() {
                         className="block h-full rounded-[var(--radius-lg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
                       >
                         <Card className="h-full gap-3 px-6 transition-colors hover:bg-[var(--color-canvas-soft)]">
-                          <p className="type-caption-strong flex items-center gap-2 text-[var(--color-primary)]">
+                          <p className="type-caption-strong flex items-center gap-2 text-[var(--color-primary-ink)]">
                             <CalendarDays
                               size={ICON_SIZE.sm}
                               aria-hidden="true"
@@ -776,7 +776,7 @@ function HomeContent() {
                     <Camera
                       size={ICON_SIZE.sm}
                       aria-hidden="true"
-                      className="text-[var(--color-primary)]"
+                      className="text-[var(--color-primary-ink)]"
                     />
                     กิจกรรมพันธกิจล่าสุด
                   </h3>
@@ -824,7 +824,7 @@ function HomeContent() {
                   <Megaphone
                     size={ICON_SIZE.sm}
                     aria-hidden="true"
-                    className="text-[var(--color-primary)]"
+                    className="text-[var(--color-primary-ink)]"
                   />
                   ประกาศและข่าวสาร
                 </h3>

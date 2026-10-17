@@ -60,21 +60,21 @@ describe("Member PWA: colours come from tokens", () => {
   });
 });
 
-describe("Member PWA: teal text on the mint tint passes AA", () => {
-  it("light --color-primary on --color-accent-soft fails 4.5:1, --color-primary-focus passes (why the chips use it)", () => {
+describe("Member PWA: orange text on the accent tint passes AA", () => {
+  it("light --color-primary (fill orange) on --color-accent-soft fails 4.5:1, --color-primary-ink passes (why the chips use it)", () => {
     const css = read("client/src/index.css");
     const light = (name: string) => css.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`))![1]; // first definition = :root (light)
     const tint = light("--color-accent-soft");
     expect(contrast(light("--color-primary"), tint)).toBeLessThan(4.5);
-    expect(contrast(light("--color-primary-focus"), tint)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(light("--color-primary-ink"), tint)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("no member element puts --color-primary / --color-primary-ink text on a plain accent-soft background", () => {
+  it("no member element puts --color-primary (the fill orange) as text on a plain accent-soft background", () => {
     const offenders: string[] = [];
     for (const rel of MEMBER_FILES) {
       for (const cls of classNames(code(rel))) {
         const onTint = /(^|\s)bg-\[var\(--color-accent-soft\)\]/.test(cls);
-        if (onTint && /(^|\s)text-\[var\(--color-primary(-ink)?\)\]/.test(cls)) offenders.push(`${rel}: ${cls.slice(0, 90)}`);
+        if (onTint && /(^|\s)text-\[var\(--color-primary\)\]/.test(cls)) offenders.push(`${rel}: ${cls.slice(0, 90)}`);
       }
     }
     expect(offenders).toEqual([]);

@@ -8,6 +8,7 @@ import {
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link } from "wouter";
 import { ICON_SIZE } from "@/lib/icon-sizes";
+import { initialOf } from "@/lib/initials";
 
 /**
  * Shared screen-level UI, Design System V2.
@@ -172,7 +173,7 @@ export function SectionHeader({
       {action && (
         <Link
           href={action.href}
-          className="type-caption-strong inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-[var(--color-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+          className="type-caption-strong inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-[var(--color-primary-ink)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
         >
           {action.label}
         </Link>
@@ -903,7 +904,7 @@ export function InitialsAvatar({
       style={{ width: size, height: size }}
       className="type-caption-strong flex shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-canvas-soft)] text-[var(--color-ink)]"
     >
-      {name.trim().slice(0, 1) || "?"}
+      {initialOf(name)}
     </span>
   );
 }
