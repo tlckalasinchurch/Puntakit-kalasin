@@ -17,8 +17,8 @@ describe("homeTilesFor", () => {
     expect(homeTilesFor("ministry_leader")).toEqual({ primary: ["care", "photo", "followUp"] });
   });
 
-  it("viewer only keeps the follow-up tile", () => {
-    expect(homeTilesFor("viewer")).toEqual({ primary: ["followUp"] });
+  it("viewer gets no tiles: it cannot create follow-ups, so the tile would open an empty list", () => {
+    expect(homeTilesFor("viewer")).toEqual({ primary: [] });
   });
 
   it("member and a missing role get no tiles", () => {
@@ -37,7 +37,7 @@ describe("homeTilesFor", () => {
     expect(primary.includes("membership")).toBe(hasRole(role, MEMBERSHIP_VIEW_ROLES));
   });
 
-  it.each(USER_ROLES.filter((r) => r !== "member"))("%s can always reach follow-ups (tile or 'ดูทั้งหมด')", (role) => {
+  it.each(USER_ROLES.filter((r) => hasRole(r, CREATE_ROLES)))("%s can always reach follow-ups (tile or 'ดูทั้งหมด')", (role) => {
     const { primary } = homeTilesFor(role);
     const hasInSecondary = homeMoreLinksFor(role).some((l) => l.href === HOME_TILE_HREF.followUp);
     expect(primary.includes("followUp") || hasInSecondary).toBe(true);

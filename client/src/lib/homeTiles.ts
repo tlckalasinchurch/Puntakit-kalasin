@@ -45,8 +45,8 @@ const isOfficeRole = (role: UserRole) => hasRole(role, PRIVILEGED_ROLES) && hasR
 
 /**
  * Which quick-action tiles the home page shows for a role. A group leader's
- * weekly work is three things, so follow-ups move into "ดูทั้งหมด"; every other
- * role keeps the tiles it had.
+ * weekly work is three things, so follow-ups move into "ดูทั้งหมด"; a viewer has no
+ * follow-ups to show, so gets no tile; every other role keeps the tiles it had.
  */
 export function homeTilesFor(role: UserRole | undefined): HomeTiles {
   if (role === undefined || !hasRole(role, ADMIN_SHELL_ROLES)) return { primary: [] };
@@ -54,7 +54,9 @@ export function homeTilesFor(role: UserRole | undefined): HomeTiles {
   const primary: HomeTileId[] = [];
   if (hasRole(role, CREATE_ROLES)) primary.push("care", "photo");
   if (hasRole(role, MEMBERSHIP_VIEW_ROLES)) primary.push("membership");
-  if (!isGroupLeader(role)) primary.push("followUp");
+  // A viewer cannot create follow-ups and only ever sees its own (none), so the tile
+  // would open an empty list. A group leader has it under "ดูทั้งหมด".
+  if (hasRole(role, PRIVILEGED_ROLES)) primary.push("followUp");
   return { primary };
 }
 
