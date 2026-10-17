@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { BadgeCheck, Camera, ClipboardCheck, ListTodo } from "lucide-react";
 import { ErrorState, StatusChip } from "@/components/DesignSystem";
@@ -7,9 +7,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, hasRole } from "@shared/roles";
-import type { HomeLink } from "@/lib/homeLinks";
 import { HOME_TILE_HREF, homeTilesFor, homeMoreLinksFor, type HomeTileId } from "@/lib/homeTiles";
 import { MissionPhotoSheet } from "./MissionPhotoSheet";
+import { RecoveredNote, SectionHeldByBanner, usePageWideFailure, useReportFailure } from "./homeFailures";
+import { useRetryZone } from "./useRetryZone";
 
 interface Overview {
   scopeLabel: string;
@@ -72,25 +73,53 @@ function Tile({
  * rows that exist inside the role's scope — there is no weekly-report data in
  * the system yet, so none is implied.
  */
-export function HomeMyWork({ extraLinks = [] }: { extraLinks?: HomeLink[] }) {
+export function HomeMyWork() {
   const { user } = useAuth();
   const [data, setData] = useState<Overview | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setError(null);
+    setLoading(true);
     try {
       setData(await api.get<Overview>("/api/home/overview"));
     } catch (err) {
       setError(err instanceof ApiError ? err : new ApiError("โหลดข้อมูลหน้าแรกไม่สำเร็จ", 0));
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Lets Home tell "this one query failed" from "several failed together" (one banner then).
+  const pageWideFailure = usePageWideFailure();
+  useReportFailure("overview", error !== null, () => void load(), error ? (error.serverMessage ?? error.message) : undefined, loading);
+
+  // The error box stays mounted while its own retry runs, so focus on the button is not dropped;
+  // when the retry works it is replaced by a short note that takes the focus (see useRetryZone).
+  const zone = useRetryZone({ loading, failed: error ? 1 : 0 });
+  const lastError = useRef<ApiError | null>(null);
+  if (error) lastError.current = error;
+  const errorBox = (e: ApiError) => (
+    <div ref={zone.rootRef}>
+      <ErrorState
+        inset
+        title="โหลดข้อมูลของคุณไม่สำเร็จ"
+        description={e.message}
+        technical={e.serverMessage}
+        retryBusy={zone.busy}
+        onRetry={() => {
+          if (zone.begin()) void load();
+        }}
+      />
+    </div>
+  );
 
   const canSeeMembership = hasRole(user?.role, MEMBERSHIP_VIEW_ROLES);
   const canPostPhotos = hasRole(user?.role, CREATE_ROLES);
@@ -117,11 +146,12 @@ export function HomeMyWork({ extraLinks = [] }: { extraLinks?: HomeLink[] }) {
             <button
               type="button"
               aria-expanded={moreOpen}
-              aria-controls="home-more-links"
+              aria-controls={moreOpen ? "home-more-links" : undefined}
               onClick={() => setMoreOpen((v) => !v)}
               className="type-caption-strong inline-flex min-h-11 items-center px-1 text-[var(--color-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
             >
               {moreOpen ? "ซ่อน" : "ดูทั้งหมด"}
+              <span className="sr-only"> ทางลัดเพิ่มเติม</span>
             </button>
           )}
         </div>
@@ -146,10 +176,17 @@ export function HomeMyWork({ extraLinks = [] }: { extraLinks?: HomeLink[] }) {
         )}
       </section>
 
-      {error ? (
-        <ErrorState inset title="โหลดข้อมูลของคุณไม่สำเร็จ" description={error.message} technical={error.serverMessage} onRetry={() => void load()} />
+      {zone.busy && lastError.current ? (
+        errorBox(lastError.current)
+      ) : error ? (
+        pageWideFailure ? <SectionHeldByBanner className="px-0 py-2" /> : errorBox(error)
       ) : (
         <>
+          {zone.recovered && (
+            <div ref={zone.rootRef}>
+              <RecoveredNote zone={zone} />
+            </div>
+          )}
 
       <section aria-labelledby="home-stats">
         <h2 id="home-stats" className="type-lead mb-1 text-[var(--color-ink)]">
@@ -194,7 +231,7 @@ export function HomeMyWork({ extraLinks = [] }: { extraLinks?: HomeLink[] }) {
             </h2>
             {data.recentPhotos.length > 0 && (
               <Link href="/feed" className="type-caption-strong inline-flex min-h-11 items-center px-1 text-[var(--color-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]">
-                ดูทั้งหมด
+                ดูทั้งหมด<span className="sr-only"> ภาพพันธกิจ</span>
               </Link>
             )}
           </div>

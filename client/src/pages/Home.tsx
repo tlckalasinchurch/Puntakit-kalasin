@@ -1,27 +1,30 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Activity,
   CalendarDays,
   Camera,
   ChevronRight,
   Clock,
-  Compass,
-  FileText,
-  HeartHandshake,
   Inbox as InboxIcon,
   ListTodo,
   Megaphone,
   RotateCw,
   ShieldCheck,
-  UserCheck,
   UserRound,
-  Users,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { HomeMyWork } from "@/components/home/HomeMyWork";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { OrgSnapshot } from "@/components/OrgSnapshot";
+import {
+  HomeFailureBanner,
+  HomeFailuresProvider,
+  RecoveredNote,
+  SectionHeldByBanner,
+  usePageWideFailure,
+  useReportFailure,
+} from "@/components/home/homeFailures";
+import { useRetryZone } from "@/components/home/useRetryZone";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,8 +36,9 @@ import {
 } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
+import { initialOf } from "@/lib/initials";
 import { useAuth } from "@/contexts/AuthContext";
-import { ADMIN_ROLES, CREATE_ROLES, PRIVILEGED_ROLES as OPERATIONS_ROLES } from "@shared/roles";
+import { CREATE_ROLES, PRIVILEGED_ROLES as OPERATIONS_ROLES } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 // ---------------------------------------------------------------------------
@@ -148,7 +152,7 @@ type QueryState<T> =
   | { status: "error"; message: string; technical?: string }
   | { status: "success"; data: T };
 
-function useHomeQuery<T>(path: string | null) {
+function useHomeQuery<T>(path: string | null, key: string) {
   const [state, setState] = useState<QueryState<T>>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
 
@@ -179,6 +183,9 @@ function useHomeQuery<T>(path: string | null) {
   }, [path, attempt]);
 
   const retry = useCallback(() => setAttempt(n => n + 1), []);
+  // One report per query (not per section that reads it), so the page can tell "one query
+  // failed" from "several failed together".
+  useReportFailure(key, state.status === "error", retry, state.status === "error" ? state.technical : undefined, path !== null && state.status === "loading");
   return [state, retry] as const;
 }
 
@@ -193,6 +200,27 @@ function QueryView<T>({
   skeleton: React.ReactNode;
   children: (data: T) => React.ReactNode;
 }) {
+  const pageWide = usePageWideFailure();
+  // The error box stays mounted while its own retry runs, so focus on the button is not dropped;
+  // when the retry works it is replaced by a short note that takes the focus (see useRetryZone).
+  const zone = useRetryZone({ loading: state.status === "loading", failed: state.status === "error" ? 1 : 0 });
+  const lastError = useRef<{ message: string; technical?: string } | null>(null);
+  if (state.status === "error") lastError.current = { message: state.message, technical: state.technical };
+
+  const errorBox = (error: { message: string; technical?: string }) => (
+    <div ref={zone.rootRef}>
+      <ErrorState
+        title={error.message}
+        description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+        technical={error.technical}
+        retryBusy={zone.busy}
+        onRetry={() => {
+          if (zone.begin()) retry();
+        }}
+      />
+    </div>
+  );
+  if (zone.busy && lastError.current) return errorBox(lastError.current);
   if (state.status === "loading") {
     return (
       <div role="status" aria-label="กำลังโหลดข้อมูล">
@@ -200,15 +228,19 @@ function QueryView<T>({
       </div>
     );
   }
-  if (state.status === "error")
+  // Several queries failed together: the banner at the top already says so once.
+  if (state.status === "error" && pageWide) return <SectionHeldByBanner />;
+  if (state.status === "error") return errorBox(state);
+  if (zone.recovered) {
     return (
-      <ErrorState
-        title={state.message}
-        description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
-        technical={state.technical}
-        onRetry={retry}
-      />
+      <>
+        <div ref={zone.rootRef} className="m-3">
+          <RecoveredNote zone={zone} />
+        </div>
+        {children(state.data)}
+      </>
     );
+  }
   return <>{children(state.data)}</>;
 }
 
@@ -286,26 +318,23 @@ function RowsSkeleton({ rows }: { rows: number }) {
  * There is no "last contacted" timestamp anywhere in the schema, so this does
  * NOT claim to show one. What it shows is what the database can actually
  * answer: how the member list splits between `ติดตามแล้ว` and `ต้องติดตาม`
- * (both are real columns on `members.status`), and — for the follow-up queue —
- * how far past `dueAt` each open item has gone, which is a real timestamp.
+ * (both are real columns on `members.status`).
+ *
+ * The overdue follow-ups are NOT drawn here: the attention card already lists
+ * them ("รายการที่เลยกำหนด", with how many days past `dueAt`), and showing the
+ * same items twice made the page look like it held more problems than it does.
  *
  * The bar length is the datum; no invented trend, no fabricated "days since".
  */
 function ContactGap({
   followedUp,
   needFollowUp,
-  overdue,
 }: {
   followedUp: number;
   needFollowUp: number;
-  overdue: OperationsFollowUp[];
 }) {
   const total = followedUp + needFollowUp;
   const needPct = total > 0 ? (needFollowUp / total) * 100 : 0;
-  const maxDays = overdue.reduce((max, item) => {
-    const days = daysOverdue(item.dueAt);
-    return days === null ? max : Math.max(max, days);
-  }, 0);
 
   return (
     <div className="px-6 py-5">
@@ -340,39 +369,6 @@ function ContactGap({
         />
       </div>
 
-      {maxDays > 0 && (
-        <>
-          <p className="type-caption-strong mt-6 text-[var(--color-ink)]">
-            เลยกำหนดนานที่สุด
-          </p>
-          <ul className="mt-3 space-y-3">
-            {overdue.slice(0, 3).map(followUp => {
-              const days = daysOverdue(followUp.dueAt);
-              if (days === null) return null;
-              return (
-                <li key={followUp.id}>
-                  <div className="flex items-baseline justify-between gap-4">
-                    <span className="type-caption truncate text-[var(--color-ink)]">
-                      {followUp.title}
-                    </span>
-                    <span className="type-fine shrink-0 font-semibold text-[var(--color-error-ink)]">
-                      {days} วัน
-                    </span>
-                  </div>
-                  {/* Bar length is proportional to how overdue, against the
-                      worst item in the queue, so the longest is always full. */}
-                  <div className="mt-1.5 h-1 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--color-canvas-soft)]">
-                    <div
-                      className="h-full rounded-[var(--radius-pill)] bg-[var(--color-ink)]"
-                      style={{ width: `${(days / maxDays) * 100}%` }}
-                    />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </>
-      )}
     </div>
   );
 }
@@ -457,138 +453,28 @@ function AttentionRow({
 }
 
 // ---------------------------------------------------------------------------
-// Static editorial content
-// ---------------------------------------------------------------------------
-// Role-based shortcuts configuration
-// ---------------------------------------------------------------------------
-
-interface RoleShortcut {
-  href: string;
-  icon: typeof Users;
-  title: string;
-  detail: string;
-}
-
-const GROUP_LEADER_SHORTCUTS: RoleShortcut[] = [
-  {
-    href: "/care",
-    icon: UserCheck,
-    title: "เช็คชื่อกลุ่มแคร์",
-    detail: "บันทึกการเข้าร่วมประจำสัปดาห์",
-  },
-  {
-    href: "/members",
-    icon: Users,
-    title: "สมาชิกในกลุ่ม",
-    detail: "ดูแลสมาชิกในความรับผิดชอบ",
-  },
-  {
-    href: "/groups",
-    icon: Compass,
-    title: "สถิติกลุ่มของฉัน",
-    detail: "ดูภาพรวมกลุ่มพันธกิจ",
-  },
-];
-
-const STAFF_ADMIN_SHORTCUTS: RoleShortcut[] = [
-  {
-    href: "/care",
-    icon: UserCheck,
-    title: "เช็คชื่อพันธกิจ",
-    detail: "บันทึกการเข้าร่วม",
-  },
-  {
-    href: "/members",
-    icon: Users,
-    title: "จัดการสมาชิก",
-    detail: "ทะเบียนสมาชิกคริสตจักร",
-  },
-  {
-    href: "/reports",
-    icon: Activity,
-    title: "รายงานและสถิติ",
-    detail: "ภาพรวมพันธกิจคริสตจักร",
-  },
-];
-
-const MINISTRY_LEADER_SHORTCUTS: RoleShortcut[] = [
-  {
-    href: "/care",
-    icon: UserCheck,
-    title: "เช็คชื่อพันธกิจ",
-    detail: "บันทึกการเข้าร่วม",
-  },
-  {
-    href: "/members",
-    icon: Users,
-    title: "สมาชิก",
-    detail: "ทะเบียนสมาชิก",
-  },
-  {
-    href: "/ministries",
-    icon: HeartHandshake,
-    title: "ฝ่ายงานพันธกิจ",
-    detail: "การดูแลฝ่ายงาน",
-  },
-];
-
-const DEFAULT_SHORTCUTS: RoleShortcut[] = [
-  {
-    href: "/members",
-    icon: Users,
-    title: "สมาชิก",
-    detail: "ดูแลความสัมพันธ์และการติดตาม",
-  },
-  {
-    href: "/groups",
-    icon: Compass,
-    title: "พันธกิจ",
-    detail: "เชื่อมโยงผู้คนในชุมชน",
-  },
-  {
-    href: "/events",
-    icon: CalendarDays,
-    title: "กิจกรรม",
-    detail: "ตารางและสิ่งที่กำลังจะเกิดขึ้น",
-  },
-];
-
-function getRoleShortcuts(role: string | undefined): RoleShortcut[] {
-  if (role === "group_leader") return GROUP_LEADER_SHORTCUTS;
-  if (role === "ministry_leader") return MINISTRY_LEADER_SHORTCUTS;
-  if (
-    role &&
-    (ADMIN_ROLES.includes(role as (typeof ADMIN_ROLES)[number]) ||
-      role === "staff")
-  ) {
-    return STAFF_ADMIN_SHORTCUTS;
-  }
-  return DEFAULT_SHORTCUTS;
-}
-
-// Church's discipleship framework. Editorial guidance only: no member-stage data exists behind it.
-const DISCIPLESHIP_PATHWAY = [
-  { title: "พบคน", detail: "สร้างความสัมพันธ์และมิตรภาพ" },
-  { title: "ประกาศ", detail: "แบ่งปันข่าวประเสริฐด้วยความรัก" },
-  { title: "นำรับเชื่อ", detail: "ต้อนรับและติดตามดูแลใกล้ชิด" },
-  { title: "นมัสการ", detail: "ร่วมสามัคคีธรรมที่คริสตจักร" },
-  { title: "เข้าพันธกิจ", detail: "ผูกพันในครอบครัวแห่งความเชื่อ" },
-  { title: "สร้างสาวก", detail: "เติบโตและพร้อมส่งต่อพระพร" },
-];
-
-// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
+/** The provider sits outside the content so the content's queries can report failures up to it. */
 export default function Home() {
+  return (
+    <HomeFailuresProvider>
+      <HomeContent />
+    </HomeFailuresProvider>
+  );
+}
+
+function HomeContent() {
   usePageTitle("ภาพรวมพันธกิจ");
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const canSeeOperations = Boolean(
     user && OPERATIONS_ROLES.includes(user.role)
   );
-  // Group leaders get a focused "today" header; this picks a page heading,
-  // it is not a role label (those come from ROLE_LABELS in shared/labels.ts).
+  // Group leaders get the date under the heading and no search box; this is a layout switch,
+  // not a role label (those come from ROLE_LABELS in shared/labels.ts). The heading itself is
+  // the same for every role: "งานวันนี้" is the nav item that opens /care, and Home must not share its name.
   const isGroupLeader = user?.role === "group_leader";
 
   // Redirect member role directly to Member PWA
@@ -599,26 +485,29 @@ export default function Home() {
   }, [user, navigate]);
 
   const [summary, retrySummary] = useHomeQuery<DashboardSummary>(
-    "/api/dashboard/summary"
+    "/api/dashboard/summary",
+    "summary"
   );
-  const [events, retryEvents] = useHomeQuery<ChurchEvent[]>("/api/events");
+  const [events, retryEvents] = useHomeQuery<ChurchEvent[]>("/api/events", "events");
   const [operations, retryOperations] = useHomeQuery<OperationsData>(
-    canSeeOperations ? "/api/dashboard/operations" : null
+    canSeeOperations ? "/api/dashboard/operations" : null,
+    "operations"
   );
 
   return (
     <AppLayout>
       <div className="home-editorial space-y-12 lg:space-y-20">
-        {/* Greeting + search, then the organisation at a glance */}
-        {/* Phase 2: Role-aware hero. Group leaders see "งานวันนี้" (today's work)
-            with the check-in CTA as primary. Staff see the operational overview. */}
+        {/* Only renders when two or more of the page's queries have failed together. */}
+        <HomeFailureBanner />
+        {/* Phase 2: Role-aware hero. The heading is the same for every role; group leaders
+            get today's date under it and the check-in tile first (see homeTiles). */}
         <section aria-labelledby="home-title" className="space-y-6">
           <div>
             <p className="type-caption-strong text-[var(--color-primary)]">
               สวัสดี {user?.name ?? "ทีมงานพันธกิจ"}
             </p>
             <h1 id="home-title" className="type-display-md mt-2 text-[var(--color-ink)]">
-              {isGroupLeader ? "งานวันนี้" : "ภาพรวมพันธกิจ"}
+              ภาพรวมพันธกิจ
             </h1>
             {isGroupLeader && (
               <p className="type-body mt-2 text-[var(--color-body-muted)]">
@@ -641,50 +530,174 @@ export default function Home() {
           {/* Quick actions first (large, thumb-sized), then this person's own numbers
               and latest photos — scoped by the API to what their role may see. */}
           {user && user.role !== "member" && (
-            <HomeMyWork
-              extraLinks={getRoleShortcuts(user.role).map(({ href, title }) => ({ href, label: title }))}
-            />
+            <HomeMyWork />
           )}
-          {canSeeOperations && <OrgSnapshot />}
         </section>
 
-        {/* Placeholder for the weekly report form (not built yet). The role shortcuts that
-            used to sit above it now live in HomeMyWork "ทำต่อได้เลย" > "ดูทั้งหมด". */}
-        {user && user.role !== "member" && (
-          <section aria-label="รายงานสัปดาห์">
-            {/* Primary Action */}
-            <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <span
-                  aria-hidden="true"
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-canvas-soft)] text-[var(--color-primary)]"
+        {/* People and groups that need a decision come right after the greeting and
+            shortcuts, ahead of the organisation snapshot,
+            events and news: someone opening the app should reach this without
+            scrolling past those. */}
+        <section aria-labelledby="home-attention">
+          <SectionHeader
+            id="home-attention"
+            title="ผู้คนและกลุ่มที่ต้องดูแล"
+            description="รายการที่รอการตัดสินใจหรือการติดตามจากทีม"
+          />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="min-w-0 gap-0 py-0">
+              <h3 className="type-body-strong border-b border-[var(--color-divider)] px-6 py-4 text-[var(--color-ink)]">
+                สิ่งที่ต้องดูแล
+              </h3>
+              {canSeeOperations && (
+                <QueryView
+                  state={operations}
+                  retry={retryOperations}
+                  skeleton={<RowsSkeleton rows={3} />}
                 >
-                  <FileText size={ICON_SIZE.lg} aria-hidden="true" />
-                </span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="type-body-strong text-[var(--color-ink)]">
-                      เริ่มรายงานสัปดาห์นี้
-                    </h3>
-                    <StatusChip tone="neutral">เร็วๆ นี้</StatusChip>
-                  </div>
-                  <p className="type-caption text-[var(--color-body-muted)]">
-                    แบบฟอร์มส่งสรุปยอดและกิจกรรมประจำสัปดาห์ (กำลังจัดเตรียม)
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="min-h-11 shrink-0"
-                disabled
-                title="ระบบรายงานสัปดาห์กำลังจัดเตรียม ยังไม่เปิดให้ส่ง"
+                  {data => (
+                    <>
+                      <ul className="divide-y divide-[var(--color-divider)] border-b border-[var(--color-divider)]">
+                        <AttentionRow
+                          href="/inbox"
+                          icon={InboxIcon}
+                          label="ข้อมูลที่รอตรวจสอบ"
+                          count={data.pendingSubmissionsCount}
+                        />
+                        <AttentionRow
+                          href="/follow-up"
+                          icon={ListTodo}
+                          label="การติดตามที่ยังไม่เสร็จ"
+                          count={data.openFollowUpsCount}
+                          detail={
+                            data.overdueFollowUpsCount > 0
+                              ? `เลยกำหนด ${data.overdueFollowUpsCount.toLocaleString("th-TH")} รายการ`
+                              : undefined
+                          }
+                          alert={data.overdueFollowUpsCount > 0}
+                        />
+                        <AttentionRow
+                          href="/groups"
+                          icon={Clock}
+                          label="กลุ่มที่ไม่มีกิจกรรมใน 14 วัน"
+                          count={data.inactiveGroups.length}
+                        />
+                      </ul>
+                      {data.overdueFollowUps.length > 0 && (
+                        <div className="border-b border-[var(--color-divider)] px-6 py-4">
+                          <p className="type-caption-strong text-[var(--color-error-ink)]">
+                            รายการที่เลยกำหนด
+                          </p>
+                          <ul className="mt-2 space-y-2">
+                            {data.overdueFollowUps.slice(0, 4).map(followUp => (
+                              <li
+                                key={followUp.id}
+                                className="flex items-baseline justify-between gap-4"
+                              >
+                                <span className="type-caption truncate text-[var(--color-ink)]">
+                                  {followUp.title}
+                                </span>
+                                <span className="type-caption shrink-0 text-right text-[var(--color-body-muted)]">
+                                  {followUp.subjectMemberName ??
+                                    followUp.subjectGroupName ??
+                                    "-"}
+                                  {daysOverdue(followUp.dueAt) ? (
+                                    <span className="type-fine ml-2 font-semibold text-[var(--color-error-ink)]">
+                                      เลย {daysOverdue(followUp.dueAt)} วัน
+                                    </span>
+                                  ) : null}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </QueryView>
+              )}
+              <QueryView
+                state={summary}
+                retry={retrySummary}
+                skeleton={<RowsSkeleton rows={1} />}
               >
-                ยังไม่เปิดให้ส่ง
-              </Button>
-            </div>
-          </section>
-        )}
+                {data => (
+                  <ContactGap
+                    followedUp={data.followedUp}
+                    needFollowUp={data.needFollowUp}
+                  />
+                )}
+              </QueryView>
+            </Card>
+
+            <Card className="min-w-0 gap-0 py-0">
+              <div className="flex items-center justify-between gap-4 border-b border-[var(--color-divider)] px-6 py-4">
+                <h3 className="type-body-strong text-[var(--color-ink)]">
+                  สมาชิกใหม่ล่าสุด
+                </h3>
+                <Button asChild variant="link" className="h-11 px-2">
+                  <Link href="/members">
+                    ดูทั้งหมด<span className="sr-only"> สมาชิกใหม่ล่าสุด</span>
+                  </Link>
+                </Button>
+              </div>
+              <QueryView
+                state={summary}
+                retry={retrySummary}
+                skeleton={<RowsSkeleton rows={4} />}
+              >
+                {data =>
+                  !data.recentMembers?.length ? (
+                    <EmptyState
+                      inset
+                      icon={UserRound}
+                      title="ยังไม่มีสมาชิกใหม่"
+                      description="สมาชิกที่ลงทะเบียนล่าสุดจะแสดงที่นี่"
+                    />
+                  ) : (
+                    <ul className="divide-y divide-[var(--color-divider)]">
+                      {data.recentMembers.map(member => (
+                        <li
+                          key={member.id}
+                          className="flex items-center gap-4 px-6 py-4"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="type-body-strong flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-canvas-soft)] text-[var(--color-ink)]"
+                          >
+                            {initialOf(member.name)}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="type-body-strong line-clamp-2 block break-words text-[var(--color-ink)]">
+                              {member.name}{" "}
+                              {member.nickname ? `(${member.nickname})` : ""}
+                            </span>
+                            <span className="type-caption block truncate text-[var(--color-body-muted)]">
+                              {member.area
+                                ? `พื้นที่: ${member.area}`
+                                : member.role}
+                            </span>
+                          </span>
+                          <StatusChip
+                            tone={
+                              member.status === "ติดตามแล้ว"
+                                ? "success"
+                                : "warning"
+                            }
+                          >
+                            {member.status}
+                          </StatusChip>
+                        </li>
+                      ))}
+                    </ul>
+                  )
+                }
+              </QueryView>
+            </Card>
+          </div>
+        </section>
+
+        {canSeeOperations && <OrgSnapshot />}
 
         {/* Active ministry: the one canonical upcoming-events presentation */}
         <section aria-labelledby="home-upcoming">
@@ -818,7 +831,9 @@ export default function Home() {
                   ประกาศและข่าวสาร
                 </h3>
                 <Button asChild variant="link" className="h-11 px-2">
-                  <Link href="/announcements">ดูทั้งหมด</Link>
+                  <Link href="/announcements">
+                    ดูทั้งหมด<span className="sr-only"> ประกาศและข่าวสาร</span>
+                  </Link>
                 </Button>
               </div>
               <QueryView
@@ -868,170 +883,6 @@ export default function Home() {
                             </Link>
                           </li>
                         ))}
-                    </ul>
-                  )
-                }
-              </QueryView>
-            </Card>
-          </div>
-        </section>
-
-        {/* People and groups that need a decision come first: a leader opening
-            the app on a phone should reach this without scrolling past the
-            editorial sections. */}
-        <section aria-labelledby="home-attention">
-          <SectionHeader
-            id="home-attention"
-            title="ผู้คนและกลุ่มที่ต้องดูแล"
-            description="รายการที่รอการตัดสินใจหรือการติดตามจากทีม"
-          />
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="min-w-0 gap-0 py-0">
-              <h3 className="type-body-strong border-b border-[var(--color-divider)] px-6 py-4 text-[var(--color-ink)]">
-                สิ่งที่ต้องดูแล
-              </h3>
-              {canSeeOperations && (
-                <QueryView
-                  state={operations}
-                  retry={retryOperations}
-                  skeleton={<RowsSkeleton rows={3} />}
-                >
-                  {data => (
-                    <>
-                      <ul className="divide-y divide-[var(--color-divider)] border-b border-[var(--color-divider)]">
-                        <AttentionRow
-                          href="/inbox"
-                          icon={InboxIcon}
-                          label="ข้อมูลที่รอตรวจสอบ"
-                          count={data.pendingSubmissionsCount}
-                        />
-                        <AttentionRow
-                          href="/follow-up"
-                          icon={ListTodo}
-                          label="การติดตามที่ยังไม่เสร็จ"
-                          count={data.openFollowUpsCount}
-                          detail={
-                            data.overdueFollowUpsCount > 0
-                              ? `เลยกำหนด ${data.overdueFollowUpsCount.toLocaleString("th-TH")} รายการ`
-                              : undefined
-                          }
-                          alert={data.overdueFollowUpsCount > 0}
-                        />
-                        <AttentionRow
-                          href="/groups"
-                          icon={Clock}
-                          label="กลุ่มที่ไม่มีกิจกรรมใน 14 วัน"
-                          count={data.inactiveGroups.length}
-                        />
-                      </ul>
-                      {data.overdueFollowUps.length > 0 && (
-                        <div className="border-b border-[var(--color-divider)] px-6 py-4">
-                          <p className="type-caption-strong text-[var(--color-error-ink)]">
-                            รายการที่เลยกำหนด
-                          </p>
-                          <ul className="mt-2 space-y-2">
-                            {data.overdueFollowUps.slice(0, 4).map(followUp => (
-                              <li
-                                key={followUp.id}
-                                className="flex items-baseline justify-between gap-4"
-                              >
-                                <span className="type-caption truncate text-[var(--color-ink)]">
-                                  {followUp.title}
-                                </span>
-                                <span className="type-caption shrink-0 text-[var(--color-body-muted)]">
-                                  {followUp.subjectMemberName ??
-                                    followUp.subjectGroupName ??
-                                    "-"}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </QueryView>
-              )}
-              <QueryView
-                state={summary}
-                retry={retrySummary}
-                skeleton={<RowsSkeleton rows={1} />}
-              >
-                {data => (
-                  <ContactGap
-                    followedUp={data.followedUp}
-                    needFollowUp={data.needFollowUp}
-                    /* The operations endpoint is role-gated, and the query is
-                       not even issued for other roles, so its state stays
-                       "loading" forever. The member split is still real, so
-                       render the bar and just skip the overdue list. */
-                    overdue={
-                      canSeeOperations && operations.status === "success"
-                        ? operations.data.overdueFollowUps
-                        : []
-                    }
-                  />
-                )}
-              </QueryView>
-            </Card>
-
-            <Card className="min-w-0 gap-0 py-0">
-              <div className="flex items-center justify-between gap-4 border-b border-[var(--color-divider)] px-6 py-4">
-                <h3 className="type-body-strong text-[var(--color-ink)]">
-                  สมาชิกใหม่ล่าสุด
-                </h3>
-                <Button asChild variant="link" className="h-11 px-2">
-                  <Link href="/members">ดูทั้งหมด</Link>
-                </Button>
-              </div>
-              <QueryView
-                state={summary}
-                retry={retrySummary}
-                skeleton={<RowsSkeleton rows={4} />}
-              >
-                {data =>
-                  !data.recentMembers?.length ? (
-                    <EmptyState
-                      inset
-                      icon={UserRound}
-                      title="ยังไม่มีสมาชิกใหม่"
-                      description="สมาชิกที่ลงทะเบียนล่าสุดจะแสดงที่นี่"
-                    />
-                  ) : (
-                    <ul className="divide-y divide-[var(--color-divider)]">
-                      {data.recentMembers.map(member => (
-                        <li
-                          key={member.id}
-                          className="flex items-center gap-4 px-6 py-4"
-                        >
-                          <span
-                            aria-hidden="true"
-                            className="type-body-strong flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-canvas-soft)] text-[var(--color-ink)]"
-                          >
-                            {member.name.slice(0, 1)}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="type-body-strong line-clamp-2 block break-words text-[var(--color-ink)]">
-                              {member.name}{" "}
-                              {member.nickname ? `(${member.nickname})` : ""}
-                            </span>
-                            <span className="type-caption block truncate text-[var(--color-body-muted)]">
-                              {member.area
-                                ? `พื้นที่: ${member.area}`
-                                : member.role}
-                            </span>
-                          </span>
-                          <StatusChip
-                            tone={
-                              member.status === "ติดตามแล้ว"
-                                ? "success"
-                                : "warning"
-                            }
-                          >
-                            {member.status}
-                          </StatusChip>
-                        </li>
-                      ))}
                     </ul>
                   )
                 }

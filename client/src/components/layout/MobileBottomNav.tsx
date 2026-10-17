@@ -13,7 +13,8 @@ interface MobileBottomNavProps {
  * Bottom navigation for phones (hidden from `lg`, where the sidebar is
  * always visible). It carries only the destinations used every week: home,
  * care-group check-in (for roles that can record attendance), members and
- * groups, plus a button that opens the full menu. Reports and everything else
+ * groups (group leaders: home, today's work, follow-ups and members), plus a
+ * button that opens the full menu. Reports and everything else
  * stay in the drawer so this bar never grows past five targets.
  */
 export function MobileBottomNav({ onMenu, menuOpen }: MobileBottomNavProps) {
@@ -22,10 +23,13 @@ export function MobileBottomNav({ onMenu, menuOpen }: MobileBottomNavProps) {
   const canCheckIn = hasRole(user?.role, CREATE_ROLES);
   const isGroupLeader = user?.role === "group_leader";
 
-  // Phase 1: group leaders get a focused bottom nav — their weekly work first.
-  // "งานวันนี้" (today's work) is the primary destination, not a generic home.
+  // Phase 1: group leaders get a focused bottom nav centred on their weekly work:
+  // "งานวันนี้" (check-in), follow-ups and members. "หน้าหลัก" leads, as for every other
+  // role (the app opens on `/`), so a leader can always get back to the overview; with it
+  // the bar is four items plus the menu button, never past five targets.
   const items = isGroupLeader
     ? [
+        { label: "หน้าหลัก", path: "/", icon: HomeIcon },
         { label: "งานวันนี้", path: "/care", icon: ListChecks },
         { label: "ติดตาม", path: "/follow-up", icon: ListTodo },
         { label: "สมาชิก", path: "/members", icon: Users },

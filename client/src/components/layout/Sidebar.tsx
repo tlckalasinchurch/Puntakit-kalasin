@@ -161,12 +161,16 @@ export const navGroups: NavGroup[] = [
  * Focused navigation for group leaders (Phase 1).
  * A group leader's weekly work is: check in their group, follow up with
  * absentees, and see their members. They do not need the full admin menu.
+ * "หน้าหลัก" comes first, as for every other role: the installed app opens on `/`
+ * (manifest `start_url`), and without an entry there a leader had no way back to
+ * their own overview from the menu.
  * This is a UX affordance only — server authorization is unchanged.
  */
 export const groupLeaderNavGroups: NavGroup[] = [
   {
     name: "งานของฉัน",
     items: [
+      { label: "หน้าหลัก", path: "/", icon: HomeIcon },
       {
         label: "งานวันนี้",
         path: "/care",
