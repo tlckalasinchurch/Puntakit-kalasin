@@ -32,6 +32,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { MapUnavailable } from "@/components/map/MapUnavailable";
 import { usePersistFn } from "@/hooks/usePersistFn";
 import { hasWebGL } from "@/lib/webgl";
+import { observeSize } from "@/lib/observeSize";
 import { cn } from "@/lib/utils";
 
 maplibregl.setWorkerUrl(workerUrl);
@@ -83,6 +84,7 @@ export function MapView({
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+  const stopResize = useRef<(() => void) | null>(null);
   const style = useRef<string | StyleSpecification>(styleFor(basemap, theme));
   const [unavailable, setUnavailable] = useState(() => !hasWebGL());
 
@@ -99,6 +101,9 @@ export function MapView({
       });
       instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
       map.current = instance;
+      // MapLibre only re-measures on a window resize; a collapsing sidebar or a dialog resizes this
+      // container without one, which would leave the canvas at its old size.
+      stopResize.current = observeSize(mapContainer.current, () => instance.resize());
       onMapReady?.(instance);
     } catch {
       // A context that probed fine can still fail to initialise (low memory, lost context).
@@ -109,6 +114,8 @@ export function MapView({
   useEffect(() => {
     init();
     return () => {
+      stopResize.current?.();
+      stopResize.current = null;
       map.current?.remove();
       map.current = null;
     };
