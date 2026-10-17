@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Clock,
   Compass,
-  FileText,
   HeartHandshake,
   Inbox as InboxIcon,
   ListTodo,
@@ -22,6 +21,13 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { HomeMyWork } from "@/components/home/HomeMyWork";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { OrgSnapshot } from "@/components/OrgSnapshot";
+import {
+  HomeFailureBanner,
+  HomeFailuresProvider,
+  SectionHeldByBanner,
+  usePageWideFailure,
+  useReportFailure,
+} from "@/components/home/homeFailures";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -148,7 +154,7 @@ type QueryState<T> =
   | { status: "error"; message: string; technical?: string }
   | { status: "success"; data: T };
 
-function useHomeQuery<T>(path: string | null) {
+function useHomeQuery<T>(path: string | null, key: string) {
   const [state, setState] = useState<QueryState<T>>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
 
@@ -179,6 +185,9 @@ function useHomeQuery<T>(path: string | null) {
   }, [path, attempt]);
 
   const retry = useCallback(() => setAttempt(n => n + 1), []);
+  // One report per query (not per section that reads it), so the page can tell "one query
+  // failed" from "several failed together".
+  useReportFailure(key, state.status === "error", retry, state.status === "error" ? state.technical : undefined);
   return [state, retry] as const;
 }
 
@@ -193,6 +202,7 @@ function QueryView<T>({
   skeleton: React.ReactNode;
   children: (data: T) => React.ReactNode;
 }) {
+  const pageWide = usePageWideFailure();
   if (state.status === "loading") {
     return (
       <div role="status" aria-label="กำลังโหลดข้อมูล">
@@ -200,6 +210,8 @@ function QueryView<T>({
       </div>
     );
   }
+  // Several queries failed together: the banner at the top already says so once.
+  if (state.status === "error" && pageWide) return <SectionHeldByBanner />;
   if (state.status === "error")
     return (
       <ErrorState
@@ -544,7 +556,16 @@ const DISCIPLESHIP_PATHWAY = [
 // Page
 // ---------------------------------------------------------------------------
 
+/** The provider sits outside the content so the content's queries can report failures up to it. */
 export default function Home() {
+  return (
+    <HomeFailuresProvider>
+      <HomeContent />
+    </HomeFailuresProvider>
+  );
+}
+
+function HomeContent() {
   usePageTitle("ภาพรวมพันธกิจ");
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -565,16 +586,20 @@ export default function Home() {
   }, [user, navigate]);
 
   const [summary, retrySummary] = useHomeQuery<DashboardSummary>(
-    "/api/dashboard/summary"
+    "/api/dashboard/summary",
+    "summary"
   );
-  const [events, retryEvents] = useHomeQuery<ChurchEvent[]>("/api/events");
+  const [events, retryEvents] = useHomeQuery<ChurchEvent[]>("/api/events", "events");
   const [operations, retryOperations] = useHomeQuery<OperationsData>(
-    canSeeOperations ? "/api/dashboard/operations" : null
+    canSeeOperations ? "/api/dashboard/operations" : null,
+    "operations"
   );
 
   return (
     <AppLayout>
       <div className="home-editorial space-y-12 lg:space-y-20">
+        {/* Only renders when two or more of the page's queries have failed together. */}
+        <HomeFailureBanner />
         {/* Greeting + search, then the organisation at a glance */}
         {/* Phase 2: Role-aware hero. The heading is the same for every role; group leaders
             get today's date under it and the check-in tile first (see homeTiles). */}
@@ -775,44 +800,6 @@ export default function Home() {
         </section>
 
         {canSeeOperations && <OrgSnapshot />}
-
-        {/* Placeholder for the weekly report form (not built yet). The role shortcuts that
-            used to sit above it now live in HomeMyWork "ทำต่อได้เลย" > "ดูทั้งหมด". */}
-        {user && user.role !== "member" && (
-          <section aria-label="รายงานสัปดาห์">
-            {/* Primary Action */}
-            <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <span
-                  aria-hidden="true"
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-canvas-soft)] text-[var(--color-primary)]"
-                >
-                  <FileText size={ICON_SIZE.lg} aria-hidden="true" />
-                </span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="type-body-strong text-[var(--color-ink)]">
-                      เริ่มรายงานสัปดาห์นี้
-                    </h3>
-                    <StatusChip tone="neutral">เร็วๆ นี้</StatusChip>
-                  </div>
-                  <p className="type-caption text-[var(--color-body-muted)]">
-                    แบบฟอร์มส่งสรุปยอดและกิจกรรมประจำสัปดาห์ (กำลังจัดเตรียม)
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="min-h-11 shrink-0"
-                disabled
-                title="ระบบรายงานสัปดาห์กำลังจัดเตรียม ยังไม่เปิดให้ส่ง"
-              >
-                ยังไม่เปิดให้ส่ง
-              </Button>
-            </div>
-          </section>
-        )}
 
         {/* Active ministry: the one canonical upcoming-events presentation */}
         <section aria-labelledby="home-upcoming">

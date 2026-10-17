@@ -10,6 +10,7 @@ import { CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, hasRole } from "@shared/roles";
 import type { HomeLink } from "@/lib/homeLinks";
 import { HOME_TILE_HREF, homeTilesFor, homeMoreLinksFor, type HomeTileId } from "@/lib/homeTiles";
 import { MissionPhotoSheet } from "./MissionPhotoSheet";
+import { SectionHeldByBanner, usePageWideFailure, useReportFailure } from "./homeFailures";
 
 interface Overview {
   scopeLabel: string;
@@ -92,6 +93,10 @@ export function HomeMyWork({ extraLinks = [] }: { extraLinks?: HomeLink[] }) {
     void load();
   }, [load]);
 
+  // Lets Home tell "this one query failed" from "several failed together" (one banner then).
+  const pageWideFailure = usePageWideFailure();
+  useReportFailure("overview", error !== null, () => void load(), error ? (error.serverMessage ?? error.message) : undefined);
+
   const canSeeMembership = hasRole(user?.role, MEMBERSHIP_VIEW_ROLES);
   const canPostPhotos = hasRole(user?.role, CREATE_ROLES);
   const { primary: tiles } = homeTilesFor(user?.role);
@@ -147,7 +152,11 @@ export function HomeMyWork({ extraLinks = [] }: { extraLinks?: HomeLink[] }) {
       </section>
 
       {error ? (
-        <ErrorState inset title="โหลดข้อมูลของคุณไม่สำเร็จ" description={error.message} technical={error.serverMessage} onRetry={() => void load()} />
+        pageWideFailure ? (
+          <SectionHeldByBanner className="px-0 py-2" />
+        ) : (
+          <ErrorState inset title="โหลดข้อมูลของคุณไม่สำเร็จ" description={error.message} technical={error.serverMessage} onRetry={() => void load()} />
+        )
       ) : (
         <>
 

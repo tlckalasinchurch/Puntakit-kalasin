@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 import { DataBar, ErrorState } from "@/components/DesignSystem";
 import { api, ApiError } from "@/lib/api";
+import { SectionHeldByBanner, usePageWideFailure, useReportFailure } from "@/components/home/homeFailures";
 
 /**
  * Home → organisation snapshot: totals plus one row per body, linking to the
@@ -35,7 +36,12 @@ export function OrgSnapshot() {
     };
   }, [attempt]);
 
+  // Lets Home tell "this one query failed" from "several failed together" (one banner then).
+  const pageWideFailure = usePageWideFailure();
+  useReportFailure("org", error !== null, () => setAttempt((n) => n + 1), error ?? undefined);
+
   if (error) {
+    if (pageWideFailure) return <SectionHeldByBanner className="px-1 py-2" />;
     return <ErrorState title="โหลดภาพรวมองค์กรไม่สำเร็จ" description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง" technical={error} onRetry={() => setAttempt((n) => n + 1)} />;
   }
   if (!data) {

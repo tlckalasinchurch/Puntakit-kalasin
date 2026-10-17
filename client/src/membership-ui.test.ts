@@ -225,9 +225,10 @@ describe("membership UI contracts", () => {
     // 3: a group_leader's empty states name the scope instead of claiming the system is empty.
     expect(members).toContain("ยังไม่มีสมาชิกในขอบเขตของคุณ");
     expect(code("client/src/pages/CareToday.tsx")).toContain("ยังไม่มีพันธกิจในขอบเขตของคุณ");
-    // 13: disabled report button keeps a 44px target; recent-member names wrap instead of truncating.
+    // 13: recent-member names wrap instead of truncating. (This item also pinned the 44px target of the
+    // disabled weekly-report button; that placeholder was removed from Home on purpose, and
+    // home-contract.test.ts now asserts it stays gone.)
     const home = code("client/src/pages/Home.tsx");
-    expect(home).toContain('className="min-h-11 shrink-0"');
     expect(home).toContain("line-clamp-2 block break-words");
   });
 });

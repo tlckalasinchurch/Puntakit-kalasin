@@ -22,7 +22,6 @@ describe("Admin Home: order of sections", () => {
       'aria-labelledby="home-title"',
       'aria-labelledby="home-attention"',
       "<OrgSnapshot />",
-      'aria-label="รายงานสัปดาห์"',
       'aria-labelledby="home-upcoming"',
       'aria-labelledby="home-recent"',
     ].map(at);
@@ -59,6 +58,28 @@ describe("Admin Home: overdue follow-ups appear once, with the days", () => {
     const block = home.slice(start, start + 1400);
     expect(block).toContain("daysOverdue(followUp.dueAt)");
     expect(block).toContain("เลย {daysOverdue(followUp.dueAt)} วัน");
+  });
+});
+
+describe("Admin Home: no disabled weekly-report placeholder", () => {
+  // It was a 90-164px block of "เริ่มรายงานสัปดาห์นี้ / เร็วๆ นี้ / ยังไม่เปิดให้ส่ง" with a disabled button,
+  // against the shell's own rule that an entry which opens "coming soon" teaches people not to trust it.
+  it("Home no longer renders the placeholder section, its copy or its disabled button", () => {
+    expect(home).not.toContain('aria-label="รายงานสัปดาห์"');
+    expect(home).not.toContain("เริ่มรายงานสัปดาห์นี้");
+    expect(home).not.toContain("ยังไม่เปิดให้ส่ง");
+    expect(home).not.toContain("แบบฟอร์มส่งสรุปยอดและกิจกรรมประจำสัปดาห์");
+    expect(home).not.toMatch(/\bFileText\b/);
+  });
+
+  it("the page still says plainly that there is no weekly report yet (the truthful message is kept)", () => {
+    const myWork = read("client/src/components/home/HomeMyWork.tsx");
+    expect(myWork).toContain("ระบบยังไม่มีรายงานรายสัปดาห์");
+  });
+
+  it("the Member PWA is untouched by this change", () => {
+    // Its own report CTA is a separate, deliberate decision (members cannot create reports yet).
+    expect(read("client/src/components/lamb/LambHero.tsx")).toContain("lamb-report-soon");
   });
 });
 
