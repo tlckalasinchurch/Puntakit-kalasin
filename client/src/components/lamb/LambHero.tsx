@@ -1,5 +1,4 @@
 import { Check } from "lucide-react";
-import { StatusChip } from "@/components/DesignSystem";
 import { LambMascot } from "./LambMascot";
 
 const CHECKLIST = [
@@ -66,26 +65,26 @@ export function LambHero() {
             </li>
           ))}
         </ul>
-        {/* The report form for members is not built yet (POST /api/submissions is limited to CREATE_ROLES),
-            so this is shown as unavailable instead of linking to a page that does not exist.
+        {/* The report form for members is not built yet (POST /api/submissions is limited to CREATE_ROLES,
+            and /app/reports is a read-only list), so this is shown as unavailable instead of
+            linking to a page that does not do the job.
 
-            It still has to read as THE action on this page, so the shape is a
-            primary one — teal wash, teal edge, full width on a phone — and the
-            "soon" chip beside it is what says it is not open. Previously the fill
-            was --color-canvas-soft on a white card, which left no button edge at
-            all and made the primary action the faintest control on the screen.
-            Teal label on a teal wash follows brand-spec's rule to use
-            --color-primary-focus for teal text on a tinted surface. */}
-        <div className="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+            It has to read as closed, not as a live primary action: it was a teal wash at full
+            opacity, which looked tappable while doing nothing. Now it is muted with a hairline
+            edge, and the reason is visible text under it (a `title` tooltip never shows on a
+            phone). Muted text on the soft canvas keeps its contrast, so it stays readable. */}
+        <div className="mt-6 flex flex-col items-start gap-2">
           <button
             type="button"
             disabled
-            title="ฟอร์มบันทึกรายงานกำลังจัดเตรียม ยังไม่เปิดให้ใช้งาน"
-            className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-full border border-[var(--color-primary)]/45 bg-[color-mix(in_srgb,var(--color-primary)_18%,transparent)] px-6 py-3 text-center font-semibold text-[var(--color-primary-focus)] sm:w-auto"
+            aria-describedby="lamb-report-soon"
+            className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-full border border-[var(--color-hairline)] bg-[var(--color-canvas-soft)] px-6 py-3 text-center font-semibold text-[var(--color-body-muted)] sm:w-auto"
           >
             เริ่มบันทึกรายงาน
           </button>
-          <StatusChip tone="neutral">เร็วๆ นี้</StatusChip>
+          <p id="lamb-report-soon" className="type-caption text-[var(--color-body-muted)]">
+            เร็วๆ นี้ — ฟอร์มบันทึกรายงานสำหรับสมาชิกกำลังจัดเตรียม
+          </p>
         </div>
       </div>
       <LambMascot

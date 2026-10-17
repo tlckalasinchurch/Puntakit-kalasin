@@ -110,9 +110,9 @@ export default function MemberReports() {
               <li key={sub.id}>
                 <Link
                   href={`/app/reports/${sub.id}`}
-                  className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
+                  className="flex items-center gap-4 rounded-2xl bg-[var(--color-surface)] p-4 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
                 >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#E4F7F2] text-[var(--lamb-primary)]">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-accent-soft)] text-[var(--lamb-primary)]">
                     <ClipboardList size={22} aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">

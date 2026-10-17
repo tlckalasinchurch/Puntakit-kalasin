@@ -160,7 +160,7 @@ export default function MemberGroup() {
       {!loading && !error && group && (
         <>
           <section className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5">
-            <span className="type-fine inline-flex items-center rounded-[var(--radius-xs)] bg-[var(--color-accent-soft)] px-2 py-1 font-semibold text-[var(--color-primary-ink)]">
+            <span className="type-fine inline-flex items-center rounded-[var(--radius-xs)] bg-[var(--color-accent-soft)] px-2 py-1 font-semibold text-[var(--color-primary-focus)]">
               {(CATEGORY_LABELS as Record<string, string>)[group.category] ?? (group.category || "พันธกิจ")}
             </span>
             <h2 className="type-body-strong mt-2 text-[var(--color-ink)]">
@@ -228,7 +228,7 @@ export default function MemberGroup() {
                     <span className="type-caption-strong text-[var(--color-ink)]">
                       {group.leaderName}
                     </span>
-                    <span className="type-fine rounded-[var(--radius-xs)] bg-[var(--color-accent-soft)] px-1.5 py-0.5 font-semibold text-[var(--color-primary)]">
+                    <span className="type-fine rounded-[var(--radius-xs)] bg-[var(--color-accent-soft)] px-1.5 py-0.5 font-semibold text-[var(--color-primary-focus)]">
                       หัวหน้ากลุ่ม
                     </span>
                   </div>
@@ -274,7 +274,7 @@ export default function MemberGroup() {
                     ) : (
                       <span
                         aria-hidden="true"
-                        className="type-caption-strong flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-accent-soft)] text-[var(--color-primary)]"
+                        className="type-caption-strong flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-accent-soft)] text-[var(--color-primary-focus)]"
                       >
                         {getInitials(m.memberName)}
                       </span>

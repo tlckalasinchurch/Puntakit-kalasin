@@ -118,6 +118,8 @@ export default function MemberHome() {
         QRCode.toDataURL(res.member.qrToken, {
           width: 180,
           margin: 1,
+          // Not UI colour: these are the QR image's own modules, rasterised once, so CSS tokens
+          // cannot apply and a scanner needs dark-on-light in both themes.
           color: { dark: "#272729", light: "#ffffff" },
         }).then(setQrDataUrl);
       }
