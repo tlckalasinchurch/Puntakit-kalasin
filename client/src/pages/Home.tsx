@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Activity,
   CalendarDays,
@@ -24,10 +24,12 @@ import { OrgSnapshot } from "@/components/OrgSnapshot";
 import {
   HomeFailureBanner,
   HomeFailuresProvider,
+  RecoveredNote,
   SectionHeldByBanner,
   usePageWideFailure,
   useReportFailure,
 } from "@/components/home/homeFailures";
+import { useRetryZone } from "@/components/home/useRetryZone";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -187,7 +189,7 @@ function useHomeQuery<T>(path: string | null, key: string) {
   const retry = useCallback(() => setAttempt(n => n + 1), []);
   // One report per query (not per section that reads it), so the page can tell "one query
   // failed" from "several failed together".
-  useReportFailure(key, state.status === "error", retry, state.status === "error" ? state.technical : undefined);
+  useReportFailure(key, state.status === "error", retry, state.status === "error" ? state.technical : undefined, path !== null && state.status === "loading");
   return [state, retry] as const;
 }
 
@@ -203,6 +205,26 @@ function QueryView<T>({
   children: (data: T) => React.ReactNode;
 }) {
   const pageWide = usePageWideFailure();
+  // The error box stays mounted while its own retry runs, so focus on the button is not dropped;
+  // when the retry works it is replaced by a short note that takes the focus (see useRetryZone).
+  const zone = useRetryZone({ loading: state.status === "loading", failed: state.status === "error" ? 1 : 0 });
+  const lastError = useRef<{ message: string; technical?: string } | null>(null);
+  if (state.status === "error") lastError.current = { message: state.message, technical: state.technical };
+
+  const errorBox = (error: { message: string; technical?: string }) => (
+    <div ref={zone.rootRef}>
+      <ErrorState
+        title={error.message}
+        description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+        technical={error.technical}
+        retryBusy={zone.busy}
+        onRetry={() => {
+          if (zone.begin()) retry();
+        }}
+      />
+    </div>
+  );
+  if (zone.busy && lastError.current) return errorBox(lastError.current);
   if (state.status === "loading") {
     return (
       <div role="status" aria-label="กำลังโหลดข้อมูล">
@@ -212,15 +234,17 @@ function QueryView<T>({
   }
   // Several queries failed together: the banner at the top already says so once.
   if (state.status === "error" && pageWide) return <SectionHeldByBanner />;
-  if (state.status === "error")
+  if (state.status === "error") return errorBox(state);
+  if (zone.recovered) {
     return (
-      <ErrorState
-        title={state.message}
-        description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
-        technical={state.technical}
-        onRetry={retry}
-      />
+      <>
+        <div ref={zone.rootRef} className="m-3">
+          <RecoveredNote zone={zone} />
+        </div>
+        {children(state.data)}
+      </>
     );
+  }
   return <>{children(state.data)}</>;
 }
 
@@ -738,7 +762,9 @@ function HomeContent() {
                   สมาชิกใหม่ล่าสุด
                 </h3>
                 <Button asChild variant="link" className="h-11 px-2">
-                  <Link href="/members">ดูทั้งหมด</Link>
+                  <Link href="/members">
+                    ดูทั้งหมด<span className="sr-only"> สมาชิกใหม่ล่าสุด</span>
+                  </Link>
                 </Button>
               </div>
               <QueryView
@@ -931,7 +957,9 @@ function HomeContent() {
                   ประกาศและข่าวสาร
                 </h3>
                 <Button asChild variant="link" className="h-11 px-2">
-                  <Link href="/announcements">ดูทั้งหมด</Link>
+                  <Link href="/announcements">
+                    ดูทั้งหมด<span className="sr-only"> ประกาศและข่าวสาร</span>
+                  </Link>
                 </Button>
               </div>
               <QueryView

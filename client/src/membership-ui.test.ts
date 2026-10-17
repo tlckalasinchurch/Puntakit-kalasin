@@ -185,7 +185,8 @@ describe("membership UI contracts", () => {
     expect(home).toContain("homeTilesFor(");
     // Tiles render before ErrorState check so user can navigate even if overview fails
     const tilePos = home.indexOf('id="home-quick"');
-    const errorPos = home.indexOf("<ErrorState");
+    // the error branch of the returned JSX (the `errorBox` helper above it only defines the box)
+    const errorPos = home.indexOf("zone.busy && lastError.current ?");
     expect(tilePos).toBeGreaterThan(0);
     expect(errorPos).toBeGreaterThan(tilePos);
   });

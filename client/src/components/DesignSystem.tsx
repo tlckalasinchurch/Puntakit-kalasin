@@ -288,8 +288,11 @@ interface ErrorStateProps {
   /** The underlying technical message, shown only behind a disclosure. */
   technical?: string;
   onRetry?: () => void;
-  /** Disables the retry button, e.g. while a retry is already in flight. */
-  retryDisabled?: boolean;
+  /**
+   * A retry is already in flight. The button stays focusable (aria-disabled, not disabled) so keyboard
+   * focus is not dropped while it waits, and pressing it does nothing.
+   */
+  retryBusy?: boolean;
   retryLabel?: string;
   inset?: boolean;
 }
@@ -299,7 +302,7 @@ export function ErrorState({
   description = "ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง",
   technical,
   onRetry,
-  retryDisabled = false,
+  retryBusy = false,
   retryLabel = "ลองอีกครั้ง",
   inset = false,
 }: ErrorStateProps) {
@@ -359,9 +362,12 @@ export function ErrorState({
       {onRetry && (
         <button
           type="button"
-          onClick={onRetry}
-          disabled={retryDisabled}
-          className="inline-flex min-h-11 shrink-0 items-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+          onClick={() => {
+            if (!retryBusy) onRetry();
+          }}
+          aria-disabled={retryBusy || undefined}
+          data-retry
+          className="inline-flex min-h-11 shrink-0 items-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] px-4 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] aria-disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
         >
           {retryLabel}
         </button>

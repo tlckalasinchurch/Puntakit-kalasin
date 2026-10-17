@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 import { DataBar, ErrorState } from "@/components/DesignSystem";
 import { api, ApiError } from "@/lib/api";
-import { SectionHeldByBanner, usePageWideFailure, useReportFailure } from "@/components/home/homeFailures";
+import { RecoveredNote, SectionHeldByBanner, usePageWideFailure, useReportFailure } from "@/components/home/homeFailures";
+import { useRetryZone } from "@/components/home/useRetryZone";
 
 /**
  * Home → organisation snapshot: totals plus one row per body, linking to the
@@ -23,13 +24,23 @@ export function OrgSnapshot() {
   const [data, setData] = useState<Overview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     setError(null);
+    setLoading(true);
     api.get<Overview>("/api/org/overview").then(
-      (d) => active && setData(d),
-      (err) => active && setError(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err))
+      (d) => {
+        if (!active) return;
+        setData(d);
+        setLoading(false);
+      },
+      (err) => {
+        if (!active) return;
+        setError(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
+        setLoading(false);
+      }
     );
     return () => {
       active = false;
@@ -38,19 +49,45 @@ export function OrgSnapshot() {
 
   // Lets Home tell "this one query failed" from "several failed together" (one banner then).
   const pageWideFailure = usePageWideFailure();
-  useReportFailure("org", error !== null, () => setAttempt((n) => n + 1), error ?? undefined);
+  useReportFailure("org", error !== null, () => setAttempt((n) => n + 1), error ?? undefined, loading);
 
+  // The error box stays mounted while its own retry runs, so focus on the button is not dropped;
+  // when the retry works it is replaced by a short note that takes the focus (see useRetryZone).
+  const zone = useRetryZone({ loading, failed: error ? 1 : 0 });
+  const lastError = useRef<string | null>(null);
+  if (error) lastError.current = error;
+  const errorBox = (technical: string) => (
+    <div ref={zone.rootRef}>
+      <ErrorState
+        title="โหลดภาพรวมองค์กรไม่สำเร็จ"
+        description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
+        technical={technical}
+        retryBusy={zone.busy}
+        onRetry={() => {
+          if (zone.begin()) setAttempt((n) => n + 1);
+        }}
+      />
+    </div>
+  );
+  if (zone.busy && lastError.current) return errorBox(lastError.current);
   if (error) {
     if (pageWideFailure) return <SectionHeldByBanner className="px-1 py-2" />;
-    return <ErrorState title="โหลดภาพรวมองค์กรไม่สำเร็จ" description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง" technical={error} onRetry={() => setAttempt((n) => n + 1)} />;
+    return errorBox(error);
   }
   if (!data) {
     return <div role="status" aria-label="กำลังโหลดภาพรวมองค์กร" className="card-surface h-64 animate-pulse motion-reduce:animate-none" />;
   }
-  if (data.bodies.length === 0) return null;
+  const recovered = zone.recovered ? (
+    <div ref={zone.rootRef} className="mb-3">
+      <RecoveredNote zone={zone} />
+    </div>
+  ) : null;
+  if (data.bodies.length === 0) return recovered;
 
   const max = Math.max(1, ...data.bodies.map((b) => b.memberCount));
   return (
+    <>
+    {recovered}
     <section aria-labelledby="home-org" className="card-surface p-5 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -101,5 +138,6 @@ export function OrgSnapshot() {
         <ArrowRight size={16} aria-hidden="true" />
       </Link>
     </section>
+    </>
   );
 }
