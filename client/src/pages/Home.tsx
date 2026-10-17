@@ -676,7 +676,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="sm"
-                className="shrink-0"
+                className="min-h-11 shrink-0"
                 disabled
                 title="ระบบรายงานสัปดาห์กำลังจัดเตรียม ยังไม่เปิดให้ส่ง"
               >
@@ -1011,7 +1011,7 @@ export default function Home() {
                             {member.name.slice(0, 1)}
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="type-body-strong block truncate text-[var(--color-ink)]">
+                            <span className="type-body-strong line-clamp-2 block break-words text-[var(--color-ink)]">
                               {member.name}{" "}
                               {member.nickname ? `(${member.nickname})` : ""}
                             </span>

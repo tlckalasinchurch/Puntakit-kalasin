@@ -3,6 +3,7 @@ import { BadgeCheck, CircleDollarSign, RefreshCw, UserCheck, UserX } from "lucid
 import { toast } from "sonner";
 import { ErrorState, StatusChip } from "@/components/DesignSystem";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DateField } from "@/components/DateField";
 import { api, ApiError } from "@/lib/api";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import {
@@ -126,6 +127,11 @@ export function MembershipPanel({ memberId, onChanged }: { memberId: string; onC
           setSaving(false);
           return;
         }
+        if (value < ORDINARY_FEE_BAHT) {
+          setFormError(`จำนวนเงินต้องไม่น้อยกว่าค่าสมาชิก ${ORDINARY_FEE_BAHT} บาท`);
+          setSaving(false);
+          return;
+        }
         await api.patch(`/api/memberships/terms/${pending.termId}/payment`, { amountBaht: value, paidOn: paidOn || undefined, note: note.trim() || undefined });
         toast.success("บันทึกการชำระเงินแล้ว");
       }
@@ -156,12 +162,14 @@ export function MembershipPanel({ memberId, onChanged }: { memberId: string; onC
   const history = terms.filter((t) => t.status === "closed");
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-[var(--radius-lg)] border border-[var(--color-hairline)] p-4">
+    <div className="space-y-6">
+      <div className="rounded-[var(--radius-lg)] bg-[var(--color-canvas-soft)] p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <StatusChip tone={STATE_TONE[summary.state]}>{summary.label}</StatusChip>
+          <StatusChip tone={STATE_TONE[summary.state]} className="pk-ms-status">
+            {summary.label}
+          </StatusChip>
           {current && current.paymentStatus !== "not_required" && (
-            <StatusChip tone={PAYMENT_TONE[current.paymentStatus]}>
+            <StatusChip tone={PAYMENT_TONE[current.paymentStatus]} className="pk-ms-status">
               {current.paymentStatus === "paid" ? `ชำระแล้ว ${current.paidAmountBaht ?? current.feeBaht} บาท` : `${PAYMENT_STATUS_LABELS.unpaid} ${current.feeBaht} บาท`}
             </StatusChip>
           )}
@@ -201,7 +209,7 @@ export function MembershipPanel({ memberId, onChanged }: { memberId: string; onC
         )}
 
         {permissions.canDecide && !pending && (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="pk-ms-actions mt-5 flex flex-wrap gap-2">
             {!current && (
               <>
                 <button type="button" className={BTN_PRIMARY} onClick={() => open({ kind: "start", type: "extraordinary" })}>
@@ -235,7 +243,7 @@ export function MembershipPanel({ memberId, onChanged }: { memberId: string; onC
           </div>
         )}
         {permissions.canRecordPayment && current?.type === "ordinary" && current.paymentStatus === "unpaid" && !pending && (
-          <div className="mt-2">
+          <div className="pk-ms-actions mt-2">
             <button type="button" className={BTN_OUTLINE} onClick={() => open({ kind: "payment", termId: current.id })}>
               <CircleDollarSign size={ICON_SIZE.sm} aria-hidden="true" />
               บันทึกการชำระเงิน
@@ -243,9 +251,15 @@ export function MembershipPanel({ memberId, onChanged }: { memberId: string; onC
           </div>
         )}
 
+        {!permissions.canDecide && !permissions.canRecordPayment && !pending && (
+          <p className="type-caption mt-4 text-[var(--color-body-muted)]">
+            อ่านอย่างเดียว — คุณดูสถานะได้แต่ไม่มีสิทธิ์บันทึกหรือเปลี่ยนสถานะ
+          </p>
+        )}
+
         {pending && (
           <form
-            className="mt-4 space-y-3 rounded-[var(--radius-md)] bg-[var(--color-canvas-soft)] p-4"
+            className="mt-5 space-y-3 rounded-[var(--radius-md)] bg-[var(--color-canvas)] p-4"
             onSubmit={(e) => {
               e.preventDefault();
               void submit();
@@ -275,10 +289,7 @@ export function MembershipPanel({ memberId, onChanged }: { memberId: string; onC
                   <span className="type-caption-strong text-[var(--color-ink)]">จำนวนเงิน (บาท)</span>
                   <input className={`${INPUT} mt-1`} inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} />
                 </label>
-                <label className="block">
-                  <span className="type-caption-strong text-[var(--color-ink)]">วันที่รับเงิน</span>
-                  <input className={`${INPUT} mt-1`} type="date" value={paidOn} max={data.today} onChange={(e) => setPaidOn(e.target.value)} />
-                </label>
+                <DateField label="วันที่รับเงิน" value={paidOn} onChange={setPaidOn} />
               </div>
             )}
             {pending.kind !== "start" && (
@@ -309,7 +320,7 @@ export function MembershipPanel({ memberId, onChanged }: { memberId: string; onC
           <h4 className="type-caption-strong mb-2 text-[var(--color-ink)]">ประวัติรอบสมาชิก</h4>
           <ol className="space-y-2">
             {history.map((t) => (
-              <li key={t.id} className="rounded-[var(--radius-md)] border border-[var(--color-hairline)] p-3">
+              <li key={t.id} className="rounded-[var(--radius-md)] bg-[var(--color-canvas-soft)] p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="type-caption-strong text-[var(--color-ink)]">{MEMBERSHIP_TYPE_LABELS[t.type]}</span>
                   <StatusChip tone="neutral">{closeReasonLabel(t.closedReason)}</StatusChip>

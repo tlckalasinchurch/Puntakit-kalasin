@@ -58,3 +58,19 @@ describe("user-facing copy", () => {
     expect(read("client/src/pages/ImportData.tsx")).not.toMatch(/ตรวจสอบ group_members/);
   });
 });
+
+describe("home quick actions contract (RBP-01)", () => {
+  it("HomeMyWork delegates tile and secondary link computation to lib/homeTiles without inline role lists", () => {
+    const src = read("client/src/components/home/HomeMyWork.tsx");
+    expect(src).toContain("homeTilesFor(user?.role)");
+    expect(src).toContain("homeMoreLinksFor(user?.role)");
+    // Role names live in shared/roles.ts sets, never in the component or in lib/homeTiles.
+    const roleLiteral = /"(super_admin|admin|staff|ministry_leader|group_leader|viewer|member)"/;
+    expect(src).not.toMatch(roleLiteral);
+    expect(read("client/src/lib/homeTiles.ts")).not.toMatch(roleLiteral);
+    // Does not call un-scoped summary API
+    expect(src).not.toContain("/api/dashboard/summary");
+    // Only relies on /api/home/overview
+    expect(src).toContain("/api/home/overview");
+  });
+});

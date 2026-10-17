@@ -114,16 +114,120 @@ describe("membership UI contracts", () => {
     expect(read("client/src/components/home/MissionPhotoSheet.tsx")).toContain("prepareImage");
   });
 
-  it("home quick actions are gated by the shared role sets", () => {
+  it("the card refinement is a new block appended after the print rules and never touches the card's data", () => {
+    const start = css.indexOf("Membership card refinement");
+    expect(start).toBeGreaterThan(css.indexOf("/* Print only the card"));
+    const block = css.slice(start);
+    // Corners follow the card's own box (a % radius), not a viewport-based cqw on the container itself.
+    expect(block).toMatch(/\.pk-card\s*\{[^}]*border-radius:\s*[\d.]+%\s*\/\s*[\d.]+%/);
+    // Gold frame and sheen are pseudo-elements, and the sheen is dropped when printing.
+    expect(block).toContain(".pk-card::before");
+    expect(block).toContain(".pk-card::after");
+    expect(/@media print\s*\{[^}]*\.pk-card::before\s*\{[^}]*display:\s*none/.test(block)).toBe(true);
+    // No animation: the card is a document, not an ornament.
+    expect(block).not.toMatch(/@keyframes|animation\s*:/);
+    // Plate has ellipsis and name has line-clamp to prevent overflowing on long names
+    expect(block).toContain(".pk-card__plate");
+    expect(block).toContain("-webkit-line-clamp: 2");
+    // Still no baked-in data or contact fields in the card component.
+    expect(card).not.toMatch(/phone|email|lineId|address/i);
+  });
+
+  it("the memberships page keeps 44px targets, real tabs and the role-scoped API call in the lighter layout", () => {
+    const page = read("client/src/pages/Memberships.tsx");
+    expect(page).toContain('role="tablist"');
+    expect(page).toContain('role="tab"');
+    expect(page).toContain("aria-selected={tab === t.id}");
+    expect(page).toContain("pk-ms-row");
+    expect(page).toContain("ไม่พบสมาชิกที่ตรงกับคำค้น");
+    // The list still comes from the one scoped endpoint; the page decides nothing about who may see whom.
+    expect(page).toContain('"/api/memberships/overview?filter=all&limit=500"');
+    const start = css.indexOf("Membership review");
+    expect(start).toBeGreaterThan(css.indexOf("Membership card refinement"));
+    const block = css.slice(start);
+    const minRem = (selector: string) => {
+      const m = new RegExp(`${selector.replace(/[.[\]]/g, "\\$&")}\\s*\\{[^}]*min-height:\\s*([\\d.]+)rem`).exec(block);
+      return m ? Number(m[1]) * 16 : 0;
+    };
+    expect(minRem(".pk-ms-tab")).toBeGreaterThanOrEqual(44);
+    expect(minRem(".pk-ms-row")).toBeGreaterThanOrEqual(44);
+    // Status is words, not colour alone: the chips render the summary label text.
+    expect(page).toContain("{i.summary.label}");
+  });
+
+  it("the photo sheet shows upload progress and keeps its tall, full-width pick buttons", () => {
+    const sheet = read("client/src/components/home/MissionPhotoSheet.tsx");
+    expect(sheet).toContain('role="progressbar"');
+    for (const attr of ["aria-valuemin", "aria-valuemax", "aria-valuenow"]) expect(sheet).toContain(attr);
+    expect(sheet).toContain("min-h-14"); // 56px pick buttons
+    expect(sheet).toContain("sm:flex-row"); // side by side from 640px, stacked on a phone
+    expect(sheet).toContain('aria-live="polite"');
+    expect(sheet).toContain("ยังไม่เผยแพร่");
+    // Save button is disabled only when busy, so save() handles validation messaging
+    expect(sheet).toContain("disabled={busy}");
+    // The upload pipeline itself is unchanged.
+    expect(sheet).toContain("uploadMissionPhoto");
+    expect(sheet).toContain('"/api/activities"');
+    expect(sheet).toContain('type: "ministry_update"');
+  });
+
+  it("the membership panel checks fee against constant and shows read-only notice", () => {
+    expect(panel).toContain("value < ORDINARY_FEE_BAHT");
+    expect(panel).toContain("อ่านอย่างเดียว");
+  });
+
+  it("home quick actions are gated by the shared role sets and render above error", () => {
     expect(home).toMatch(/hasRole\(user\?\.role, CREATE_ROLES\)/);
     expect(home).toMatch(/hasRole\(user\?\.role, MEMBERSHIP_VIEW_ROLES\)/);
     // "ดูทั้งหมด" is a real disclosure, not decoration.
     expect(home).toContain('aria-expanded={moreOpen}');
+    // Which tiles a role gets is decided by `homeTilesFor`, not by a role list in the component.
+    expect(home).toContain("homeTilesFor(");
+    // Tiles render before ErrorState check so user can navigate even if overview fails
+    const tilePos = home.indexOf('id="home-quick"');
+    const errorPos = home.indexOf("<ErrorState");
+    expect(tilePos).toBeGreaterThan(0);
+    expect(errorPos).toBeGreaterThan(tilePos);
+  });
+
+  it("the home tile block is appended after the existing card rules and keeps text at 12px or more", () => {
+    const start = css.indexOf("Home quick actions v2");
+    expect(start).toBeGreaterThan(css.indexOf("/* Print only the card"));
+    const block = css.slice(start);
+    const sizes = [...block.matchAll(/font-size:\s*([\d.]+)px/g)].map((m) => Number(m[1]));
+    expect(sizes.length).toBeGreaterThan(0);
+    for (const size of sizes) expect(size).toBeGreaterThanOrEqual(12);
   });
 
   it("tiles and buttons keep a 44px target", () => {
-    expect(home).toContain("min-h-28");
+    // Tiles are sized by the `.pk-home-tile` block: whole-tile target, well above 44px.
+    expect(home).toContain("pk-home-tile");
+    const tile = /\.pk-home-tile\s*\{[^}]*min-height:\s*([\d.]+)rem/.exec(css);
+    expect(tile, ".pk-home-tile must set a min-height in rem").toBeTruthy();
+    expect(Number(tile![1]) * 16).toBeGreaterThanOrEqual(44);
     expect(panel).toContain("min-h-11");
     expect(read("client/src/pages/Memberships.tsx")).toContain("min-h-11");
+  });
+
+  it("E2E-AUDIT items 3, 6, 8, 12, 13 stay fixed", () => {
+    // 6: payment date uses the Thai DateField, not a native mm/dd/yyyy input.
+    const panel = code("client/src/components/membership/MembershipPanel.tsx");
+    expect(panel).toContain("<DateField");
+    expect(panel).not.toContain('type="date"');
+    // 8: the panel outlives the overview row, so a closed term shows history and the restart buttons.
+    const page = code("client/src/pages/Memberships.tsx");
+    expect(page).toContain("open={openId !== null}");
+    expect(page).not.toContain("opened !== null");
+    // 12: viewer must not call /api/care/groups.
+    const members = code("client/src/pages/Members.tsx");
+    expect(members).toContain("hasRole(user?.role, CREATE_ROLES)");
+    expect(members).toContain("if (!canLoadCareGroups)");
+    // 3: a group_leader's empty states name the scope instead of claiming the system is empty.
+    expect(members).toContain("ยังไม่มีสมาชิกในขอบเขตของคุณ");
+    expect(code("client/src/pages/CareToday.tsx")).toContain("ยังไม่มีพันธกิจในขอบเขตของคุณ");
+    // 13: disabled report button keeps a 44px target; recent-member names wrap instead of truncating.
+    const home = code("client/src/pages/Home.tsx");
+    expect(home).toContain('className="min-h-11 shrink-0"');
+    expect(home).toContain("line-clamp-2 block break-words");
   });
 });

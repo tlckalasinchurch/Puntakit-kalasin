@@ -2244,51 +2244,338 @@
   }
 }
 
-/* First-party PIN authentication — soft Glassmorphism */
-.pin-login { min-height: var(--app-vh); display: grid; grid-template-columns: minmax(0, 1fr); position: relative; overflow: hidden; background: radial-gradient(circle at 12% 12%, rgba(129, 231, 218, .28), transparent 23rem), radial-gradient(circle at 88% 84%, rgba(91, 133, 255, .22), transparent 25rem), linear-gradient(135deg, #092b3a 0%, #0e5b63 48%, #182d5d 100%); color: #f7fffe; }
-.pin-login::before, .pin-login::after { content: ""; position: absolute; border-radius: 50%; filter: blur(2px); pointer-events: none; }
-.pin-login::before { width: 19rem; height: 19rem; left: 12%; bottom: -8rem; background: rgba(61, 224, 197, .24); }
-.pin-login::after { width: 24rem; height: 24rem; right: -7rem; top: -8rem; background: rgba(163, 125, 255, .24); }
-.pin-login__brand { display: none; position: relative; overflow: hidden; background: rgba(7, 36, 51, .24); color: #f7fffe; padding: clamp(2rem, 7vw, 6rem); border-right: 1px solid rgba(255, 255, 255, .16); }
-.pin-login__brand-content { position: relative; z-index: 1; display: grid; align-content: space-between; min-height: min(78vh, 46rem); gap: 2rem; }
-.pin-login__brand-copy { align-self: center; }
-.pin-login__brand-copy p { margin: 0; }
-.pin-login__brand-copy .type-display-md { margin: .65rem 0 1rem; color: #f7fffe; font-size: clamp(2.25rem, 4.5vw, 4.5rem); line-height: 1.08; }
-.pin-login__brand-copy .type-body { color: rgba(247, 255, 254, .76); line-height: 1.8; }
-.pin-login__eyebrow { color: #138c82; font-size: .72rem; font-weight: 800; letter-spacing: .16em; line-height: 1.2; }
-.pin-login__brand .pin-login__eyebrow { color: rgba(247, 255, 254, .7); }
-.pin-login__brand-orb { position: absolute; width: 32rem; height: 32rem; right: -13rem; top: 12%; border: 1px solid rgba(255, 255, 255, .2); border-radius: 50%; box-shadow: 0 0 0 5rem rgba(255, 255, 255, .05), 0 0 0 10rem rgba(255, 255, 255, .03); }
-.pin-login__brand-note { display: inline-flex; align-items: center; gap: .6rem; width: fit-content; padding: .75rem 1rem; border: 1px solid rgba(255, 255, 255, .2); border-radius: var(--radius-pill); background: rgba(255, 255, 255, .08); color: rgba(247, 255, 254, .86); font-size: .82rem; backdrop-filter: blur(12px); }
-.pin-login__panel { position: relative; z-index: 1; display: grid; place-items: center; padding: 1.25rem; }
-.pin-login__card { width: min(100%, 28rem); padding: 2rem 1.35rem 1.4rem; border: 1px solid rgba(255, 255, 255, .38); border-radius: 2rem; background: rgba(255, 255, 255, .14); box-shadow: 0 24px 70px rgba(2, 19, 38, .3), inset 0 1px 0 rgba(255, 255, 255, .22); backdrop-filter: blur(24px) saturate(135%); -webkit-backdrop-filter: blur(24px) saturate(135%); }
-.pin-login__mobile-logo { margin-bottom: 2.25rem; }
-.pin-login__heading { margin-bottom: 2rem; }
-.pin-login__heading .pin-login__eyebrow { margin-bottom: .6rem; color: rgba(247, 255, 254, .78); }
-.pin-login__card h1 { margin: 0 0 .5rem; color: #fff; letter-spacing: -.035em; }
-.pin-login__sub { margin: 0; color: rgba(247, 255, 254, .72); }
-.pin-login__identity { display: grid; gap: .55rem; color: #fff; font-size: .875rem; font-weight: 700; }
-.pin-login__identity input { width: 100%; min-height: 3.25rem; border: 1px solid rgba(255, 255, 255, .32); border-radius: 1rem; background: rgba(255, 255, 255, .13); padding: 0 1rem; color: #fff; font: inherit; outline: none; transition: border-color .18s, box-shadow .18s, background .18s; }
-.pin-login__identity input::placeholder { color: rgba(247, 255, 254, .64); opacity: 1; }
-.pin-login__identity input:focus { border-color: rgba(255, 255, 255, .82); background: rgba(255, 255, 255, .2); box-shadow: 0 0 0 4px rgba(151, 255, 236, .18), 0 8px 24px rgba(2, 19, 38, .12); }
-.pin-login__pin-heading { display: flex; justify-content: space-between; align-items: center; margin: 1.65rem 0 .7rem; color: #fff; font-size: .875rem; font-weight: 700; }
-.pin-login__pin-count { color: rgba(247, 255, 254, .7); font-variant-numeric: tabular-nums; font-weight: 600; }
-.pin-login__dots { display: flex; justify-content: center; gap: .85rem; margin: 0 0 1.2rem; padding: .2rem 0 .45rem; }
-.pin-login__dots span { width: .8rem; height: .8rem; border: 2px solid rgba(255, 255, 255, .58); border-radius: 50%; background: transparent; transition: background .15s, transform .15s, border-color .15s; }
-.pin-login__dots span.is-filled { border-color: #9affec; background: #9affec; transform: scale(1.1); box-shadow: 0 0 12px rgba(154, 255, 236, .45); }
-.pin-login__keypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; }
-.pin-login__keypad button { min-height: 3.7rem; display: inline-flex; align-items: center; justify-content: center; gap: .35rem; border: 1px solid rgba(255, 255, 255, .28); border-radius: 1rem; background: rgba(255, 255, 255, .12); color: #fff; font: inherit; font-size: 1.35rem; font-weight: 700; cursor: pointer; transition: background .18s, border-color .18s, transform .15s, box-shadow .18s; }
-.pin-login__keypad button span { font-size: .74rem; font-weight: 700; }
-.pin-login__keypad button:hover:not(:disabled), .pin-login__keypad button:focus-visible { border-color: rgba(255, 255, 255, .78); background: rgba(255, 255, 255, .23); box-shadow: 0 8px 20px rgba(2, 19, 38, .16); outline: none; }
-.pin-login__keypad button:active:not(:disabled) { transform: scale(.96); }
-.pin-login__keypad button:disabled { opacity: .45; cursor: not-allowed; }
-.pin-login__submit { width: 100%; min-height: 3.35rem; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; margin-top: 1rem; border: 1px solid rgba(255, 255, 255, .45); border-radius: 1rem; background: linear-gradient(135deg, #9affec, #b7c7ff); color: #103642; font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 12px 28px rgba(2, 19, 38, .22), inset 0 1px 0 rgba(255, 255, 255, .7); transition: background .18s, transform .15s, box-shadow .18s; }
-.pin-login__submit:hover:not(:disabled) { background: linear-gradient(135deg, #c4fff4, #d0d9ff); box-shadow: 0 15px 32px rgba(2, 19, 38, .28), inset 0 1px 0 rgba(255, 255, 255, .8); }
-.pin-login__submit:active:not(:disabled) { transform: translateY(1px); }
-.pin-login__submit:disabled { opacity: .52; cursor: not-allowed; box-shadow: none; }
-.pin-login__error { margin: .85rem 0 0; padding: .7rem .85rem; border: 1px solid rgba(255, 189, 203, .55); border-radius: 1rem; background: rgba(255, 89, 123, .16); color: #fff; font-size: .9rem; line-height: 1.5; text-align: center; }
-.pin-login__help { margin: 1rem 0 0; color: rgba(247, 255, 254, .68); text-align: center; line-height: 1.6; }
-@media (prefers-reduced-motion: reduce) { .pin-login__dots span, .pin-login__keypad button, .pin-login__submit, .pin-login__identity input { transition: none; } }
-@media (min-width: 900px) { .pin-login { grid-template-columns: minmax(0, 1fr) minmax(30rem, 38rem); } .pin-login__brand { display: block; } .pin-login__panel { padding: 3rem clamp(3rem, 6vw, 7rem); } .pin-login__card { padding: 2.5rem 2rem 1.6rem; } .pin-login__mobile-logo { display: none; } }
+/* First-party PIN authentication — Luxury Dark Glassmorphism.
+   A self-contained visual scope: this screen is always dark, in both themes,
+   because it is the one moment the product meets someone at a door.
+   It deliberately does NOT read the global light/dark tokens — see
+   `docs/audits/2026-10-15-full-product-ux/MINIMAL-DESIGN-SYSTEM.md` D9.
+   Every pairing below was measured for WCAG AA (see the audit file). */
+.pin-login {
+  --pin-bg-0: #04161a;
+  --pin-bg-1: #072028;
+  --pin-bg-2: #0a2f33;
+  --pin-text: #f4faf9;
+  --pin-mint: #7ff0dd;
+  --pin-champagne: #e8d3a8;
+  --pin-glass: rgba(255, 255, 255, .055);
+  --pin-glass-strong: rgba(255, 255, 255, .085);
+  --pin-line: rgba(255, 255, 255, .15);
+  --pin-line-bright: rgba(255, 255, 255, .28);
+  --pin-ease: cubic-bezier(.22, 1, .36, 1);
+  /* Re-point the shared light tokens at dark equivalents for this scope only.
+     `LegalLinks` is shared with the member app and paints itself from
+     --color-canvas / --color-ink / --color-hairline; without this it would
+     render as two opaque white pills at the foot of the glass card. */
+  --color-canvas: rgba(255, 255, 255, .055);
+  --color-canvas-soft: rgba(255, 255, 255, .09);
+  --color-ink: #f4faf9;
+  --color-body-muted: rgba(244, 250, 249, .68);
+  --color-hairline: rgba(255, 255, 255, .18);
+  --color-divider: rgba(255, 255, 255, .12);
+  --color-primary-focus: #7ff0dd;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  /* var(--app-vh) = 100dvh, not 100svh. `svh` is the SHORTEST viewport (toolbar
+     shown), so on a tall phone the gradient stopped short and the page canvas
+     showed as a seam once the user scrolled and the toolbar hid. `dvh` tracks
+     the real visible area, so the login is always full-bleed. */
+  min-height: var(--app-vh);
+  /* `clip` on the inline axis only: it hides the aurora bleed without creating
+     a scroll container, so a short phone can still reach the legal links.
+     `hidden` here used to make the foot of the card unreachable. */
+  overflow-x: clip;
+  background: linear-gradient(168deg, var(--pin-bg-0) 0%, var(--pin-bg-1) 52%, var(--pin-bg-2) 100%);
+  color: var(--pin-text);
+  isolation: isolate;
+}
+/* Two slow aurora washes — the only light source in the room. */
+.pin-login::before,
+.pin-login::after {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(72px);
+  pointer-events: none;
+  content: "";
+}
+.pin-login::before {
+  width: 30rem;
+  height: 30rem;
+  top: -12rem;
+  left: -10rem;
+  background: rgba(12, 124, 130, .38);
+}
+.pin-login::after {
+  width: 26rem;
+  height: 26rem;
+  right: -11rem;
+  bottom: -9rem;
+  background: rgba(232, 211, 168, .16);
+}
+
+/* ---- Left rail: the promise, shown only where there is room for it ---- */
+.pin-login__brand {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  padding: clamp(2.5rem, 6vw, 5rem);
+  border-right: 1px solid var(--pin-line);
+  /* Anchored to the left edge and faded out, so the rail has no visible right
+     seam where the panel would otherwise end in a hard rectangle. */
+  background: radial-gradient(120% 85% at 0% 50%, rgba(255, 255, 255, .055), transparent 68%);
+}
+.pin-login__brand-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-content: space-between;
+  gap: 2.5rem;
+  min-height: min(74vh, 42rem);
+}
+.pin-login__brand-copy {
+  align-self: center;
+  max-width: 26rem;
+}
+.pin-login__brand-copy p {
+  margin: 0;
+}
+.pin-login__brand-copy .type-display-md {
+  margin: .7rem 0 1.1rem;
+  color: var(--pin-text);
+  font-size: clamp(2.1rem, 4vw, 3.4rem);
+  line-height: 1.1;
+  letter-spacing: -.02em;
+}
+.pin-login__brand-copy .type-body {
+  color: rgba(244, 250, 249, .74);
+  line-height: 1.8;
+}
+.pin-login__brand-note {
+  display: inline-flex;
+  align-items: center;
+  gap: .65rem;
+  width: fit-content;
+  padding: .7rem 1.05rem;
+  border: 1px solid var(--pin-line);
+  border-radius: var(--radius-pill);
+  background: var(--pin-glass);
+  color: rgba(244, 250, 249, .86);
+  font-size: .82rem;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* ---- Right: the glass card ---- */
+.pin-login__panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem 1.1rem 2rem;
+}
+.pin-login__card {
+  width: min(100%, 27rem);
+  padding: 1.75rem 1.25rem 1.25rem;
+  border: 1px solid var(--pin-line);
+  border-radius: 2rem;
+  background: var(--pin-glass);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .16);
+  backdrop-filter: blur(30px) saturate(155%);
+  -webkit-backdrop-filter: blur(30px) saturate(155%);
+}
+.pin-login__mobile-logo {
+  margin-bottom: 1.6rem;
+}
+.pin-login__heading {
+  margin-bottom: 1.5rem;
+}
+.pin-login__eyebrow {
+  margin: 0;
+  color: var(--pin-mint);
+  font-size: .78rem;
+  font-weight: 700;
+  /* No letter-spacing and no uppercase: Thai has no letter case, and tracking
+     breaks its word shapes — the old .16em rendered "ยินดีต้อนรับกลับ" as
+     seven disconnected clusters. The Latin brand line is spaced in its own rule. */
+}
+.pin-login__card h1 {
+  margin: .55rem 0 .4rem;
+  color: #fff;
+  font-size: 1.9rem;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+}
+.pin-login__sub {
+  margin: 0;
+  color: rgba(244, 250, 249, .72);
+}
+
+/* ---- PIN readout ---- */
+.pin-login__pin-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 .8rem;
+  color: rgba(244, 250, 249, .82);
+  font-size: .82rem;
+  font-weight: 600;
+}
+.pin-login__pin-count {
+  color: rgba(244, 250, 249, .56);
+  font-variant-numeric: tabular-nums;
+}
+.pin-login__dots {
+  display: flex;
+  justify-content: center;
+  gap: .9rem;
+  margin: 0 0 1.6rem;
+  padding: .25rem 0 .5rem;
+}
+.pin-login__dots span {
+  width: .8rem;
+  height: .8rem;
+  border: 1.5px solid rgba(244, 250, 249, .45);
+  border-radius: 50%;
+  background: transparent;
+  transition: background .22s var(--pin-ease), box-shadow .22s var(--pin-ease), transform .22s var(--pin-ease), border-color .22s var(--pin-ease);
+}
+.pin-login__dots span.is-filled {
+  border-color: var(--pin-mint);
+  background: var(--pin-mint);
+  box-shadow: 0 0 14px rgba(127, 240, 221, .5);
+  transform: scale(1.08);
+}
+
+/* ---- Keypad: glass tiles ---- */
+.pin-login__keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .6rem;
+}
+.pin-login__keypad button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  min-height: 3.5rem;
+  border: 1px solid var(--pin-line);
+  border-radius: 1.1rem;
+  background: var(--pin-glass);
+  color: #fff;
+  font: inherit;
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: background .2s var(--pin-ease), border-color .2s var(--pin-ease), transform .16s var(--pin-ease), box-shadow .2s var(--pin-ease);
+}
+.pin-login__keypad button span {
+  font-size: .78rem;
+  font-weight: 600;
+  color: rgba(244, 250, 249, .78);
+}
+.pin-login__keypad button:hover:not(:disabled),
+.pin-login__keypad button:focus-visible {
+  border-color: var(--pin-line-bright);
+  background: var(--pin-glass-strong);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .3);
+  outline: none;
+}
+.pin-login__keypad button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(127, 240, 221, .32), 0 10px 24px rgba(0, 0, 0, .3);
+}
+.pin-login__keypad button:active:not(:disabled) {
+  transform: scale(.96);
+}
+.pin-login__keypad button:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+/* ---- Primary action: the one warm, solid moment ---- */
+.pin-login__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  width: 100%;
+  min-height: 3.5rem;
+  margin-top: 1.15rem;
+  border: 0;
+  border-radius: 1.1rem;
+  background: linear-gradient(135deg, #f2e2c4, var(--pin-champagne) 55%, #d9bf8c);
+  color: var(--pin-bg-0);
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: .01em;
+  cursor: pointer;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .38), inset 0 1px 0 rgba(255, 255, 255, .6);
+  transition: box-shadow .22s var(--pin-ease), transform .16s var(--pin-ease), filter .22s var(--pin-ease);
+}
+.pin-login__submit:hover:not(:disabled) {
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .46), inset 0 1px 0 rgba(255, 255, 255, .7);
+  filter: brightness(1.04);
+}
+.pin-login__submit:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.pin-login__submit:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ---- Feedback ---- */
+.pin-login__error {
+  margin: .95rem 0 0;
+  padding: .75rem .9rem;
+  border: 1px solid rgba(255, 138, 152, .5);
+  border-radius: 1rem;
+  background: rgba(194, 59, 77, .2);
+  color: #fff;
+  font-size: .875rem;
+  line-height: 1.5;
+  text-align: center;
+}
+.pin-login__help {
+  margin: 1.1rem 0 0;
+  color: rgba(244, 250, 249, .6);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ---- Motion: honour the OS, and never animate a static screen ---- */
+@media (prefers-reduced-motion: reduce) {
+  .pin-login::before,
+  .pin-login::after {
+    filter: blur(72px);
+  }
+  .pin-login__dots span,
+  .pin-login__keypad button,
+  .pin-login__submit {
+    transition: none;
+  }
+}
+
+/* ---- Wide screens: show the promise beside the card ---- */
+@media (min-width: 900px) {
+  .pin-login {
+    grid-template-columns: minmax(0, 1fr) minmax(30rem, 38rem);
+  }
+  .pin-login__brand {
+    display: block;
+  }
+  .pin-login__panel {
+    padding: 3rem clamp(3rem, 6vw, 6rem);
+  }
+  .pin-login__card {
+    padding: 2.75rem 2.1rem 1.75rem;
+  }
+  .pin-login__mobile-logo {
+    display: none;
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /* Lamb Edition — member app (/app).                                  */
@@ -2343,4 +2630,347 @@
 /* react-day-picker's stylesheet fills .rdp-chevron with its accent (pure blue); our chevrons are stroke icons. */
 .rdp-root .rdp-chevron {
   fill: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Home quick actions v2 — feature `home-card-membership-ux`, ticket HCM-01.
+   Added as a new block; no earlier rule was changed. Large centred icon, a
+   soft filled surface instead of a ring of border, and a target well above 44px.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.pk-home-tiles {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.pk-home-tiles[data-count="3"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (min-width: 1024px) {
+  .pk-home-tiles:not([data-count="3"]) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.pk-home-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 7.5rem;
+  padding: 1.25rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  background: var(--color-canvas-sunken);
+  color: var(--color-ink);
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+.pk-home-tile:hover {
+  background: color-mix(in srgb, var(--color-primary) 9%, var(--color-canvas-sunken));
+}
+.pk-home-tile:focus-visible {
+  outline: 2px solid var(--color-primary-focus);
+  outline-offset: 2px;
+}
+.pk-home-tile__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.pk-home-tile__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+.pk-home-tile__title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.pk-home-tile__hint {
+  display: none;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-body-muted);
+}
+.pk-home-tile .pk-home-tile__badge {
+  max-width: 100%;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 0.25rem;
+  padding: 0.25rem 0.375rem;
+  text-align: center;
+}
+/* Three tiles on a 320px phone are only 88px wide each: spend less on padding so the badge fits. */
+@media (max-width: 359px) {
+  .pk-home-tile {
+    padding-inline: 0.125rem;
+  }
+  .pk-home-tile .pk-home-tile__badge {
+    padding-inline: 0.25rem;
+  }
+}
+@media (min-width: 640px) {
+  .pk-home-tile__title {
+    font-size: 17px;
+  }
+  .pk-home-tile__hint {
+    display: block;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pk-home-tile {
+    transition: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Membership card refinement — feature `home-card-membership-ux`, ticket HCM-04.
+   Added as a new block; no earlier rule was changed. The first version used
+   `cqw` on the container element itself, which resolves against the viewport:
+   a 640px card on a 1280px screen got a 54px corner and a 6px gold ring. Here
+   the corners are a % of the card's own box (ID-1: 3.18mm of 85.6mm = 3.7%) and
+   the gold frame is drawn by a pseudo-element, whose `cqw` is the card's width.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.pk-card {
+  isolation: isolate;
+  border-radius: 3.7% / 5.87%;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.1),
+    0 1px 2px rgb(0 0 0 / 0.35),
+    0 14px 28px -12px rgb(0 0 0 / 0.5),
+    0 30px 50px -28px rgb(0 0 0 / 0.55);
+}
+/* Light catching the surface: static, under every piece of content. */
+.pk-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    rgb(255 255 255 / 0) 28%,
+    rgb(255 255 255 / 0.13) 44%,
+    rgb(255 255 255 / 0.03) 56%,
+    rgb(255 255 255 / 0) 70%
+  );
+}
+/* The gold frame, with a hairline shade just inside it. */
+.pk-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  border: 0.55cqw solid var(--card-gold-mid);
+  box-shadow: inset 0 0 0 0.18cqw rgb(0 0 0 / 0.25);
+}
+/* A double gold ring around the portrait. */
+.pk-card__photo {
+  box-shadow:
+    0 0 0 0.35cqw var(--card-emerald-lo),
+    0 0 0 0.75cqw var(--card-gold-lo);
+}
+/* Legibility: dark ink on the ribbon and the big care-group number must stay readable
+   along their whole length, so neither gradient is allowed to fall to the darkest gold. */
+.pk-card__ribbon {
+  background: linear-gradient(90deg, var(--card-gold-mid), var(--card-gold-hi) 50%, var(--card-gold-mid));
+}
+.pk-card__num {
+  background: linear-gradient(180deg, var(--card-gold-hi), var(--card-gold-mid));
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+/* The golden curve used to run through "MEMBER" and, on a small card whose text cannot go
+   below 12px, through the end-of-term line. Sit the curve lower (50 of 630 units) and give
+   that line room below it, on the dark wave. */
+.pk-card__decor path {
+  transform: translateY(50px);
+}
+.pk-card__valid {
+  bottom: 6cqw;
+}
+/* On a phone-width card the first version folded the type into the end-of-term line, which
+   then crossed the curve. Show the type on its own label (where the full card has it), keep
+   the end-of-term line short and below the curve, and keep number + date on single lines. */
+@container (max-width: 460px) {
+  .pk-card__kind {
+    display: block;
+  }
+  .pk-card__valid-type {
+    display: none;
+  }
+  .pk-card__valid {
+    bottom: 3.4cqw;
+  }
+  .pk-card__decor path {
+    transform: translateY(65px);
+  }
+  .pk-card__meta {
+    width: 46cqw;
+    white-space: nowrap;
+  }
+}
+/* Narrowest card (a 320px phone): the end-of-term line is as wide as the curve's whole rise,
+   so no position clears it. The two gold strokes go; the dark wave, frame and rings stay. */
+@container (max-width: 300px) {
+  .pk-card__decor path:nth-of-type(n + 2) {
+    display: none;
+  }
+}
+/* Long nickname/name: the original plate is `display: flex`, which cannot
+   text-overflow. Switch to block so ellipsis works. The full name could wrap
+   3+ lines and cover the end-of-term date; clamp it to 2. */
+.pk-card__plate {
+  display: block;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pk-card__name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Membership review — feature `home-card-membership-ux`, ticket HCM-05.
+   Added as a new block; no earlier rule was changed. Tabs without a ring of
+   border, rows that keep the name readable on a phone (the status chips drop to
+   their own line instead of squeezing the name), and a lighter panel.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.pk-ms-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pk-ms-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-canvas-sunken);
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.15s ease;
+}
+.pk-ms-tab:hover {
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-canvas-sunken));
+}
+.pk-ms-tab[aria-selected="true"] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.pk-ms-tab:focus-visible {
+  outline: 2px solid var(--color-primary-focus);
+  outline-offset: 2px;
+}
+.pk-ms-tab__count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.pk-ms-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-hairline);
+}
+.pk-ms-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "avatar main"
+    ". chips";
+  column-gap: 0.75rem;
+  row-gap: 0.625rem;
+  align-items: start;
+  width: 100%;
+  min-height: 4rem;
+  padding: 1rem 0.25rem;
+  border: 0;
+  border-bottom: 1px solid var(--color-hairline);
+  background: transparent;
+  color: var(--color-ink);
+  text-align: left;
+  transition: background-color 0.15s ease;
+}
+.pk-ms-row:hover {
+  background: var(--color-canvas-soft);
+}
+.pk-ms-row:focus-visible {
+  outline: 2px solid var(--color-primary-focus);
+  outline-offset: -2px;
+}
+.pk-ms-row__avatar {
+  grid-area: avatar;
+  display: flex;
+}
+/* Initials sit on a surface as pale as the page, so give the circle a hairline edge. */
+.pk-ms-row__avatar > * {
+  border-radius: 9999px;
+  box-shadow: 0 0 0 1px var(--color-hairline);
+}
+.pk-ms-row__main {
+  grid-area: main;
+  min-width: 0;
+}
+.pk-ms-row__chips {
+  grid-area: chips;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+@media (min-width: 640px) {
+  .pk-ms-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "avatar main chips";
+    align-items: center;
+    padding-inline: 0.75rem;
+  }
+  .pk-ms-row__chips {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+}
+/* The state of a member's year is the first thing read in the panel: a larger chip. */
+.pk-ms-status {
+  font-size: 14px;
+  padding: 0.375rem 0.75rem;
+}
+/* Full-width action buttons on a phone, natural width from 640px. */
+.pk-ms-actions > button {
+  width: 100%;
+}
+@media (min-width: 640px) {
+  .pk-ms-actions > button {
+    width: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pk-ms-tab,
+  .pk-ms-row {
+    transition: none;
+  }
+}
+@media print {
+  .pk-card::before {
+    display: none;
+  }
 }

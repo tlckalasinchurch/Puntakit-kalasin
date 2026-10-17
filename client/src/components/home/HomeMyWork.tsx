@@ -7,7 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, hasRole } from "@shared/roles";
-import { mergeHomeLinks, type HomeLink } from "@/lib/homeLinks";
+import type { HomeLink } from "@/lib/homeLinks";
+import { HOME_TILE_HREF, homeTilesFor, homeMoreLinksFor, type HomeTileId } from "@/lib/homeTiles";
 import { MissionPhotoSheet } from "./MissionPhotoSheet";
 
 interface Overview {
@@ -19,19 +20,7 @@ interface Overview {
   recentPhotos: Array<{ activityId: string; title: string; occurredAt: string; groupName: string | null; url: string }>;
 }
 
-const SECONDARY_LINKS: Array<{ href: string; label: string }> = [
-  { href: "/members", label: "สมาชิก" },
-  { href: "/groups", label: "พันธกิจ" },
-  { href: "/attendance", label: "เช็คชื่อวันนมัสการ" },
-  { href: "/events", label: "กิจกรรม" },
-  { href: "/feed", label: "ฟีดกิจกรรม" },
-  { href: "/announcements", label: "การประกาศ" },
-  { href: "/map", label: "แผนที่พันธกิจ" },
-];
-
-const TILE =
-  "group flex min-h-28 flex-col justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 text-left transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
-
+// Look and sizing live in the `.pk-home-tile*` block at the end of index.css.
 function Tile({
   icon: Icon,
   title,
@@ -49,24 +38,28 @@ function Tile({
 }) {
   const body = (
     <>
-      <span className="flex items-start justify-between gap-2">
-        <span aria-hidden="true" className="flex size-12 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-accent-soft)] text-[var(--color-primary)]">
-          <Icon size={26} aria-hidden="true" />
-        </span>
-        {badge && <StatusChip tone="warning">{badge}</StatusChip>}
+      <span aria-hidden="true" className="pk-home-tile__icon">
+        <Icon size={32} aria-hidden="true" />
       </span>
-      <span>
-        <span className="type-body-strong block text-[var(--color-ink)]">{title}</span>
-        {hint && <span className="type-fine mt-0.5 block text-[var(--color-body-muted)]">{hint}</span>}
+      <span className="pk-home-tile__text">
+        <span className="pk-home-tile__title">{title}</span>
+        {hint && <span className="pk-home-tile__hint">{hint}</span>}
       </span>
+      {badge && (
+        <StatusChip tone="warning" className="pk-home-tile__badge">
+          {/* "3 ต้องดำเนินการ": the line may break after the number, never inside the words. */}
+          <span>{badge.split(" ")[0]}</span>
+          <span className="whitespace-nowrap">{badge.split(" ").slice(1).join(" ")}</span>
+        </StatusChip>
+      )}
     </>
   );
   return href ? (
-    <Link href={href} className={TILE}>
+    <Link href={href} className="pk-home-tile">
       {body}
     </Link>
   ) : (
-    <button type="button" onClick={onClick} className={TILE}>
+    <button type="button" onClick={onClick} className="pk-home-tile">
       {body}
     </button>
   );
@@ -99,18 +92,19 @@ export function HomeMyWork({ extraLinks = [] }: { extraLinks?: HomeLink[] }) {
     void load();
   }, [load]);
 
-  const canCheckIn = hasRole(user?.role, CREATE_ROLES);
   const canSeeMembership = hasRole(user?.role, MEMBERSHIP_VIEW_ROLES);
-  const canPostPhotos = canCheckIn;
-
-  if (error) {
-    return <ErrorState inset title="โหลดข้อมูลของคุณไม่สำเร็จ" description={error.message} technical={error.serverMessage} onRetry={() => void load()} />;
-  }
+  const canPostPhotos = hasRole(user?.role, CREATE_ROLES);
+  const { primary: tiles } = homeTilesFor(user?.role);
+  const moreLinks = homeMoreLinksFor(user?.role);
 
   const attention = data?.membership?.attention ?? 0;
-  // Destinations already shown as tiles above; the rest of the role shortcuts join the "ดูทั้งหมด" list.
-  const tileHrefs = new Set<string>(["/follow-up", ...(canCheckIn ? ["/care"] : []), ...(canSeeMembership ? ["/memberships"] : [])]);
-  const moreLinks = mergeHomeLinks(SECONDARY_LINKS, extraLinks, tileHrefs);
+  const openFollowUps = data?.counts.openFollowUps ?? 0;
+  const tileView: Record<HomeTileId, { icon: React.ComponentType<{ size?: number; "aria-hidden"?: boolean | "true" }>; title: string; hint: string; badge?: string; onClick?: () => void }> = {
+    care: { icon: ClipboardCheck, title: "เช็คชื่อกลุ่มดูแล", hint: "ประจำสัปดาห์" },
+    photo: { icon: Camera, title: "อัปเดตภาพพันธกิจ", hint: "ถ่ายหรือเลือกรูป", onClick: () => setSheetOpen(true) },
+    membership: { icon: BadgeCheck, title: "สถานะสมาชิก", hint: "วิสามัญ · ต่ออายุ", badge: attention > 0 ? `${attention} ต้องดำเนินการ` : undefined },
+    followUp: { icon: ListTodo, title: "การติดตาม", hint: "ที่ต้องดูแลต่อ", badge: openFollowUps > 0 ? `${openFollowUps} รายการ` : undefined },
+  };
 
   return (
     <div className="space-y-8">
@@ -119,31 +113,24 @@ export function HomeMyWork({ extraLinks = [] }: { extraLinks?: HomeLink[] }) {
           <h2 id="home-quick" className="type-lead text-[var(--color-ink)]">
             ทำต่อได้เลย
           </h2>
-          <button
-            type="button"
-            aria-expanded={moreOpen}
-            aria-controls="home-more-links"
-            onClick={() => setMoreOpen((v) => !v)}
-            className="type-caption-strong inline-flex min-h-11 items-center px-1 text-[var(--color-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-          >
-            {moreOpen ? "ซ่อน" : "ดูทั้งหมด"}
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {canCheckIn && <Tile icon={ClipboardCheck} title="เช็คชื่อกลุ่มดูแล" hint="ประจำสัปดาห์" href="/care" />}
-          {canPostPhotos && <Tile icon={Camera} title="อัปเดตภาพพันธกิจ" hint="ถ่ายหรือเลือกรูป" onClick={() => setSheetOpen(true)} />}
-          {canSeeMembership && (
-            <Tile icon={BadgeCheck} title="สถานะสมาชิก" hint="วิสามัญ · ต่ออายุ" badge={attention > 0 ? `${attention} ต้องดำเนินการ` : undefined} href="/memberships" />
+          {moreLinks.length > 0 && (
+            <button
+              type="button"
+              aria-expanded={moreOpen}
+              aria-controls="home-more-links"
+              onClick={() => setMoreOpen((v) => !v)}
+              className="type-caption-strong inline-flex min-h-11 items-center px-1 text-[var(--color-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+            >
+              {moreOpen ? "ซ่อน" : "ดูทั้งหมด"}
+            </button>
           )}
-          <Tile
-            icon={ListTodo}
-            title="การติดตาม"
-            hint="ที่ต้องดูแลต่อ"
-            badge={data && data.counts.openFollowUps > 0 ? `${data.counts.openFollowUps} รายการ` : undefined}
-            href="/follow-up"
-          />
         </div>
-        {moreOpen && (
+        <div className="pk-home-tiles" data-count={tiles.length}>
+          {tiles.map((id) => (
+            <Tile key={id} {...tileView[id]} href={HOME_TILE_HREF[id] ?? undefined} />
+          ))}
+        </div>
+        {moreOpen && moreLinks.length > 0 && (
           <ul id="home-more-links" className="mt-3 flex flex-wrap gap-2" aria-label="ทางลัดอื่น ๆ">
             {moreLinks.map((l) => (
               <li key={l.href}>
@@ -158,6 +145,11 @@ export function HomeMyWork({ extraLinks = [] }: { extraLinks?: HomeLink[] }) {
           </ul>
         )}
       </section>
+
+      {error ? (
+        <ErrorState inset title="โหลดข้อมูลของคุณไม่สำเร็จ" description={error.message} technical={error.serverMessage} onRetry={() => void load()} />
+      ) : (
+        <>
 
       <section aria-labelledby="home-stats">
         <h2 id="home-stats" className="type-lead mb-1 text-[var(--color-ink)]">
@@ -221,6 +213,8 @@ export function HomeMyWork({ extraLinks = [] }: { extraLinks?: HomeLink[] }) {
             </ul>
           )}
         </section>
+      )}
+        </>
       )}
 
       {canPostPhotos && <MissionPhotoSheet open={sheetOpen} onClose={() => setSheetOpen(false)} groups={data?.photoGroups ?? []} onSaved={() => void load()} />}
