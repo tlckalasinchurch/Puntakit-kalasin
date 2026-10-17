@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, Clock, ListTodo, RotateCcw, X } from "lucide-react";
+import { CheckCircle2, Clock, ListTodo, RotateCcw, SearchX, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
@@ -75,10 +75,14 @@ export default function FollowUps() {
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [transitioningId, setTransitioningId] = useState<string | null>(null);
 
-  const load = async (pageToLoad: number = page) => {
-    setIsLoading(true);
-    setError(null);
-    setErrorTechnical(null);
+  // `background` refreshes in place after a status change: the list stays on screen (no skeleton
+  // flash, no scroll jump) and a failed refresh keeps the rows and says so in a toast.
+  const load = async (pageToLoad: number = page, { background = false } = {}) => {
+    if (!background) {
+      setIsLoading(true);
+      setError(null);
+      setErrorTechnical(null);
+    }
     try {
       const params = new URLSearchParams();
       if (statusFilter) params.set("status", statusFilter);
@@ -86,17 +90,28 @@ export default function FollowUps() {
       params.set("page", String(pageToLoad));
       params.set("limit", "50");
       const res = await api.getWithMeta<FollowUpRow[]>(`/api/follow-ups?${params.toString()}`);
+      if (!res.data?.length && pageToLoad > 1) {
+        // The last row of this page just left it (status change under a filter): step back a page.
+        setPage(pageToLoad - 1);
+        return load(pageToLoad - 1, { background });
+      }
       setItems(res.data || []);
       setMeta(res.meta ?? null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "โหลดรายการติดตามไม่สำเร็จ");
-      setErrorTechnical(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
+      if (background) {
+        toast.error("รีเฟรชรายการไม่สำเร็จ ข้อมูลที่เห็นอาจไม่ใช่ล่าสุด — กด “โหลดใหม่”");
+      } else {
+        setError(err instanceof ApiError ? err.message : "โหลดรายการติดตามไม่สำเร็จ");
+        setErrorTechnical(err instanceof ApiError ? (err.serverMessage ?? err.message) : String(err));
+      }
     } finally {
-      setIsLoading(false);
+      if (!background) setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    // A new filter starts from page 1; the pager must say so too.
+    setPage(1);
     load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, overdueOnly]);
@@ -106,7 +121,7 @@ export default function FollowUps() {
     try {
       await api.put(`/api/follow-ups/${row.id}/status`, { status });
       toast.success(`เปลี่ยนสถานะเป็น "${STATUS_LABELS[status]}" แล้ว`);
-      load();
+      await load(page, { background: true });
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "เปลี่ยนสถานะไม่สำเร็จ");
     } finally {
@@ -169,6 +184,19 @@ export default function FollowUps() {
             description="ระบบเชื่อมต่อไม่สำเร็จในขณะนี้ กรุณาลองอีกครั้ง"
             technical={errorTechnical ?? undefined}
             onRetry={() => load()}
+          />
+        ) : items.length === 0 && (statusFilter || overdueOnly) ? (
+          <EmptyState
+            icon={SearchX}
+            title="ไม่มีรายการที่ตรงกับตัวกรอง"
+            description="ลองเปลี่ยนสถานะ หรือเอาตัวกรองออกเพื่อดูรายการทั้งหมด"
+            action={{
+              label: "ล้างตัวกรอง",
+              onClick: () => {
+                setStatusFilter("");
+                setOverdueOnly(false);
+              },
+            }}
           />
         ) : items.length === 0 ? (
           <EmptyState
