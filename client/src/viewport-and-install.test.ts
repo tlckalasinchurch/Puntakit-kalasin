@@ -75,6 +75,11 @@ describe("safe areas", () => {
     const nav = read("client/src/components/layout/MobileBottomNav.tsx");
     expect(nav).toMatch(/pl-\[var\(--safe-l\)\]/);
     expect(nav).toMatch(/pr-\[var\(--safe-r\)\]/);
+    // The member nav is the same kind of fixed sibling (the member shell can span the whole viewport
+    // in landscape, and the manifest allows any orientation), so it needs the same insets.
+    const memberNav = read("client/src/components/layout/MemberAppLayout.tsx").match(/<nav\b[\s\S]*?>/)![0];
+    expect(memberNav).toMatch(/pl-\[var\(--safe-l\)\]/);
+    expect(memberNav).toMatch(/pr-\[var\(--safe-r\)\]/);
   });
 
   it("never pins a responsive gutter with an inline style", () => {
@@ -206,15 +211,13 @@ describe("service worker", () => {
     expect(sw).toMatch(/navigationPreload\.enable\(\)/);
   });
 
-  it("retries the network when the preload itself rejects", () => {
-    // `preloadResponse || fetch(...)` was the bug this test used to lock in.
-    // A preload rejects on its own (connection reset, 5xx, timeout) and that
-    // rejection propagated straight to the offline branch, so every navigation
-    // silently fell back to the cached shell without ever retrying the network
-    // — with preload enabled for all navigations, that is every single visit.
-    expect(sw).toMatch(/event\.preloadResponse/);
-    expect(sw).toMatch(/event\.preloadResponse[\s\S]{0,160}?\.catch\(\(\)\s*=>\s*fetch\(event\.request\)\)/);
-    expect(sw).not.toMatch(/event\.preloadResponse\s*\|\|\s*fetch\(/);
+  it("never uses preloadResponse as a truthy flag (it is always a Promise)", () => {
+    // `preloadResponse ? … : fetch(…)` and `preloadResponse || fetch(…)` both treated the Promise as
+    // "present" for every request, so non-navigations (resolving to undefined) got an undefined
+    // response. Behaviour is proven in sw-fetch.test.ts, which runs the handler; this only keeps the
+    // pattern from creeping back in.
+    expect(sw).toMatch(/Promise\.resolve\(event\.preloadResponse\)/);
+    expect(sw).not.toMatch(/event\.preloadResponse\s*(\?|\|\|)/);
   });
 
   it("never hands respondWith an undefined response", () => {

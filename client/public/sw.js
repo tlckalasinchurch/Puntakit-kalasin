@@ -113,18 +113,24 @@ self.addEventListener("fetch", (event) => {
 
   // HTML and everything else: network-first, cache answers only offline.
   //
-  // `event.preloadResponse` is non-null only for navigations when preload is
-  // enabled; for every other request it falls through to fetch().
+  // `event.preloadResponse` is ALWAYS a Promise (or absent in browsers without
+  // navigation preload). It resolves to the preloaded Response only for a
+  // navigation with preload enabled; for every other request (manifest, icons,
+  // images, navigations where preload is off) it resolves to `undefined`. So it
+  // cannot be used as a truthy flag: `preloadResponse ? … : fetch()` picked it for
+  // every request and handed `undefined` to respondWith, which fails the request.
   //
-  // The preload is NOT a substitute for the request. It rejects on its own
+  // The preload is also NOT a substitute for the request. It rejects on its own
   // whenever the preloaded fetch fails (connection reset, 5xx, preload timeout)
   // and a rejected `preloadResponse` propagates straight to the offline
-  // fallback below — so `preloadResponse || fetch(...)` left the real network
-  // untried and pinned every navigation to the stale cached shell. Retry with
-  // fetch() first, and only treat the request as offline if that fails too.
-  const networkAttempt = event.preloadResponse
-    ? event.preloadResponse.catch(() => fetch(event.request))
-    : fetch(event.request);
+  // fallback below — pinning every navigation to the stale cached shell.
+  //
+  // So: await it, treat "absent", "resolved to undefined" and "rejected" alike,
+  // and in all three cases make the real request. Only treat the request as
+  // offline if that fails too.
+  const networkAttempt = Promise.resolve(event.preloadResponse)
+    .catch(() => undefined)
+    .then((preloaded) => preloaded || fetch(event.request));
 
   event.respondWith(
     networkAttempt

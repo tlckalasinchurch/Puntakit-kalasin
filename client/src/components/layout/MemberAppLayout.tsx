@@ -154,7 +154,7 @@ export function MemberAppLayout({ children }: MemberAppLayoutProps) {
       {/* Bottom navigation — 5 real links, >= 44px tall each. */}
       <nav
         aria-label="เมนูหลักของแอพสมาชิก"
-        className={`pk-nav fixed bottom-0 left-1/2 z-30 w-full ${shellWidthClass(isMemberHome)} -translate-x-1/2 pb-[var(--safe-b)]`}
+        className={`pk-nav fixed bottom-0 left-1/2 z-30 w-full ${shellWidthClass(isMemberHome)} -translate-x-1/2 pb-[var(--safe-b)] pl-[var(--safe-l)] pr-[var(--safe-r)]`}
       >
         <ul className="flex items-stretch justify-around">
           {NAV_ITEMS.map(item => {
