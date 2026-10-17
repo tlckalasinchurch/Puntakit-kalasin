@@ -855,7 +855,7 @@ export default function Members() {
                       <div className="flex items-center justify-end gap-1">
                         <button
                           type="button"
-                          className="flex size-11 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                          className="flex size-11 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
                           onClick={() => openMember(m)}
                           aria-label={`ดูข้อมูลของ ${m.name}`}
                         >
@@ -864,7 +864,7 @@ export default function Members() {
                         {canManage && (
                           <button
                             type="button"
-                            className="flex size-11 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                            className="flex size-11 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
                             onClick={() => openEdit(m)}
                             aria-label={`แก้ไขข้อมูลของ ${m.name}`}
                           >

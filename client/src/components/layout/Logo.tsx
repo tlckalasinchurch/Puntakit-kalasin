@@ -11,13 +11,13 @@ export function Logo({ tone = "onDark" }: { tone?: "onDark" | "onLight" }) {
   const sub =
     tone === "onDark"
       ? "text-[var(--color-primary-on-dark)]"
-      : "text-[var(--color-primary)]";
+      : "text-[var(--color-primary-ink)]";
 
   return (
     <span className="flex items-center gap-3">
       <span
         aria-hidden="true"
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)] text-[var(--color-on-dark)]"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)] text-[var(--color-on-primary)]"
       >
         <Cross size={22} strokeWidth={2.6} />
       </span>

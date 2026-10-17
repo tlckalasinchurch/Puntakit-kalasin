@@ -87,7 +87,7 @@ export function MemberDetailModal({
             type="button"
             onClick={handleCreateFollowUp}
             disabled={creatingFollowUp}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-primary-ink)] transition-colors hover:bg-[var(--color-accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
           >
             <Plus size={ICON_SIZE.sm} aria-hidden="true" />
             {creatingFollowUp ? "กำลังสร้าง…" : "สร้างรายการติดตาม"}

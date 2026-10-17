@@ -44,7 +44,7 @@ export function MobileBottomNav({ onMenu, menuOpen }: MobileBottomNavProps) {
   return (
     <nav
       aria-label="เมนูล่าง"
-      className="pk-nav fixed inset-x-0 bottom-0 z-30 flex pb-[var(--safe-b)] pl-[var(--safe-l)] pr-[var(--safe-r)] lg:hidden"
+      className="pk-nav flex lg:hidden"
     >
       {items.map(({ label, path, icon: Icon }) => {
         const active = location === path;

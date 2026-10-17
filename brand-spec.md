@@ -6,10 +6,11 @@
 
 ## Visual direction
 
-Quiet graphite chrome, rounded white surfaces, and a single teal interactive color.
-The interface recedes so the people in it are the content: warm and people-centered,
-never loud. Church blue and deep navy were the pre-V2 identity; olive field green was
-the V2 identity. Both are fully retired.
+Neon Orange and warm Porcelain: charcoal chrome, white cards on a porcelain canvas, and
+one strategic orange. The interface stays warm and people-centered; orange marks the
+primary action and the current place, not every control. Church blue, deep navy, olive
+green and teal were earlier identities and are retired. The Puntakit logo keeps its
+original colours in every theme.
 
 ## Assets
 
@@ -18,52 +19,54 @@ the V2 identity. Both are fully retired.
 
 ## Tokens
 
-**Field (the one interactive color)**
+**Primary (Neon Orange, used strategically)**
 
 | Token | Hex | Use |
 |---|---|---|
-| Field | `#0c7c82` | links, primary buttons, icons, focus. The only chromatic UI color |
-| Field hover | `#09696e` | hover / pressed / focus ring |
-| Field on dark | `#7faf72` | accent text on graphite surfaces |
-| Field tint | `#e8f0e4` | soft chip background on white |
+| Primary | `#ff6115` | fill of primary buttons, selected state, current-page indicator. Text on it is `#171717` (5.95:1) |
+| On primary | `#171717` | text/icons on the orange fill. Never white (3.01:1) |
+| Primary hover / ring | `#e8560a` | hover / pressed fill and focus ring (3.55:1 on porcelain) |
+| Primary ink | `#b93800` | orange as text, link or icon on light surfaces (5.64:1 on porcelain) |
+| Primary on dark | `#ff6115` | accent on charcoal chrome (5.95:1) |
+| Primary tint | `#ffeadb` | soft chip background |
 
-> **Contrast rule for teal text.** `#0c7c82` clears AA as a *fill* carrying white
-> text (4.98:1) and on canvas (4.76:1), but it measures **4.45:1 on a pale tint** —
-> below AA. On any tinted or dark surface, use `--color-primary-focus` `#09696e`
-> (5.77:1) for teal text instead. This is the same finding that moved the member
-> app to `--lamb-primary: #0A767C`.
+> **Contrast rule for orange.** `#ff6115` is 2.94:1 on porcelain and 3.01:1 on white,
+> so it is a *fill* colour only: it carries charcoal text, never white, and it is never
+> body text. Orange text and links use `--color-primary-ink`. Status is never carried
+> by orange alone (icon or label as well). All pairs are measured from the real tokens
+> in `palette-contrast.test.ts`.
 
 **Chrome & surfaces** (a three-step neutral ladder)
 
 | Token | Hex | Use |
 |---|---|---|
-| Ink | `#0f172a` | headings and body text |
-| Ink muted | `#5b6474` | secondary text, labels, metadata |
-| Canvas | `#f8fafc` | the page background |
-| Canvas soft | `#f5f5f7` | wells, table stripes, `secondary` / `muted` / `accent` |
+| Ink | `#171717` | headings and body text |
+| Ink muted | `#5c554a` | secondary text, labels, metadata |
+| Canvas | `#fffcf4` | the page background (Porcelain) |
+| Canvas soft | `#f7f2e7` | wells, table stripes, `secondary` / `muted` / `accent` |
 | Surface | `#ffffff` | card surfaces |
-| Sunken | `#f1f5f9` | recessed areas only — inset wells, hover fills |
-| Divider | `#e2e8f0` | hairlines inside a card |
-| Hairline | `#e2e8f0` | card borders, inputs (`--border`, `--input`) |
+| Sunken | `#f1ebdd` | recessed areas only — inset wells, hover fills |
+| Divider | `#ede7d9` | hairlines inside a card |
+| Hairline | `#e6dfcf` | card borders, inputs (`--border`, `--input`) |
 
 **Neutral text ramp** (for secondary and muted copy on canvas)
 
 | Token | Hex | Use | On canvas |
 |---|---|---|---|
-| Text secondary | `#475569` | supporting copy, descriptions | 7.24:1 |
-| Text tertiary | `#5b6474` | metadata, helper text | 6.4:1 |
-| Text quaternary | `#64748b` | the quietest legible text | 4.55:1 |
+| Text secondary | `#4a443b` | supporting copy, descriptions | 7.24:1 |
+| Text tertiary | `#5c554a` | metadata, helper text | 6.4:1 |
+| Text quaternary | `#6a6256` | the quietest legible text | 4.55:1 |
 
 **Graphite (dark chrome)**
 
 | Token | Hex | Use |
 |---|---|---|
-| Graphite | `#272729` | sidebar, dark surfaces, tooltips |
-| Graphite 2 | `#2a2a2c` | gradient start / raised dark surface |
-| Graphite 3 | `#252527` | gradient end / recessed dark surface |
-| On dark | `#ffffff` | text on graphite |
-| On dark muted | `#a1a1a6` | secondary text on graphite |
-| On dark hairline | `#3a3a3c` | dividers on graphite |
+| Charcoal | `#171717` | sidebar, dark surfaces, tooltips |
+| Charcoal 2 | `#1f1f1f` | gradient start / raised dark surface |
+| Charcoal 3 | `#141414` | gradient end / recessed dark surface |
+| On dark | `#fffcf4` | text on graphite |
+| On dark muted | `#a8a298` | secondary text on graphite |
+| On dark hairline | `#34312d` | dividers on graphite |
 | Black | `#000000` | dark-mode page background |
 
 **Status (fixed meaning — never repurpose these)**
@@ -97,20 +100,21 @@ rules are banned by `design-system-consistency.test.ts`).
 
 | Token | Hex | On canvas |
 |---|---|---|
-| Canvas | `#061a1f` | — |
-| Canvas soft | `#123033` | — |
-| Surface | `#0c2529` | — |
-| Sunken | `#0a2126` | — |
-| Ink | `#f4faf9` | 16.92:1 |
-| Text secondary | `#c3d4d4` | 11.65:1 |
-| Text tertiary | `#9db2b2` | 8.04:1 |
-| Text quaternary | `#7e9493` | 5.57:1 |
-| Field (primary) | `#2fc4bd` | 8.30:1 as text |
-| Field hover | `#5fd7d1` | — |
-| On field | `#04211f` | 7.85:1 on the fill |
+| Canvas | `#171717` | — |
+| Canvas soft | `#2a2a2a` | — |
+| Surface | `#202020` | — |
+| Sunken | `#121212` | — |
+| Ink | `#fffcf4` | 17.49:1 |
+| Text secondary | `#d2ccbf` | 11.21:1 |
+| Text tertiary | `#b3aca0` | 7.96:1 |
+| Text quaternary | `#a59e92` | >= 4.5:1 on every surface |
+| Primary (fill) | `#ff6115` | 5.95:1 against canvas |
+| Primary hover / ring | `#ff8a4d` | 7.68:1 on canvas |
+| Primary ink (text) | `#ff7a3d` | 6.92:1 as text |
+| On primary | `#171717` | 5.95:1 on the fill |
 
-> **Do not write `color: #fff` on a primary fill.** White on the dark primary
-> measures **2.15:1**. Use `var(--color-on-primary)`.
+> **Do not write `color: #fff` on a primary fill.** White on Neon Orange
+> measures **3.01:1**. Use `var(--color-on-primary)`.
 
 **Glass.** Chrome in dark mode is glass, not flat fill: `--glass-fill`,
 `--glass-fill-strong`, `--glass-line`, `--glass-line-bright`, `--glass-blur`.

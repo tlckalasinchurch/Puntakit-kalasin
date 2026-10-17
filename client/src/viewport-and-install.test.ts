@@ -70,16 +70,20 @@ describe("safe areas", () => {
     expect(read("client/src/components/layout/MemberAppLayout.tsx")).toMatch(/var\(--safe-l\)/);
     expect(read("client/src/components/layout/MemberAppLayout.tsx")).toMatch(/var\(--safe-r\)/);
     expect(read("client/src/components/layout/AppLayout.tsx")).toMatch(/var\(--safe-l\)/);
-    // The bottom nav is `fixed inset-x-0`, a sibling of the padded wrapper, so
-    // it needs its own insets or the first/last item sits under a notch.
-    const nav = read("client/src/components/layout/MobileBottomNav.tsx");
-    expect(nav).toMatch(/pl-\[var\(--safe-l\)\]/);
-    expect(nav).toMatch(/pr-\[var\(--safe-r\)\]/);
-    // The member nav is the same kind of fixed sibling (the member shell can span the whole viewport
-    // in landscape, and the manifest allows any orientation), so it needs the same insets.
-    const memberNav = read("client/src/components/layout/MemberAppLayout.tsx").match(/<nav\b[\s\S]*?>/)![0];
-    expect(memberNav).toMatch(/pl-\[var\(--safe-l\)\]/);
-    expect(memberNav).toMatch(/pr-\[var\(--safe-r\)\]/);
+    // Both bottom navs are the same floating `.pk-nav` capsule, fixed and a sibling of the padded
+    // wrapper, so the insets live in its CSS: centred between the left/right insets and lifted above
+    // the home indicator (`--safe-b`).
+    const css = read("client/src/index.css");
+    const nav = css.slice(css.indexOf(".pk-nav {"), css.indexOf(".pk-nav-item {"));
+    expect(nav).toMatch(/position:\s*fixed/);
+    expect(nav).toMatch(/var\(--safe-l\)/);
+    expect(nav).toMatch(/var\(--safe-r\)/);
+    expect(nav).toMatch(/bottom:\s*calc\(var\(--safe-b\)/);
+    // Not wider than 520px, so five items do not spread across an iPad.
+    expect(nav).toMatch(/520px/);
+    for (const rel of ["MobileBottomNav", "MemberAppLayout"]) {
+      expect(read(`client/src/components/layout/${rel}.tsx`)).toMatch(/className="pk-nav[ "]/);
+    }
   });
 
   it("never pins a responsive gutter with an inline style", () => {

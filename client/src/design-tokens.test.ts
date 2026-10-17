@@ -40,12 +40,16 @@ describe("design token source of truth", () => {
   it("declares the core V2 brand tokens", () => {
     // The values the whole UI is built on. If one of these changes, the docs
     // and every component need to change with it.
-    expect(tokens.get("--color-primary")).toBe("#0c7c82");
-    expect(tokens.get("--color-primary-focus")).toBe("#09696e");
-    expect(tokens.get("--color-primary-on-dark")).toBe("#7faf72");
-    expect(tokens.get("--color-ink")).toBe("#0f172a");
-    expect(tokens.get("--color-dark-surface")).toBe("#272729");
-    expect(tokens.get("--color-canvas")).toBe("#f8fafc");
+    // Orange & Porcelain: Neon Orange fill, warm porcelain canvas, deep charcoal ink.
+    expect(tokens.get("--color-primary")).toBe("#ff6115");
+    expect(tokens.get("--color-primary-focus")).toBe("#e8560a");
+    expect(tokens.get("--color-primary-ink")).toBe("#b93800");
+    expect(tokens.get("--color-on-primary")).toBe("#171717");
+    expect(tokens.get("--color-primary-on-dark")).toBe("#ff6115");
+    expect(tokens.get("--color-ink")).toBe("#171717");
+    expect(tokens.get("--color-dark-surface")).toBe("#171717");
+    expect(tokens.get("--color-canvas")).toBe("#fffcf4");
+    expect(tokens.get("--color-surface")).toBe("#ffffff");
   });
 
   it("defines a real elevation token", () => {
@@ -168,8 +172,8 @@ describe("design token source of truth", () => {
     ]) {
       expect(tokens.get(token), `${token} missing`).toMatch(/^#[0-9a-f]{6}$/i);
     }
-    // A sunken surface is neutral, not blue-white.
-    expect(tokens.get("--color-canvas-sunken")).toBe("#f1f5f9");
+    // A sunken surface is a warm neutral, not blue-white.
+    expect(tokens.get("--color-canvas-sunken")).toBe("#f1ebdd");
   });
 });
 
@@ -191,10 +195,14 @@ describe("text on a primary fill", () => {
     const dark = css.slice(css.indexOf("\n.dark {"));
     const darkPrimary = dark.match(/--color-primary:\s*(#[0-9a-f]{6})/i)![1];
     const darkOnPrimary = dark.match(/--color-on-primary:\s*(#[0-9a-f]{6})/i)![1];
-    // Light mode: --color-on-primary falls back to --color-on-dark (#f8fafc).
-    expect(tokens.get("--color-on-primary")).toBe("var(--color-on-dark)");
-    expect(ratio("#f8fafc", tokens.get("--color-primary")!)).toBeGreaterThanOrEqual(4.5);
+    // Neon Orange is too light for white text (3.0:1), so both themes use charcoal on the fill
+    // and on the hover/pressed fill (--color-primary-focus).
+    const darkFocus = dark.match(/--color-primary-focus:\s*(#[0-9a-f]{6})/i)![1];
+    const onPrimary = tokens.get("--color-on-primary")!;
+    expect(ratio(onPrimary, tokens.get("--color-primary")!)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(onPrimary, tokens.get("--color-primary-focus")!)).toBeGreaterThanOrEqual(4.5);
     expect(ratio(darkOnPrimary, darkPrimary)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(darkOnPrimary, darkFocus)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("no page sets white text on a primary fill", () => {
@@ -229,8 +237,13 @@ describe("primary as text on its own soft tint", () => {
       )
       .join("");
 
-  it("--color-primary-ink equals --color-primary in light mode, so light pages do not change", () => {
-    expect(tokens.get("--color-primary-ink")).toBe("var(--color-primary)");
+  it("light --color-primary-ink (orange as TEXT) is >= 4.5:1 on canvas, surface and the accent-soft tint", () => {
+    const ink = tokens.get("--color-primary-ink")!;
+    for (const bg of ["--color-canvas", "--color-surface", "--color-canvas-soft", "--color-accent-soft"]) {
+      expect(cr(ink, tokens.get(bg)!), bg).toBeGreaterThanOrEqual(4.5);
+    }
+    // The fill orange itself is NOT a text colour on light surfaces.
+    expect(cr(tokens.get("--color-primary")!, tokens.get("--color-canvas")!)).toBeLessThan(4.5);
   });
 
   it("dark --color-primary-ink is >= 4.5:1 on the dark accent-soft tint over the dark canvas", () => {
@@ -240,7 +253,7 @@ describe("primary as text on its own soft tint", () => {
     // The tint base is read from the sheet rather than hardcoded, so retuning
     // the dark palette cannot leave this assertion checking a stale colour.
     const tintBase = dark.match(/--color-primary:\s*(#[0-9a-f]{6})/i)![1];
-    const tint = dark.match(/--color-accent-soft:\s*rgba\(47,\s*196,\s*189,\s*([\d.]+)\)/)![1];
+    const tint = dark.match(/--color-accent-soft:\s*rgba\(255,\s*97,\s*21,\s*([\d.]+)\)/)![1];
     expect(cr(ink, mix(tintBase, canvas, Number(tint)))).toBeGreaterThanOrEqual(4.5);
   });
 });

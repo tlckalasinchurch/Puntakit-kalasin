@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { ROLE_LABELS } from "@shared/labels";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { initialOf } from "@/lib/initials";
 
 export default function Profile() {
   usePageTitle("โปรไฟล์ส่วนตัว");
@@ -40,7 +41,7 @@ export default function Profile() {
   }
 
   const roleLabel = ROLE_LABELS[user.role] ?? user.role;
-  const initial = user.name.trim().slice(0, 1) || "?";
+  const initial = initialOf(user.name);
 
   const handleLogout = async () => {
     await logout();

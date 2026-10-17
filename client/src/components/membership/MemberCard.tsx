@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { MembershipType } from "@shared/membership";
+import { initialOf } from "../../lib/initials";
 
 /**
  * The membership card. It draws only what the register gives it: no name,
@@ -87,7 +88,7 @@ export function MemberCard({ card }: { card: MemberCardData }) {
           <img src={card.avatarUrl!} alt={`รูปถ่ายของ ${card.name}`} onError={() => setPhotoFailed(true)} />
         ) : (
           <div className="pk-card__photo-empty">
-            <strong aria-hidden="true">{card.name.trim().slice(0, 1)}</strong>
+            <strong aria-hidden="true">{initialOf(card.name)}</strong>
             <span>ยังไม่มีรูป</span>
           </div>
         )}

@@ -79,7 +79,7 @@ export default function Privacy() {
         <div style={{ marginTop: 32, paddingTop: 20, borderTop: "1px solid var(--color-hairline)" }}>
           <Link
             href="/terms"
-            className="type-caption-strong mr-5 inline-flex min-h-11 items-center text-[var(--color-primary)] no-underline"
+            className="type-caption-strong mr-5 inline-flex min-h-11 items-center text-[var(--color-primary-ink)] no-underline"
           >
             อ่านเงื่อนไขการใช้งาน →
           </Link>

@@ -67,7 +67,7 @@ class ErrorBoundary extends Component<Props, State> {
               <RotateCcw size={16} />
               โหลดหน้าใหม่
             </button>
-            <a href="/" className="type-caption mt-4 inline-flex min-h-11 items-center text-[var(--color-primary)] underline">
+            <a href="/" className="type-caption mt-4 inline-flex min-h-11 items-center text-[var(--color-primary-ink)] underline">
               กลับหน้าหลัก
             </a>
           </div>

@@ -102,7 +102,7 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
           <button
             type="button"
             onClick={() => toggleTheme?.()}
-            className="flex size-11 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-hairline)] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+            className="flex size-11 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-hairline)] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
             aria-label={
               theme === "dark" ? "เปลี่ยนเป็นโหมดสว่าง" : "เปลี่ยนเป็นโหมดมืด"
             }
@@ -125,7 +125,7 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
                   ? "เปิดกล่องข้อมูล มีรายการใหม่ " + unreadCount + " รายการ"
                   : "เปิดกล่องข้อมูล"
               }
-              className="relative flex size-11 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-hairline)] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+              className="relative flex size-11 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-hairline)] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-primary-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
             >
               <Bell size={ICON_SIZE.md} aria-hidden="true" />
               {unreadCount > 0 && (
