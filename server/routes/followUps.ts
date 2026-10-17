@@ -18,6 +18,7 @@ import {
 } from "../../shared/validation.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { assertGroupInScope, assertMembersInScope, getLedGroupIds, isScopedRole } from "../lib/careScope.js";
+import { canSeeMemberContacts } from "./members.js";
 import { CREATE_ROLES, PRIVILEGED_ROLES } from "../../shared/roles.js";
 import { logAudit } from "../lib/audit.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
@@ -147,15 +148,21 @@ followUpsRouter.get("/", async (req, res, next) => {
     const [countResult] = await db.select({ total: count() }).from(followUps).where(whereClause);
     const total = Number(countResult?.total ?? 0);
 
-    const rows = await db
+    // Open work first, earliest due date first (undated last); finished and cancelled rows
+    // follow, most recently changed first. Done in SQL so every page of the queue agrees.
+    const isOpen = sql`${followUps.status} in ('open', 'in_progress')`;
+    const rawRows = await db
       .select({
         id: followUps.id,
         status: followUps.status,
         title: followUps.title,
         subjectMemberId: followUps.subjectMemberId,
         subjectMemberName: members.name,
+        subjectMemberPhone: members.phone,
+        subjectMemberAssignedLeaderId: members.assignedLeaderId,
         subjectGroupId: followUps.subjectGroupId,
         subjectGroupName: groups.name,
+        subjectGroupOrgLevel: groups.orgLevel,
         activityId: followUps.activityId,
         ownerId: followUps.ownerId,
         ownerName: users.name,
@@ -167,9 +174,27 @@ followUpsRouter.get("/", async (req, res, next) => {
       .leftJoin(groups, eq(followUps.subjectGroupId, groups.id))
       .leftJoin(users, eq(followUps.ownerId, users.id))
       .where(whereClause)
-      .orderBy(sql`${followUps.dueAt} asc nulls last`, desc(followUps.createdAt))
+      .orderBy(
+        sql`case when ${isOpen} then 0 else 1 end`,
+        sql`case when ${isOpen} then ${followUps.dueAt} end asc nulls last`,
+        sql`case when ${isOpen} then null else ${followUps.updatedAt} end desc nulls last`,
+        desc(followUps.createdAt)
+      )
       .limit(limit)
       .offset(offset);
+
+    // The subject's phone follows the members contact policy (`canSeeMemberContacts`): real
+    // number only for roles that may see it or the member's assigned leader, otherwise none,
+    // with `subjectMemberContactMasked` so the page can say why there is no call button.
+    // `assignedLeaderId` only decides visibility and is not returned.
+    const rows = rawRows.map(({ subjectMemberAssignedLeaderId, subjectMemberPhone, ...row }) => {
+      const canSee = canSeeMemberContacts(user.role, user.id, subjectMemberAssignedLeaderId);
+      return {
+        ...row,
+        subjectMemberPhone: canSee ? subjectMemberPhone : null,
+        subjectMemberContactMasked: !canSee && Boolean(subjectMemberPhone),
+      };
+    });
 
     res.json({ success: true, data: rows, meta: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 } });
   } catch (err) {

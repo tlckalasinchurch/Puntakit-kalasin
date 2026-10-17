@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { CheckCircle2, Clock, ListTodo, RotateCcw, SearchX, X } from "lucide-react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { Link } from "wouter";
+import { CheckCircle2, Clock, ListTodo, Phone, RotateCcw, SearchX, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
@@ -16,6 +17,8 @@ import { ListSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError, type ApiMeta } from "@/lib/api";
 import type { FollowUpStatus } from "@shared/schema";
+import { CREATE_ROLES, hasRole } from "@shared/roles";
+import { useAuth } from "@/contexts/AuthContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface FollowUpRow {
@@ -24,8 +27,13 @@ interface FollowUpRow {
   title: string;
   subjectMemberId: string | null;
   subjectMemberName: string | null;
+  /** Real number only when the viewer may see this member's contacts; otherwise null. */
+  subjectMemberPhone: string | null;
+  /** A number exists but is hidden from this viewer (members contact policy). */
+  subjectMemberContactMasked: boolean;
   subjectGroupId: string | null;
   subjectGroupName: string | null;
+  subjectGroupOrgLevel: "body" | "care" | null;
   activityId: string | null;
   ownerId: string | null;
   ownerName: string | null;
@@ -54,6 +62,53 @@ const ROW_BUTTON_CLASS =
 const ROW_PRIMARY_BUTTON_CLASS =
   "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-3 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
 
+const SUBJECT_LINK_CLASS =
+  "inline-flex min-h-11 items-center rounded-[var(--radius-xs)] font-semibold text-[var(--color-primary)] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
+
+/**
+ * Who the follow-up is about, as links: a member opens their detail dialog on /members; a care
+ * group opens its roster and call list on /care (a screen only CREATE_ROLES can reach, so other
+ * roles and body-level groups stay plain text). There is no group detail page to link to.
+ */
+function SubjectLine({ row, canOpenCare }: { row: FollowUpRow; canOpenCare: boolean }) {
+  const parts: ReactNode[] = [];
+  if (row.subjectMemberName) {
+    parts.push(
+      row.subjectMemberId ? (
+        <Link href={`/members?member=${encodeURIComponent(row.subjectMemberId)}`} className={SUBJECT_LINK_CLASS}>
+          {row.subjectMemberName}
+        </Link>
+      ) : (
+        <span>{row.subjectMemberName}</span>
+      )
+    );
+  }
+  if (row.subjectGroupName) {
+    parts.push(
+      row.subjectGroupId && row.subjectGroupOrgLevel === "care" && canOpenCare ? (
+        <Link href={`/care?group=${encodeURIComponent(row.subjectGroupId)}`} className={SUBJECT_LINK_CLASS}>
+          {row.subjectGroupName}
+        </Link>
+      ) : (
+        <span>{row.subjectGroupName}</span>
+      )
+    );
+  }
+  if (parts.length === 0) parts.push(<span>ไม่ระบุเป้าหมาย</span>);
+  if (row.ownerName) parts.push(<span>ผู้รับผิดชอบ: {row.ownerName}</span>);
+
+  return (
+    <p className="type-caption mt-0.5 flex flex-wrap items-center gap-x-2 text-[var(--color-text-secondary)]">
+      {parts.map((part, i) => (
+        <Fragment key={i}>
+          {i > 0 && <span aria-hidden="true">•</span>}
+          {part}
+        </Fragment>
+      ))}
+    </p>
+  );
+}
+
 function formatDate(iso: string | null) {
   if (!iso) return "ไม่มีกำหนด";
   return new Date(iso).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" });
@@ -65,6 +120,8 @@ function isOverdue(row: FollowUpRow) {
 
 export default function FollowUps() {
   usePageTitle("รายการติดตาม");
+  const { user } = useAuth();
+  const canOpenCare = hasRole(user?.role, CREATE_ROLES);
   const [items, setItems] = useState<FollowUpRow[]>([]);
   const [meta, setMeta] = useState<ApiMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -227,14 +284,19 @@ export default function FollowUps() {
                     )}
                   </div>
                   <h3 className="type-caption-strong text-[var(--color-ink)]">{row.title}</h3>
-                  <p className="type-caption mt-0.5 text-[var(--color-text-secondary)]">
-                    {[row.subjectMemberName, row.subjectGroupName].filter(Boolean).join(" • ") || "ไม่ระบุเป้าหมาย"}
-                    {row.ownerName ? ` • ผู้รับผิดชอบ: ${row.ownerName}` : ""}
-                  </p>
+                  <SubjectLine row={row} canOpenCare={canOpenCare} />
                   <p className="type-fine mt-0.5 text-[var(--color-body-muted)]">กำหนด: {formatDate(row.dueAt)}</p>
                 </div>
 
                 <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+                  {(row.status === "open" || row.status === "in_progress") &&
+                    (row.subjectMemberPhone ? (
+                      <a className={ROW_BUTTON_CLASS} href={`tel:${row.subjectMemberPhone}`}>
+                        <Phone size={ICON_SIZE.sm} aria-hidden="true" /> โทร {row.subjectMemberPhone}
+                      </a>
+                    ) : row.subjectMemberContactMasked ? (
+                      <span className="type-caption text-[var(--color-body-muted)]">เบอร์ถูกปิดบัง</span>
+                    ) : null)}
                   {row.status === "open" && (
                     <button
                       type="button"
