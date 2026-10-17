@@ -96,7 +96,7 @@ function MenuItem({
       role="menuitem"
       onClick={onSelect}
       className={`type-caption flex min-h-11 w-full items-center gap-3 px-3 text-left transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-focus)] ${
-        tone === "danger" ? "text-[var(--color-error)]" : "text-[var(--color-ink)]"
+        tone === "danger" ? "text-[var(--color-error-ink)]" : "text-[var(--color-ink)]"
       }`}
     >
       <Icon size={ICON_SIZE.sm} aria-hidden="true" className="shrink-0" />

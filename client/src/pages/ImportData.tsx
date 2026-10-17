@@ -250,7 +250,7 @@ export default function ImportData() {
           />
           <button type="button" className={CONTROL_BUTTON} disabled={isCheckingGate} onClick={() => void runPreCheck()}>
             <ShieldCheck size={ICON_SIZE.sm} aria-hidden="true" />
-            {isCheckingGate ? "กำลังตรวจ…" : "ตรวจสอบ group_members"}
+            {isCheckingGate ? "กำลังตรวจ…" : "ตรวจสมาชิกกลุ่มที่ซ้ำ"}
           </button>
           {preCheck && (
             <div className="mt-4" role="status">

@@ -218,18 +218,18 @@ export default function MemberAttendance() {
 
         <div className="mt-4 grid grid-cols-2 gap-3 border-t border-[var(--color-on-dark-hairline)] pt-4">
           <div className="rounded-[var(--radius-md)] bg-[var(--color-on-dark)]/10 p-3">
-            <p className="type-fine text-[var(--color-on-dark-muted)]">
+            <p className="type-fine text-[var(--color-on-dark)]/80">
               เข้าร่วมทั้งหมด
             </p>
             <p className="mt-1 flex items-baseline gap-1">
               <span className="type-lead font-bold">{attendedCount}</span>
-              <span className="type-fine text-[var(--color-on-dark-muted)]">
+              <span className="type-fine text-[var(--color-on-dark)]/80">
                 ครั้ง
               </span>
             </p>
           </div>
           <div className="rounded-[var(--radius-md)] bg-[var(--color-on-dark)]/10 p-3">
-            <p className="type-fine text-[var(--color-on-dark-muted)]">
+            <p className="type-fine text-[var(--color-on-dark)]/80">
               สถานะความสม่ำเสมอ
             </p>
             <p className="type-caption mt-1 flex items-center gap-1.5 font-semibold">

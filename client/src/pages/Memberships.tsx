@@ -49,6 +49,10 @@ export default function Memberships() {
   const [search, setSearch] = useState("");
   const [careGroup, setCareGroup] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+  // Kept apart from `data.items`: ending a term drops the member from the
+  // overview, but the panel must stay open to show the closed history and the
+  // "start a new round" buttons (that is how a mistaken "ไม่ต่อ" is undone).
+  const [openName, setOpenName] = useState("");
 
   const load = useCallback(async () => {
     setError(null);
@@ -90,7 +94,7 @@ export default function Memberships() {
     { id: "unpaid", label: "ยังไม่ชำระ", n: counts?.unpaid },
     { id: "all", label: "ทั้งหมด", n: counts?.total },
   ];
-  const opened = data?.items.find((i) => i.memberId === openId) ?? null;
+  const closeModal = () => setOpenId(null);
 
   return (
     <AppLayout>
@@ -104,23 +108,13 @@ export default function Memberships() {
       ) : !data ? (
         <ListSkeleton count={5} />
       ) : (
-        <div className="space-y-5">
-          <div role="tablist" aria-label="กรองตามสถานะ" className="flex flex-wrap gap-2">
+        <div className="space-y-6">
+          {/* Look and spacing of tabs, rows and the panel live in the `.pk-ms-*` block at the end of index.css. */}
+          <div role="tablist" aria-label="กรองตามสถานะ" className="pk-ms-tabs">
             {tabs.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                role="tab"
-                aria-selected={tab === t.id}
-                onClick={() => setTab(t.id)}
-                className={`inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-pill)] border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] ${
-                  tab === t.id
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-on-primary)]"
-                    : "border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-ink)] hover:bg-[var(--color-canvas-soft)]"
-                }`}
-              >
+              <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className="pk-ms-tab">
                 {t.label}
-                <span className="tabular-nums opacity-90">{t.n ?? "–"}</span>
+                <span className="pk-ms-tab__count">{t.n ?? "–"}</span>
               </button>
             ))}
           </div>
@@ -150,7 +144,7 @@ export default function Memberships() {
 
           {visible.length === 0 ? (
             <EmptyState
-              title={tab === "attention" ? "ไม่มีรายการที่ต้องดำเนินการ" : "ไม่พบสมาชิกตามเงื่อนไข"}
+              title={search.trim() ? "ไม่พบสมาชิกที่ตรงกับคำค้น" : tab === "attention" ? "ไม่มีรายการที่ต้องดำเนินการ" : "ไม่พบสมาชิกตามเงื่อนไข"}
               description={
                 (counts?.total ?? 0) === 0
                   ? "ยังไม่มีสมาชิกที่ถูกบันทึกสถานะรายปี — เปิดข้อมูลสมาชิกแล้วเริ่มรอบวิสามัญหรือสามัญได้จากหน้ารายละเอียด"
@@ -158,29 +152,29 @@ export default function Memberships() {
               }
             />
           ) : (
-            <ul className="space-y-2">
+            <ul className="pk-ms-list">
               {visible.map((i) => (
                 <li key={i.memberId}>
-                  <button
-                    type="button"
-                    onClick={() => setOpenId(i.memberId)}
-                    className="flex w-full min-h-16 items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-3 text-left transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-                    aria-label={`ดูสถานะสมาชิกของ ${i.name}`}
-                  >
-                    {i.avatarUrl ? <img src={i.avatarUrl} alt="" className="size-11 shrink-0 rounded-full object-cover" /> : <InitialsAvatar name={i.name} size={44} />}
-                    <span className="min-w-0 flex-1">
-                      <span className="type-body-strong block truncate text-[var(--color-ink)]">
+                  <button type="button" onClick={() => {
+                      setOpenName(i.name);
+                      setOpenId(i.memberId);
+                    }} className="pk-ms-row" aria-label={`ดูสถานะสมาชิกของ ${i.name}`}>
+                    <span className="pk-ms-row__avatar">
+                      {i.avatarUrl ? <img src={i.avatarUrl} alt="" className="size-11 shrink-0 rounded-full object-cover" /> : <InitialsAvatar name={i.name} size={44} />}
+                    </span>
+                    <span className="pk-ms-row__main">
+                      <span className="type-body-strong block text-[var(--color-ink)]">
                         {i.name}
                         {i.nickname ? ` (${i.nickname})` : ""}
                       </span>
-                      <span className="type-fine block truncate text-[var(--color-body-muted)]">
+                      <span className="type-fine block text-[var(--color-body-muted)]">
                         {[i.memberNo ? `No. ${i.memberNo}` : null, i.careGroup?.name, i.bodyName].filter(Boolean).join(" · ") || "ยังไม่มีพันธกิจ"}
                       </span>
                       <span className="type-fine mt-1 block tabular-nums text-[var(--color-text-secondary)]">
                         ครบ {formatThaiDay(i.term.endsOn)} · {describeDaysToEnd(i.summary.daysToEnd)}
                       </span>
                     </span>
-                    <span className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="pk-ms-row__chips">
                       <StatusChip tone={STATE_TONE[i.summary.state]}>{i.summary.label}</StatusChip>
                       {i.term.paymentStatus !== "not_required" && <StatusChip tone={PAYMENT_TONE[i.term.paymentStatus]}>{PAYMENT_STATUS_LABELS[i.term.paymentStatus]}</StatusChip>}
                     </span>
@@ -192,8 +186,8 @@ export default function Memberships() {
         </div>
       )}
 
-      <Modal open={opened !== null} onClose={() => setOpenId(null)} title="สถานะสมาชิกรายปี" description={opened?.name} size="wide" discardGuard={false}>
-        {opened && <MembershipPanel memberId={opened.memberId} onChanged={() => void load()} />}
+      <Modal open={openId !== null} onClose={closeModal} title="สถานะสมาชิกรายปี" description={openName} size="wide" discardGuard={false}>
+        {openId && <MembershipPanel memberId={openId} onChanged={() => void load()} />}
       </Modal>
     </AppLayout>
   );

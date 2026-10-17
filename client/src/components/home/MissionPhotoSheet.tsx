@@ -18,6 +18,9 @@ const BTN =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-pill)] px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50";
 const BTN_PRIMARY = `${BTN} bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-focus)]`;
 const BTN_OUTLINE = `${BTN} border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-ink)] hover:bg-[var(--color-canvas-soft)]`;
+// The two ways to add photos are the main actions in the sheet: tall, full width on a phone.
+const PICK_BTN =
+  "inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 text-base font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50 sm:w-auto sm:flex-1";
 const INPUT =
   "min-h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-3 text-base md:text-sm text-[var(--color-ink)] placeholder:text-[var(--color-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
 
@@ -129,7 +132,7 @@ export function MissionPhotoSheet({
         groupId,
         media: urls.map((url) => ({ url, kind: "image" })),
       });
-      toast.success(`บันทึกภาพพันธกิจแล้ว (${urls.length} รูป)`);
+      toast.success(`บันทึกเป็นฉบับร่างแล้ว (${urls.length} รูป) ยังไม่เผยแพร่`);
       onSaved();
       onClose();
     } catch (err) {
@@ -142,6 +145,9 @@ export function MissionPhotoSheet({
       setStage("idle");
     }
   };
+
+  // Photos already stored: `progress` is the index being uploaded, so it equals the finished count.
+  const uploaded = stage === "saving" ? picked.length : Math.min(progress, picked.length);
 
   const status =
     stage === "preparing"
@@ -164,7 +170,7 @@ export function MissionPhotoSheet({
           <button type="button" className={BTN_OUTLINE} onClick={onClose} disabled={busy}>
             ยกเลิก
           </button>
-          <button type="button" className={BTN_PRIMARY} onClick={() => void save()} disabled={busy || picked.length === 0 || !groupId}>
+          <button type="button" className={BTN_PRIMARY} onClick={() => void save()} disabled={busy}>
             {busy ? status || "กำลังทำงาน…" : `บันทึกภาพ${picked.length > 0 ? ` (${picked.length})` : ""}`}
           </button>
         </>
@@ -198,16 +204,19 @@ export function MissionPhotoSheet({
             <div>
               <input ref={pickRef} type="file" accept={ACCEPTED_IMAGE_TYPES} multiple className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => void addFiles(e.target.files)} />
               <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => void addFiles(e.target.files)} />
-              <div className="flex flex-wrap gap-2">
-                <button type="button" className={BTN_OUTLINE} disabled={busy || picked.length >= MAX_PHOTOS} onClick={() => cameraRef.current?.click()}>
-                  <Camera size={ICON_SIZE.sm} aria-hidden="true" />
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button type="button" className={PICK_BTN} disabled={busy || picked.length >= MAX_PHOTOS} onClick={() => cameraRef.current?.click()}>
+                  <Camera size={ICON_SIZE.md} aria-hidden="true" />
                   ถ่ายรูป
                 </button>
-                <button type="button" className={BTN_OUTLINE} disabled={busy || picked.length >= MAX_PHOTOS} onClick={() => pickRef.current?.click()}>
-                  <ImagePlus size={ICON_SIZE.sm} aria-hidden="true" />
+                <button type="button" className={PICK_BTN} disabled={busy || picked.length >= MAX_PHOTOS} onClick={() => pickRef.current?.click()}>
+                  <ImagePlus size={ICON_SIZE.md} aria-hidden="true" />
                   เลือกรูป
                 </button>
               </div>
+              <p aria-live="polite" className="type-fine mt-2 text-[var(--color-body-muted)]">
+                เลือกแล้ว {picked.length}/{MAX_PHOTOS} รูป
+              </p>
               {picked.length > 0 && (
                 <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4" aria-label="รูปที่เลือก">
                   {picked.map((p, index) => (
@@ -245,8 +254,23 @@ export function MissionPhotoSheet({
             {status}
           </p>
         )}
+        {(stage === "uploading" || stage === "saving") && picked.length > 0 && (
+          <div
+            role="progressbar"
+            aria-label="ความคืบหน้าการอัปโหลดภาพ"
+            aria-valuemin={0}
+            aria-valuemax={picked.length}
+            aria-valuenow={uploaded}
+            className="h-2 overflow-hidden rounded-full bg-[var(--color-canvas-soft)]"
+          >
+            <div
+              className="h-full rounded-full bg-[var(--color-primary)] transition-[width] duration-200 motion-reduce:transition-none"
+              style={{ width: `${Math.round((uploaded / picked.length) * 100)}%` }}
+            />
+          </div>
+        )}
         {error && (
-          <p role="alert" className="type-caption text-[var(--color-error)]">
+          <p role="alert" className="type-caption text-[var(--color-error-ink)]">
             {error}
           </p>
         )}

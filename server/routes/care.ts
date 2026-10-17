@@ -7,7 +7,7 @@ import { canSeeMemberContacts, maskPhone } from "./members.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 import { parseCareGroupDescription } from "../../shared/orgView.js";
-import { getLedGroupIds, isScopedRole, leadsGroup } from "../lib/careScope.js";
+import { getViewableGroupIds, isScopedRole, viewsGroup } from "../lib/careScope.js";
 
 /**
  * Care-leader view of one care group: who belongs to it, who was marked on a
@@ -32,7 +32,7 @@ const dayKey = (d: Date | string) => new Date(d).toISOString().slice(0, 10);
 careRouter.get("/groups", async (req, res, next) => {
   try {
     const db = getDb();
-    const led = isScopedRole(req.user!.role) ? await getLedGroupIds(req.user!.id) : null;
+    const led = isScopedRole(req.user!.role) ? await getViewableGroupIds(req.user!.id) : null;
     const cares = await db
       .select({ id: groups.id, name: groups.name, parentGroupId: groups.parentGroupId })
       .from(groups)
@@ -77,8 +77,8 @@ careRouter.get("/groups/:id/roster", async (req, res, next) => {
       .limit(1);
     if (!care) throw new NotFoundError("ไม่พบพันธกิจที่ระบุ");
 
-    // A group_leader may only open the roster of groups they lead.
-    if (isScopedRole(req.user!.role) && !(await leadsGroup(req.user!.id, id))) {
+    // A group_leader may only open the roster of groups they lead or that sit under a body they lead.
+    if (isScopedRole(req.user!.role) && !(await viewsGroup(req.user!.id, id))) {
       throw new ForbiddenError("คุณไม่มีสิทธิ์ดูข้อมูลพันธกิจนี้");
     }
 

@@ -5,6 +5,7 @@ import { groupMembers, members } from "../../shared/schema.js";
 import type { UserRole } from "../../shared/schema.js";
 import { ForbiddenError } from "./errors.js";
 import { getLedGroupIds as getScopedGroupIds } from "./groupAccess.js";
+import { withDescendantGroups } from "./membershipScope.js";
 
 /**
  * Tenant scope for the `group_leader` role.
@@ -25,16 +26,41 @@ export async function leadsGroup(userId: string, groupId: string): Promise<boole
   return (await getLedGroupIds(userId)).includes(groupId);
 }
 
-/** Ids of members who are active in any group the user leads. */
-export async function getScopedMemberIds(userId: string): Promise<string[]> {
-  const led = await getLedGroupIds(userId);
-  if (led.length === 0) return [];
+/** Members who are active in any of `groupIds` (members not deleted). */
+async function activeMemberIdsIn(groupIds: string[]): Promise<string[]> {
+  if (groupIds.length === 0) return [];
   const rows = await getDb()
     .selectDistinct({ id: groupMembers.memberId })
     .from(groupMembers)
     .innerJoin(members, eq(groupMembers.memberId, members.id))
-    .where(and(inArray(groupMembers.groupId, led), eq(groupMembers.status, "active"), isNull(members.deletedAt)));
+    .where(and(inArray(groupMembers.groupId, groupIds), eq(groupMembers.status, "active"), isNull(members.deletedAt)));
   return rows.map((r) => r.id);
+}
+
+/** Ids of members who are active in any group the user leads. Write scope: direct groups only. */
+export async function getScopedMemberIds(userId: string): Promise<string[]> {
+  return activeMemberIdsIn(await getLedGroupIds(userId));
+}
+
+/**
+ * READ scope: the groups a leader may look at — the groups they lead plus every
+ * descendant (a body leader sees the care groups under the body). Cycle-safe.
+ * Writes keep using `getLedGroupIds`, so a body leader reads but does not edit
+ * a child care group's records.
+ */
+export async function getViewableGroupIds(userId: string): Promise<string[]> {
+  const led = await getLedGroupIds(userId);
+  if (led.length === 0) return [];
+  return Array.from(await withDescendantGroups(led));
+}
+
+export async function viewsGroup(userId: string, groupId: string): Promise<boolean> {
+  return (await getViewableGroupIds(userId)).includes(groupId);
+}
+
+/** READ scope for members: active members of any viewable group. */
+export async function getViewableMemberIds(userId: string): Promise<string[]> {
+  return activeMemberIdsIn(await getViewableGroupIds(userId));
 }
 
 /** Throws 403 unless the request user is unscoped, or leads `groupId`. */

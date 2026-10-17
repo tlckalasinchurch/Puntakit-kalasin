@@ -1,0 +1,40 @@
+ M CLAUDE.md
+ M client/src/components/home/HomeMyWork.tsx
+ M client/src/components/home/MissionPhotoSheet.tsx
+ M client/src/components/membership/MembershipPanel.tsx
+ M client/src/index.css
+ M client/src/membership-ui.test.ts
+ M client/src/pages/Memberships.tsx
+ M client/src/pages/PinSignInPage.tsx
+ M client/src/role-aware-ui.test.ts
+?? .ai/workflow/features/home-card-membership-ux/E2E-AUDIT.md
+?? .ai/workflow/features/home-card-membership-ux/GRILL.md
+?? .ai/workflow/features/home-card-membership-ux/SPEC.md
+?? .ai/workflow/features/home-card-membership-ux/TICKETS.md
+?? .ai/workflow/features/role-based-pages/AUDIT.md
+?? .ai/workflow/features/role-based-pages/GRILL.md
+?? .ai/workflow/features/role-based-pages/SPEC.md
+?? .ai/workflow/features/role-based-pages/TICKETS.md
+?? .ai/workflow/features/role-based-pages/rounds/round-1/candidate.md
+?? Puntakit-Role-Based-Pages.md
+?? client/src/lib/homeTiles.test.ts
+?? client/src/lib/homeTiles.ts
+?? docs/audits/2026-10-15-full-product-ux/DARK-THEME-RECORD.md
+?? docs/audits/2026-10-15-full-product-ux/LOGIN-REWRITE-RECORD.md
+?? docs/audits/2026-10-15-full-product-ux/VIEWPORT-AND-INSTALL-RECORD.md
+?? docs/audits/2026-10-15-minimal-premium/PHASE-A-AUDIT.md
+?? docs/audits/2026-10-15-product-audit/FEATURE-INVENTORY.md
+7217c0e89da7628b100088068284b6f14f17e4975a10a8004be9f4ed5979a367 *.ai/workflow/features/home-card-membership-ux/E2E-AUDIT.md
+b72825fbc8155f4de30837b7c875660448c05519fb9a72cf95423955348a98e7 *.ai/workflow/features/home-card-membership-ux/GRILL.md
+45dc426cf67b6a221caf33abbdcdfcc783785165ddde7b06880fafca49f72aeb *.ai/workflow/features/home-card-membership-ux/SPEC.md
+e666c153c5c5df19824c47acd5ecad8e271bc126ede08a64bb09f3f02a84f9d4 *.ai/workflow/features/home-card-membership-ux/TICKETS.md
+3a0362bd8f713411ba72b6946e8c90239c8d37d46ab68701f81c4d4db1aba8a7 *.ai/workflow/features/role-based-pages/AUDIT.md
+eab4b631b7f89ee5b980d65f22da015a372c086c563b0090bf3b921a4a53fd62 *.ai/workflow/features/role-based-pages/GRILL.md
+5bb7290d326772c32ef3b57740ad7509aa7932b6459b1cd18efc57ff0f65ae47 *.ai/workflow/features/role-based-pages/SPEC.md
+4e040d369251a9a2f0b8c2ab2dc554e3bef6e04181d7ba0c6ca179539a3177e2 *.ai/workflow/features/role-based-pages/TICKETS.md
+c94d30b1f1ccdb23997cb8d88c07d4619f154d91bc4ff2225e2b05ea5a6d3339 *.ai/workflow/features/role-based-pages/rounds/round-1/candidate.md
+2f9e986d3f280ec78a67a1a5d7f26a1740c4b00123a7f20a15bfb4adcfbff910 *client/src/lib/homeTiles.ts
+25bbaafc55df57d973088d300a0fded320a3a62e1ac68eb3756de9ff760936f9 *client/src/lib/homeTiles.test.ts
+98d7d8cb72501fb73c18d9786d1e426f25eae9bc766ef654e7820c024ef8c2ce *client/src/components/home/HomeMyWork.tsx
+4d74a3ce35a1642c2541226e65a3aabe75a42a29b07b6515808a148d5c43f9ab *client/src/role-aware-ui.test.ts
+05ee6703318a31cd6431eba6608cdf80e855df35aff0456f4cd1efd2444f7d5c *client/src/membership-ui.test.ts

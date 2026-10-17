@@ -317,11 +317,25 @@ describe("UX audit Batch E — remaining low-severity items", () => {
 
   it("theme-color follows the in-app theme toggle, not prefers-color-scheme", () => {
     const html = read("client/index.html");
-    expect(html).toMatch(/<meta name="theme-color" content="#f5f5f7" \/>/);
     expect(html).not.toMatch(/theme-color[^>]*media=/);
     const ctx = read("client/src/contexts/ThemeContext.tsx");
     expect(ctx).toMatch(/meta\[name="theme-color"\]/);
-    expect(ctx).toMatch(/"#000000" : "#f5f5f7"/);
+
+    // The two literals are read back and compared against index.css instead of
+    // being pinned here, so retuning a canvas can never leave this assertion
+    // checking a stale colour. The structural rules above are unchanged.
+    const css = read("client/src/index.css");
+    const root = css.slice(css.indexOf(":root"), css.indexOf("\n}", css.indexOf(":root")));
+    const dark = css.slice(css.indexOf("\n.dark {"));
+    const lightCanvas = root.match(/--color-canvas:\s*(#[0-9a-f]{6})/i)![1];
+    const darkCanvas = dark.match(/--color-canvas:\s*(#[0-9a-f]{6})/i)![1];
+    const pair = ctx.match(/"(#[0-9a-f]{6})"\s*:\s*"(#[0-9a-f]{6})"/i);
+    expect(pair, "ThemeContext must pick between two literal canvas colours").not.toBeNull();
+    expect([pair![1].toLowerCase(), pair![2].toLowerCase()].sort()).toEqual(
+      [darkCanvas.toLowerCase(), lightCanvas.toLowerCase()].sort()
+    );
+    // The static meta must be the default theme, which is dark.
+    expect(html).toMatch(new RegExp(`<meta name="theme-color" content="${darkCanvas}" />`, "i"));
   });
 
   it("ErrorBoundary speaks Thai and announces itself", () => {
@@ -384,7 +398,8 @@ describe("UX audit Batch F — pages added after the first audit", () => {
     const src = read("client/src/pages/ImportOrgData.tsx");
     expect(src).not.toMatch(/--color-danger/);
     expect(src).not.toMatch(/#b42318/);
-    expect(src).toMatch(/var\(--color-error\)/);
+    // error text uses the dark-aware -ink variant (same hex as --color-error in light mode)
+    expect(src).toMatch(/var\(--color-error(-ink)?\)/);
   });
 
   it("ErrorState gets a friendly Thai title with the raw message behind technical", () => {
@@ -419,9 +434,21 @@ describe("UX audit Batch F — pages added after the first audit", () => {
     expect(src).not.toMatch(/size-9/);
   });
 
-  it("MobileBottomNav marks the active item with a shape cue, not colour alone", () => {
+  it("MobileBottomNav marks the active item with shape cues, not colour alone", () => {
     const src = read("client/src/components/layout/MobileBottomNav.tsx");
-    expect(src).toMatch(/bg-\[var\(--color-accent-soft\)\]/);
+    // The component no longer inlines the cue — it opts into the shared class
+    // the member bottom bar also uses, which is what keeps the two shells
+    // answering "which page am I on" identically.
+    expect(src).toMatch(/pk-nav-item/);
+    expect(src).toMatch(/pk-nav-item__icon/);
+
+    // The cue itself must still exist, and it must be a SHAPE: a tinted pill
+    // behind the glyph plus a bar at the bottom edge. Two cues, not one.
+    const css = read("client/src/index.css");
+    expect(css).toMatch(
+      /\.pk-nav-item\[aria-current="page"\]\s\.pk-nav-item__icon\s*\{[^}]*background:/
+    );
+    expect(css).toMatch(/\.pk-nav-item\[aria-current="page"\]::after\s*\{[^}]*width:/);
   });
 
   it("Sidebar drawer closes on Escape with focus moved in and restored", () => {
@@ -520,9 +547,17 @@ describe("Audit 2026-10-04 — permissions, error states and mobile forms", () =
 
   it("the bottom-nav menu button lines up with its siblings", () => {
     const src = read("client/src/components/layout/MobileBottomNav.tsx");
-    expect(src).toMatch(
-      /<span aria-hidden="true" className="flex size-9 items-center justify-center">\s*<Menu/
-    );
+    // Alignment used to depend on two near-identical class literals being kept
+    // in step by hand. It now depends on both the links and the เมนู button
+    // using the same icon wrapper, so assert exactly that: one icon class in
+    // the file, used by both.
+    const iconSpans = src.match(/className="pk-nav-item__icon"/g) ?? [];
+    expect(iconSpans).toHaveLength(2);
+    // The เมนู button is not a destination, so it must never claim to be the
+    // current page — it carries no aria-current at all.
+    const button = src.slice(src.indexOf("<button"));
+    expect(button).not.toMatch(/aria-current/);
+    expect(button).toMatch(/aria-controls="app-sidebar"/);
   });
 
   it("index.css has a global :focus-visible fallback and no dangling design-doc reference", () => {

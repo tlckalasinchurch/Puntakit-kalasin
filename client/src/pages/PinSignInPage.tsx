@@ -39,6 +39,9 @@ export default function PinSignInPage() {
     setError("");
     try {
       await api.post("/api/auth/login", { pin });
+      // A full reload, deliberately: the session cookie was just issued and
+      // AuthContext still holds a null user, so a client-side navigate would
+      // bounce straight back to /login.
       window.location.assign("/");
     } catch (err) {
       setPin("");
@@ -73,14 +76,18 @@ export default function PinSignInPage() {
   return (
     <main className="pin-login" onKeyDown={handleKeyDown}>
       <section className="pin-login__brand" aria-label="เกี่ยวกับ Puntakit">
-        <div className="pin-login__brand-orb" />
         <div className="pin-login__brand-content">
           <Logo tone="onDark" />
           <div className="pin-login__brand-copy">
-            <p className="pin-login__eyebrow">PUNTAKIT</p>
-            <p className="type-display-md">ดูแลสมาชิก<br />ด้วยหัวใจ</p>
+            <p className="pin-login__eyebrow">Puntakit</p>
+            <p className="type-display-md">
+              ดูแลสมาชิก
+              <br />
+              ด้วยหัวใจ
+            </p>
             <p className="type-body">
-              ระบบจัดการสมาชิกและพันธกิจ<br />
+              ระบบจัดการสมาชิกและพันธกิจ
+              <br />
               คริสตจักรชีวิตสุขสันต์กาฬสินธุ์
             </p>
           </div>
@@ -93,34 +100,72 @@ export default function PinSignInPage() {
 
       <section className="pin-login__panel" aria-labelledby="login-title">
         <div className="pin-login__card">
-          <div className="pin-login__mobile-logo"><Logo tone="onLight" /></div>
+          <div className="pin-login__mobile-logo">
+            <Logo tone="onDark" />
+          </div>
+
           <div className="pin-login__heading">
             <p className="pin-login__eyebrow">ยินดีต้อนรับกลับ</p>
-            <h1 id="login-title" className="type-display-md">เข้าสู่ระบบ</h1>
+            <h1 id="login-title">เข้าสู่ระบบ</h1>
             <p className="type-body pin-login__sub">กรอกรหัส PIN เพื่อเข้าสู่ระบบ</p>
           </div>
 
           <div className="pin-login__pin-heading">
             <span>รหัส PIN</span>
-            <span className="pin-login__pin-count" aria-live="polite">{pin.length}/6</span>
+            <span className="pin-login__pin-count" aria-live="polite">
+              {pin.length}/6
+            </span>
           </div>
-          <div className="pin-login__dots" aria-label={`กรอก PIN แล้ว ${pin.length} จาก 6 หลัก`}>
+
+          <div
+            className="pin-login__dots"
+            role="img"
+            aria-label={`กรอก PIN แล้ว ${pin.length} หลัก จากทั้งหมด 6 หลัก`}
+          >
             {Array.from({ length: 6 }, (_, index) => (
-              <span key={index} className={index < pin.length ? "is-filled" : ""} />
+              <span
+                key={index}
+                className={index < pin.length ? "is-filled" : ""}
+                aria-hidden="true"
+              />
             ))}
           </div>
 
-          <div className="pin-login__keypad" aria-label="แป้นตัวเลข">
+          <div className="pin-login__keypad" role="group" aria-label="แป้นตัวเลข">
             {digits.slice(0, 9).map((digit) => (
-              <button key={digit} type="button" onClick={() => append(digit)} aria-label={`เลข ${digit}`} disabled={busy}>
+              <button
+                key={digit}
+                type="button"
+                onClick={() => append(digit)}
+                aria-label={`เลข ${digit}`}
+                disabled={busy}
+              >
                 {digit}
               </button>
             ))}
-            <button type="button" onClick={clearPin} aria-label="ล้าง PIN" disabled={busy || pin.length === 0}>
-              <RotateCcw size={19} aria-hidden="true" /><span>ล้าง</span>
+            <button
+              type="button"
+              onClick={clearPin}
+              aria-label="ล้างรหัส PIN ทั้งหมด"
+              disabled={busy || pin.length === 0}
+            >
+              <RotateCcw size={19} aria-hidden="true" />
+              <span>ล้าง</span>
             </button>
-            <button type="button" onClick={() => append("0")} aria-label="เลข 0" disabled={busy}>0</button>
-            <button type="button" onClick={() => setPin((current) => current.slice(0, -1))} aria-label="ลบตัวเลข" disabled={busy || pin.length === 0}>
+            <button
+              type="button"
+              onClick={() => append("0")}
+              aria-label="เลข 0"
+              disabled={busy}
+            >
+              0
+            </button>
+            <button
+              type="button"
+              onClick={() => setPin((current) => current.slice(0, -1))}
+              aria-label="ลบตัวเลขหลักสุดท้าย"
+              disabled={busy || pin.length === 0}
+            >
               <Delete size={21} aria-hidden="true" />
             </button>
           </div>
@@ -136,8 +181,16 @@ export default function PinSignInPage() {
             {busy ? "กำลังตรวจสอบ…" : "เข้าสู่ระบบ"}
           </button>
 
-          {error && <p className="pin-login__error" role="alert">{error}</p>}
-          <p className="type-caption pin-login__help">หากลืม PIN กรุณาติดต่อผู้ดูแลระบบ</p>
+          {error && (
+            <p className="pin-login__error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <p className="type-caption pin-login__help">
+            หากลืม PIN กรุณาติดต่อผู้ดูแลระบบ
+          </p>
+
           <LegalLinks />
         </div>
       </section>

@@ -40,12 +40,12 @@ describe("design token source of truth", () => {
   it("declares the core V2 brand tokens", () => {
     // The values the whole UI is built on. If one of these changes, the docs
     // and every component need to change with it.
-    expect(tokens.get("--color-primary")).toBe("#315c2b");
-    expect(tokens.get("--color-primary-focus")).toBe("#3f7337");
+    expect(tokens.get("--color-primary")).toBe("#0c7c82");
+    expect(tokens.get("--color-primary-focus")).toBe("#09696e");
     expect(tokens.get("--color-primary-on-dark")).toBe("#7faf72");
-    expect(tokens.get("--color-ink")).toBe("#1d1d1f");
+    expect(tokens.get("--color-ink")).toBe("#0f172a");
     expect(tokens.get("--color-dark-surface")).toBe("#272729");
-    expect(tokens.get("--color-canvas")).toBe("#ffffff");
+    expect(tokens.get("--color-canvas")).toBe("#f8fafc");
   });
 
   it("defines a real elevation token", () => {
@@ -169,7 +169,7 @@ describe("design token source of truth", () => {
       expect(tokens.get(token), `${token} missing`).toMatch(/^#[0-9a-f]{6}$/i);
     }
     // A sunken surface is neutral, not blue-white.
-    expect(tokens.get("--color-canvas-sunken")).toBe("#f2f2f4");
+    expect(tokens.get("--color-canvas-sunken")).toBe("#f1f5f9");
   });
 });
 
@@ -191,9 +191,9 @@ describe("text on a primary fill", () => {
     const dark = css.slice(css.indexOf("\n.dark {"));
     const darkPrimary = dark.match(/--color-primary:\s*(#[0-9a-f]{6})/i)![1];
     const darkOnPrimary = dark.match(/--color-on-primary:\s*(#[0-9a-f]{6})/i)![1];
-    // Light mode: --color-on-primary falls back to --color-on-dark (#ffffff).
+    // Light mode: --color-on-primary falls back to --color-on-dark (#f8fafc).
     expect(tokens.get("--color-on-primary")).toBe("var(--color-on-dark)");
-    expect(ratio("#ffffff", tokens.get("--color-primary")!)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio("#f8fafc", tokens.get("--color-primary")!)).toBeGreaterThanOrEqual(4.5);
     expect(ratio(darkOnPrimary, darkPrimary)).toBeGreaterThanOrEqual(4.5);
   });
 
@@ -204,5 +204,43 @@ describe("text on a primary fill", () => {
       return /["'`][^"'`\n]*bg-\[var\(--color-primary\)\][^"'`\n]*text-\[var\(--color-on-dark\)\]/.test(src);
     });
     expect(offenders.map((f) => path.relative(REPO_ROOT, f))).toEqual([]);
+  });
+});
+
+describe("primary as text on its own soft tint", () => {
+  const lum = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const cr = (a: string, b: string) => {
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  const mix = (fg: string, bg: string, t: number) =>
+    "#" +
+    [1, 3, 5]
+      .map((i) =>
+        Math.round(parseInt(fg.slice(i, i + 2), 16) * t + parseInt(bg.slice(i, i + 2), 16) * (1 - t))
+          .toString(16)
+          .padStart(2, "0")
+      )
+      .join("");
+
+  it("--color-primary-ink equals --color-primary in light mode, so light pages do not change", () => {
+    expect(tokens.get("--color-primary-ink")).toBe("var(--color-primary)");
+  });
+
+  it("dark --color-primary-ink is >= 4.5:1 on the dark accent-soft tint over the dark canvas", () => {
+    const dark = css.slice(css.indexOf("\n.dark {"));
+    const ink = dark.match(/--color-primary-ink:\s*(#[0-9a-f]{6})/i)![1];
+    const canvas = dark.match(/--color-canvas:\s*(#[0-9a-f]{6})/i)![1];
+    // The tint base is read from the sheet rather than hardcoded, so retuning
+    // the dark palette cannot leave this assertion checking a stale colour.
+    const tintBase = dark.match(/--color-primary:\s*(#[0-9a-f]{6})/i)![1];
+    const tint = dark.match(/--color-accent-soft:\s*rgba\(47,\s*196,\s*189,\s*([\d.]+)\)/)![1];
+    expect(cr(ink, mix(tintBase, canvas, Number(tint)))).toBeGreaterThanOrEqual(4.5);
   });
 });

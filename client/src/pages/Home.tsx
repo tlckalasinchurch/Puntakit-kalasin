@@ -355,7 +355,7 @@ function ContactGap({
                     <span className="type-caption truncate text-[var(--color-ink)]">
                       {followUp.title}
                     </span>
-                    <span className="type-fine shrink-0 font-semibold text-[var(--color-error)]">
+                    <span className="type-fine shrink-0 font-semibold text-[var(--color-error-ink)]">
                       {days} วัน
                     </span>
                   </div>
@@ -391,7 +391,7 @@ function IconBadge({
     <span
       className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-canvas-soft)] ${
         tone === "alert"
-          ? "text-[var(--color-error)]"
+          ? "text-[var(--color-error-ink)]"
           : "text-[var(--color-primary)]"
       }`}
     >
@@ -431,7 +431,7 @@ function AttentionRow({
           </span>
           {detail && (
             <span
-              className={`type-caption block ${alert ? "text-[var(--color-error)]" : "text-[var(--color-body-muted)]"}`}
+              className={`type-caption block ${alert ? "text-[var(--color-error-ink)]" : "text-[var(--color-body-muted)]"}`}
             >
               {detail}
             </span>
@@ -566,14 +566,6 @@ function getRoleShortcuts(role: string | undefined): RoleShortcut[] {
   return DEFAULT_SHORTCUTS;
 }
 
-const SECONDARY_LINKS = [
-  { href: "/events", label: "กิจกรรมทั้งหมด" },
-  { href: "/announcements", label: "ประกาศและข่าวสาร" },
-  { href: "/feed", label: "ฟีดพันธกิจ" },
-  { href: "/map", label: "แผนที่พันธกิจ" },
-  { href: "/follow-up", label: "รายการติดตาม" },
-];
-
 // Church's discipleship framework. Editorial guidance only: no member-stage data exists behind it.
 const DISCIPLESHIP_PATHWAY = [
   { title: "พบคน", detail: "สร้างความสัมพันธ์และมิตรภาพ" },
@@ -614,8 +606,6 @@ export default function Home() {
     canSeeOperations ? "/api/dashboard/operations" : null
   );
 
-  const [showMoreShortcuts, setShowMoreShortcuts] = useState(false);
-
   return (
     <AppLayout>
       <div className="home-editorial space-y-12 lg:space-y-20">
@@ -642,22 +632,26 @@ export default function Home() {
             )}
           </div>
           {!isGroupLeader && (
-            <GlobalSearch variant="prominent" className="max-w-xl" />
+            // From sm up the topbar already carries the search; a second
+            // role="search" landmark with the same label is redundant.
+            <div className="sm:hidden">
+              <GlobalSearch variant="prominent" className="max-w-xl" />
+            </div>
           )}
           {/* Quick actions first (large, thumb-sized), then this person's own numbers
               and latest photos — scoped by the API to what their role may see. */}
-          {user && user.role !== "member" && <HomeMyWork />}
+          {user && user.role !== "member" && (
+            <HomeMyWork
+              extraLinks={getRoleShortcuts(user.role).map(({ href, title }) => ({ href, label: title }))}
+            />
+          )}
           {canSeeOperations && <OrgSnapshot />}
         </section>
 
-        {/* Role-based shortcuts — owner-approved: immediately after greeting/header */}
+        {/* Placeholder for the weekly report form (not built yet). The role shortcuts that
+            used to sit above it now live in HomeMyWork "ทำต่อได้เลย" > "ดูทั้งหมด". */}
         {user && user.role !== "member" && (
-          <section aria-labelledby="home-shortcuts" className="space-y-4">
-            <SectionHeader
-              id="home-shortcuts"
-              title="ทางลัดของฉัน"
-              description="เมนูที่ใช้งานบ่อยตามบทบาทหน้าที่ของคุณ"
-            />
+          <section aria-label="รายงานสัปดาห์">
             {/* Primary Action */}
             <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
@@ -675,84 +669,19 @@ export default function Home() {
                     <StatusChip tone="neutral">เร็วๆ นี้</StatusChip>
                   </div>
                   <p className="type-caption text-[var(--color-body-muted)]">
-                    แบบฟอร์มส่งสรุปยอดและกิจกรรมประจำสัปดาห์ (อยู่ระหว่างจัดเตรียมใน Phase 4)
+                    แบบฟอร์มส่งสรุปยอดและกิจกรรมประจำสัปดาห์ (กำลังจัดเตรียม)
                   </p>
                 </div>
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                className="shrink-0"
+                className="min-h-11 shrink-0"
                 disabled
-                title="ระบบรายงานสัปดาห์นี้อยู่ระหว่างการพัฒนาใน Phase 4"
+                title="ระบบรายงานสัปดาห์กำลังจัดเตรียม ยังไม่เปิดให้ส่ง"
               >
                 ยังไม่เปิดให้ส่ง
               </Button>
-            </div>
-
-            {/* Role-based shortcuts: max 3 large-icon shortcuts */}
-            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-              {getRoleShortcuts(user?.role).map(
-                ({ href, icon: Icon, title, detail }) => (
-                  <li key={href}>
-                    <Link
-                      href={href}
-                      className="flex min-h-[96px] items-center gap-4 pk-surface rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 outline-none transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] active:bg-[var(--color-canvas-soft)]"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-circle)] bg-[var(--color-canvas-soft)] text-[var(--color-primary)]"
-                      >
-                        <Icon size={ICON_SIZE.lg} aria-hidden="true" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="type-body-strong block text-[var(--color-ink)]">
-                          {title}
-                        </span>
-                        <span className="type-caption mt-0.5 block truncate text-[var(--color-body-muted)]">
-                          {detail}
-                        </span>
-                      </span>
-                      <ChevronRight
-                        size={ICON_SIZE.md}
-                        aria-hidden="true"
-                        className="shrink-0 text-[var(--color-body-muted)]"
-                      />
-                    </Link>
-                  </li>
-                )
-              )}
-            </ul>
-
-            {/* View all disclosure */}
-            <div className="flex flex-col items-center gap-3 pt-1">
-              <button
-                type="button"
-                aria-expanded={showMoreShortcuts}
-                aria-controls="home-secondary-shortcuts"
-                onClick={() => setShowMoreShortcuts(prev => !prev)}
-                className="type-caption-strong inline-flex min-h-11 items-center px-4 py-2 text-[var(--color-primary)] outline-none hover:underline focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] rounded-[var(--radius-md)]"
-              >
-                {showMoreShortcuts ? "ย่อเมนูทางลัด" : "ดูทั้งหมด"}
-              </button>
-              {showMoreShortcuts && (
-                <ul
-                  id="home-secondary-shortcuts"
-                  className="flex flex-wrap justify-center gap-2"
-                  aria-label="ทางลัดเพิ่มเติม"
-                >
-                  {SECONDARY_LINKS.map(link => (
-                    <li key={link.href}>
-                      <Link
-                        href={link.href}
-                        className="type-caption-strong inline-flex min-h-11 items-center rounded-full border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-4 py-2 text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-                      >
-                        {link.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </div>
           </section>
         )}
@@ -997,7 +926,7 @@ export default function Home() {
                       </ul>
                       {data.overdueFollowUps.length > 0 && (
                         <div className="border-b border-[var(--color-divider)] px-6 py-4">
-                          <p className="type-caption-strong text-[var(--color-error)]">
+                          <p className="type-caption-strong text-[var(--color-error-ink)]">
                             รายการที่เลยกำหนด
                           </p>
                           <ul className="mt-2 space-y-2">
@@ -1082,7 +1011,7 @@ export default function Home() {
                             {member.name.slice(0, 1)}
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="type-body-strong block truncate text-[var(--color-ink)]">
+                            <span className="type-body-strong line-clamp-2 block break-words text-[var(--color-ink)]">
                               {member.name}{" "}
                               {member.nickname ? `(${member.nickname})` : ""}
                             </span>

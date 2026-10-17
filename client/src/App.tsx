@@ -3,7 +3,7 @@ import { Route, Switch, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ADMIN_ROLES, ADMIN_SHELL_ROLES, MEMBERSHIP_VIEW_ROLES, PRIVILEGED_ROLES, SUPER_ADMIN_ROLES } from "@shared/roles";
+import { ADMIN_ROLES, ADMIN_SHELL_ROLES, CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, PRIVILEGED_ROLES, SUPER_ADMIN_ROLES } from "@shared/roles";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -140,8 +140,11 @@ function Router() {
           <FollowUps />
         </ProtectedRoute>
       </Route>
+      {/* Mirrors the Sidebar entry. `viewer` is in ADMIN_SHELL_ROLES but cannot
+          `POST /api/submissions`, and the page's "บันทึกข้อมูลนำเข้า" button
+          would 403 for it. */}
       <Route path="/inbox">
-        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
+        <ProtectedRoute allow={CREATE_ROLES}>
           <Inbox />
         </ProtectedRoute>
       </Route>
@@ -150,8 +153,14 @@ function Router() {
           <ImportData />
         </ProtectedRoute>
       </Route>
+      {/* Mirrors `careRouter.use(requireAuth, requireRole(...CREATE_ROLES))`
+          in server/routes/care.ts. `viewer` is in ADMIN_SHELL_ROLES but not in
+          CREATE_ROLES, so it used to open this page and then hit a 403 from
+          GET /api/care/groups — an error screen with a retry that cannot work.
+          nav-structure-contract.test.ts already expected CREATE_ROLES here, so
+          this also reconciles the route with the sidebar it ships. */}
       <Route path="/care">
-        <ProtectedRoute allow={ADMIN_SHELL_ROLES}>
+        <ProtectedRoute allow={CREATE_ROLES}>
           <CareToday />
         </ProtectedRoute>
       </Route>
@@ -160,8 +169,10 @@ function Router() {
           <OrgChart />
         </ProtectedRoute>
       </Route>
+      {/* Mirrors `adminUsersRouter.use(...)`, which rejects every role except
+          super_admin — including admin. See server/routes/adminUsers.ts. */}
       <Route path="/admin/users">
-        <ProtectedRoute>
+        <ProtectedRoute allow={SUPER_ADMIN_ROLES}>
           <AdminUsers />
         </ProtectedRoute>
       </Route>
@@ -180,8 +191,11 @@ function Router() {
           <ImportDuplicates />
         </ProtectedRoute>
       </Route>
+      {/* Reading merge plans is PRIVILEGED_ROLES (`requireReader` in
+          server/routes/importMergePlans.ts); review/withdraw stay requireAdmin
+          server-side, so a staff or ministry_leader sees the page read-only. */}
       <Route path="/import/merge-approvals">
-        <ProtectedRoute>
+        <ProtectedRoute allow={PRIVILEGED_ROLES}>
           <ImportMergeApprovals />
         </ProtectedRoute>
       </Route>
@@ -258,12 +272,12 @@ function Router() {
 
 function App() {
   const content = (
-    <ThemeProvider defaultTheme="light" switchable>
+    <ThemeProvider defaultTheme="dark" switchable>
       <AuthProvider>
         <Suspense fallback={<RouteSkeleton />}>
           <Router />
         </Suspense>
-        <Toaster />
+        <Toaster mobileOffset={{ bottom: "calc(env(safe-area-inset-bottom) + 80px)", left: 16, right: 16 }} />
       </AuthProvider>
     </ThemeProvider>
   );

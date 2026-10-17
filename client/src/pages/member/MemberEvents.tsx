@@ -286,7 +286,7 @@ export default function MemberEvents() {
                         type="button"
                         disabled={pendingEventId !== null}
                         onClick={() => setInterestedEvent(evt)}
-                        className="type-caption-strong inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-accent-soft)] px-4 text-[var(--color-primary)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-60 motion-reduce:transition-none"
+                        className="type-caption-strong inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-hairline)] bg-[var(--color-accent-soft)] px-4 text-[var(--color-primary-focus)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-60 motion-reduce:transition-none"
                       >
                         <Heart size={ICON_SIZE.sm} aria-hidden="true" />
                         <span>สนใจ</span>
@@ -303,7 +303,7 @@ export default function MemberEvents() {
                               Boolean(evt.isRegistered)
                             )
                           }
-                          className="type-caption-strong inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-error)] bg-[var(--color-canvas)] px-4 text-[var(--color-error)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-error)] disabled:opacity-60 motion-reduce:transition-none"
+                          className="type-caption-strong inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-error)] bg-[var(--color-canvas)] px-4 text-[var(--color-error-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-error)] disabled:opacity-60 motion-reduce:transition-none"
                         >
                           <CheckCircle2 size={ICON_SIZE.sm} aria-hidden="true" />
                           <span>ยกเลิกการลงทะเบียน</span>

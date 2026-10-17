@@ -58,15 +58,15 @@ export function LambQuickActions({
           <li key={href}>
             <Link
               href={href}
-              className="group relative flex min-h-[120px] flex-col justify-between rounded-2xl bg-white p-4 shadow-sm transition-[transform,box-shadow,background-color] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
+              className="group relative flex min-h-[104px] flex-col justify-between rounded-2xl border border-[var(--color-hairline)] bg-[var(--lamb-surface)] p-4 transition-[transform,background-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--color-primary)]/35 hover:bg-[var(--color-accent-soft)]/40 active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#E4F7F2] text-[#0C7C82] transition-transform duration-200 ease-out group-hover:scale-105 group-active:scale-95 motion-reduce:transition-none motion-reduce:group-hover:scale-100 motion-reduce:group-active:scale-100">
-                <Icon size={22} aria-hidden="true" />
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--lamb-mint)] text-[var(--lamb-primary)] transition-transform duration-200 ease-out group-hover:scale-105 group-active:scale-95 motion-reduce:transition-none motion-reduce:group-hover:scale-100 motion-reduce:group-active:scale-100">
+                <Icon size={20} aria-hidden="true" />
                 {title === "ข่าวสาร" && notificationCount > 0 && (
                   <span
                     aria-label={`${notificationCount} การแจ้งเตือนใหม่`}
                     aria-live="polite"
-                    className="absolute top-2 right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-error)] px-1 text-xs font-bold text-white shadow-sm motion-safe:animate-pulse motion-reduce:animate-none"
+                    className="absolute top-2 right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-error)] px-1 text-xs font-bold text-[var(--color-on-primary)] shadow-sm motion-safe:animate-pulse motion-reduce:animate-none"
                   >
                     {notificationCount > 9 ? "9+" : notificationCount}
                   </span>

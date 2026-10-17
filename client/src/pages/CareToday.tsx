@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Check, ListChecks, MessageCircle, Phone, Users } from "lucide-react";
+import { Check, ChevronDown, ListChecks, MessageCircle, Phone, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { EmptyState, ErrorState, PageHeader } from "@/components/DesignSystem";
 import { ListSkeleton } from "@/components/LoadingStates";
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * เช็คชื่อพันธกิจ — the care leader's weekly job on one screen.
@@ -56,6 +57,11 @@ function localDate(): string {
 }
 const isPresent = (s: RosterMember["status"]) => s === "present" || s === "online";
 const label = (m: RosterMember) => m.nickname?.trim() || m.name;
+/** First letter for the avatar badge: skips Thai leading vowels (เ แ โ ใ ไ), which cannot stand alone. */
+const initial = (m: RosterMember) => {
+  const text = label(m);
+  return Array.from(text.replace(/^[เ-ไ]+/, ""))[0] ?? Array.from(text)[0];
+};
 const errText = (e: unknown) => (e instanceof ApiError ? e.message : "ดำเนินการไม่สำเร็จ กรุณาลองอีกครั้ง");
 
 function readStored(): string {
@@ -67,6 +73,8 @@ function readStored(): string {
 }
 
 export default function CareToday() {
+  const { user } = useAuth();
+  const isGroupLeader = user?.role === "group_leader";
   usePageTitle("เช็คชื่อกลุ่มดูแล");
   const [bodies, setBodies] = useState<BodyOption[] | null>(null);
   const [bodiesError, setBodiesError] = useState<string | null>(null);
@@ -78,6 +86,17 @@ export default function CareToday() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const date = useMemo(localDate, []);
+
+  // The bottom nav's height follows its content (and is 0 on desktop, where it is hidden), so the
+  // sticky save bar tracks the measured height instead of a guessed constant.
+  const [navHeight, setNavHeight] = useState(0);
+  useEffect(() => {
+    const nav = document.querySelector(".pk-nav");
+    if (!nav) return;
+    const ro = new ResizeObserver(() => setNavHeight(nav.getBoundingClientRect().height));
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, []);
 
   const loadBodies = useCallback(async () => {
     setBodiesError(null);
@@ -177,7 +196,15 @@ export default function CareToday() {
           <ListSkeleton count={4} />
         </div>
       ) : options.length === 0 ? (
-        <EmptyState icon={Users} title="ยังไม่มีพันธกิจในระบบ" description="สร้างพันธกิจที่หน้ากลุ่ม หรือโหลดข้อมูลผังองค์กรที่หน้านำเข้าจาก Excel" />
+        <EmptyState
+          icon={Users}
+          title={isGroupLeader ? "ยังไม่มีพันธกิจในขอบเขตของคุณ" : "ยังไม่มีพันธกิจในระบบ"}
+          description={
+            isGroupLeader
+              ? "บัญชีนี้ยังไม่ได้รับมอบหมายให้ดูแลพันธกิจ หรือบอดี้ของคุณยังไม่มีแคร์ภายใต้ ให้แจ้งเจ้าหน้าที่ตรวจการมอบหมาย ส่วนสมาชิกดูได้ที่หน้า สมาชิก และ สถานะสมาชิก"
+              : "สร้างพันธกิจที่หน้ากลุ่ม หรือโหลดข้อมูลผังองค์กรที่หน้านำเข้าจาก Excel"
+          }
+        />
       ) : (
         <div className="clay-screen">
           {options.length > 1 && (
@@ -185,22 +212,29 @@ export default function CareToday() {
               <label htmlFor="care-group" className="type-caption-strong block text-[var(--color-ink)]">
                 พันธกิจ
               </label>
-              <select
-                id="care-group"
-                value={groupId}
-                onChange={(e) => setGroupId(e.target.value)}
-                className="clay-chip mt-1.5 w-full appearance-none pr-4 !text-base"
-              >
-                {bodies.map((b) => (
-                  <optgroup key={b.name} label={b.name}>
-                    {b.careGroups.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name.trim()}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+              <div className="relative mt-1.5">
+                <select
+                  id="care-group"
+                  value={groupId}
+                  onChange={(e) => setGroupId(e.target.value)}
+                  className="clay-chip w-full appearance-none pr-11 text-base"
+                >
+                  {bodies.map((b) => (
+                    <optgroup key={b.name} label={b.name}>
+                      {b.careGroups.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name.trim()}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={20}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-body-muted)]"
+                />
+              </div>
             </div>
           )}
 
@@ -230,7 +264,7 @@ export default function CareToday() {
                   </h2>
                 </div>
                 <div className="flex items-baseline gap-3">
-                  <b className="type-body-strong tabular-nums text-xl">
+                  <b className="type-lead font-semibold tabular-nums text-[var(--color-ink)]">
                     มา {picked.size} / {members.length}
                   </b>
                   <span className="type-caption ml-auto text-[var(--color-body-muted)]">แตะอีกครั้งเพื่อยกเลิก</span>
@@ -262,9 +296,9 @@ export default function CareToday() {
                   </li>
                 ))}
               </ul>
-              <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-10 -mx-1 flex flex-col gap-2 bg-[var(--clay-ground)] px-1 py-3 lg:bottom-0">
+              <div className="sticky z-10 -mx-1 flex flex-col gap-2 bg-[var(--clay-ground)] px-1 py-3" style={{ bottom: navHeight }}>
                 {saveError && (
-                  <p role="alert" className="type-caption rounded-[var(--radius-sm)] bg-[var(--color-error)]/10 p-3 text-[var(--color-error)]">
+                  <p role="alert" className="type-caption rounded-[var(--radius-sm)] bg-[var(--color-error)]/10 p-3 text-[var(--color-error-ink)]">
                     {saveError}
                   </p>
                 )}
@@ -320,7 +354,7 @@ export default function CareToday() {
                       <li key={m.id} className="clay-card-soft flex flex-col gap-3">
                         <div className="flex items-center gap-3">
                           <span className="clay-badge peach" aria-hidden="true">
-                            {Array.from(label(m))[0]}
+                            {initial(m)}
                           </span>
                           <div className="min-w-0 flex-1">
                             <p className="type-body-strong truncate">{label(m)}</p>

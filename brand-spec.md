@@ -6,9 +6,10 @@
 
 ## Visual direction
 
-Quiet graphite chrome, rounded white surfaces, and a single olive interactive color.
+Quiet graphite chrome, rounded white surfaces, and a single teal interactive color.
 The interface recedes so the people in it are the content: warm and people-centered,
-never loud. Church blue and deep navy were the previous identity and are fully retired.
+never loud. Church blue and deep navy were the pre-V2 identity; olive field green was
+the V2 identity. Both are fully retired.
 
 ## Assets
 
@@ -21,23 +22,37 @@ never loud. Church blue and deep navy were the previous identity and are fully r
 
 | Token | Hex | Use |
 |---|---|---|
-| Field | `#315c2b` | links, primary buttons, icons, focus. The only chromatic UI color |
-| Field hover | `#3f7337` | hover / pressed / focus ring |
+| Field | `#0c7c82` | links, primary buttons, icons, focus. The only chromatic UI color |
+| Field hover | `#09696e` | hover / pressed / focus ring |
 | Field on dark | `#7faf72` | accent text on graphite surfaces |
 | Field tint | `#e8f0e4` | soft chip background on white |
+
+> **Contrast rule for teal text.** `#0c7c82` clears AA as a *fill* carrying white
+> text (4.98:1) and on canvas (4.76:1), but it measures **4.45:1 on a pale tint** —
+> below AA. On any tinted or dark surface, use `--color-primary-focus` `#09696e`
+> (5.77:1) for teal text instead. This is the same finding that moved the member
+> app to `--lamb-primary: #0A767C`.
 
 **Chrome & surfaces** (a three-step neutral ladder)
 
 | Token | Hex | Use |
 |---|---|---|
-| Ink | `#1d1d1f` | headings and body text |
-| Ink muted | `#6f6f73` | secondary text, labels, metadata |
-| Canvas | `#ffffff` | card surfaces |
+| Ink | `#0f172a` | headings and body text |
+| Ink muted | `#5b6474` | secondary text, labels, metadata |
+| Canvas | `#f8fafc` | the page background |
 | Canvas soft | `#f5f5f7` | wells, table stripes, `secondary` / `muted` / `accent` |
-| Surface | `#fafafc` | the step between canvas and canvas-soft |
-| Sunken | `#f2f2f4` | recessed areas only — inset wells, hover fills |
-| Divider | `#f0f0f0` | hairlines inside a card |
-| Hairline | `#e0e0e0` | card borders, inputs (`--border`, `--input`) |
+| Surface | `#ffffff` | card surfaces |
+| Sunken | `#f1f5f9` | recessed areas only — inset wells, hover fills |
+| Divider | `#e2e8f0` | hairlines inside a card |
+| Hairline | `#e2e8f0` | card borders, inputs (`--border`, `--input`) |
+
+**Neutral text ramp** (for secondary and muted copy on canvas)
+
+| Token | Hex | Use | On canvas |
+|---|---|---|---|
+| Text secondary | `#475569` | supporting copy, descriptions | 7.24:1 |
+| Text tertiary | `#5b6474` | metadata, helper text | 6.4:1 |
+| Text quaternary | `#64748b` | the quietest legible text | 4.55:1 |
 
 **Graphite (dark chrome)**
 
@@ -72,6 +87,38 @@ never loud. Church blue and deep navy were the previous identity and are fully r
 
 **Chart series** — use in order, do not reorder:
 `#548bd9` · `#44b889` · `#f1a73b` · `#df5b79` · `#7e5ad6` · `#45a8a4`
+
+## Dark mode (the default as of 2026-10-15)
+
+Dark is not a variant of light here — it is its own retuned palette, measured
+against the PIN sign-in surface. `ThemeProvider` defaults to `dark`; the toggle
+stays. **`.dark` is a token remap**, never a class override (`!important` dark
+rules are banned by `design-system-consistency.test.ts`).
+
+| Token | Hex | On canvas |
+|---|---|---|
+| Canvas | `#061a1f` | — |
+| Canvas soft | `#123033` | — |
+| Surface | `#0c2529` | — |
+| Sunken | `#0a2126` | — |
+| Ink | `#f4faf9` | 16.92:1 |
+| Text secondary | `#c3d4d4` | 11.65:1 |
+| Text tertiary | `#9db2b2` | 8.04:1 |
+| Text quaternary | `#7e9493` | 5.57:1 |
+| Field (primary) | `#2fc4bd` | 8.30:1 as text |
+| Field hover | `#5fd7d1` | — |
+| On field | `#04211f` | 7.85:1 on the fill |
+
+> **Do not write `color: #fff` on a primary fill.** White on the dark primary
+> measures **2.15:1**. Use `var(--color-on-primary)`.
+
+**Glass.** Chrome in dark mode is glass, not flat fill: `--glass-fill`,
+`--glass-fill-strong`, `--glass-line`, `--glass-line-bright`, `--glass-blur`.
+A card reads as glass through its **top-edge highlight**, not a drop shadow
+alone.
+
+**The member app shares this palette.** `.lamb-theme` is now pure aliases onto
+the central tokens — there is no second brand left to drift.
 
 ## Typography
 

@@ -194,12 +194,12 @@ export default function MemberProfile() {
       <Link
         href="/app"
         aria-label="กลับไปหน้าแรก"
-        className="mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-[#0C7C82] shadow-sm transition hover:bg-[#E4F7F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0C7C82]"
+        className="mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--lamb-surface)] text-[var(--lamb-primary)] shadow-sm transition hover:bg-[var(--lamb-mint)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
       >
         <ChevronLeft size={20} aria-hidden="true" />
       </Link>
       <div>
-        <p className="text-sm font-semibold text-[#0C7C82]">ตั้งค่าบัญชี</p>
+        <p className="text-sm font-semibold text-[var(--lamb-primary)]">ตั้งค่าบัญชี</p>
         <h1 className="mt-0.5 text-2xl font-extrabold tracking-tight text-[var(--color-ink)] sm:text-3xl">
           โปรไฟล์และข้อมูลส่วนตัว
         </h1>
@@ -231,7 +231,7 @@ export default function MemberProfile() {
       {pageHeading}
 
       {/* Identity */}
-      <section className="rounded-3xl border border-[#D8EEE7] bg-[#E4F7F2] p-5 shadow-sm sm:p-6">
+      <section className="rounded-3xl border border-[var(--glass-line)] bg-[var(--lamb-mint)] p-5 shadow-sm sm:p-6">
         <div className="flex items-center gap-4">
           {profile?.avatarUrl ? (
             <img
@@ -252,11 +252,11 @@ export default function MemberProfile() {
               {profile?.name || user?.name}
             </p>
             {profile?.nickname && (
-              <p className="type-fine text-[var(--color-body-muted)]">
+              <p className="type-fine text-[var(--color-text-secondary)]">
                 ({profile.nickname})
               </p>
             )}
-            <p className="type-fine mt-0.5 truncate text-[var(--color-body-muted)]">
+            <p className="type-fine mt-0.5 truncate text-[var(--color-text-secondary)]">
               {user?.email}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -387,7 +387,7 @@ export default function MemberProfile() {
                 <Heart
                   size={ICON_SIZE.sm}
                   aria-hidden="true"
-                  className="text-[var(--color-error)]"
+                  className="text-[var(--color-error-ink)]"
                 />
                 บุคคลติดต่อกรณีฉุกเฉิน
               </h3>
@@ -480,7 +480,7 @@ export default function MemberProfile() {
       )}
 
       {/* Push notifications */}
-      <section className="rounded-3xl border border-[var(--color-divider)] bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-3xl border border-[var(--color-divider)] bg-[var(--lamb-surface)] p-5 shadow-sm sm:p-6">
         <h2 className="type-body-strong flex items-center gap-2 text-[var(--color-ink)]">
           <Bell
             size={ICON_SIZE.sm}
@@ -521,7 +521,7 @@ export default function MemberProfile() {
 
       {/* Privacy & legal */}
       <section
-        className="rounded-3xl border border-[var(--color-divider)] bg-white p-5 shadow-sm sm:p-6"
+        className="rounded-3xl border border-[var(--color-divider)] bg-[var(--lamb-surface)] p-5 shadow-sm sm:p-6"
         data-testid="privacy-links"
       >
         <h2 className="type-body-strong flex items-center gap-2 text-[var(--color-ink)]">

@@ -83,6 +83,18 @@ export function DateField({
               <Calendar
                 mode="single"
                 locale={th}
+                className="[--cell-size:--spacing(11)]"
+                // rdp's unlayered stylesheet outranks Tailwind utilities, so its nav size needs an inline override.
+                style={
+                  {
+                    "--rdp-nav_button-width": "2.75rem",
+                    "--rdp-nav_button-height": "2.75rem",
+                    "--rdp-day_button-width": "2.75rem",
+                    "--rdp-day_button-height": "2.75rem",
+                    "--rdp-accent-color": "var(--color-primary-ink)",
+                    "--rdp-today-color": "var(--color-primary-ink)",
+                  } as React.CSSProperties
+                }
                 formatters={{ formatCaption }}
                 selected={selected}
                 onSelect={(day) => {
