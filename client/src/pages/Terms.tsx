@@ -52,7 +52,7 @@ const sections = [
 export default function Terms() {
   usePageTitle("เงื่อนไขการใช้งานระบบ");
   return (
-    <div className="login-shell" style={{ alignItems: "flex-start", overflowY: "auto", padding: "32px 16px" }}>
+    <main className="login-shell" style={{ alignItems: "flex-start", overflowY: "auto", padding: "32px 16px" }}>
       <article
         className="login-card"
         style={{ width: "min(760px, 100%)", textAlign: "left", maxHeight: "none" }}
@@ -72,7 +72,7 @@ export default function Terms() {
             {s.body.map((p, i) => (
               <p key={i} className="type-caption mb-2 text-[var(--color-text-secondary)]">
                 {s.title.startsWith("4.") && i === 1 ? (
-                  <Link href="/privacy" className="type-caption-strong text-[var(--color-primary-ink)]">
+                  <Link href="/privacy" className="type-caption-strong inline-flex min-h-11 items-center text-[var(--color-primary-ink)] underline underline-offset-4">
                     {p}
                   </Link>
                 ) : (
@@ -98,6 +98,6 @@ export default function Terms() {
           </Link>
         </div>
       </article>
-    </div>
+    </main>
   );
 }

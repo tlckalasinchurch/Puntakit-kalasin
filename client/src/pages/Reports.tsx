@@ -13,6 +13,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { PRIVILEGED_ROLES as REPORT_ROLES } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { downloadFile } from "@/lib/download";
 
 interface StatusCount {
   status: string;
@@ -80,7 +81,7 @@ export default function Reports() {
   const handleExport = (reportKey: string) => {
     if (rangeError) return;
     const query = buildQuery(startDate, endDate);
-    window.open(`/api/reports/export/${reportKey}.csv${query ? `?${query}` : ""}`, "_blank");
+    downloadFile(`/api/reports/export/${reportKey}.csv${query ? `?${query}` : ""}`);
   };
 
   if (!canView) {

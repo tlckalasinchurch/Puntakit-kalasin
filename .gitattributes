@@ -1,0 +1,4 @@
+# A few legacy files keep CRLF line endings; a trailing CR is not a whitespace error there.
+*.ts whitespace=cr-at-eol
+*.tsx whitespace=cr-at-eol
+*.css whitespace=cr-at-eol

@@ -46,6 +46,7 @@ import {
 } from "@shared/roles";
 import { useLocation, useSearch, useSearchParams } from "wouter";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { downloadFile } from "@/lib/download";
 import { MemberDetailModal } from "@/components/members/MemberDetailModal";
 
 // Thai labels live in shared/labels.ts (same map the Member PWA renders), so
@@ -520,7 +521,7 @@ export default function Members() {
   };
 
   const handleExportCsv = () => {
-    window.open("/api/members/export/csv", "_blank");
+    downloadFile("/api/members/export/csv");
     toast.info("กำลังเริ่มดาวน์โหลดไฟล์ CSV…");
   };
 

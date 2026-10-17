@@ -11,7 +11,7 @@ import NotFound from "@/pages/NotFound";
 
 // Every page is code-split. Before this, all 24 pages sat in one entry chunk, so
 // any heavy dependency used by any single page was downloaded by everyone on
-// first paint — leaflet + leaflet.markercluster (~456 kB unminified) used only
+// first paint — maplibre-gl (several hundred kB) used only
 // by /map, qrcode (~58 kB) used by three pages, and so on. Router paths, shells
 // and access rules are unchanged; this only changes when a page's code arrives.
 //

@@ -195,14 +195,11 @@
   .type-fine { font-size: 12px; font-weight: 400; line-height: 1.4; }
 }
 
-/* Leaflet's own zoom control buttons default to 26px (30px in its "touch" variant),
-   under the V2 44px touch-target minimum. Attribution text is left at its
-   conventional small size — that's required copyright text, not an app control. */
-.leaflet-control-zoom-in,
-.leaflet-control-zoom-out {
+/* MapLibre's zoom buttons default to 29px, under the V2 44px touch-target minimum. Attribution
+   text is left at its conventional small size — that's required copyright text, not an app control. */
+.maplibregl-ctrl-group button {
   width: 44px !important;
   height: 44px !important;
-  line-height: 44px !important;
 }
 /* Base element rules live in the base layer so Tailwind utilities on shared
    primitives (text size, weight, borders) are not overridden by unlayered CSS. */
@@ -1567,7 +1564,7 @@
   --clay-press: inset 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 @layer components {
-  .clay-screen { background: var(--clay-ground); border-radius: var(--radius-card); padding: 20px 16px 24px; display: flex; flex-direction: column; gap: 18px; }
+  .clay-screen { background: transparent; border-radius: 0; padding: 4px 0 24px; display: flex; flex-direction: column; gap: 18px; }
   .clay-card { background: var(--clay-surface); border: 1px solid var(--color-hairline); border-radius: var(--radius-card); box-shadow: var(--clay-puff); padding: 18px; }
   .clay-card-soft { background: var(--clay-surface); border: 1px solid var(--color-hairline); border-radius: var(--radius-tile); box-shadow: var(--clay-puff-sm); padding: 14px; }
   .clay-btn { min-height: 56px; border-radius: var(--radius-pill); padding-inline: 26px; font-weight: 700; font-size: 17px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: var(--color-primary); color: var(--color-on-primary); box-shadow: var(--clay-puff-sm); transition: box-shadow 0.15s, transform 0.15s; }
@@ -3059,4 +3056,14 @@
   .pk-view-tab {
     transition: none;
   }
+}
+
+/* Lamb illustrations are opaque full-bleed scenes (no alpha). Rounded corners and, in
+   dark mode, a hairline ring make them read as intentional illustration tiles on a
+   dark card instead of raw light rectangles. */
+.lamb-art {
+  border-radius: var(--radius-tile);
+}
+.dark .lamb-art {
+  box-shadow: 0 0 0 1px var(--color-hairline);
 }

@@ -81,7 +81,7 @@ async function assertOrgHierarchy(groupId: string | null, next: OrgFields) {
 // Helper to check if user can manage the group. Role set is shared with the
 // client via `GROUP_MANAGE_ANY_ROLES` (shared/roles.ts); a group_leader gets
 // an extra ownership check below.
-async function verifyGroupManagementAccess(req: Request, groupId: string) {
+export async function verifyGroupManagementAccess(req: Request, groupId: string) {
   const user = req.user!;
   if (GROUP_MANAGE_ANY_ROLES.includes(user.role)) {
     return true;
@@ -114,7 +114,7 @@ async function verifyGroupManagementAccess(req: Request, groupId: string) {
 }
 
 // Helper to mask location and coordinates for private/confidential groups for non-privileged users
-function maskGroupLocation<T extends { privacy?: string; meetingLocation?: string | null; latitude?: string | null; longitude?: string | null; area?: string | null }>(
+function maskGroupLocation<T extends { privacy?: string; meetingLocation?: string | null; latitude?: string | null; longitude?: string | null; area?: string | null; coverUrl?: string | null }>(
   group: T,
   req: Request,
   isLeaderOrActiveMember: boolean = false
@@ -143,6 +143,8 @@ function maskGroupLocation<T extends { privacy?: string; meetingLocation?: strin
     meetingLocation: maskedLocation,
     latitude: null,
     longitude: null,
+    // The place photo shows the house, so it is hidden with the coordinates.
+    ...("coverUrl" in group ? { coverUrl: null } : {}),
   };
 }
 

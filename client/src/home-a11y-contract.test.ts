@@ -43,8 +43,11 @@ describe("Home links: 'ดูทั้งหมด' names are distinct and keep 
 describe("Home disclosure: aria-controls points at something that exists (R3)", () => {
   it("is only set while the controlled list is rendered", () => {
     expect(myWork).toContain('aria-controls={moreOpen ? "home-more-links" : undefined}');
-    // the list is rendered under the same condition and carries the id
-    expect(myWork).toMatch(/\{moreOpen && moreLinks\.length > 0 && \(\s*<ul id="home-more-links"/);
+    // the list carries the id and is rendered whenever the toggle is open (`linksVisible` is `moreOpen`,
+    // or always when there are no tiles — in which case there is no toggle at all)
+    expect(myWork).toContain("const linksVisible = noTiles || moreOpen;");
+    expect(myWork).toMatch(/\{linksVisible && moreLinks\.length > 0 && \(\s*<ul id="home-more-links"/);
+    expect(myWork).toMatch(/\{!noTiles && moreLinks\.length > 0 && \(\s*<button/);
   });
 
   it("no other aria-controls on Home refers to an id that is not in the same file", () => {

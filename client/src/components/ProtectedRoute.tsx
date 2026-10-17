@@ -69,8 +69,8 @@ export function ProtectedRoute({ children, allow }: ProtectedRouteProps) {
   // valid and the redirect would just repeat.
   if (error) {
     return (
-      <div
-        className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-4 px-4 py-10"
+      <main
+        className="mx-auto flex min-h-[var(--app-vh)] max-w-lg flex-col justify-center gap-4 px-4 py-10"
         data-testid="auth-error"
       >
         <h1 className="type-display-md text-[var(--color-ink)]">เข้าสู่ระบบไม่สำเร็จ</h1>
@@ -97,7 +97,7 @@ export function ProtectedRoute({ children, allow }: ProtectedRouteProps) {
             ออกจากระบบ
           </Button>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -105,17 +105,19 @@ export function ProtectedRoute({ children, allow }: ProtectedRouteProps) {
 
   if (denied) {
     return (
-      <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-4 px-4 py-10" data-testid="route-denied">
-        <EmptyState
-          icon={Lock}
-          headingLevel={1}
-          title="คุณไม่มีสิทธิ์เปิดหน้านี้"
-          description="หน้านี้ใช้ได้เฉพาะบางบทบาท หากต้องการใช้งาน กรุณาติดต่อผู้ดูแลระบบ"
-        />
+      <main className="mx-auto flex min-h-[var(--app-vh)] max-w-lg flex-col justify-center gap-4 px-4 py-10" data-testid="route-denied">
+        <div className="rounded-[var(--radius-card)] border border-[var(--color-hairline)] bg-[var(--color-surface)] p-2 shadow-[var(--shadow-card)]">
+          <EmptyState
+            icon={Lock}
+            headingLevel={1}
+            title="คุณไม่มีสิทธิ์เปิดหน้านี้"
+            description="หน้านี้ใช้ได้เฉพาะบางบทบาท หากต้องการใช้งาน กรุณาติดต่อผู้ดูแลระบบ"
+          />
+        </div>
         <Button asChild className="min-h-11">
           <Link href="/">กลับหน้าหลัก</Link>
         </Button>
-      </div>
+      </main>
     );
   }
 

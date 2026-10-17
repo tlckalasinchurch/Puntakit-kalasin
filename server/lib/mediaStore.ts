@@ -65,7 +65,7 @@ function pickStorage(): StorageKind {
   return "local";
 }
 
-export async function storeImage(folder: "avatars" | "mission", bytes: Buffer, contentType: ImageContentType): Promise<StoredMedia> {
+export async function storeImage(folder: "avatars" | "mission" | "groups", bytes: Buffer, contentType: ImageContentType): Promise<StoredMedia> {
   const storage = pickStorage();
   const name = `${randomUUID()}.${IMAGE_TYPES[contentType]}`;
   if (storage === "blob") {
