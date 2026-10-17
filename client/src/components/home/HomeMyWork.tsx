@@ -7,7 +7,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, hasRole } from "@shared/roles";
-import type { HomeLink } from "@/lib/homeLinks";
 import { HOME_TILE_HREF, homeTilesFor, homeMoreLinksFor, type HomeTileId } from "@/lib/homeTiles";
 import { MissionPhotoSheet } from "./MissionPhotoSheet";
 import { RecoveredNote, SectionHeldByBanner, usePageWideFailure, useReportFailure } from "./homeFailures";
@@ -74,7 +73,7 @@ function Tile({
  * rows that exist inside the role's scope — there is no weekly-report data in
  * the system yet, so none is implied.
  */
-export function HomeMyWork({ extraLinks = [] }: { extraLinks?: HomeLink[] }) {
+export function HomeMyWork() {
   const { user } = useAuth();
   const [data, setData] = useState<Overview | null>(null);
   const [error, setError] = useState<ApiError | null>(null);

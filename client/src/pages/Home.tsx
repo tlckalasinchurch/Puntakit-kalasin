@@ -1,20 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Activity,
   CalendarDays,
   Camera,
   ChevronRight,
   Clock,
-  Compass,
-  HeartHandshake,
   Inbox as InboxIcon,
   ListTodo,
   Megaphone,
   RotateCw,
   ShieldCheck,
-  UserCheck,
   UserRound,
-  Users,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -43,7 +38,7 @@ import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
 import { initialOf } from "@/lib/initials";
 import { useAuth } from "@/contexts/AuthContext";
-import { ADMIN_ROLES, CREATE_ROLES, PRIVILEGED_ROLES as OPERATIONS_ROLES } from "@shared/roles";
+import { CREATE_ROLES, PRIVILEGED_ROLES as OPERATIONS_ROLES } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 // ---------------------------------------------------------------------------
@@ -458,126 +453,6 @@ function AttentionRow({
 }
 
 // ---------------------------------------------------------------------------
-// Static editorial content
-// ---------------------------------------------------------------------------
-// Role-based shortcuts configuration
-// ---------------------------------------------------------------------------
-
-interface RoleShortcut {
-  href: string;
-  icon: typeof Users;
-  title: string;
-  detail: string;
-}
-
-const GROUP_LEADER_SHORTCUTS: RoleShortcut[] = [
-  {
-    href: "/care",
-    icon: UserCheck,
-    title: "เช็คชื่อกลุ่มแคร์",
-    detail: "บันทึกการเข้าร่วมประจำสัปดาห์",
-  },
-  {
-    href: "/members",
-    icon: Users,
-    title: "สมาชิกในกลุ่ม",
-    detail: "ดูแลสมาชิกในความรับผิดชอบ",
-  },
-  {
-    href: "/groups",
-    icon: Compass,
-    title: "สถิติกลุ่มของฉัน",
-    detail: "ดูภาพรวมกลุ่มพันธกิจ",
-  },
-];
-
-const STAFF_ADMIN_SHORTCUTS: RoleShortcut[] = [
-  {
-    href: "/care",
-    icon: UserCheck,
-    title: "เช็คชื่อพันธกิจ",
-    detail: "บันทึกการเข้าร่วม",
-  },
-  {
-    href: "/members",
-    icon: Users,
-    title: "จัดการสมาชิก",
-    detail: "ทะเบียนสมาชิกคริสตจักร",
-  },
-  {
-    href: "/reports",
-    icon: Activity,
-    title: "รายงานและสถิติ",
-    detail: "ภาพรวมพันธกิจคริสตจักร",
-  },
-];
-
-const MINISTRY_LEADER_SHORTCUTS: RoleShortcut[] = [
-  {
-    href: "/care",
-    icon: UserCheck,
-    title: "เช็คชื่อพันธกิจ",
-    detail: "บันทึกการเข้าร่วม",
-  },
-  {
-    href: "/members",
-    icon: Users,
-    title: "สมาชิก",
-    detail: "ทะเบียนสมาชิก",
-  },
-  {
-    href: "/ministries",
-    icon: HeartHandshake,
-    title: "ฝ่ายงานพันธกิจ",
-    detail: "การดูแลฝ่ายงาน",
-  },
-];
-
-const DEFAULT_SHORTCUTS: RoleShortcut[] = [
-  {
-    href: "/members",
-    icon: Users,
-    title: "สมาชิก",
-    detail: "ดูแลความสัมพันธ์และการติดตาม",
-  },
-  {
-    href: "/groups",
-    icon: Compass,
-    title: "พันธกิจ",
-    detail: "เชื่อมโยงผู้คนในชุมชน",
-  },
-  {
-    href: "/events",
-    icon: CalendarDays,
-    title: "กิจกรรม",
-    detail: "ตารางและสิ่งที่กำลังจะเกิดขึ้น",
-  },
-];
-
-function getRoleShortcuts(role: string | undefined): RoleShortcut[] {
-  if (role === "group_leader") return GROUP_LEADER_SHORTCUTS;
-  if (role === "ministry_leader") return MINISTRY_LEADER_SHORTCUTS;
-  if (
-    role &&
-    (ADMIN_ROLES.includes(role as (typeof ADMIN_ROLES)[number]) ||
-      role === "staff")
-  ) {
-    return STAFF_ADMIN_SHORTCUTS;
-  }
-  return DEFAULT_SHORTCUTS;
-}
-
-// Church's discipleship framework. Editorial guidance only: no member-stage data exists behind it.
-const DISCIPLESHIP_PATHWAY = [
-  { title: "พบคน", detail: "สร้างความสัมพันธ์และมิตรภาพ" },
-  { title: "ประกาศ", detail: "แบ่งปันข่าวประเสริฐด้วยความรัก" },
-  { title: "นำรับเชื่อ", detail: "ต้อนรับและติดตามดูแลใกล้ชิด" },
-  { title: "นมัสการ", detail: "ร่วมสามัคคีธรรมที่คริสตจักร" },
-  { title: "เข้าพันธกิจ", detail: "ผูกพันในครอบครัวแห่งความเชื่อ" },
-  { title: "สร้างสาวก", detail: "เติบโตและพร้อมส่งต่อพระพร" },
-];
-
-// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -655,9 +530,7 @@ function HomeContent() {
           {/* Quick actions first (large, thumb-sized), then this person's own numbers
               and latest photos — scoped by the API to what their role may see. */}
           {user && user.role !== "member" && (
-            <HomeMyWork
-              extraLinks={getRoleShortcuts(user.role).map(({ href, title }) => ({ href, label: title }))}
-            />
+            <HomeMyWork />
           )}
         </section>
 
