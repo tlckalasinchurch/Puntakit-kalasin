@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "@/components/DesignSystem";
+import { ResponsiveSelector } from "@/components/ResponsiveSelector";
 import { api, ApiError } from "@/lib/api";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import {
@@ -184,17 +185,18 @@ export function MissionPhotoSheet({
         ) : (
           <>
             {groups.length > 1 ? (
-              <label className="block">
-                <span className="type-caption-strong text-[var(--color-ink)]">พันธกิจ</span>
-                <select className={`${INPUT} mt-1`} value={groupId} onChange={(e) => setGroupId(e.target.value)} disabled={busy}>
-                  <option value="">เลือกพันธกิจ</option>
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div>
+                <label htmlFor="mission-photo-group" className="type-caption-strong mb-1.5 block text-[var(--color-ink)]">พันธกิจ</label>
+                <ResponsiveSelector
+                  id="mission-photo-group"
+                  label="พันธกิจ"
+                  value={groupId}
+                  onValueChange={setGroupId}
+                  emptyLabel="เลือกพันธกิจ"
+                  options={groups.map((g) => ({ value: g.id, label: g.name }))}
+                  disabled={busy}
+                />
+              </div>
             ) : (
               <p className="type-caption text-[var(--color-text-secondary)]">
                 พันธกิจ: <strong className="text-[var(--color-ink)]">{groups[0].name}</strong>

@@ -48,6 +48,7 @@ import { useLocation, useSearch, useSearchParams } from "wouter";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { downloadFile } from "@/lib/download";
 import { MemberDetailModal } from "@/components/members/MemberDetailModal";
+import { ResponsiveSelector } from "@/components/ResponsiveSelector";
 
 // Thai labels live in shared/labels.ts (same map the Member PWA renders), so
 // admin and member surfaces can never show different words for a status.
@@ -650,26 +651,19 @@ export default function Members() {
 
         {careOptions.length > 0 && (
           <div className="w-full sm:w-auto">
-            <label htmlFor="members-care" className="type-caption-strong block text-[var(--color-ink)]">
-              พันธกิจ
-            </label>
-            <select
+            <label htmlFor="members-care" className="type-caption-strong mb-1.5 block text-[var(--color-ink)]">พันธกิจ</label>
+            <ResponsiveSelector
               id="members-care"
+              label="พันธกิจ"
               value={careFilter}
-              onChange={(e) => setCareFilter(e.target.value)}
-              className={`${SELECT_CLASS} mt-1.5 sm:w-48`}
-            >
-              <option value="">ทุกพันธกิจ</option>
-              {careOptions.map((b) => (
-                <optgroup key={b.body} label={b.body}>
-                  {b.cares.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name.trim()}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+              onValueChange={setCareFilter}
+              emptyLabel="ทุกพันธกิจ"
+              groups={careOptions.map((b) => ({
+                label: b.body,
+                options: b.cares.map((c) => ({ value: c.id, label: c.name.trim() })),
+              }))}
+              className="sm:w-48"
+            />
           </div>
         )}
 
@@ -1145,23 +1139,18 @@ export default function Members() {
               {careOptions.length > 0 && (
                 <Field label="พันธกิจ" hint="เลือกพันธกิจที่สมาชิกเข้าร่วม ย้ายพันธกิจได้ภายหลัง">
                   {fieldProps => (
-                    <select
-                      {...fieldProps}
-                      className={SELECT_CLASS}
+                    <ResponsiveSelector
+                      id={fieldProps.id}
+                      describedBy={fieldProps["aria-describedby"]}
+                      label="พันธกิจ"
                       value={form.careGroupId}
-                      onChange={(e) => setForm({ ...form, careGroupId: e.target.value })}
-                    >
-                      <option value="">ยังไม่ระบุพันธกิจ</option>
-                      {careOptions.map((b) => (
-                        <optgroup key={b.body} label={b.body}>
-                          {b.cares.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name.trim()}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
+                      onValueChange={(value) => setForm({ ...form, careGroupId: value })}
+                      emptyLabel="ยังไม่ระบุพันธกิจ"
+                      groups={careOptions.map((b) => ({
+                        label: b.body,
+                        options: b.cares.map((c) => ({ value: c.id, label: c.name.trim() })),
+                      }))}
+                    />
                   )}
                 </Field>
               )}
