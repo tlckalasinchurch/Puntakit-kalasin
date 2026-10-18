@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type * as maplibregl from "maplibre-gl";
 import { LocateFixed, MapPin } from "lucide-react";
 import { MapView, type Basemap } from "@/components/Map";
@@ -19,9 +19,12 @@ interface LocationPickerProps {
   confirmLabel?: string;
   /** Receives the chosen point. Throw to keep the dialog open (the caller reports why). */
   onConfirm: (point: LatLng) => Promise<void> | void;
+  /** Extra fields shown under the readout (e.g. the place photo and landmark text), saved by the caller. */
+  children?: ReactNode;
 }
 
-const PIN_COLOR = "#e8560a";
+// The pin sits on the base map, outside the theme tokens, so it is the Teal primary as a literal (the white ring keeps it visible on light, dark and satellite).
+const PIN_COLOR = "#0c7c82";
 
 /** Human-readable reasons a phone could not give us its position. */
 function geolocationMessage(error: GeolocationPositionError): string {
@@ -35,7 +38,7 @@ function geolocationMessage(error: GeolocationPositionError): string {
  * or a pasted Google Maps link / "lat, lng" text. Nothing is saved here; the
  * chosen point goes to `onConfirm`.
  */
-export function LocationPicker({ open, onOpenChange, title, initial, confirmLabel = "บันทึกพิกัด", onConfirm }: LocationPickerProps) {
+export function LocationPicker({ open, onOpenChange, title, initial, confirmLabel = "บันทึกพิกัด", onConfirm, children }: LocationPickerProps) {
   const { theme } = useTheme();
   const [basemap, setBasemap] = useState<Basemap>("street");
   const [point, setPoint] = useState<LatLng | null>(initial);
@@ -214,6 +217,8 @@ export function LocationPicker({ open, onOpenChange, title, initial, confirmLabe
             <span className="text-[var(--color-body-muted)]">ยังไม่ได้ปักหมุด</span>
           )}
         </p>
+
+        {children}
 
         <DialogFooter className="gap-2 sm:gap-2">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
