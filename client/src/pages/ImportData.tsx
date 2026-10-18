@@ -8,7 +8,7 @@ import { ListSkeleton } from "@/components/LoadingStates";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
-import { PRIVILEGED_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
+import { ADMIN_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { IMPORT_BLOB_PREFIX, IMPORT_UPLOAD_FILENAME_HEADER, IMPORT_UPLOAD_MAX_BYTES } from "@shared/importUpload";
 
@@ -74,8 +74,8 @@ const messageOf = (err: unknown, fallback: string) => (err instanceof ApiError ?
 export default function ImportData() {
   usePageTitle("นำเข้าข้อมูลจาก Excel");
   const { user } = useAuth();
-  const canRead = hasRole(user?.role, PRIVILEGED_ROLES);
-  // Writing import data is super_admin only (server: requireImportWriter); reading stays PRIVILEGED_ROLES.
+  const canRead = hasRole(user?.role, ADMIN_ROLES);
+  // Writing import data is super_admin only (server: requireImportWriter); reading stays ADMIN_ROLES.
   const canImport = hasRole(user?.role, SUPER_ADMIN_ROLES);
 
   const [batches, setBatches] = useState<BatchRow[]>([]);

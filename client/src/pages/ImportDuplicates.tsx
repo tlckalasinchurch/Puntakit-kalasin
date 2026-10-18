@@ -16,7 +16,7 @@ import {
 import { ListSkeleton } from "@/components/LoadingStates";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
-import { PRIVILEGED_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
+import { ADMIN_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import {
   IMPORT_DUPLICATE_DECISIONS,
@@ -414,7 +414,7 @@ function CandidateCard({ candidate, canDecide, onSaved }: { candidate: Candidate
 export default function ImportDuplicates() {
   usePageTitle("ตรวจสอบชื่อเล่นซ้ำ");
   const { user } = useAuth();
-  const canRead = hasRole(user?.role, PRIVILEGED_ROLES);
+  const canRead = hasRole(user?.role, ADMIN_ROLES);
   const canDecide = hasRole(user?.role, SUPER_ADMIN_ROLES);
 
   const [batches, setBatches] = useState<BatchOption[]>([]);

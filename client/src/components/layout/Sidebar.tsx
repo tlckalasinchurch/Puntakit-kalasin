@@ -122,7 +122,7 @@ export const navGroups: NavGroup[] = [
         label: "นำเข้าจาก Excel",
         path: "/import",
         icon: FileSpreadsheet,
-        roles: PRIVILEGED_ROLES,
+        roles: ADMIN_ROLES,
       },
     ],
   },

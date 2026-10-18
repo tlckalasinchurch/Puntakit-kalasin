@@ -3,7 +3,7 @@ import { Route, Switch, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ADMIN_SHELL_ROLES, CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, PRIVILEGED_ROLES, SUPER_ADMIN_ROLES } from "@shared/roles";
+import { ADMIN_ROLES, ADMIN_SHELL_ROLES, CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, PRIVILEGED_ROLES, SUPER_ADMIN_ROLES } from "@shared/roles";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -149,7 +149,7 @@ function Router() {
         </ProtectedRoute>
       </Route>
       <Route path="/import">
-        <ProtectedRoute allow={PRIVILEGED_ROLES}>
+        <ProtectedRoute allow={ADMIN_ROLES}>
           <ImportData />
         </ProtectedRoute>
       </Route>
@@ -187,15 +187,15 @@ function Router() {
         </ProtectedRoute>
       </Route>
       <Route path="/import/duplicates">
-        <ProtectedRoute allow={PRIVILEGED_ROLES}>
+        <ProtectedRoute allow={ADMIN_ROLES}>
           <ImportDuplicates />
         </ProtectedRoute>
       </Route>
-      {/* Reading merge plans is PRIVILEGED_ROLES (`requireReader` in
+      {/* Reading merge plans is ADMIN_ROLES (`requireReader` in
           server/routes/importMergePlans.ts); propose/review/withdraw are super_admin only
           (`requireImportWriter`), so everyone else sees the page read-only. */}
       <Route path="/import/merge-approvals">
-        <ProtectedRoute allow={PRIVILEGED_ROLES}>
+        <ProtectedRoute allow={ADMIN_ROLES}>
           <ImportMergeApprovals />
         </ProtectedRoute>
       </Route>

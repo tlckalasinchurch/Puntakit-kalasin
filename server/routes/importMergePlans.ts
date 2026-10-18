@@ -19,7 +19,7 @@ import {
   importMergeReviewBodySchema,
   type ImportMergeField,
 } from "../../shared/importMerge.js";
-import { PRIVILEGED_ROLES } from "../../shared/roles.js";
+import { ADMIN_ROLES } from "../../shared/roles.js";
 import { requireRole } from "../middleware/auth.js";
 import { requireImportWriter } from "../middleware/importAccess.js";
 import { logAudit } from "../lib/audit.js";
@@ -39,7 +39,7 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from ".
  */
 export const mergePlansRouter = Router();
 
-const requireReader = requireRole(...PRIVILEGED_ROLES);
+const requireReader = requireRole(...ADMIN_ROLES);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function planIdParam(req: Request): string {

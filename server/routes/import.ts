@@ -25,7 +25,7 @@ import {
   importFromBlobBodySchema,
   IMPORT_UPLOAD_MAX_BYTES,
 } from "../../shared/import.js";
-import { PRIVILEGED_ROLES } from "../../shared/roles.js";
+import { ADMIN_ROLES } from "../../shared/roles.js";
 import { requireAdmin, requireAuth, requireRole } from "../middleware/auth.js";
 import { requireImportWriter } from "../middleware/importAccess.js";
 import { logAudit } from "../lib/audit.js";
@@ -65,8 +65,8 @@ export const importRouter = Router();
 importRouter.use(requireAuth);
 importRouter.use("/merge-plans", mergePlansRouter);
 
-/** Reads of import data: the privileged ministry roles, via shared/roles.ts. */
-const requireImportReader = requireRole(...PRIVILEGED_ROLES);
+/** Reads of import data: raw church-wide personal data, not yet scoped to a care group, so admin roles only. */
+const requireImportReader = requireRole(...ADMIN_ROLES);
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

@@ -7,7 +7,7 @@ import { EmptyState, ErrorState, Field, PageHeader, StatusChip, type StatusTone 
 import { ListSkeleton } from "@/components/LoadingStates";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
-import { PRIVILEGED_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
+import { ADMIN_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
 import {
   IMPORT_MERGE_FIELDS,
   IMPORT_MERGE_FIELD_LABELS,
@@ -205,7 +205,7 @@ function PlanCard({ plan, userId, canAct, onDone }: { plan: Plan; userId: string
 
 export default function ImportMergeApprovals() {
   const { user } = useAuth();
-  const canRead = hasRole(user?.role, PRIVILEGED_ROLES);
+  const canRead = hasRole(user?.role, ADMIN_ROLES);
   const canAct = hasRole(user?.role, SUPER_ADMIN_ROLES);
 
   const [status, setStatus] = useState<StatusFilter>("proposed");
