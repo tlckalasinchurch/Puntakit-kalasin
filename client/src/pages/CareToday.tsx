@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Check, ChevronDown, ListChecks, MessageCircle, Phone, Users } from "lucide-react";
@@ -213,7 +214,7 @@ export default function CareToday() {
                 พันธกิจ
               </label>
               <div className="relative mt-1.5">
-                <select
+                <ResponsiveSelect
                   id="care-group"
                   value={groupId}
                   onChange={(e) => setGroupId(e.target.value)}
@@ -228,7 +229,7 @@ export default function CareToday() {
                       ))}
                     </optgroup>
                   ))}
-                </select>
+                </ResponsiveSelect>
                 <ChevronDown
                   size={20}
                   aria-hidden="true"

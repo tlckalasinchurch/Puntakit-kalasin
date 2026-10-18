@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { useEffect, useMemo, useState } from "react";
 import { Copy, Lock } from "lucide-react";
 import { toast } from "sonner";
@@ -291,19 +292,19 @@ function MergePlanPanel({ candidate, canDecide, onSaved }: { candidate: Candidat
       <div className="mt-3 flex flex-col gap-3">
         <Field label="แถวหลักที่จะเก็บไว้">
           {(props) => (
-            <select id={props.id} aria-describedby={props["aria-describedby"]} className={CONTROL_CLASS} value={primary} onChange={(e) => setPrimary(e.target.value)}>
+            <ResponsiveSelect id={props.id} aria-describedby={props["aria-describedby"]} className={CONTROL_CLASS} value={primary} onChange={(e) => setPrimary(e.target.value)}>
               {candidate.members.map((m, index) => (
                 <option key={m.sourceRowId} value={m.sourceRowId}>
                   แถวที่ {index + 1} ({m.sheetName} / {m.excelRow})
                 </option>
               ))}
-            </select>
+            </ResponsiveSelect>
           )}
         </Field>
         {IMPORT_MERGE_FIELDS.map((field) => (
           <Field key={field} label={`${IMPORT_MERGE_FIELD_LABELS[field]} ใช้ค่าจาก`}>
             {(props) => (
-              <select
+              <ResponsiveSelect
                 id={props.id}
                 aria-describedby={props["aria-describedby"]}
                 className={CONTROL_CLASS}
@@ -315,7 +316,7 @@ function MergePlanPanel({ candidate, canDecide, onSaved }: { candidate: Candidat
                     {labelOf(m.sourceRowId)}: {valueOf(m, field)}
                   </option>
                 ))}
-              </select>
+              </ResponsiveSelect>
             )}
           </Field>
         ))}
@@ -498,7 +499,7 @@ export default function ImportDuplicates() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="สถานะการตัดสินใจ" hint="กรองตามผลที่บันทึกไว้">
           {(props) => (
-            <select
+            <ResponsiveSelect
               id={props.id}
               aria-describedby={props["aria-describedby"]}
               className={CONTROL_CLASS}
@@ -508,12 +509,12 @@ export default function ImportDuplicates() {
               <option value="all">ทั้งหมด</option>
               <option value="undecided">ยังไม่ตัดสิน / ต้องตรวจใหม่</option>
               <option value="decided">ตัดสินแล้ว</option>
-            </select>
+            </ResponsiveSelect>
           )}
         </Field>
         <Field label="ไฟล์ที่นำเข้า" hint="เว้นว่างไว้เพื่อดูทุกไฟล์รวมกัน">
           {(props) => (
-            <select
+            <ResponsiveSelect
               id={props.id}
               aria-describedby={props["aria-describedby"]}
               className={CONTROL_CLASS}
@@ -526,7 +527,7 @@ export default function ImportDuplicates() {
                   {batch.sourceFileName}
                 </option>
               ))}
-            </select>
+            </ResponsiveSelect>
           )}
         </Field>
         </div>

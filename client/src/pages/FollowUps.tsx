@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import { CheckCircle2, Clock, ListTodo, Phone, RotateCcw, SearchX, X } from "lucide-react";
@@ -203,7 +204,7 @@ export default function FollowUps() {
         <div className="w-full sm:w-56">
           <Field label="สถานะ">
             {props => (
-              <select
+              <ResponsiveSelect
                 {...props}
                 className={CONTROL_CLASS}
                 value={statusFilter}
@@ -215,7 +216,7 @@ export default function FollowUps() {
                     {label}
                   </option>
                 ))}
-              </select>
+              </ResponsiveSelect>
             )}
           </Field>
         </div>

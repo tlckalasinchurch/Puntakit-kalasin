@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { KeyRound, Search, ShieldCheck, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -179,7 +180,7 @@ export default function AdminUsers() {
                   <label className="sr-only" htmlFor={`role-${u.id}`}>
                     บทบาทของ {u.name}
                   </label>
-                  <select
+                  <ResponsiveSelect
                     id={`role-${u.id}`}
                     value={u.role}
                     disabled={isMe}
@@ -191,7 +192,7 @@ export default function AdminUsers() {
                         {ROLE_LABELS[r]}
                       </option>
                     ))}
-                  </select>
+                  </ResponsiveSelect>
                   <button
                     type="button"
                     onClick={() => setEditing(u)}

@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { useMemo, useState } from "react";
 import { CalendarDays, ChevronDown, Clock, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -521,7 +522,7 @@ export default function Events() {
           </Field>
           <Field label="ประเภท" required>
             {props => (
-              <select
+              <ResponsiveSelect
                 {...props}
                 className={CONTROL_CLASS}
                 value={form.category}
@@ -531,12 +532,12 @@ export default function Events() {
                 <option value="activity">กิจกรรม</option>
                 <option value="meeting">ประชุม</option>
                 <option value="other">อื่นๆ</option>
-              </select>
+              </ResponsiveSelect>
             )}
           </Field>
           <Field label="สถานะ" required>
             {props => (
-              <select
+              <ResponsiveSelect
                 {...props}
                 className={CONTROL_CLASS}
                 value={form.status}
@@ -545,7 +546,7 @@ export default function Events() {
                 <option value="scheduled">กำหนดการ</option>
                 <option value="cancelled">ยกเลิก</option>
                 <option value="completed">เสร็จสิ้น</option>
-              </select>
+              </ResponsiveSelect>
             )}
           </Field>
           <div className="sm:col-span-2">

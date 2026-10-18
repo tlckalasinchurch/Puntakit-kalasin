@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -128,14 +129,14 @@ export default function Memberships() {
             {careGroups.length > 1 && (
               <label className="block">
                 <span className="sr-only">กรองตามพันธกิจ</span>
-                <select className={INPUT} value={careGroup} onChange={(e) => setCareGroup(e.target.value)}>
+                <ResponsiveSelect className={INPUT} value={careGroup} onChange={(e) => setCareGroup(e.target.value)}>
                   <option value="">ทุกพันธกิจ</option>
                   {careGroups.map(([id, name]) => (
                     <option key={id} value={id}>
                       {name}
                     </option>
                   ))}
-                </select>
+                </ResponsiveSelect>
               </label>
             )}
           </div>

@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import {
@@ -669,7 +670,7 @@ export default function Groups() {
           >
             ประเภทกลุ่ม
           </label>
-          <select
+          <ResponsiveSelect
             id="groups-category"
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
@@ -681,7 +682,7 @@ export default function Groups() {
                 {v}
               </option>
             ))}
-          </select>
+          </ResponsiveSelect>
         </div>
 
         <div className="w-full sm:w-auto">
@@ -691,7 +692,7 @@ export default function Groups() {
           >
             ระดับในผังองค์กร
           </label>
-          <select
+          <ResponsiveSelect
             id="groups-level"
             value={levelFilter}
             onChange={(e) => setLevelFilter(e.target.value)}
@@ -701,7 +702,7 @@ export default function Groups() {
             <option value="body">บอดี้</option>
             <option value="care">พันธกิจ</option>
             <option value="none">กลุ่มทั่วไป</option>
-          </select>
+          </ResponsiveSelect>
         </div>
 
         <div className="w-full sm:w-auto">
@@ -711,7 +712,7 @@ export default function Groups() {
           >
             สถานะกลุ่ม
           </label>
-          <select
+          <ResponsiveSelect
             id="groups-status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -721,7 +722,7 @@ export default function Groups() {
             <option value="active">เปิดดำเนินการ</option>
             <option value="paused">พักชั่วคราว</option>
             <option value="closed">ปิดกลุ่ม</option>
-          </select>
+          </ResponsiveSelect>
         </div>
 
         <div className="w-full sm:w-auto">
@@ -731,7 +732,7 @@ export default function Groups() {
           >
             การเปิดเผยข้อมูล
           </label>
-          <select
+          <ResponsiveSelect
             id="groups-privacy"
             value={privacyFilter}
             onChange={(e) => setPrivacyFilter(e.target.value)}
@@ -741,7 +742,7 @@ export default function Groups() {
             <option value="public">สาธารณะ</option>
             <option value="private">กลุ่มปิด (สมาชิก)</option>
             <option value="confidential">กลุ่มลับเฉพาะ</option>
-          </select>
+          </ResponsiveSelect>
         </div>
         </FilterDisclosure>
       </div>
@@ -846,7 +847,7 @@ export default function Groups() {
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="ระดับในผังองค์กร">
                 {fieldProps => (
-                  <select
+                  <ResponsiveSelect
                     {...fieldProps}
                     className={SELECT_CLASS}
                     value={form.orgLevel}
@@ -861,13 +862,13 @@ export default function Groups() {
                     <option value="">กลุ่มทั่วไป (ไม่อยู่ในผัง)</option>
                     <option value="body">บอดี้</option>
                     <option value="care">พันธกิจ</option>
-                  </select>
+                  </ResponsiveSelect>
                 )}
               </Field>
               {form.orgLevel === "care" && (
                 <Field label="อยู่ใต้บอดี้">
                   {fieldProps => (
-                    <select
+                    <ResponsiveSelect
                       {...fieldProps}
                       className={SELECT_CLASS}
                       value={form.parentGroupId}
@@ -879,7 +880,7 @@ export default function Groups() {
                           {b.name}
                         </option>
                       ))}
-                    </select>
+                    </ResponsiveSelect>
                   )}
                 </Field>
               )}
@@ -899,7 +900,7 @@ export default function Groups() {
               )}
               <Field label="ประเภทกลุ่ม">
                 {fieldProps => (
-                  <select
+                  <ResponsiveSelect
                     {...fieldProps}
                     className={SELECT_CLASS}
                     value={form.category}
@@ -912,12 +913,12 @@ export default function Groups() {
                         {v}
                       </option>
                     ))}
-                  </select>
+                  </ResponsiveSelect>
                 )}
               </Field>
               <Field label="สถานะกลุ่ม">
                 {fieldProps => (
-                  <select
+                  <ResponsiveSelect
                     {...fieldProps}
                     className={SELECT_CLASS}
                     value={form.status}
@@ -928,7 +929,7 @@ export default function Groups() {
                     <option value="active">เปิดดำเนินการ</option>
                     <option value="paused">พักชั่วคราว</option>
                     <option value="closed">ปิดกลุ่ม</option>
-                  </select>
+                  </ResponsiveSelect>
                 )}
               </Field>
             </div>
@@ -937,7 +938,7 @@ export default function Groups() {
               hint="กำหนดว่าสมาชิกทั่วไปเห็นสถานที่ของกลุ่มได้แค่ไหน"
             >
               {fieldProps => (
-                <select
+                <ResponsiveSelect
                   {...fieldProps}
                   className={SELECT_CLASS}
                   value={form.privacy}
@@ -950,7 +951,7 @@ export default function Groups() {
                   <option value="confidential">
                     กลุ่มลับ — ซ่อนสถานที่จากสมาชิก
                   </option>
-                </select>
+                </ResponsiveSelect>
               )}
             </Field>
             <Field label="รายละเอียดและจุดสังเกต" hint="แสดงบนการ์ดแผนที่ เช่น วัน-เวลาประชุม เส้นทางเข้าบ้าน จุดสังเกต">
@@ -1136,7 +1137,7 @@ export default function Groups() {
               >
                 <Field label="เพิ่มสมาชิกเข้ากลุ่ม">
                   {fieldProps => (
-                    <select
+                    <ResponsiveSelect
                       {...fieldProps}
                       className={SELECT_CLASS}
                       value={selectedMemberId}
@@ -1153,7 +1154,7 @@ export default function Groups() {
                           {m.phone ? ` — ${m.phone}` : ""}
                         </option>
                       ))}
-                    </select>
+                    </ResponsiveSelect>
                   )}
                 </Field>
 
@@ -1190,7 +1191,7 @@ export default function Groups() {
 
                 <Field label="บทบาทในกลุ่ม">
                   {fieldProps => (
-                    <select
+                    <ResponsiveSelect
                       {...fieldProps}
                       className={SELECT_CLASS}
                       value={selectedRole}
@@ -1202,7 +1203,7 @@ export default function Groups() {
                       <option value="leader">หัวหน้ากลุ่ม</option>
                       <option value="assistant_leader">ผู้ช่วยหัวหน้า</option>
                       <option value="host">เจ้าบ้าน</option>
-                    </select>
+                    </ResponsiveSelect>
                   )}
                 </Field>
 

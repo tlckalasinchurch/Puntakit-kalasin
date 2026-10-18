@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
@@ -608,7 +609,7 @@ export default function Attendance() {
           <div className="min-w-[220px] flex-1 sm:max-w-[280px]">
             <Field label="ประเภทการนมัสการ/กิจกรรม">
               {props => (
-                <select
+                <ResponsiveSelect
                   id={props.id}
                   aria-describedby={props["aria-describedby"]}
                   aria-invalid={props["aria-invalid"]}
@@ -623,7 +624,7 @@ export default function Attendance() {
                   <option value="prayer_meeting">อธิษฐานวันพุธ</option>
                   <option value="youth_service">นมัสการวัยรุ่น</option>
                   <option value="special_event">กิจกรรมพิเศษ</option>
-                </select>
+                </ResponsiveSelect>
               )}
             </Field>
           </div>
@@ -635,7 +636,7 @@ export default function Attendance() {
                 hint={isGroupLeader ? "ต้องเลือกพันธกิจที่คุณดูแลก่อนบันทึกการเช็คชื่อ" : undefined}
               >
                 {props => (
-                  <select
+                  <ResponsiveSelect
                     id={props.id}
                     aria-describedby={props["aria-describedby"]}
                     aria-invalid={props["aria-invalid"]}
@@ -651,7 +652,7 @@ export default function Attendance() {
                         {g.name}
                       </option>
                     ))}
-                  </select>
+                  </ResponsiveSelect>
                 )}
               </Field>
             </div>
@@ -935,7 +936,7 @@ export default function Attendance() {
             <div className="min-w-[200px] shrink-0">
               <Field label="เกณฑ์การขาด">
                 {props => (
-                  <select
+                  <ResponsiveSelect
                     id={props.id}
                     aria-describedby={props["aria-describedby"]}
                     aria-invalid={props["aria-invalid"]}
@@ -946,7 +947,7 @@ export default function Attendance() {
                     <option value={2}>ขาด 2 สัปดาห์ขึ้นไป</option>
                     <option value={3}>ขาด 3 สัปดาห์ขึ้นไป (แนะนำ)</option>
                     <option value={4}>ขาด 4 สัปดาห์ขึ้นไป (เร่งด่วน)</option>
-                  </select>
+                  </ResponsiveSelect>
                 )}
               </Field>
             </div>

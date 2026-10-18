@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
@@ -497,26 +498,26 @@ export default function Feed() {
         <FilterDisclosure activeCount={[typeFilter, statusFilter].filter(Boolean).length}>
         <Field label="ประเภทกิจกรรม">
           {(props) => (
-            <select {...props} className={CONTROL_CLASS} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+            <ResponsiveSelect {...props} className={CONTROL_CLASS} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
               <option value="">ทุกประเภทกิจกรรม</option>
               {typeOptions.map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
               ))}
-            </select>
+            </ResponsiveSelect>
           )}
         </Field>
         <Field label="สถานะ">
           {(props) => (
-            <select {...props} className={CONTROL_CLASS} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <ResponsiveSelect {...props} className={CONTROL_CLASS} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">ทุกสถานะ</option>
               {statusOptions.map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
               ))}
-            </select>
+            </ResponsiveSelect>
           )}
         </Field>
         </FilterDisclosure>
@@ -756,7 +757,7 @@ export default function Feed() {
           )}
           <Field label="ประเภทกิจกรรม" required>
             {(props) => (
-              <select
+              <ResponsiveSelect
                 {...props}
                 className={CONTROL_CLASS}
                 value={form.type}
@@ -767,7 +768,7 @@ export default function Feed() {
                     {label}
                   </option>
                 ))}
-              </select>
+              </ResponsiveSelect>
             )}
           </Field>
 
@@ -827,7 +828,7 @@ export default function Feed() {
           )}
           <Field label="กลุ่ม (ถ้ามี)">
             {(props) => (
-              <select
+              <ResponsiveSelect
                 {...props}
                 className={CONTROL_CLASS}
                 value={form.groupId}
@@ -839,7 +840,7 @@ export default function Feed() {
                     {g.name}
                   </option>
                 ))}
-              </select>
+              </ResponsiveSelect>
             )}
           </Field>
 

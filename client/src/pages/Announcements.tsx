@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { useState } from "react";
 import { Megaphone, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -250,7 +251,7 @@ export default function Announcements() {
           </Field>
           <Field label="สถานะ" required>
             {props => (
-              <select
+              <ResponsiveSelect
                 {...props}
                 className={CONTROL_CLASS}
                 value={form.status}
@@ -258,7 +259,7 @@ export default function Announcements() {
               >
                 <option value="draft">ฉบับร่าง</option>
                 <option value="published">เผยแพร่แล้ว</option>
-              </select>
+              </ResponsiveSelect>
             )}
           </Field>
         </form>

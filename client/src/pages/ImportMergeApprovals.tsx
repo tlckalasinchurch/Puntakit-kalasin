@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { useCallback, useEffect, useState } from "react";
 import { Lock, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -252,14 +253,14 @@ export default function ImportMergeApprovals() {
       <section className="card-surface mb-4 p-4 sm:p-5">
         <Field label="สถานะแผน">
           {(props) => (
-            <select id={props.id} aria-describedby={props["aria-describedby"]} className={CONTROL_CLASS} value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)}>
+            <ResponsiveSelect id={props.id} aria-describedby={props["aria-describedby"]} className={CONTROL_CLASS} value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)}>
               <option value="all">ทั้งหมด</option>
               {IMPORT_MERGE_PLAN_STATUSES.map((value) => (
                 <option key={value} value={value}>
                   {IMPORT_MERGE_PLAN_STATUS_LABELS[value]}
                 </option>
               ))}
-            </select>
+            </ResponsiveSelect>
           )}
         </Field>
         {IMPORT_MERGE_REQUIRES_SECOND_REVIEWER && (

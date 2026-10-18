@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import {
@@ -634,7 +635,7 @@ export default function Members() {
           >
             พื้นที่
           </label>
-          <select
+          <ResponsiveSelect
             id="members-area"
             value={area}
             onChange={(e) => setArea(e.target.value)}
@@ -646,7 +647,7 @@ export default function Members() {
                 {option}
               </option>
             ))}
-          </select>
+          </ResponsiveSelect>
         </div>
 
         {careOptions.length > 0 && (
@@ -674,7 +675,7 @@ export default function Members() {
           >
             การติดตาม
           </label>
-          <select
+          <ResponsiveSelect
             id="members-status"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
@@ -683,7 +684,7 @@ export default function Members() {
             <option value="ทั้งหมด">ทุกสถานะ</option>
             <option value="ติดตามแล้ว">ติดตามแล้ว</option>
             <option value="ต้องติดตาม">ต้องติดตาม</option>
-          </select>
+          </ResponsiveSelect>
         </div>
 
         <div className="w-full sm:w-auto">
@@ -693,7 +694,7 @@ export default function Members() {
           >
             ประเภทสมาชิก
           </label>
-          <select
+          <ResponsiveSelect
             id="members-membership"
             value={membershipStatus}
             onChange={(e) => setMembershipStatus(e.target.value)}
@@ -705,7 +706,7 @@ export default function Members() {
             <option value="candidate">ผู้เตรียมรับเชื่อ</option>
             <option value="transferred">ย้ายคริสตจักร</option>
             <option value="inactive">ขาดการติดต่อ</option>
-          </select>
+          </ResponsiveSelect>
         </div>
         </FilterDisclosure>
       </div>
@@ -1001,7 +1002,7 @@ export default function Members() {
               />
               <Field label="เพศ">
                 {fieldProps => (
-                  <select
+                  <ResponsiveSelect
                     {...fieldProps}
                     className={SELECT_CLASS}
                     value={form.gender}
@@ -1013,7 +1014,7 @@ export default function Members() {
                     <option value="male">ชาย</option>
                     <option value="female">หญิง</option>
                     <option value="other">อื่นๆ</option>
-                  </select>
+                  </ResponsiveSelect>
                 )}
               </Field>
             </div>
@@ -1088,7 +1089,7 @@ export default function Members() {
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="ประเภทสมาชิก">
                 {fieldProps => (
-                  <select
+                  <ResponsiveSelect
                     {...fieldProps}
                     className={SELECT_CLASS}
                     value={form.membershipStatus}
@@ -1104,12 +1105,12 @@ export default function Members() {
                     <option value="candidate">ผู้เตรียมรับเชื่อ</option>
                     <option value="transferred">ย้ายคริสตจักร</option>
                     <option value="inactive">ขาดการติดต่อ</option>
-                  </select>
+                  </ResponsiveSelect>
                 )}
               </Field>
               <Field label="สถานะการติดตาม">
                 {fieldProps => (
-                  <select
+                  <ResponsiveSelect
                     {...fieldProps}
                     className={SELECT_CLASS}
                     value={form.status}
@@ -1122,7 +1123,7 @@ export default function Members() {
                   >
                     <option value="ต้องติดตาม">ต้องติดตาม</option>
                     <option value="ติดตามแล้ว">ติดตามแล้ว</option>
-                  </select>
+                  </ResponsiveSelect>
                 )}
               </Field>
               <Field label="พื้นที่ / ย่าน" hint="ใช้จัดกลุ่มการเยี่ยมเยียน">

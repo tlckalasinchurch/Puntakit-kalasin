@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { useId, useState } from "react";
 import { HeartHandshake, Pencil, Plus, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
@@ -234,7 +235,7 @@ export default function Ministries() {
             </Field>
             <Field label="สถานะ">
               {(props) => (
-                <select
+                <ResponsiveSelect
                   id={props.id}
                   aria-describedby={props["aria-describedby"]}
                   aria-invalid={props["aria-invalid"]}
@@ -244,7 +245,7 @@ export default function Ministries() {
                 >
                   <option value="active">ดำเนินการอยู่</option>
                   <option value="inactive">หยุดชั่วคราว</option>
-                </select>
+                </ResponsiveSelect>
               )}
             </Field>
           </div>

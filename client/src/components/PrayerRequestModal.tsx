@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { useEffect, useId, useState } from "react";
 import { HeartHandshake, Lock, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -167,7 +168,7 @@ export function PrayerRequestModal({
 
         <Field label="หมวดหมู่">
           {props => (
-            <select
+            <ResponsiveSelect
               id={props.id}
               aria-describedby={props["aria-describedby"]}
               aria-invalid={props["aria-invalid"]}
@@ -180,7 +181,7 @@ export function PrayerRequestModal({
                   {v}
                 </option>
               ))}
-            </select>
+            </ResponsiveSelect>
           )}
         </Field>
 

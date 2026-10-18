@@ -32,6 +32,7 @@ interface ResponsiveSelectorProps {
   disabled?: boolean;
   id?: string;
   describedBy?: string;
+  ariaInvalid?: boolean | "false" | "true" | "grammar" | "spelling";
   className?: string;
 }
 
@@ -51,6 +52,7 @@ export function ResponsiveSelector({
   disabled = false,
   id,
   describedBy,
+  ariaInvalid,
   className,
 }: ResponsiveSelectorProps) {
   const isMobile = useIsMobile();
@@ -62,6 +64,7 @@ export function ResponsiveSelector({
     [options, groups]
   );
   const selected = allOptions.find(option => option.value === value);
+  const isSearchable = allOptions.length > 8;
   const filteredOptions = filterSelectorOptions(options, query);
   const filteredGroups = groups
     .map(group => ({ ...group, options: filterSelectorOptions(group.options, query) }))
@@ -125,6 +128,7 @@ export function ResponsiveSelector({
       aria-expanded={open}
       aria-controls={listId}
       aria-describedby={describedBy}
+      aria-invalid={ariaInvalid}
       className={cn(triggerClass, className)}
     >
       <span className={cn("truncate", !selected && "text-[var(--color-body-muted)]")}>{selected?.label ?? placeholder}</span>
@@ -135,13 +139,13 @@ export function ResponsiveSelector({
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={setOpen}>
-        <button type="button" id={id} disabled={disabled} aria-haspopup="dialog" aria-expanded={open} aria-describedby={describedBy} className={cn(triggerClass, className)} onClick={() => setOpen(true)}>
+        <button type="button" id={id} disabled={disabled} aria-haspopup="dialog" aria-expanded={open} aria-describedby={describedBy} aria-invalid={ariaInvalid} className={cn(triggerClass, className)} onClick={() => setOpen(true)}>
           <span className={cn("truncate", !selected && "text-[var(--color-body-muted)]")}>{selected?.label ?? placeholder}</span>
           <ChevronDown size={18} aria-hidden="true" className="shrink-0 text-[var(--color-body-muted)]" />
         </button>
         <SheetContent side="bottom" className="z-[60] h-[min(88dvh,44rem)] max-h-[100dvh] gap-3 overflow-hidden rounded-t-[var(--radius-lg)] border-t border-[var(--color-hairline)] px-4 pb-[calc(1rem+var(--safe-b))]">
           <SheetHeader className="px-0 pb-0"><SheetTitle>{label}</SheetTitle><SheetDescription>เลือกจากข้อมูลที่มีสิทธิ์เข้าถึง</SheetDescription></SheetHeader>
-          {search()}
+          {isSearchable && search()}
           {optionList}
         </SheetContent>
       </Sheet>
@@ -152,7 +156,7 @@ export function ResponsiveSelector({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent align="start" sideOffset={6} className="w-[var(--radix-popover-trigger-width)] min-w-56 overflow-hidden p-1">
-        {allOptions.length > 8 && search("p-1")}
+        {isSearchable && search("p-1")}
         {optionList}
       </PopoverContent>
     </Popover>

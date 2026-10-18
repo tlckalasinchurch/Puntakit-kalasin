@@ -1,3 +1,4 @@
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { useEffect, useRef, useState } from "react";
 import {
   CheckCircle2,
@@ -286,7 +287,7 @@ export default function Inbox() {
       <div className="mb-5 w-full sm:w-56">
         <Field label="สถานะ">
           {props => (
-            <select
+            <ResponsiveSelect
               {...props}
               className={CONTROL_CLASS}
               value={statusFilter}
@@ -298,7 +299,7 @@ export default function Inbox() {
                   {label}
                 </option>
               ))}
-            </select>
+            </ResponsiveSelect>
           )}
         </Field>
       </div>
@@ -589,7 +590,7 @@ export default function Inbox() {
           {publishError && <FormError>{publishError}</FormError>}
           <Field label="ประเภทกิจกรรม" required>
             {props => (
-              <select
+              <ResponsiveSelect
                 {...props}
                 className={CONTROL_CLASS}
                 value={publishForm.type}
@@ -605,7 +606,7 @@ export default function Inbox() {
                     {label}
                   </option>
                 ))}
-              </select>
+              </ResponsiveSelect>
             )}
           </Field>
           <Field label="หัวข้อ" required>
