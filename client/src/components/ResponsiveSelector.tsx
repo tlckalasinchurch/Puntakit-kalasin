@@ -56,6 +56,7 @@ export function ResponsiveSelector({
   className,
 }: ResponsiveSelectorProps) {
   const isMobile = useIsMobile();
+  const [isTouchLayout, setIsTouchLayout] = useState(false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const listId = useId();
@@ -69,6 +70,16 @@ export function ResponsiveSelector({
   const filteredGroups = groups
     .map(group => ({ ...group, options: filterSelectorOptions(group.options, query) }))
     .filter(group => group.options.length > 0);
+
+  useEffect(() => {
+    const touchMedia = window.matchMedia("(pointer: coarse)");
+    const updateTouchLayout = () => {
+      setIsTouchLayout(touchMedia.matches || navigator.maxTouchPoints > 0);
+    };
+    updateTouchLayout();
+    touchMedia.addEventListener("change", updateTouchLayout);
+    return () => touchMedia.removeEventListener("change", updateTouchLayout);
+  }, []);
 
   useEffect(() => {
     if (!open) setQuery("");
@@ -108,7 +119,6 @@ export function ResponsiveSelector({
     <div className={cn("relative", className)}>
       <Search size={17} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-body-muted)]" />
       <input
-        autoFocus={isMobile}
         type="search"
         value={query}
         onChange={event => setQuery(event.target.value)}
@@ -136,7 +146,7 @@ export function ResponsiveSelector({
     </button>
   );
 
-  if (isMobile) {
+  if (isMobile || isTouchLayout) {
     return (
       <Sheet open={open} onOpenChange={setOpen}>
         <button type="button" id={id} disabled={disabled} aria-haspopup="dialog" aria-expanded={open} aria-describedby={describedBy} aria-invalid={ariaInvalid} className={cn(triggerClass, className)} onClick={() => setOpen(true)}>
