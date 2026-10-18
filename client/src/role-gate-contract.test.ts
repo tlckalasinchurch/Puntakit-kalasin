@@ -78,7 +78,7 @@ describe("role-gate contract (client ↔ server single source)", () => {
  *
  * The sets below are read off the server, not chosen here:
  *  - `adminUsersRouter.use(...)` rejects every role except `super_admin`.
- *  - `mergePlansRouter` reads under `requireReader = requireRole(...PRIVILEGED_ROLES)`.
+ *  - `mergePlansRouter` reads under `requireReader = requireRole(...ADMIN_ROLES)`.
  *  - `careRouter.use(...)` takes `CREATE_ROLES` (BLOCKER 3).
  *  - `/inbox` takes `CREATE_ROLES`, not `ADMIN_SHELL_ROLES`: `viewer` is in the
  *    shell set but cannot `POST /api/submissions` (create is
@@ -87,7 +87,9 @@ describe("role-gate contract (client ↔ server single source)", () => {
  */
 const ROUTE_GATES: ReadonlyArray<readonly [string, string]> = [
   ["/admin/users", "SUPER_ADMIN_ROLES"],
-  ["/import/merge-approvals", "PRIVILEGED_ROLES"],
+  ["/import/merge-approvals", "ADMIN_ROLES"],
+  ["/import", "ADMIN_ROLES"],
+  ["/import/duplicates", "ADMIN_ROLES"],
   // `orgDataRouter` takes `requireImportWriter` (super_admin) on every call.
   ["/import/org", "SUPER_ADMIN_ROLES"],
   ["/care", "CREATE_ROLES"],

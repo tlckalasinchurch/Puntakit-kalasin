@@ -237,9 +237,9 @@ describe("Mission import API — Phase 2 L1/L2 (real PGlite Postgres)", () => {
     });
   });
 
-  describe("reads (staff)", () => {
+  describe("reads (admin roles only)", () => {
     it("lists the batch with counts", async () => {
-      const res = await fetch(`${baseUrl}/api/import/batches`, { headers: { Cookie: staffCookie } });
+      const res = await fetch(`${baseUrl}/api/import/batches`, { headers: { Cookie: adminCookie } });
       expect(res.status).toBe(200);
       const body = (await res.json()) as { data: Array<{ id: string }>; meta: { total: number } };
       expect(body.data.map((b) => b.id)).toContain(batchId);
@@ -248,7 +248,7 @@ describe("Mission import API — Phase 2 L1/L2 (real PGlite Postgres)", () => {
 
     it("previews raw beside normalized, and marks blocked fields", async () => {
       const res = await fetch(`${baseUrl}/api/import/batches/${batchId}/preview`, {
-        headers: { Cookie: staffCookie },
+        headers: { Cookie: adminCookie },
       });
       expect(res.status).toBe(200);
       const body = (await res.json()) as {
@@ -264,7 +264,7 @@ describe("Mission import API — Phase 2 L1/L2 (real PGlite Postgres)", () => {
 
     it("returns a completeness report with skipped: 0 and the duplicate flagged", async () => {
       const res = await fetch(`${baseUrl}/api/import/batches/${batchId}/report`, {
-        headers: { Cookie: staffCookie },
+        headers: { Cookie: adminCookie },
       });
       expect(res.status).toBe(200);
       const body = (await res.json()) as {
@@ -284,7 +284,7 @@ describe("Mission import API — Phase 2 L1/L2 (real PGlite Postgres)", () => {
     });
 
     it("exposes the duplicate review queue globally (with the never-merge note)", async () => {
-      const res = await fetch(`${baseUrl}/api/import/duplicates`, { headers: { Cookie: staffCookie } });
+      const res = await fetch(`${baseUrl}/api/import/duplicates`, { headers: { Cookie: adminCookie } });
       expect(res.status).toBe(200);
       const body = (await res.json()) as { data: { duplicates: Array<{ nickname: string }>; note: string } };
       expect(body.data.duplicates.map((d) => d.nickname)).toEqual(["หนู"]);
@@ -292,7 +292,7 @@ describe("Mission import API — Phase 2 L1/L2 (real PGlite Postgres)", () => {
     });
 
     it("lists every occurrence of a flagged nickname with its verbatim L1 values", async () => {
-      const res = await fetch(`${baseUrl}/api/import/duplicates`, { headers: { Cookie: staffCookie } });
+      const res = await fetch(`${baseUrl}/api/import/duplicates`, { headers: { Cookie: adminCookie } });
       const body = (await res.json()) as {
         data: {
           duplicates: Array<{

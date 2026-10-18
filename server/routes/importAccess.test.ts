@@ -120,12 +120,16 @@ describe("import write access is super_admin only (real PGlite Postgres)", () =>
     expect(await snapshot()).toEqual(before);
   });
 
-  it("keeps the read endpoints on their existing PRIVILEGED_ROLES rule", async () => {
-    for (const role of ["admin", "staff"] as const) {
-      expect((await fetch(`${baseUrl}/api/import/batches`, { headers: { Cookie: cookies[role] } })).status).toBe(200);
+  it("limits the read endpoints to ADMIN_ROLES (raw church-wide import data)", async () => {
+    const reads = ["batches", "duplicates", "merge-plans"];
+    for (const path of reads) {
+      expect((await fetch(`${baseUrl}/api/import/${path}`, { headers: { Cookie: cookies.admin } })).status).toBe(200);
+      expect((await fetch(`${baseUrl}/api/import/${path}`, { headers: { Cookie: cookies.super_admin } })).status).toBe(200);
+      for (const role of ["ministry_leader", "staff", "group_leader", "viewer", "member"] as const) {
+        expect((await fetch(`${baseUrl}/api/import/${path}`, { headers: { Cookie: cookies[role] } })).status).toBe(403);
+      }
+      expect((await fetch(`${baseUrl}/api/import/${path}`)).status).toBe(401);
     }
-    expect((await fetch(`${baseUrl}/api/import/batches`, { headers: { Cookie: cookies.member } })).status).toBe(403);
-    expect((await fetch(`${baseUrl}/api/import/batches`)).status).toBe(401);
   });
 
   it("checks the role before the upload body is read (guard sits ahead of express.raw)", () => {

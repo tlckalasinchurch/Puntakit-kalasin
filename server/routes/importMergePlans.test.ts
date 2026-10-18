@@ -131,10 +131,10 @@ describe("merge plans (four-eyes approval, no merge executed)", () => {
     await client.closeDatabase();
   });
 
-  it("gates by role: 401 without a session; staff may read but not propose or review", async () => {
+  it("gates by role: 401 without a session; staff may neither read, propose nor review", async () => {
     const group = await groupOf("หนู");
     expect((await api("merge-plans", null)).status).toBe(401);
-    expect((await api("merge-plans", staff)).status).toBe(200);
+    expect((await api("merge-plans", staff)).status).toBe(403);
     expect((await api("merge-plans", staff, { body: planBody(group) })).status).toBe(403);
     expect(
       (await api("merge-plans/00000000-0000-4000-8000-000000000000/review", staff, { body: { outcome: "approved" } })).status
