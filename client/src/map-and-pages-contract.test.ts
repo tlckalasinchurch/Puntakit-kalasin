@@ -81,7 +81,7 @@ describe("/map page", () => {
     expect(page).toContain("นำทางด้วย Google Maps");
     expect(page).toContain("googleMapsDirectionsUrl(point)");
     expect(page).toContain("GROUP_MANAGE_ANY_ROLES");
-    expect(page).toMatch(/api\.put\(`\/api\/groups\/\$\{group\.id\}`, \{ latitude, longitude \}\)/);
+    expect(page).toMatch(/api\.put\(`\/api\/groups\/\$\{group\.id\}`, \{ latitude, longitude, \.\.\.patch \}\)/); // coordinates + the place text in one PUT
   });
 });
 

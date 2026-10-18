@@ -8,6 +8,7 @@ import { MapView, type Basemap } from "@/components/Map";
 import { BasemapToggle } from "@/components/map/BasemapToggle";
 import { GroupPhotoField } from "@/components/groups/GroupPhotoField";
 import { LocationPicker } from "@/components/map/LocationPicker";
+import { PlaceFields } from "@/components/map/PlaceFields";
 import { createPinMarker } from "@/components/map/pins";
 import { clusterPoints } from "@/lib/cluster";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { api, ApiError } from "@/lib/api";
 import { bodyColor, googleMapsDirectionsUrl, KALASIN_CENTER, NO_BODY_COLOR, toLatLng, formatCoordinate, type LatLng } from "@/lib/geo";
+import { EMPTY_PLACE_DRAFT, placeDraftOf, placePatchOf, type PlaceDraft } from "@/lib/placeDraft";
 import { GROUP_MANAGE_ANY_ROLES, hasRole } from "@shared/roles";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -246,7 +248,7 @@ function GroupDetailBody({
       {canEdit && (
         <Button type="button" variant="outline" className="w-full" onClick={onPin}>
           <MapPin aria-hidden="true" />
-          {point ? "แก้ไขพิกัดบนแผนที่" : "ปักพิกัดบนแผนที่"}
+          {point ? "แก้ไขพิกัด รูป และรายละเอียด" : "ปักพิกัดและเพิ่มรูป"}
         </Button>
       )}
       <Button asChild variant="ghost" className="w-full">
@@ -432,21 +434,39 @@ export default function MapPage() {
     }
   }, [withCoordinates, mapInstanceId, zoomTick, colorOf]);
 
-  const savePoint = async (group: MapGroup, point: LatLng) => {
+  // The text drafted in the location dialog (landmark, day, time, place). Reset for each group opened.
+  const [placeDraft, setPlaceDraft] = useState<PlaceDraft>(EMPTY_PLACE_DRAFT);
+  useEffect(() => {
+    setPlaceDraft(pickerGroup ? placeDraftOf(pickerGroup) : EMPTY_PLACE_DRAFT);
+    // Only when a different group is opened: a photo change must not discard what was typed.
+  }, [pickerGroup?.id]);
+
+  /** A new (or removed) place photo, mirrored into the list, the open card and the open dialog. */
+  const applyPhoto = (id: string, coverUrl: string | null) => {
+    setState(prev =>
+      prev.status === "success" ? { status: "success", data: prev.data.map(g => (g.id === id ? { ...g, coverUrl } : g)) } : prev
+    );
+    setSelectedGroup(prev => (prev && prev.id === id ? { ...prev, coverUrl } : prev));
+    setPickerGroup(prev => (prev && prev.id === id ? { ...prev, coverUrl } : prev));
+  };
+
+  // One PUT saves the coordinates and the text together; the photo is stored separately as it is chosen.
+  const savePlace = async (group: MapGroup, point: LatLng, draft: PlaceDraft) => {
     const latitude = formatCoordinate(point.lat);
     const longitude = formatCoordinate(point.lng);
+    const patch = placePatchOf(draft);
     try {
-      await api.put(`/api/groups/${group.id}`, { latitude, longitude });
+      await api.put(`/api/groups/${group.id}`, { latitude, longitude, ...patch });
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "บันทึกพิกัดไม่สำเร็จ");
+      toast.error(err instanceof ApiError ? err.message : "บันทึกไม่สำเร็จ");
       throw err;
     }
     setState(prev =>
       prev.status === "success"
-        ? { status: "success", data: prev.data.map(g => (g.id === group.id ? { ...g, latitude, longitude } : g)) }
+        ? { status: "success", data: prev.data.map(g => (g.id === group.id ? { ...g, latitude, longitude, ...patch } : g)) }
         : prev
     );
-    toast.success("บันทึกพิกัดพันธกิจแล้ว");
+    toast.success("บันทึกพิกัดและรายละเอียดพันธกิจแล้ว");
   };
 
   return (
@@ -695,15 +715,7 @@ export default function MapPage() {
                   setPickerGroup(selectedGroup);
                   setSelectedGroup(null);
                 }}
-                onPhotoChange={coverUrl => {
-                  const id = selectedGroup.id;
-                  setState(prev =>
-                    prev.status === "success"
-                      ? { status: "success", data: prev.data.map(g => (g.id === id ? { ...g, coverUrl } : g)) }
-                      : prev
-                  );
-                  setSelectedGroup(prev => (prev && prev.id === id ? { ...prev, coverUrl } : prev));
-                }}
+                onPhotoChange={coverUrl => applyPhoto(selectedGroup.id, coverUrl)}
               />
             </>
           )}
@@ -712,10 +724,20 @@ export default function MapPage() {
       <LocationPicker
         open={pickerGroup !== null}
         onOpenChange={open => !open && setPickerGroup(null)}
-        title={pickerGroup ? `ปักพิกัด: ${pickerGroup.name}` : "ปักพิกัด"}
+        title={pickerGroup ? `พิกัด รูป และรายละเอียด: ${pickerGroup.name}` : "ปักพิกัด"}
         initial={pickerGroup ? toLatLng(pickerGroup.latitude, pickerGroup.longitude) : null}
-        onConfirm={point => (pickerGroup ? savePoint(pickerGroup, point) : undefined)}
-      />
+        confirmLabel="บันทึก"
+        onConfirm={point => (pickerGroup ? savePlace(pickerGroup, point, placeDraft) : undefined)}
+      >
+        {pickerGroup && (
+          <PlaceFields
+            group={pickerGroup}
+            draft={placeDraft}
+            onChange={setPlaceDraft}
+            onPhotoChange={coverUrl => applyPhoto(pickerGroup.id, coverUrl)}
+          />
+        )}
+      </LocationPicker>
     </AppLayout>
   );
 }

@@ -502,6 +502,14 @@ groupsRouter.put("/:id", async (req, res, next) => {
       );
     }
 
+    // The schema fills defaults (category, privacy, status, isOpen) even under `.partial()`, so
+    // parsed.data holds values the caller never sent. Writing them would silently reset a group's
+    // privacy (and so unmask its location and photo), status and category on any partial update,
+    // e.g. when only coordinates or the photo change. Keep only the keys that were in the request.
+    const sent = Object.fromEntries(
+      Object.entries(parsed.data).filter(([key]) => Object.prototype.hasOwnProperty.call(req.body ?? {}, key))
+    );
+
     // A group_leader may update meeting details of their own group, but not
     // take over leadership, change privacy, or alter the org hierarchy.
     // Check req.body (not parsed.data) because the schema fills defaults.
@@ -543,7 +551,7 @@ groupsRouter.put("/:id", async (req, res, next) => {
     const [updatedGroup] = await db
       .update(groups)
       .set({
-        ...parsed.data,
+        ...sent,
         ...org,
         leaderId: parsed.data.leaderId !== undefined ? (parsed.data.leaderId || null) : existing.leaderId,
         coLeaderId: parsed.data.coLeaderId !== undefined ? (parsed.data.coLeaderId || null) : existing.coLeaderId,
@@ -557,7 +565,7 @@ groupsRouter.put("/:id", async (req, res, next) => {
       action: "UPDATE_GROUP",
       entityType: "group",
       entityId: id,
-      details: parsed.data as Record<string, unknown>,
+      details: sent as Record<string, unknown>,
       req,
     });
 
