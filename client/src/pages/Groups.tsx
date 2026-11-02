@@ -1,5 +1,5 @@
 import { ResponsiveSelect } from "@/components/ResponsiveSelect";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import {
   ChevronLeft,
@@ -21,7 +21,6 @@ import {
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { GroupPhotoField } from "@/components/groups/GroupPhotoField";
-import { LocationPicker } from "@/components/map/LocationPicker";
 import { Button } from "@/components/ui/button";
 import { formatCoordinate, toLatLng } from "@/lib/geo";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -207,6 +206,9 @@ const iconButtonClass =
   "flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-canvas-soft)] hover:text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]";
 
 
+// maplibre-gl (~1 MB) loads only when the pin dialog is first opened, not with the Groups page.
+const LocationPicker = lazy(() => import("@/components/map/LocationPicker").then((m) => ({ default: m.LocationPicker })));
+
 export default function Groups() {
   usePageTitle("พันธกิจ");
   const { user } = useAuth();
@@ -237,6 +239,7 @@ export default function Groups() {
   const [editingGroup, setEditingGroup] = useState<GroupItem | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerMounted, setPickerMounted] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -1069,7 +1072,10 @@ export default function Groups() {
               </Field>
             </div>
             <div>
-              <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>
+              <Button type="button" variant="outline" onClick={() => {
+                  setPickerMounted(true);
+                  setPickerOpen(true);
+                }}>
                 <MapPin size={ICON_SIZE.sm} aria-hidden="true" />
                 ปักหมุดบนแผนที่
               </Button>
@@ -1318,14 +1324,18 @@ export default function Groups() {
           onCancel={() => setRemoveTarget(null)}
         />
       )}
-      <LocationPicker
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-        title="ปักหมุดตำแหน่งพันธกิจ"
-        initial={toLatLng(form.latitude, form.longitude)}
-        confirmLabel="ใช้ตำแหน่งนี้"
-        onConfirm={(point) => setForm((f) => ({ ...f, latitude: formatCoordinate(point.lat), longitude: formatCoordinate(point.lng) }))}
-      />
+      {pickerMounted && (
+        <Suspense fallback={null}>
+          <LocationPicker
+            open={pickerOpen}
+            onOpenChange={setPickerOpen}
+            title="ปักหมุดตำแหน่งพันธกิจ"
+            initial={toLatLng(form.latitude, form.longitude)}
+            confirmLabel="ใช้ตำแหน่งนี้"
+            onConfirm={(point) => setForm((f) => ({ ...f, latitude: formatCoordinate(point.lat), longitude: formatCoordinate(point.lng) }))}
+          />
+        </Suspense>
+      )}
     </AppLayout>
   );
 }
