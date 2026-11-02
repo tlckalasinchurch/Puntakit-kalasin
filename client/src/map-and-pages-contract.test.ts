@@ -100,6 +100,13 @@ describe("location picker", () => {
     expect(groups).toContain("<LocationPicker");
     expect(groups).toContain("ปักหมุดบนแผนที่");
   });
+
+  it("Groups loads the picker lazily so maplibre-gl stays out of the Groups chunk", () => {
+    const groups = read("client/src/pages/Groups.tsx");
+    expect(groups).toMatch(/lazy\(\(\) => import\("@\/components\/map\/LocationPicker"\)/);
+    expect(groups).not.toMatch(/^import .*components\/map\/LocationPicker/m);
+    expect(groups).toContain("<Suspense");
+  });
 });
 
 describe("page-level fixes", () => {
