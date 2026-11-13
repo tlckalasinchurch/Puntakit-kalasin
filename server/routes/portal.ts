@@ -1,4 +1,5 @@
-import { Router, type Request } from "express";
+import express, { Router, type Request } from "express";
+import { z } from "zod";
 import { and, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { getDb } from "../db/client.js";
 import {
@@ -8,7 +9,9 @@ import {
   events,
   groupMembers,
   groups,
+  mediaAssets,
   members,
+  missionSubmissions,
   prayerRequests,
   pushSubscriptions,
   users,
@@ -23,6 +26,12 @@ import {
 import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../lib/audit.js";
 import { ConflictError, NotFoundError, ValidationError } from "../lib/errors.js";
+import {
+  IMAGE_CONTENT_TYPES,
+  MEDIA_MAX_BYTES,
+  sniffImage,
+  storeImage,
+} from "../lib/mediaStore.js";
 
 export const portalRouter = Router();
 
@@ -727,3 +736,267 @@ portalRouter.post("/push/send-test", async (req, res, next) => {
     next(err);
   }
 });
+
+// 12. GET /groups - List groups for reporting along with active member roster
+portalRouter.get("/groups", async (req, res, next) => {
+  try {
+    const db = getDb();
+    const user = req.user!;
+    const member = await getLinkedMember(req);
+
+    const isStaffOrAdmin = ["super_admin", "admin", "staff", "ministry_leader"].includes(user.role);
+
+    let groupList;
+    if (isStaffOrAdmin) {
+      groupList = await db
+        .select({
+          id: groups.id,
+          name: groups.name,
+          category: groups.category,
+          meetingDay: groups.meetingDay,
+          meetingTime: groups.meetingTime,
+          meetingLocation: groups.meetingLocation,
+          coverUrl: groups.coverUrl,
+        })
+        .from(groups)
+        .where(isNull(groups.deletedAt))
+        .orderBy(groups.name);
+    } else {
+      const conditions = [eq(groups.leaderId, user.id)];
+      if (member) {
+        const myGroupIds = (
+          await db
+            .select({ groupId: groupMembers.groupId })
+            .from(groupMembers)
+            .where(eq(groupMembers.memberId, member.id))
+        ).map((r) => r.groupId);
+        if (myGroupIds.length > 0) {
+          conditions.push(inArray(groups.id, myGroupIds));
+        }
+      }
+      groupList = await db
+        .select({
+          id: groups.id,
+          name: groups.name,
+          category: groups.category,
+          meetingDay: groups.meetingDay,
+          meetingTime: groups.meetingTime,
+          meetingLocation: groups.meetingLocation,
+          coverUrl: groups.coverUrl,
+        })
+        .from(groups)
+        .where(and(or(...conditions), isNull(groups.deletedAt)))
+        .orderBy(groups.name);
+
+      if (groupList.length === 0) {
+        groupList = await db
+          .select({
+            id: groups.id,
+            name: groups.name,
+            category: groups.category,
+            meetingDay: groups.meetingDay,
+            meetingTime: groups.meetingTime,
+            meetingLocation: groups.meetingLocation,
+            coverUrl: groups.coverUrl,
+          })
+          .from(groups)
+          .where(and(eq(groups.privacy, "public"), isNull(groups.deletedAt)))
+          .orderBy(groups.name)
+          .limit(25);
+      }
+    }
+
+    const groupsWithRoster = await Promise.all(
+      groupList.map(async (grp) => {
+        const roster = await db
+          .select({
+            id: members.id,
+            name: members.name,
+            nickname: members.nickname,
+            avatarUrl: members.avatarUrl,
+            role: groupMembers.role,
+          })
+          .from(groupMembers)
+          .innerJoin(members, eq(groupMembers.memberId, members.id))
+          .where(and(eq(groupMembers.groupId, grp.id), isNull(members.deletedAt)))
+          .orderBy(groupMembers.role, members.name);
+
+        return {
+          ...grp,
+          members: roster,
+        };
+      })
+    );
+
+    res.json({ success: true, data: groupsWithRoster });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 13. POST /reports - Mobile-first care & ministry report submission with attendance and photos
+const portalReportSchema = z.object({
+  groupId: z.string().optional().nullable(),
+  serviceType: z
+    .enum(["care_group", "worship_practice", "prayer_meeting", "sunday_service", "youth_service", "special_event"])
+    .default("care_group"),
+  date: z.string().min(1, "กรุณาระบุวันที่จัด"),
+  title: z.string().min(1, "กรุณาระบุหัวข้อรายงาน").max(200),
+  story: z.string().max(5000).optional().default(""),
+  prayerRequests: z.string().max(2000).optional().default(""),
+  attendance: z
+    .array(
+      z.object({
+        memberId: z.string(),
+        status: z.enum(["present", "absent", "leave", "online"]).default("present"),
+      })
+    )
+    .default([]),
+  visitorCount: z.number().int().min(0).default(0),
+  mediaUrls: z.array(z.string().url()).max(10).default([]),
+});
+
+portalRouter.post("/reports", async (req, res, next) => {
+  try {
+    const parsed = portalReportSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError(
+        parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง",
+        parsed.error.issues.map((i) => ({ field: i.path.join("."), message: i.message }))
+      );
+    }
+
+    const { groupId, serviceType, date, title, story, prayerRequests: prayerText, attendance, visitorCount, mediaUrls } =
+      parsed.data;
+    const user = req.user!;
+    const db = getDb();
+
+    const presentCount = attendance.filter((a) => a.status === "present" || a.status === "online").length;
+    const absentCount = attendance.filter((a) => a.status === "absent").length;
+    const leaveCount = attendance.filter((a) => a.status === "leave").length;
+
+    let groupName = "";
+    if (groupId) {
+      const [grp] = await db.select({ name: groups.name }).from(groups).where(eq(groups.id, groupId)).limit(1);
+      if (grp) groupName = grp.name;
+    }
+
+    const summaryLine =
+      `สรุปผู้เข้าร่วม: มา ${presentCount} คน` +
+      (absentCount > 0 ? `, ขาด ${absentCount} คน` : "") +
+      (leaveCount > 0 ? `, ลา ${leaveCount} คน` : "") +
+      (visitorCount > 0 ? `, ผู้สนใจ/แขกใหม่ ${visitorCount} คน` : "");
+
+    const formattedRawText = [
+      `[รายงาน] ${title}`,
+      groupName ? `กลุ่ม/พันธกิจ: ${groupName}` : null,
+      `วันที่: ${date}`,
+      summaryLine,
+      story?.trim() ? `\nรายละเอียด/พระพร:\n${story.trim()}` : null,
+      prayerText?.trim() ? `\nหัวข้ออธิษฐานเผื่อ:\n${prayerText.trim()}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    // 1. Create mission submission
+    const [submission] = await db
+      .insert(missionSubmissions)
+      .values({
+        source: "line",
+        status: "new",
+        rawText: formattedRawText,
+        rawMediaUrls: mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
+        submittedByLabel: user.name,
+        createdById: user.id,
+      })
+      .returning();
+
+    // 2. Insert attendance records
+    const meetingDate = new Date(date);
+    for (const att of attendance) {
+      const dbServiceType = serviceType === "worship_practice" ? "care_group" : serviceType;
+      await db.insert(attendanceRecords).values({
+        date: meetingDate,
+        serviceType: dbServiceType,
+        groupId: groupId || null,
+        memberId: att.memberId,
+        status: att.status,
+        checkInMethod: "manual",
+        checkedInBy: user.id,
+      });
+    }
+
+    // 3. Optional prayer request creation
+    if (prayerText?.trim()) {
+      const linked = await getLinkedMember(req);
+      await db.insert(prayerRequests).values({
+        memberId: linked?.id ?? null,
+        userId: user.id,
+        title: `หัวข้ออธิษฐาน: ${title}`,
+        content: prayerText.trim(),
+        category: "spiritual",
+        isConfidential: false,
+        status: "pending",
+      });
+    }
+
+    await logAudit({
+      req,
+      action: "PORTAL_REPORT_SUBMITTED",
+      entityType: "mission_submission",
+      entityId: submission.id,
+      details: { groupId, attendanceCount: attendance.length, mediaCount: mediaUrls.length },
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        submissionId: submission.id,
+        message: "บันทึกรายงานและเช็คชื่อสำเร็จ",
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const rawImage = express.raw({ type: IMAGE_CONTENT_TYPES, limit: MEDIA_MAX_BYTES });
+
+// 14. POST /media - Direct photo upload for reports / attendance
+portalRouter.post("/media", rawImage, async (req, res, next) => {
+  try {
+    const user = req.user!;
+    const bytes = req.body;
+    if (!Buffer.isBuffer(bytes) || bytes.length === 0) {
+      throw new ValidationError("ไม่พบไฟล์รูปภาพ — ส่งเป็น JPEG, PNG หรือ WebP ขนาดไม่เกิน 4 MB");
+    }
+    const contentType = sniffImage(bytes);
+    if (!contentType) throw new ValidationError("ไฟล์นี้ไม่ใช่รูปภาพที่รองรับ (JPEG, PNG, WebP)");
+
+    const stored = await storeImage("mission", bytes, contentType);
+    const db = getDb();
+    const [asset] = await db
+      .insert(mediaAssets)
+      .values({
+        kind: "mission_photo",
+        storage: stored.storage,
+        pathname: stored.pathname,
+        contentType,
+        sizeBytes: bytes.length,
+        uploadedById: user.id,
+      })
+      .returning();
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: asset.id,
+        url: `/api/media/${asset.id}`,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+

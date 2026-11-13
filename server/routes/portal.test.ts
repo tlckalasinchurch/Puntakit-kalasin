@@ -55,6 +55,29 @@ describe("Member Portal & PWA Security Tests", () => {
       expect(res.status).toBe(401);
     });
 
+    it("rejects GET /api/me/groups without auth", async () => {
+      const res = await fetch(`${baseUrl}/api/me/groups`);
+      expect(res.status).toBe(401);
+    });
+
+    it("rejects POST /api/me/reports without auth", async () => {
+      const res = await fetch(`${baseUrl}/api/me/reports`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "รายงานกลุ่มแคร์", date: "2026-11-13" }),
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it("rejects POST /api/me/media without auth", async () => {
+      const res = await fetch(`${baseUrl}/api/me/media`, {
+        method: "POST",
+        headers: { "Content-Type": "image/jpeg" },
+        body: Buffer.from("test"),
+      });
+      expect(res.status).toBe(401);
+    });
+
     it("rejects POST /api/me/prayer-requests without auth", async () => {
       const res = await fetch(`${baseUrl}/api/me/prayer-requests`, {
         method: "POST",

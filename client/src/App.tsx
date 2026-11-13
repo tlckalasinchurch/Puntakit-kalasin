@@ -52,6 +52,7 @@ const MemberGroup = lazy(() => import("./pages/member/MemberGroup"));
 const MemberAttendance = lazy(() => import("./pages/member/MemberAttendance"));
 const MemberProfile = lazy(() => import("./pages/member/MemberProfile"));
 const MemberReports = lazy(() => import("./pages/member/MemberReports"));
+const MemberNewReport = lazy(() => import("./pages/member/MemberNewReport"));
 
 /** Page-content loading → skeleton (design.md §8); never "..." text. */
 function RouteSkeleton() {
@@ -102,6 +103,22 @@ function Router() {
       <Route path="/app/reports">
         <ProtectedRoute>
           <MemberReports />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/app/reports/new">
+        <ProtectedRoute>
+          <MemberNewReport />
+        </ProtectedRoute>
+      </Route>
+      {/* Quick standalone shortcuts for LINE QR code or direct links */}
+      <Route path="/report">
+        <ProtectedRoute>
+          <MemberNewReport />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/checkin">
+        <ProtectedRoute>
+          <MemberNewReport />
         </ProtectedRoute>
       </Route>
       <Route path="/app/attendance">

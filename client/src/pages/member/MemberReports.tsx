@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, ClipboardList, Plus } from "lucide-react";
+import { Link } from "wouter";
+import { CalendarDays, ClipboardList, Image as ImageIcon, Plus } from "lucide-react";
 import { MemberAppLayout } from "@/components/layout/MemberAppLayout";
 import { LambMascot } from "@/components/lamb/LambMascot";
 import { ListSkeleton } from "@/components/LoadingStates";
@@ -12,6 +13,7 @@ interface Submission {
   id: string;
   status: MissionSubmissionStatus;
   rawText: string | null;
+  rawMediaUrls?: string | null;
   submittedByLabel: string | null;
   createdAt: string;
 }
@@ -94,18 +96,19 @@ export default function MemberReports() {
           </p>
         </header>
 
-        {/* Member report form not built yet: shown as unavailable instead of a link to a missing page. */}
-        <div className="flex items-center justify-center gap-3 rounded-2xl bg-[var(--color-canvas-soft)] px-6 py-4">
-          <button
-            type="button"
-            disabled
-            title="ฟอร์มบันทึกรายงานกำลังจัดเตรียม ยังไม่เปิดให้ใช้งาน"
-            className="flex min-h-11 cursor-not-allowed items-center justify-center gap-2 font-semibold text-[var(--color-body-muted)]"
+        {/* Member report form CTA */}
+        <div className="flex items-center justify-between rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-4 shadow-sm">
+          <div>
+            <h2 className="text-sm font-bold text-[var(--color-ink)]">บันทึกรายงาน & เช็คชื่อ</h2>
+            <p className="text-xs text-[var(--color-body-muted)]">ส่งรายงานกลุ่มแคร์ ซ้อมนมัสการ พร้อมแนบรูปภาพ</p>
+          </div>
+          <Link
+            to="/app/reports/new"
+            className="flex items-center gap-1.5 rounded-xl bg-[var(--lamb-primary)] px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:opacity-90 active:scale-95"
           >
-            <Plus size={20} aria-hidden="true" />
-            เริ่มบันทึกรายงานใหม่
-          </button>
-          <StatusChip tone="neutral">เร็วๆ นี้</StatusChip>
+            <Plus size={16} aria-hidden="true" />
+            เขียนรายงานใหม่
+          </Link>
         </div>
 
         {submissions.length > 0 ? (
