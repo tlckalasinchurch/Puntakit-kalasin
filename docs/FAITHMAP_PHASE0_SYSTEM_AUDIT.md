@@ -1,141 +1,285 @@
-# FaithMap — Phase 0 System Audit
+# FaithMap — Phase 0 System Audit and Gap Analysis
 
-Date: 2026-11-13
-Scope: FaithMap System Blueprint §12 Phase 0 (System Audit, Data Mapping, Permission Matrix, Implementation Decision Record).
-Status: Audit complete. All decisions in §5 are **proposed**. No code, migration or permission change is part of this document.
+Date: 2026-11-13 (revision 2, same day as revision 1)
+Input: FaithMap Product Transformation Master Brief.
+Status: Audit and gap analysis complete. Every proposal is **proposed only**. This revision changes no application code, migration, permission or data.
 
-Method: static reading of `shared/schema.ts`, `shared/roles.ts`, `server/lib/{groupAccess,careScope,membershipScope,audit}.ts` and `server/routes/*.ts` on branch `claude/magical-cerf-lkrjyt`. I did not run the app, read production data or test a LINE account.
+Related documents (one topic each, no duplicated tables):
 
----
+| Document | Content |
+|---|---|
+| `FAITHMAP_PRODUCT_REQUIREMENTS.md` | Requirements with IDs and metric definitions |
+| `FAITHMAP_TARGET_ARCHITECTURE.md` | Proposed tables, API, scope resolution, UI routes |
+| `FAITHMAP_DATA_MAPPING.md` | Brief field → existing or proposed column |
+| `FAITHMAP_PERMISSION_MATRIX.md` | Current matrix (verified) and target matrix (proposed) |
+| `FAITHMAP_IMPLEMENTATION_ROADMAP.md` | Phases, acceptance criteria, approval gates |
 
-## 1. Findings summary
+Revision 1 of this file contained a data mapping and a permission matrix. Those sections moved to the documents above. Revision 1 also assumed a Body → Care → Group tree. The brief corrects that (§2).
 
-| # | Finding | Effect on blueprint |
+## 1. Method and limits
+
+Verified by reading code on branch `claude/magical-cerf-lkrjyt`: `shared/schema.ts`, `shared/roles.ts`, `shared/orgView.ts`, `server/lib/{groupAccess,careScope,membershipScope,audit}.ts`, `server/routes/{submissions,attendance,followUps,care,org,dashboard,groups,portal}.ts`, `client/src/App.tsx` (route list), `.github/workflows/ci.yml`, `vercel.json`, and `docs/PUNTAKIT_MISSION_DOMAIN_PLAN.md`.
+
+Level of verification: **code verified** only. Not test verified, not preview verified, not production verified. I did not run the app, run the tests, or read any database.
+
+Not verified:
+- Production data: number of bodies and groups, whether each `org_level = 'care'` row is one house mission group, existing duplicate attendance rows, existing `group_members` duplicates.
+- Client behaviour per role (I read the route list and the API calls of four pages, not every page).
+- Any LINE Official Account, LIFF app or channel configuration. The repo references none.
+
+## 2. Corrected organizational model
+
+Brief: Mission Leadership (หัวหน้าทีม ศบ.) → Body (บอดี้) → House Mission Group (กลุ่มพันธกิจบ้าน). Care (แคร์) is **not** a level. A Care Leader (หัวหน้าแคร์) and a Coordinator (ผู้ประสานงาน) are **people assigned to groups**.
+
+Repo state:
+- `groups.org_level` has two values: `body` and `care`. A `care` row has `parent_group_id` → a `body` row. The Thai UI already calls a `care` row "พันธกิจ" (CLAUDE.md, Vocabulary).
+- So the repo already stores a two-level tree. The stored value `care` is a legacy label for "house mission group". The tree depth matches the brief.
+- The supervising people are **not** modelled. The imported care leader name and coordinator name are text lines inside `groups.description` (`หนค. (ต้นฉบับ)`, `ผู้ประสานงาน (ต้นฉบับ)`, parsed by `shared/orgView.ts`). `groups.leader_member_id` is display only and grants no permission (`server/lib/groupAccess.ts`).
+
+Conclusion: no hierarchy change is needed. The missing part is a **flexible assignment model** (gap C1). Revision 1 decision D1 (third org level) is withdrawn.
+
+## 3. Revalidated findings
+
+| # | Finding (code verified) |
+|---|---|
+| F1 | Two-level tree as in §2. `GET /api/org/overview` returns head, bodies, groups per body and unassigned groups. |
+| F2 | `USER_ROLES`: `super_admin, admin, ministry_leader, group_leader, staff, member, viewer`. No supervisor, care-leader or body-leader role. |
+| F3 | A user leads a group through `groups.leader_id`, `groups.co_leader_id`, or an active `group_members` row with role `leader`/`assistant_leader` for the member linked by `members.user_id`. Read scope adds descendant groups. Write scope is direct groups only. |
+| F4 | `mission_submissions` has no `group_id`, no period, no "not held" state. It is a raw inbox that publishes into `mission_activities`. `PUNTAKIT_MISSION_DOMAIN_PLAN.md` §9 already decided to leave it untouched and add `weekly_reports` (decision Q12). |
+| F5 | Review and publish of submissions: `PRIVILEGED_ROLES` only. A `group_leader` cannot review. |
+| F6 | No reporting period, deadline, snapshot or meeting-brief entity exists. |
+| F7 | `attendance_records`: statuses `present, absent, leave, online`; duplicate check in code only; no unique index. The same-day window uses `Date.setHours(0,0,0,0)` in server local time. On Vercel the server runs in UTC, so the window is not the Asia/Bangkok day. Not reproduced; code reading only. |
+| F8 | `/care` page (`CareToday.tsx`) already does group attendance: `GET /api/care/groups`, `GET /api/care/groups/:id/roster` (members, today's marks, consecutive misses), `POST /api/attendance/bulk`. `GET /api/attendance/absentees` lists consecutive absentees with scope for `group_leader`. |
+| F9 | Visitors are `members` rows with `membership_status = 'visitor'`. `consent_given` and `consent_date` exist. No first-visit date, welcomer or newcomer status exists. |
+| F10 | `follow_ups` has title, note, subject member/group, activity, owner, due date, status, completed date. It has no issue type, priority, result or history. |
+| F11 | `audit_logs` exists. `UPDATE_GROUP` stores only the sent values, not the previous values. `group_members` has a full unique index on (`group_id`, `member_id`), so leave → rejoin reuses one row. The fix (partial unique index, decision Q8) is written at `server/db/pending/0010_group_members_history.sql` and is not applied. Its production pre-check has not been run. |
+| F12 | LINE: no adapter, no ID-token verification, no LIFF. `members.line_id` is unverified free text. `vercel.json` Content-Security-Policy does not allow LINE hosts. |
+| F13 | Web Push exists (`push_subscriptions`, `/api/portal/push/*`). `vercel.json` has no `crons`. No scheduler exists. |
+| F14 | Deployment: Vercel serverless function `api/index.ts` (max 60 s), static client from `dist/public`. CI runs install, `pnpm check`, `pnpm test`, `pnpm build` on every push and pull request. 55 test files exist. |
+| F15 | Overview and operations endpoints (`/api/org/*`, `/api/dashboard/operations`) are church-wide and limited to `PRIVILEGED_ROLES`. They have no per-body scope. |
+
+## 4. Gap analysis
+
+Priority: P1 = Phase 1, P2 = Phase 2, and so on (see the roadmap).
+
+### A. Existing — reuse without changes
+
+| # | Capability | Where |
 |---|---|---|
-| F1 | The org tree has **two** levels: `groups.org_level` is `body` or `care` (`GROUP_ORG_LEVELS`). In the UI, `care` is called **พันธกิจ**. | The blueprint has three levels: บอดี้ → แคร์ → กลุ่มพันธกิจบ้าน. The repo has no separate "แคร์" level above the house group. See D1. |
-| F2 | There is no `care_leader` or `body_leader` role. Both are `group_leader`. Scope comes from leadership: `groups.leader_id`, `groups.co_leader_id`, or an active `group_members` row with role `leader`/`assistant_leader` (`server/lib/groupAccess.ts`). | Body/care leader separation exists only as data, not as roles. This matches the blueprint guardrail "do not add roles without review". |
-| F3 | Read scope includes descendants (`getViewableGroupIds`). Write scope is direct groups only (`getLedGroupIds`). | A body leader can read care groups below the body but cannot write. This matches the blueprint review ladder for reading. |
-| F4 | `mission_submissions` has **no `group_id`**, no week/period field and no `not_held` state. Statuses: `new, reviewing, needs_info, approved, rejected`. Sources: `manual, line, import, system`. | Confirms the blueprint note. A weekly report cannot be linked to a group or to a week today. |
-| F5 | Submission review (`PUT /:id/status`, `POST /:id/publish`) is limited to `PRIVILEGED_ROLES` (`super_admin, admin, staff, ministry_leader`). `group_leader` can only create, and reopen its own rejected item. | A care leader cannot review reports today. The 4-step review ladder (§4.2) needs a permission change. See D4. |
-| F6 | There is no weekly report round entity (no "week", "cycle" or "deadline" table). | `not_submitted` cannot be computed. "Not submitted" is the absence of a row for (group, week). See D2. |
-| F7 | `attendance_records` has `group_id`, `service_type` (`care_group` exists), `status` (`present, absent, leave, online`), `check_in_method`. Duplicate protection is in code only (same member + service type + day [+ group]). There is **no unique index**. | Reusable for weekly attendance. Concurrent submissions can write duplicate rows. See D7. |
-| F8 | `GET /api/attendance/absentees?threshold=N` returns consecutive absentees over the last N recorded dates. It is scoped for `group_leader`. | Module D rule "absent 2 weeks" can reuse this endpoint. No new table needed. |
-| F9 | Visitors are stored in `members` with `membership_status = 'visitor'`. `members.consent_given` and `consent_date` exist. | The blueprint requires visitor data to stay separate from the member registry until consent. Current design contradicts this. See D5. |
-| F10 | `follow_ups` exists: `title, note, subject_member_id, subject_group_id, activity_id, owner_id, due_at, status (open, in_progress, completed, cancelled), completed_at`. No result field and no per-row history table. | Module F is mostly covered. "Result" and "history" are missing. See D6. |
-| F11 | History: `audit_logs` stores `action`, `entity_type`, `entity_id` and `details`. `UPDATE_GROUP` stores only the **sent (new)** values, not the previous values. `group_members` has `joined_at`/`left_at`, but a unique index on (`group_id`, `member_id`) means a re-join reuses one row. | Leader changes, parent (body) moves and member transfers cannot be reconstructed reliably. Blueprint §3 "keep history" is not met. See D3. |
-| F12 | LINE: no adapter, no LINE Login, no LIFF, no ID token verification. `members.line_id` is a free-text field. `mission_submissions.source = 'line'` is reserved only. | Phase 5 is greenfield. Blueprint rule "verify LINE ID token on server" has no existing code to conflict with. |
-| F13 | Notifications: `push_subscriptions` and Web Push (`/api/portal/push/subscribe`, `/push/send-test`) exist. No scheduler or cron job exists. | Saturday open / Sunday reminder needs a scheduler. See D8. |
-| F14 | Overview data: `GET /api/org/overview` (bodies, care groups, member counts) and `GET /api/dashboard/operations` are limited to `PRIVILEGED_ROLES`. `GET /api/reports/summary` exists. | Mission Overview (§6) can extend these. A `group_leader` cannot open them today. |
-| F15 | `media_assets` supports `mission_photo` with `group_id`. `mission_activities` has `group_id`, `occurred_at`, `story`, place and coordinates, plus participants and media tables. | Activity part of the weekly report (date, place, story, photos) can reuse `mission_activities`. |
+| A1 | Body → group tree, unassigned-group detection | `groups.org_level`, `parent_group_id`, `/api/org/overview` |
+| A2 | Group profile: name, meeting day/time/place, coordinates, status, photos | `groups`, `media_assets` |
+| A3 | Group member register | `group_members` |
+| A4 | Attendance statuses and bulk group check-in screen | `attendance_records`, `/care`, `/api/attendance/bulk` |
+| A5 | Consecutive-absence calculation | `/api/attendance/absentees`, care roster |
+| A6 | Mission activity record with participants, photos, place | `mission_activities` and child tables |
+| A7 | Private media storage with authorised read | `media_assets`, `/api/media/:id` |
+| A8 | PIN sign-in, sessions, CSRF, role middleware | `server/lib/firstPartyAuth.ts`, `server/middleware/auth.ts` |
+| A9 | Scope helpers for led and viewable groups | `server/lib/groupAccess.ts`, `careScope.ts` |
+| A10 | Group map | `/map` |
+| A11 | Audit log table and writer | `audit_logs`, `server/lib/audit.ts` |
+| A12 | Web Push subscriptions | `push_subscriptions` |
 
----
+### B. Improvement required
 
-## 2. Data mapping (blueprint → existing schema)
+**B1 — Vocabulary of the org model** · P1
+- Business problem: "care" reads as an org level. Leaders will misread screens.
+- Existing: stored value `care`; UI text "พันธกิจ"; API names `careGroups`, `/api/care/*`.
+- Proposal: keep stored values and API names. Fix documents and UI text only. A rename of the stored value has no user benefit.
+- Database: none. API: none. Permission: none.
+- UI/UX: labels "กลุ่มพันธกิจบ้าน", "หัวหน้าแคร์" shown as a person, never as a unit.
+- Security risk: none.
+- Regression tests: `shared/labels.test.ts` updated for any changed label.
 
-| Blueprint item | Existing source | Status |
+**B2 — Group change history** · P1
+- Business problem: leader changes and body moves cannot be reconstructed.
+- Existing: `UPDATE_GROUP` audit row with new values only.
+- Proposal: write `before` and `after` in the audit details for group updates and membership changes. Assignment history comes from C1, not from the audit log.
+- Database: none (details is text JSON). API: none. Permission: none. UI/UX: group history list in the group detail.
+- Security risk: audit details can contain contact data; keep the existing read gate.
+- Regression tests: group update writes both values; body move is recorded.
+
+**B3 — Member transfer history** · P4
+- Business problem: a member who leaves and rejoins loses the first period.
+- Existing: full unique index; decision Q8; pending SQL not applied.
+- Proposal: apply the existing plan. Run the production pre-check first (`GET /api/import/precheck/group-members`).
+- Database: index swap in one migration. API: move = leave + join. Permission: none. UI/UX: transfer history in member detail.
+- Security risk: low. Data risk: blocked if the pre-check reports duplicates.
+- Regression tests: join → leave → rejoin gives two rows; one active row per pair.
+
+**B4 — Attendance uniqueness and day boundary** · P2
+- Business problem: duplicate rows and wrong-day matching distort attendance and absence counts.
+- Existing: F7.
+- Proposal: (1) read-only audit of production duplicates; (2) compute the service day in Asia/Bangkok; (3) add a unique index on member, service type, group and service day after cleanup is approved.
+- Database: one new date column or expression index; unique index. API: `check-in` and `bulk` become upserts on the unique key. Permission: none. UI/UX: none.
+- Security risk: none. Data risk: cleanup of existing duplicates needs approval.
+- Regression tests: concurrent writes produce one row; a 06:00 Bangkok check-in lands on the Bangkok date.
+
+**B5 — Follow-up as action tracking** · P4
+- Business problem: an item has no type, priority, result or history, so leadership cannot see whether it was handled.
+- Existing: F10.
+- Proposal: add `kind`, `priority`, `result`, `source_key` to `follow_ups`; add an append-only `follow_up_events` table.
+- Database: additive columns and one table; partial unique index on `source_key` for open items. API: status change writes an event; result required on completion. Permission: unchanged rule, extended by assignments (C1).
+- UI/UX: `/follow-up` shows type, priority, history.
+- Security risk: absence reasons are sensitive; restrict the note to owner, assigned supervisors and leadership.
+- Regression tests: one open item per source key; event row per change; out-of-scope read denied.
+
+**B6 — Visitor and newcomer record** · P4
+- Business problem: first-time visitors are not tracked after the first visit.
+- Existing: F9. Visitors sit in the member register.
+- Proposal: keep visitors in `members` (no duplicate identity table). Add a 1:1 `newcomer_tracks` table for first-visit facts and status. Hide visitors from the default member register. Never create a user account for a visitor.
+- Database: one additive table. API: newcomer list within scope. Permission: visible to the group's responsible people and leadership only.
+- UI/UX: newcomer list per group and per body.
+- Security risk: personal data without consent; store the minimum (name or nickname, optional phone), mask contact data by the existing rule.
+- Regression tests: visitor not returned by the default member list; cross-body read denied.
+
+**B7 — Overview scope for body leaders** · P3
+- Business problem: a body leader cannot open any overview today.
+- Existing: F15.
+- Proposal: new overview endpoints take a scope (all bodies for leadership, own body for a body leader). Existing endpoints stay unchanged.
+- Database: none. API: new routes. Permission: new scoped read; needs approval.
+- UI/UX: body page. Security risk: cross-body leakage; every query filters by resolved scope on the server.
+- Regression tests: body leader of body A gets 403 or empty data for body B.
+
+**B8 — Leader identity stored as text** · P1
+- Business problem: imported care leaders and coordinators are names in a text field. They cannot be shown with a photo or given scoped access.
+- Existing: `groups.description` lines; `leader_member_id` display only.
+- Proposal: link each name to a `members` row by human confirmation, then create assignments (C1). Never match by name automatically. Keep the original text lines.
+- Database: none beyond C1. API: assignment endpoints. Permission: access exists only when the member has a linked user.
+- UI/UX: a "link person" step in group management.
+- Security risk: a wrong link gives the wrong person access; require confirmation and audit.
+- Regression tests: an assignment whose member has no user grants no access.
+
+**B9 — Admin access to personal data** · decision
+- Business problem: the brief limits admin access to "explicit administrative permissions".
+- Existing: `admin` and `staff` see unmasked contacts church-wide.
+- Proposal: no change in Phases 1–3. A reduction changes existing behaviour and needs its own decision (O6).
+
+### C. New development
+
+**C1 — Flexible supervisor assignments** · P1
+- Business problem: the system does not know who supervises each group, so it cannot route a report for review or show responsibility.
+- Existing: none (F2, B8).
+- Proposal: table `group_assignments` (group, member, responsibility, is_primary, starts_on, ends_on, note, created_by, ended_by). Responsibilities: `group_leader`, `care_leader`, `coordinator`, `body_leader`. A row is never updated to a different person; it is ended and a new row starts.
+- Database: one table; partial unique index for one active primary per group. No change to `groups.leader_id` in Phase 1.
+- API: list, create, end assignment; supervisor profile (groups supervised, history).
+- Permission: manage = leadership roles, and a body leader for groups in the own body (needs approval). Assignment adds scoped access only; it never grants global access.
+- UI/UX: responsibility panel with names and photos on group and body pages; list "groups without a supervisor".
+- Security risk: privilege gain through a wrong assignment; audit every change; end date removes access at once.
+- Regression tests: scope from active assignment only; ended assignment gives no access; one primary per group.
+
+**C2 — Reporting periods** · P2
+- Business problem: no week exists in data, so "missing" cannot be computed.
+- Proposal: table `reporting_periods` (week_start, week_end, opens_at, deadline_at). Created by the scheduler each Saturday, or on first use.
+- Database: one table, unique `week_start`. API: current and past periods. Permission: read for all field roles.
+- UI/UX: the week label on every report screen and number.
+- Security risk: none. Regression tests: one period per week; Bangkok week boundary.
+
+**C3 — Weekly group report** · P2
+- Business problem: one reliable report per group per week, with "not held" separate from "not submitted".
+- Existing: decision Q12 proposed `weekly_reports`; not built.
+- Proposal: table `weekly_reports`, unique (period, group). Fields: `held` (yes/no), review `status` (`submitted, under_review, needs_revision, approved`), activity date and place, teaching topic, passage, prayer, fellowship, other activity, atmosphere, next-week plan, support needed, visitor counts, submitter, `submitted_at`. Late = `submitted_at` after the period deadline, computed and never edited. "Not submitted" = expected group with no row; no placeholder rows. Attendance reuses `attendance_records` (the `/care` flow), linked by group and service day. This replaces the `weekly_report_attendance` table of Q12 and needs approval (O3).
+- Database: one table; optional `weekly_report_id` on `attendance_records`.
+- API: get or create my group's report for the period; submit; resubmit after revision. Idempotent on (period, group).
+- Permission: submit = active `group_leader` responsibility on that group.
+- UI/UX: three large steps on mobile: attendance → what happened → send. Prefilled group, date, place, roster.
+- Security risk: submit for a group not led; server checks the assignment. Double tap; unique key makes it safe.
+- Regression tests: second submit updates, never duplicates; late flag; not-held report has no attendance requirement.
+
+**C4 — Review chain and review history** · P2
+- Business problem: reports need a check by the assigned supervisor, then the body leader, with a trace.
+- Existing: F5 (wrong roles for this purpose).
+- Proposal: table `weekly_report_events`, append-only (report, actor, action, from status, to status, note, changed values before/after). The reviewer is resolved from active assignments: primary supervisor first; if none, the body leader. Body leader approval is the "approved" state.
+- Database: one table. API: review, request revision, approve.
+- Permission: **new scoped permission**: review within assigned groups; approve within own body. Needs explicit approval. No change to `PRIVILEGED_ROLES`.
+- UI/UX: review queue per reviewer; revision note shown to the submitter.
+- Security risk: review outside scope; reviewer cannot approve an own report unless no other reviewer exists (O4).
+- Regression tests: one test per actor and action, inside and outside scope.
+
+**C5 — Body summary** · P2
+- Business problem: the body leader sends one consolidated summary to leadership.
+- Proposal: table `body_summaries`, unique (period, body): issues, support needed, note, `sent_at`, `sent_by`. Counts are computed, never typed.
+- Database: one table. API: read computed summary, save notes, send. Permission: body leader of that body.
+- UI/UX: one page per body per week. Security risk: cross-body read.
+- Regression tests: counts equal the report rows; body B leader cannot read body A.
+
+**C6 — Meeting brief snapshot** · P3
+- Business problem: the Sunday-evening brief must not change when late reports arrive.
+- Proposal: table `meeting_briefs` (period, generated_at, generated_by, frozen JSON payload). Late reports show in the live view with a "late" mark. A new brief is a new row; old rows are never changed.
+- Database: one table. API: generate, list, read. Permission: leadership roles.
+- UI/UX: printable brief with the ten sections of the brief, timestamp and data scope.
+- Security risk: the payload holds names of people who need care; same gate as the live view.
+- Regression tests: a late report does not alter a stored brief; the brief can be rebuilt from recorded data as of its timestamp.
+
+**C7 — Mission Overview page** · P3
+- Business problem: leadership needs one page for "what is happening this week".
+- Existing: `/` Operations dashboard and `/org` chart cover parts.
+- Proposal: a new overview composed from C2–C6, with the four sections of the brief. A missing report counts as "unknown", never as zero.
+- Database: none. API: scoped overview endpoint. Permission: B7.
+- UI/UX: summary numbers with period label, body cards with leader photo, attention list, weekly summary. Drill-down Organization → Body → Group → Report.
+- Security risk: B7. Regression tests: totals exclude missing reports from attendance averages.
+
+**C8 — Automatic attention items** · P4
+- Business problem: absence ≥ 2 weeks, a newcomer who does not return, a missing report must become an owned task.
+- Proposal: a job creates `follow_ups` rows with `kind` and `source_key` (B5). Owner = primary supervisor, else body leader. One week absent is display only. No status label is put on the person.
+- Database: B5. API: none new. Permission: none new.
+- UI/UX: items appear in the attention list. Security risk: sensitive inference; wording stays factual ("ขาด 2 สัปดาห์ติดต่อกัน").
+- Regression tests: idempotent run; no item when attendance was not recorded for the group (unknown is not absent).
+
+**C9 — Scheduler** · P2
+- Business problem: Saturday opening, Sunday reminders and the deadline need a clock.
+- Proposal: Vercel Cron → authenticated `POST /api/cron/*` routes (secret header). Jobs are idempotent.
+- Database: none. API: cron routes. Permission: secret only, no user session.
+- Security risk: public endpoint; reject without the secret; no data in the response.
+- Regression tests: missing secret → 401; double run → no duplicates.
+
+**C10 — LINE account linking** · P5
+- Business problem: reminders and LIFF need a verified LINE identity.
+- Proposal: table `line_accounts` (user, LINE user id unique, linked_at). The server verifies the LIFF ID token with LINE and checks the channel id. Linking requires an existing signed-in session (PIN) and a confirmation step. `members.line_id` stays a display field.
+- Database: one table. API: link, unlink, token exchange for a session.
+- Permission: a user links only the own account.
+- Security risk: account takeover through a forged id; never accept a LINE user id from the client.
+- Regression tests: forged token rejected; wrong channel rejected; second user cannot claim a linked id.
+
+**C11 — LIFF screens** · P5
+- Proposal: routes inside the existing SPA that reuse C3 screens. No second frontend.
+- Database: none. API: none new. Permission: same as web.
+- Security risk: CSP in `vercel.json` must allow the LIFF SDK and LINE API hosts; review each added host.
+- Regression tests: build passes; LIFF route without a session shows the link flow.
+
+**C12 — LINE notifications** · P5
+- Proposal: Messaging API push from the scheduler: period opened, report missing, revision requested, approved. A sent-log table prevents repeats. A notification never closes a task.
+- Database: one sent-log table. API: none public. Security risk: channel token in server environment only; no personal data of other people in a message.
+- Regression tests: one message per (user, event, period).
+
+## 5. Outstanding decisions
+
+| # | Decision | Recommendation | Owner |
+|---|---|---|---|
+| O1 | Is each `org_level = 'care'` row exactly one house mission group in production data? | Confirm by a read-only count and a review with the church. All later phases depend on this. | Church + owner |
+| O2 | Assignee identity: `members` row (recommended) or `users` row? | `members`. Many supervisors have no account; access applies only when a user is linked. | Owner |
+| O3 | Attendance for the weekly report: reuse `attendance_records` (recommended) or the separate table of decision Q12? | Reuse. One attendance store; `/care` and absence logic keep working. | Owner |
+| O4 | May a supervisor who is also the group's leader review the own report? | No, unless no other reviewer exists; then the body leader reviews. | Church |
+| O5 | Which role does หัวหน้าทีม ศบ. hold? | `staff`. No new role in Phases 1–3. | Church |
+| O6 | Reduce `admin`/`staff` access to personal data? | Separate decision after Phase 3. | Church |
+| O7 | Visitors: keep in `members` plus `newcomer_tracks` (recommended) or a separate visitor table? | Keep in `members`. | Owner |
+| O8 | Deadline time on Sunday and week boundary (Saturday start?) | Needs the church's meeting time. | Church |
+| O9 | Scheduler runtime | Vercel Cron. | Owner |
+| O10 | Who may manage assignments below leadership? | Body leader for own body only. | Church |
+
+## 6. Implementation risks
+
+| Risk | Effect | Control |
 |---|---|---|
-| Body | `groups` where `org_level = 'body'` | Exists |
-| Care (แคร์) | `groups` where `org_level = 'care'` | Exists, but see D1 for the third level |
-| House group (กลุ่มพันธกิจบ้าน) | Same as care, or a child of care with `org_level = NULL` | **Undecided (D1)** |
-| Group ID, name, meeting day/time, place, coordinates, photos | `groups.id, name, meeting_day, meeting_time, meeting_location, latitude, longitude, avatar_url, cover_url`; `media_assets.kind = 'group_photo'` | Exists |
-| Group leader | `groups.leader_id` (user), `groups.leader_member_id` (display only, not a permission) | Exists |
-| Coordinator | `groups.co_leader_id` | Exists |
-| Mission type | `groups.category` | Exists; values may need review |
-| Operational status | `groups.status` (`active, paused, closed`) | Exists |
-| Member list | `group_members` | Exists |
-| Leader / move history | `audit_logs` (new values only) | **Gap (D3)** |
-| Weekly report header (group, week, status, submitter, reviewer, timestamps, late flag) | — | **Gap (D2)** |
-| Activity (date, place, story, scripture, photos) | `mission_activities` + `mission_activity_media` | Exists; no scripture field (store in `story` or add a field — D2) |
-| Attendance (present/absent) | `attendance_records` with `service_type = 'care_group'` | Exists |
-| Newcomer / returning attendee | `members.membership_status = 'visitor'`; no "returning" flag | **Partial (D5)** |
-| Consecutive absence | `/api/attendance/absentees` | Exists |
-| Follow-up item | `follow_ups` | Exists; no result field (D6) |
-| Approval record (who, when) | `mission_submissions.reviewed_by_id, reviewed_at` (one level only) | **Partial (D4)** |
-| Audit log | `audit_logs` | Exists; incomplete before-values (D3) |
-| LINE identity | `members.line_id` (free text, unverified) | **Gap (Phase 5)** |
-| Notifications | `push_subscriptions` (Web Push) | Partial; no scheduler (D8) |
+| O1 answered wrongly | Reports attach to the wrong unit | Resolve O1 before any Phase 1 ticket |
+| Scope logic spread over three helper files | A new route forgets a scope check | One resolver for assignment scope; permission test per route |
+| New scoped permissions | Unintended access | Approval gate per permission; tests inside and outside scope |
+| Unique index on existing attendance data | Migration fails or needs cleanup | Read-only production audit first |
+| Supervisors without user accounts | Assignment exists but nobody can review | Show "no account" on the assignment; fall back to the body leader |
+| Day boundary in UTC | Attendance on the wrong day | Fix before weekly reports depend on dates |
+| Serverless limit (60 s) | Long cron job fails | Small idempotent jobs |
+| LINE hosts in CSP | Wider script surface | Add exact hosts only, in Phase 5 |
+| Two workflows for field input (`mission_submissions` and weekly reports) | User confusion | Weekly report is the only path for group leaders; Inbox stays for staff |
 
----
+## 7. Approval request
 
-## 3. Permission matrix (current state, verified in code)
-
-Legend: ✔ allowed · ◐ allowed within own scope · ✖ denied. "Own scope" for `group_leader`: write = groups led directly; read = groups led plus descendants.
-
-| Action | super_admin / admin | staff | ministry_leader | group_leader | viewer | member |
-|---|---|---|---|---|---|---|
-| Read directory (groups, members, attendance) | ✔ | ✔ | ✔ | ◐ read | ✔ read-only | ✖ (portal only) |
-| Create mission activity / submission / follow-up (`CREATE_ROLES`) | ✔ | ✔ | ✔ | ◐ | ✖ | ✖ |
-| Review / approve / publish submission (`PRIVILEGED_ROLES`) | ✔ | ✔ | ✔ | ✖ | ✖ | ✖ |
-| Record attendance (`/check-in`, `/bulk`) | ✔ | ✔ | ✔ | ◐ direct groups only | ✖ | ✖ |
-| See consecutive absentees | ✔ | ✔ | ✔ | ◐ | ✔ | ✖ |
-| Org overview `/api/org/*`, Operations dashboard | ✔ | ✔ | ✔ | ✖ | ✖ | ✖ |
-| Unmasked member contacts | ✔ | ✔ | ✖ | ◐ own roster (phone) | ✖ | ✖ |
-| Membership decisions (`MEMBERSHIP_DECIDE_ROLES`) | ✔ | ✔ | ✖ | ◐ direct groups only | ✖ | ✖ |
-| Manage users and roles | super_admin only | ✖ | ✖ | ✖ | ✖ | ✖ |
-
-### Blueprint role → existing role (proposed mapping, needs confirmation)
-
-| Blueprint role | Proposed existing role | Gap |
-|---|---|---|
-| ผู้รับผิดชอบกลุ่ม (group leader) | `group_leader`, leads the house group | None for submit. Must not see other groups. |
-| หัวหน้าแคร์ (care leader) | `group_leader`, leads the care group | Cannot review submissions today (F5). |
-| หัวหน้าบอดี้ (body leader) | `group_leader`, leads the body group | Reads descendants. Cannot review or certify today. |
-| หัวหน้าทีม ศบ. (ministry team lead) | `admin` or `staff` | Needs a decision. `ministry_leader` is the ministry-team role and is deliberately kept out of member-level data (`shared/roles.ts`, D32). |
-| ผู้ดูแลระบบ (system admin) | `super_admin` | Blueprint: admin must not see all personal data automatically. Today `admin` sees unmasked contacts. Changing that is a separate decision. |
-
----
-
-## 4. Not verified
-
-- Production data: how many groups exist per level, and whether real house groups sit under care groups. I did not read any database.
-- Whether `groups.category` values match the blueprint "mission type".
-- Client UI behaviour for each role. I read server code only.
-- LINE Official Account, LIFF app and channel settings. None are referenced in this repo.
-- Real-time behaviour of concurrent attendance writes (F7 is a code-reading finding, not a reproduced bug).
-
----
-
-## 5. Implementation Decision Record (proposed — needs approval)
-
-Each decision lists the recommendation first. Nothing is implemented until the decision is approved.
-
-**D1 — Org tree depth.**
-Question: Is one แคร์ the same as one กลุ่มพันธกิจบ้าน, or does one แคร์ contain several house groups?
-- Option A (recommended if 1:1): keep two levels. A house group is a `care` row. No migration.
-- Option B (if 1:N): add a third level as `care` children with a new `org_level` value (for example `house`). Needs a migration and updates to `shared/orgView.ts`, `careScope` and the org overview.
-Blocker: needs real church data to answer.
-
-**D2 — Weekly report entity.**
-Recommendation: add one table, for example `weekly_reports`, keyed by (`group_id`, `week_start`) with a unique index. Fields: `status` (`submitted, under_review, needs_revision, approved, not_held`), `activity_id` (link to `mission_activities`), `submitted_by_id`, `submitted_at`, `is_late`, `reviewed_by_id`, `reviewed_at`, `review_note`. `not_submitted` is **computed** (no row for that group and week), never stored. This separates "not submitted" from "not held" (blueprint Module B rule).
-Alternative: add `group_id` and `week_start` to `mission_submissions`. Not recommended: submissions are a raw inbox for unstructured input, and its status set has a different meaning.
-
-**D3 — Change history.**
-Recommendation: change `logAudit` callers for groups and group membership to store both `before` and `after` values. Consider a small `group_assignments` history table (group, parent, leader, valid_from, valid_to) only if the audit log is not sufficient for reports.
-
-**D4 — Review ladder permissions.**
-Recommendation: allow a `group_leader` to review a weekly report only for groups in its **read** scope and below its own level (care leader reviews house groups; body leader certifies care summaries). Do not add new roles. Add a set in `shared/roles.ts` and permission tests for every step. This is a permission expansion and needs explicit approval (blueprint §15).
-
-**D5 — Visitors and newcomers.**
-Question: Must visitors move out of `members`?
-- Option A (recommended): keep `members` with `membership_status = 'visitor'`, hide visitor rows from the member registry by default, and restrict visitor detail to the care scope until `consent_given = true`. No migration.
-- Option B: a separate `visitors` table with promotion to `members`. Needs a migration and an import path.
-
-**D6 — Follow-up result and history.**
-Recommendation: add a `result` text field to `follow_ups`, and write an audit entry with before/after on each status change. Use `follow_ups` for system-generated items (missing report, absence ≥ 2 weeks). Generation must be idempotent: one open item per (subject, reason, week).
-
-**D7 — Attendance duplicates.**
-Recommendation: add a unique index on (`member_id`, `service_type`, `group_id`, service date), after a check for existing duplicates in production data. Needs approval because it touches existing data.
-
-**D8 — Scheduler and notifications.**
-Recommendation: decide the runtime first (Vercel Cron calling an authenticated API route, or an external scheduler). Reuse Web Push for in-app reminders. LINE messages wait for Phase 5.
-
-**D9 — หัวหน้าทีม ศบ. role.**
-Question: `admin` or `staff`? Recommendation: `staff`, so that the team lead does not get user-management or delete rights.
-
----
-
-## 6. Proposed next step
-
-1. The church answers D1, D5 and D9 (business questions).
-2. The owner approves or changes D2, D3, D4, D6, D7 and D8 (technical decisions).
-3. Run the repository feature pipeline for Phase 1–2: `/grill weekly-report` → `/spec` → `/tickets`. Implementation starts only after a ticket is set to `Status: approved` in `TICKETS.md`.
+Approve, change or reject: (1) the corrected model in §2, (2) the proposed tables in `FAITHMAP_TARGET_ARCHITECTURE.md`, (3) the target permissions in `FAITHMAP_PERMISSION_MATRIX.md`, (4) decisions O1–O10. After approval, work starts with `/grill` for Phase 1. Implementation of a ticket starts only when its marker in `TICKETS.md` is `Status: approved`.
