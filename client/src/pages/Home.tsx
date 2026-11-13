@@ -494,7 +494,7 @@ function HomeContent() {
 
   return (
     <AppLayout>
-      <div className="home-editorial space-y-12 lg:space-y-20">
+      <div className="home-editorial space-y-10 lg:space-y-12">
         {/* Only renders when two or more of the page's queries have failed together. */}
         <HomeFailureBanner />
         {/* Phase 2: Role-aware hero. The heading is the same for every role; group leaders

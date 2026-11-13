@@ -792,8 +792,9 @@
   *,
   *:before,
   *:after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-duration: 120ms !important;
+    transition-duration: 120ms !important;
     scroll-behavior: auto !important;
   }
 }
@@ -2668,8 +2669,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .lamb-theme * {
-    transition: none !important;
-    animation: none !important;
+    transition-property: opacity, background-color, border-color, color;
+    transition-duration: 120ms;
+    animation: none;
   }
 }
 

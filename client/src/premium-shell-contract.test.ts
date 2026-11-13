@@ -77,9 +77,9 @@ describe("premium shell contract", () => {
     );
   });
 
-  it("keeps the global reduced-motion override that zeroes the pk durations", () => {
+  it("keeps the global reduced-motion override that caps iterations and durations without killing state feedback", () => {
     expect(css).toMatch(
-      /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\*,\s*\*:before,\s*\*:after\s*\{[^}]*animation-duration: 0\.01ms !important;[^}]*transition-duration: 0\.01ms !important;/
+      /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\*,\s*\*:before,\s*\*:after\s*\{[^}]*animation-iteration-count: 1 !important;[^}]*animation-duration: 120ms !important;[^}]*transition-duration: 120ms !important;/
     );
   });
 

@@ -66,7 +66,7 @@ export function LambQuickActions({
                   <span
                     aria-label={`${notificationCount} การแจ้งเตือนใหม่`}
                     aria-live="polite"
-                    className="absolute top-2 right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-error)] px-1 text-xs font-bold text-[var(--color-on-primary)] shadow-sm motion-safe:animate-pulse motion-reduce:animate-none"
+                    className="absolute top-2 right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-error)] px-1 text-xs font-bold text-[var(--color-on-primary)] shadow-sm"
                   >
                     {notificationCount > 9 ? "9+" : notificationCount}
                   </span>
