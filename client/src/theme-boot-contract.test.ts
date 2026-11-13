@@ -26,22 +26,22 @@ describe("theme boot (first paint)", () => {
     expect(html.indexOf("<script>")).toBeLessThan(html.indexOf("src=\"/src/main.tsx\""));
   });
 
-  it("defaults to dark, matching ThemeProvider defaultTheme=\"dark\", and survives blocked storage", () => {
-    expect(script).toMatch(/t = "dark"/);
+  it("defaults to light, matching ThemeProvider defaultTheme=\"light\", and survives blocked storage", () => {
+    expect(script).toMatch(/t = "light"/);
     expect(script).toMatch(/try \{[\s\S]*localStorage[\s\S]*\} catch/);
-    expect(readFileSync(path.join(root, "client", "src", "App.tsx"), "utf8")).toContain("<ThemeProvider defaultTheme=\"dark\"");
+    expect(readFileSync(path.join(root, "client", "src", "App.tsx"), "utf8")).toContain("<ThemeProvider defaultTheme=\"light\"");
   });
 
   it("the boot script and ThemeContext use the same theme-color values as the CSS canvases", () => {
     expect(script).toContain(`"${darkCanvas}"`);
     expect(script).toContain(`"${lightCanvas}"`);
     expect(ctx).toContain(`"${darkCanvas}" : "${lightCanvas}"`);
-    expect(html).toContain(`<meta name="theme-color" content="${darkCanvas}" />`);
+    expect(html).toContain(`<meta name="theme-color" content="${lightCanvas}" />`);
   });
 
-  it("the PWA manifest splash colours are the dark canvas", () => {
-    expect(manifest.theme_color.toLowerCase()).toBe(darkCanvas);
-    expect(manifest.background_color.toLowerCase()).toBe(darkCanvas);
+  it("the PWA manifest splash colours are the light canvas", () => {
+    expect(manifest.theme_color.toLowerCase()).toBe(lightCanvas);
+    expect(manifest.background_color.toLowerCase()).toBe(lightCanvas);
   });
 
   it("the dark theme paints the root element, not only body/#root", () => {

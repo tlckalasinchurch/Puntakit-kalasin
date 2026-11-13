@@ -1,5 +1,5 @@
-import { Router } from "express";
-import { and, count, desc, eq, gte, isNull, lte } from "drizzle-orm";
+import { Router, type Request } from "express";
+import { and, count, desc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 import { getDb } from "../db/client.js";
 import {
   attendanceRecords,
@@ -11,8 +11,9 @@ import {
 } from "../../shared/schema.js";
 import { reportsDateRangeQuerySchema, type ReportsDateRangeQuery } from "../../shared/validation.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { PRIVILEGED_ROLES as REPORT_ROLES } from "../../shared/roles.js";
+import { REPORT_ROLES } from "../../shared/roles.js";
 import { logAudit } from "../lib/audit.js";
+import { getViewableGroupIds, getViewableMemberIds, isScopedRole } from "../lib/careScope.js";
 import { buildCsv, sendCsv } from "../lib/csv.js";
 import { ValidationError } from "../lib/errors.js";
 
@@ -20,8 +21,26 @@ export const reportsRouter = Router();
 
 reportsRouter.use(requireAuth);
 
-// REPORT_ROLES is the shared PRIVILEGED_ROLES set (shared/roles.ts).
+// REPORT_ROLES includes PRIVILEGED_ROLES + group_leader (scoped to own body/care groups).
 reportsRouter.use(requireRole(...REPORT_ROLES));
+
+interface ReportScope {
+  scoped: boolean;
+  groupIds: string[];
+  memberIds: string[];
+}
+
+async function resolveReportScope(req: Request): Promise<ReportScope> {
+  const user = req.user!;
+  if (!isScopedRole(user.role)) {
+    return { scoped: false, groupIds: [], memberIds: [] };
+  }
+  const [groupIds, memberIds] = await Promise.all([
+    getViewableGroupIds(user.id),
+    getViewableMemberIds(user.id),
+  ]);
+  return { scoped: true, groupIds, memberIds };
+}
 
 interface ParsedDateRange {
   startDate?: Date;
@@ -68,53 +87,71 @@ reportsRouter.get("/summary", async (req, res, next) => {
   try {
     const { startDate, endDate } = parseDateRange(req.query);
     const db = getDb();
+    const scope = await resolveReportScope(req);
+    const hasScopedMembers = !scope.scoped || scope.memberIds.length > 0;
+    const hasScopedGroups = !scope.scoped || scope.groupIds.length > 0;
 
-    const memberRangeConditions = [isNull(members.deletedAt)];
+    const memberBaseConditions = [isNull(members.deletedAt)];
+    if (scope.scoped && scope.memberIds.length > 0) {
+      memberBaseConditions.push(inArray(members.id, scope.memberIds));
+    }
+
+    const memberRangeConditions = [...memberBaseConditions];
     if (startDate) memberRangeConditions.push(gte(members.joinedAt, startDate));
     if (endDate) memberRangeConditions.push(lte(members.joinedAt, endDate));
 
-    const [totalMembersResult] = await db
-      .select({ count: count() })
-      .from(members)
-      .where(isNull(members.deletedAt));
+    const [totalMembersResult] = hasScopedMembers
+      ? await db.select({ count: count() }).from(members).where(and(...memberBaseConditions))
+      : [{ count: 0 }];
 
-    const [newMembersResult] = await db
-      .select({ count: count() })
-      .from(members)
-      .where(and(...memberRangeConditions));
+    const [newMembersResult] = hasScopedMembers
+      ? await db.select({ count: count() }).from(members).where(and(...memberRangeConditions))
+      : [{ count: 0 }];
 
-    const membersByStatus = await db
-      .select({ status: members.status, count: count() })
-      .from(members)
-      .where(isNull(members.deletedAt))
-      .groupBy(members.status);
+    const membersByStatus = hasScopedMembers
+      ? await db
+          .select({ status: members.status, count: count() })
+          .from(members)
+          .where(and(...memberBaseConditions))
+          .groupBy(members.status)
+      : [];
 
-    const [totalGroupsResult] = await db
-      .select({ count: count() })
-      .from(groups)
-      .where(isNull(groups.deletedAt));
+    const groupConditions = [isNull(groups.deletedAt)];
+    if (scope.scoped && scope.groupIds.length > 0) {
+      groupConditions.push(inArray(groups.id, scope.groupIds));
+    }
 
-    const groupsByStatus = await db
-      .select({ status: groups.status, count: count() })
-      .from(groups)
-      .where(isNull(groups.deletedAt))
-      .groupBy(groups.status);
+    const [totalGroupsResult] = hasScopedGroups
+      ? await db.select({ count: count() }).from(groups).where(and(...groupConditions))
+      : [{ count: 0 }];
+
+    const groupsByStatus = hasScopedGroups
+      ? await db
+          .select({ status: groups.status, count: count() })
+          .from(groups)
+          .where(and(...groupConditions))
+          .groupBy(groups.status)
+      : [];
 
     const attendanceConditions = [];
+    if (scope.scoped && scope.memberIds.length > 0) {
+      attendanceConditions.push(inArray(attendanceRecords.memberId, scope.memberIds));
+    }
     if (startDate) attendanceConditions.push(gte(attendanceRecords.date, startDate));
     if (endDate) attendanceConditions.push(lte(attendanceRecords.date, endDate));
     const attendanceWhere = attendanceConditions.length > 0 ? and(...attendanceConditions) : undefined;
 
-    const [totalAttendanceResult] = await db
-      .select({ count: count() })
-      .from(attendanceRecords)
-      .where(attendanceWhere);
+    const [totalAttendanceResult] = hasScopedMembers
+      ? await db.select({ count: count() }).from(attendanceRecords).where(attendanceWhere)
+      : [{ count: 0 }];
 
-    const attendanceByStatus = await db
-      .select({ status: attendanceRecords.status, count: count() })
-      .from(attendanceRecords)
-      .where(attendanceWhere)
-      .groupBy(attendanceRecords.status);
+    const attendanceByStatus = hasScopedMembers
+      ? await db
+          .select({ status: attendanceRecords.status, count: count() })
+          .from(attendanceRecords)
+          .where(attendanceWhere)
+          .groupBy(attendanceRecords.status)
+      : [];
 
     const eventConditions = [];
     if (startDate) eventConditions.push(gte(events.eventDate, startDate));
@@ -171,8 +208,16 @@ reportsRouter.get("/export/members.csv", async (req, res, next) => {
   try {
     const { startDate, endDate } = parseDateRange(req.query);
     const db = getDb();
+    const scope = await resolveReportScope(req);
+
+    const headers = ["ชื่อ-นามสกุล", "ชื่อเล่น", "พื้นที่", "กลุ่ม", "สถานะสมาชิก", "สถานะการติดตาม", "วันที่เข้าร่วม"];
+    if (scope.scoped && scope.memberIds.length === 0) {
+      await logAudit({ req, action: "REPORTS_EXPORT_CSV", entityType: "report", details: { report: "members", count: 0 } });
+      return sendCsv(res, `report-members-${Date.now()}.csv`, buildCsv(headers, []));
+    }
 
     const conditions = [isNull(members.deletedAt)];
+    if (scope.scoped) conditions.push(inArray(members.id, scope.memberIds));
     if (startDate) conditions.push(gte(members.joinedAt, startDate));
     if (endDate) conditions.push(lte(members.joinedAt, endDate));
 
@@ -190,7 +235,6 @@ reportsRouter.get("/export/members.csv", async (req, res, next) => {
       .where(and(...conditions))
       .orderBy(members.name);
 
-    const headers = ["ชื่อ-นามสกุล", "ชื่อเล่น", "พื้นที่", "กลุ่ม", "สถานะสมาชิก", "สถานะการติดตาม", "วันที่เข้าร่วม"];
     const csvRows = rows.map((m) => [
       m.name,
       m.nickname ?? "",
@@ -214,8 +258,16 @@ reportsRouter.get("/export/attendance.csv", async (req, res, next) => {
   try {
     const { startDate, endDate } = parseDateRange(req.query);
     const db = getDb();
+    const scope = await resolveReportScope(req);
+
+    const headers = ["วันที่", "รอบการนมัสการ", "ชื่อ-นามสกุล", "พันธกิจ", "สถานะการมา"];
+    if (scope.scoped && scope.memberIds.length === 0) {
+      await logAudit({ req, action: "REPORTS_EXPORT_CSV", entityType: "report", details: { report: "attendance", count: 0 } });
+      return sendCsv(res, `report-attendance-${Date.now()}.csv`, buildCsv(headers, []));
+    }
 
     const conditions = [];
+    if (scope.scoped) conditions.push(inArray(attendanceRecords.memberId, scope.memberIds));
     if (startDate) conditions.push(gte(attendanceRecords.date, startDate));
     if (endDate) conditions.push(lte(attendanceRecords.date, endDate));
     const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -235,7 +287,6 @@ reportsRouter.get("/export/attendance.csv", async (req, res, next) => {
       .orderBy(desc(attendanceRecords.date))
       .limit(5000);
 
-    const headers = ["วันที่", "รอบการนมัสการ", "ชื่อ-นามสกุล", "พันธกิจ", "สถานะการมา"];
     const csvRows = rows.map((r) => [
       new Date(r.date).toLocaleDateString("th-TH"),
       r.serviceType,
@@ -256,6 +307,16 @@ reportsRouter.get("/export/attendance.csv", async (req, res, next) => {
 reportsRouter.get("/export/groups.csv", async (req, res, next) => {
   try {
     const db = getDb();
+    const scope = await resolveReportScope(req);
+
+    const headers = ["ชื่อกลุ่ม", "ประเภท", "สถานะ", "พื้นที่", "ผู้นำกลุ่ม", "จำนวนสมาชิก"];
+    if (scope.scoped && scope.groupIds.length === 0) {
+      await logAudit({ req, action: "REPORTS_EXPORT_CSV", entityType: "report", details: { report: "groups", count: 0 } });
+      return sendCsv(res, `report-groups-${Date.now()}.csv`, buildCsv(headers, []));
+    }
+
+    const groupConditions = [isNull(groups.deletedAt)];
+    if (scope.scoped) groupConditions.push(inArray(groups.id, scope.groupIds));
 
     const rows = await db
       .select({
@@ -272,11 +333,10 @@ reportsRouter.get("/export/groups.csv", async (req, res, next) => {
         groupMembers,
         and(eq(groupMembers.groupId, groups.id), eq(groupMembers.status, "active"))
       )
-      .where(isNull(groups.deletedAt))
+      .where(and(...groupConditions))
       .groupBy(groups.id, users.name)
       .orderBy(groups.name);
 
-    const headers = ["ชื่อกลุ่ม", "ประเภท", "สถานะ", "พื้นที่", "ผู้นำกลุ่ม", "จำนวนสมาชิก"];
     const csvRows = rows.map((g) => [
       g.name,
       g.category,

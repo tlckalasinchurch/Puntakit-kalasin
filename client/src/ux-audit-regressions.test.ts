@@ -276,7 +276,7 @@ describe("UX audit Batch D — visual consistency and performance", () => {
     expect(html).toMatch(
       /rel="preconnect"\s+href="https:\/\/fonts\.gstatic\.com"/
     );
-    expect(html).toMatch(/fonts\.googleapis\.com\/css2\?family=Prompt/);
+    expect(html).toMatch(/fonts\.googleapis\.com\/css2\?.*family=IBM\+Plex\+Sans\+Thai/);
     expect(read("client/src/index.css")).not.toMatch(
       /@import\s+url\("https:\/\/fonts/
     );
@@ -334,8 +334,8 @@ describe("UX audit Batch E — remaining low-severity items", () => {
     expect([pair![1].toLowerCase(), pair![2].toLowerCase()].sort()).toEqual(
       [darkCanvas.toLowerCase(), lightCanvas.toLowerCase()].sort()
     );
-    // The static meta must be the default theme, which is dark.
-    expect(html).toMatch(new RegExp(`<meta name="theme-color" content="${darkCanvas}" />`, "i"));
+    // The static meta must be the default theme, which is light.
+    expect(html).toMatch(new RegExp(`<meta name="theme-color" content="${lightCanvas}" />`, "i"));
   });
 
   it("ErrorBoundary speaks Thai and announces itself", () => {
@@ -467,7 +467,7 @@ describe("Audit 2026-10-04 — permissions, error states and mobile forms", () =
       /<Route path="\/members">\s*<ProtectedRoute allow=\{ADMIN_SHELL_ROLES\}>/
     );
     expect(app).toMatch(
-      /<Route path="\/reports">\s*<ProtectedRoute allow=\{PRIVILEGED_ROLES\}>/
+      /<Route path="\/reports">\s*<ProtectedRoute allow=\{REPORT_ROLES\}>/
     );
     expect(app).toMatch(
       /<Route path="\/import\/org">\s*<ProtectedRoute allow=\{SUPER_ADMIN_ROLES\}>/

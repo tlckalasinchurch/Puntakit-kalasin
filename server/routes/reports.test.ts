@@ -5,6 +5,7 @@ import { requireRole } from "../middleware/auth.js";
 import { reportsDateRangeQuerySchema } from "../../shared/validation.js";
 import { buildCsv, csvField, csvRow, sendCsv } from "../lib/csv.js";
 import type { UserRole } from "../../shared/schema.js";
+import { REPORT_ROLES } from "../../shared/roles.js";
 
 describe("Reports API & CSV Export Tests", () => {
   let server: Server;
@@ -44,9 +45,7 @@ describe("Reports API & CSV Export Tests", () => {
     });
   });
 
-  describe("RBAC Role Enforcement (Reports = Operations role set)", () => {
-    const REPORT_ROLES: UserRole[] = ["super_admin", "admin", "staff", "ministry_leader"];
-
+  describe("RBAC Role Enforcement (REPORT_ROLES)", () => {
     it.each(REPORT_ROLES)("allows %s through the reports gate", (role) => {
       const middleware = requireRole(...REPORT_ROLES);
       const req = { user: { id: "1", email: "u@test.com", name: "U", role } } as any;
@@ -55,9 +54,9 @@ describe("Reports API & CSV Export Tests", () => {
       expect(next).toHaveBeenCalledWith();
     });
 
-    it("blocks group_leader with 403 Forbidden", () => {
+    it("blocks viewer with 403 Forbidden", () => {
       const middleware = requireRole(...REPORT_ROLES);
-      const req = { user: { id: "2", email: "gl@test.com", name: "GL", role: "group_leader" as UserRole } } as any;
+      const req = { user: { id: "2", email: "v@test.com", name: "V", role: "viewer" as UserRole } } as any;
       const next = vi.fn();
       middleware(req, {} as any, next);
       const err = next.mock.calls[0][0];

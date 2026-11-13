@@ -87,6 +87,33 @@ export default function PinSignInPage() {
     if (event.key === "Enter") void submit();
   };
 
+  useEffect(() => {
+    const onWindowKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const tag = (event.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (tag === "BUTTON" && (event.key === "Enter" || event.key === " ")) return;
+
+      if (/^\d$/.test(event.key)) {
+        event.preventDefault();
+        setPin((current) => (current.length < 6 ? current + event.key : current));
+        setError("");
+      } else if (event.key === "Backspace") {
+        event.preventDefault();
+        setPin((current) => current.slice(0, -1));
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        setPin("");
+        setError("");
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        void submit();
+      }
+    };
+    window.addEventListener("keydown", onWindowKeyDown);
+    return () => window.removeEventListener("keydown", onWindowKeyDown);
+  });
+
   return (
     <main className="pin-login" onKeyDown={handleKeyDown}>
       <section className="pin-login__brand" aria-label="เกี่ยวกับ Puntakit">

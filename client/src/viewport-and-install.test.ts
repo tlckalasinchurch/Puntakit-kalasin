@@ -141,13 +141,13 @@ describe("installability", () => {
   });
 
   it("matches the theme the app actually paints", () => {
-    const darkCanvas = css
-      .slice(css.indexOf("\n.dark {"))
+    const lightCanvas = css
+      .slice(css.indexOf(":root"), css.indexOf("\n}", css.indexOf(":root")))
       .match(/--color-canvas:\s*(#[0-9a-f]{6})/i)![1]
       .toLowerCase();
-    expect(manifest.theme_color.toLowerCase()).toBe(darkCanvas);
-    expect(manifest.background_color.toLowerCase()).toBe(darkCanvas);
-    expect(html).toMatch(new RegExp(`<meta name="theme-color" content="${darkCanvas}"`, "i"));
+    expect(manifest.theme_color.toLowerCase()).toBe(lightCanvas);
+    expect(manifest.background_color.toLowerCase()).toBe(lightCanvas);
+    expect(html).toMatch(new RegExp(`<meta name="theme-color" content="${lightCanvas}"`, "i"));
   });
 
   it("starts where role routing works for everyone", () => {

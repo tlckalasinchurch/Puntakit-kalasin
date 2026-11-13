@@ -130,3 +130,16 @@ export const MEMBERSHIP_PAYMENT_ROLES: readonly UserRole[] = ["super_admin", "ad
  * it may not change member photos.
  */
 export const MEMBER_AVATAR_ROLES: readonly UserRole[] = MEMBER_UPDATE_ROLES.filter((r) => r !== "ministry_leader");
+
+/**
+ * View & export reports (`/api/reports/*`, `/reports`).
+ * `group_leader` (body/care leaders) are scoped server-side to their own
+ * viewable body and descendant care groups (`server/lib/careScope.ts`).
+ */
+export const REPORT_ROLES: readonly UserRole[] = [...PRIVILEGED_ROLES, "group_leader"];
+
+/**
+ * View the body → care org chart (`/api/org/*`, `/org`).
+ * `group_leader` sees only their own body and its care groups.
+ */
+export const ORG_VIEW_ROLES: readonly UserRole[] = [...PRIVILEGED_ROLES, "group_leader"];

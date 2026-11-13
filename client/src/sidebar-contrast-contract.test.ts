@@ -29,36 +29,25 @@ const activeRowClasses = () => {
 };
 
 describe("Sidebar: the active row's label is readable (AA, 4.5:1)", () => {
-  // Measured in a browser before this change: the accent as *text* on its own 15% tint was 4.41:1 (dark,
-  // Home) and 4.48:1 (light). The label is small text, so it needs 4.5:1. The accent stays on the
-  // 3px bar, the icon and the drawer ring (non-text, 3:1), where it already passes.
-  it("the active label is on-dark white, not the accent colour", () => {
+  it("the active label uses primary-ink on the pale accent-soft tint (accent-ladder)", () => {
     const classes = activeRowClasses();
-    expect(classes).toContain("text-[var(--color-on-dark)]");
-    expect(classes).not.toMatch(/(^|\s)text-\[var\(--color-primary-on-dark\)\]/);
+    expect(classes).toContain("text-[var(--color-primary-ink)]");
+    expect(classes).toContain("bg-[var(--color-accent-soft)]");
   });
 
-  it("the icon keeps the accent, so the row is still identifiable by more than the label", () => {
-    expect(sidebar).toMatch(/isActive\s*\?\s*"text-\[var\(--color-primary-on-dark\)\]"/);
+  it("the icon keeps the accent, without a left bar on top of the tint", () => {
+    expect(sidebar).toMatch(/isActive\s*\?\s*"text-\[var\(--color-primary\)\]"/);
     expect(sidebar).toContain("pk-nav-active");
-    expect(css).toMatch(/\.pk-nav-active::before[\s\S]*?background: var\(--color-primary-on-dark\)/);
+    expect(css).not.toMatch(/\.pk-nav-active::before/);
   });
 
-  it("white on the 15% accent tint clears 4.5:1 with a wide margin, for every accent the app defines", () => {
-    const accents = [...css.matchAll(/--color-primary-on-dark:\s*(#[0-9a-fA-F]{6})/g)].map((m) => m[1]);
-    const surface = css.match(/--color-dark-surface-2:\s*(#[0-9a-fA-F]{6})/)?.[1];
-    expect(accents.length).toBeGreaterThanOrEqual(2);
-    expect(surface).toBeDefined();
-    for (const accent of accents) {
-      const tinted = over(channels(accent), 0.15, channels(surface!));
-      expect(ratio([255, 255, 255], tinted), `white on ${accent} @15% over ${surface}`).toBeGreaterThanOrEqual(7);
-    }
-  });
-
-  it("documents why: the accent as text on its own tint is below AA (the reason it was changed)", () => {
-    const light = css.match(/--color-primary-on-dark:\s*(#[0-9a-fA-F]{6})/)![1];
-    const surface = css.match(/--color-dark-surface-2:\s*(#[0-9a-fA-F]{6})/)![1];
-    const tinted = over(channels(light), 0.15, channels(surface));
-    expect(ratio(channels(light), tinted)).toBeLessThan(4.5);
+  it("primary-ink on accent-soft clears 4.5:1 in light mode, and light ink on dark surface clears 4.5:1", () => {
+    const lightInk = css.match(/:root\s*\{[\s\S]*?--color-primary-ink:\s*(#[0-9a-fA-F]{6})/)?.[1];
+    const lightTint = css.match(/:root\s*\{[\s\S]*?--color-accent-soft:\s*(#[0-9a-fA-F]{6})/)?.[1];
+    const darkInk = css.match(/\.dark\s*\{[\s\S]*?--color-ink:\s*(#[0-9a-fA-F]{6})/)?.[1];
+    const darkSurface = css.match(/\.dark\s*\{[\s\S]*?--color-surface:\s*(#[0-9a-fA-F]{6})/)?.[1];
+    expect(lightInk && lightTint && darkInk && darkSurface).toBeTruthy();
+    expect(ratio(channels(lightInk!), channels(lightTint!))).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(channels(darkInk!), channels(darkSurface!))).toBeGreaterThanOrEqual(7);
   });
 });

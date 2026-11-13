@@ -10,6 +10,7 @@ import {
   Inbox as InboxIcon,
   ListChecks,
   ListTodo,
+  Network,
   PanelLeftClose,
   PanelLeftOpen,
   ShieldCheck,
@@ -25,7 +26,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ICON_SIZE } from "@/lib/icon-sizes";
-import { ADMIN_ROLES, CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, PRIVILEGED_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
+import { ADMIN_ROLES, CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, PRIVILEGED_ROLES, REPORT_ROLES, SUPER_ADMIN_ROLES, hasRole } from "@shared/roles";
 import type { UserRole } from "@shared/schema";
 import { isGroupHeadActive } from "@/lib/pageViews";
 import { Logo } from "./Logo";
@@ -103,7 +104,7 @@ export const navGroups: NavGroup[] = [
         label: "รายงาน",
         path: "/reports",
         icon: BarChart3,
-        roles: PRIVILEGED_ROLES,
+        roles: REPORT_ROLES,
       },
     ],
   },
@@ -160,6 +161,10 @@ export const groupLeaderNavGroups: NavGroup[] = [
       { label: "สมาชิกของฉัน", path: "/members", icon: Users },
       { label: "สถานะสมาชิก", path: "/memberships", icon: BadgeCheck },
       { label: "กลุ่มของฉัน", path: "/groups", icon: UsersRound },
+      { label: "ผังบอดี้ของฉัน", path: "/org", icon: Network },
+      { label: "เช็คชื่อ", path: "/attendance", icon: UserCheck },
+      { label: "กิจกรรม", path: "/events", icon: CalendarDays },
+      { label: "รายงาน", path: "/reports", icon: BarChart3 },
     ],
   },
   {
@@ -264,7 +269,7 @@ export function Sidebar({ open, onClose, collapsed, onToggleCollapsed }: Sidebar
         ref={drawerRef}
         id="app-sidebar"
         tabIndex={-1}
-        className={`pk-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(22rem,88vw)] shrink-0 flex-col overflow-y-auto overflow-x-hidden bg-[var(--color-dark-surface)] text-[var(--color-on-dark)] outline-none transition-opacity duration-150 ease-out motion-reduce:transition-none lg:static lg:transition-[width] lg:duration-200 ${
+        className={`pk-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(22rem,88vw)] shrink-0 flex-col overflow-y-auto overflow-x-hidden border-r border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-ink)] outline-none transition-opacity duration-150 ease-out motion-reduce:transition-none lg:static lg:transition-[width] lg:duration-200 ${
           collapsed ? "lg:w-[4.5rem]" : "lg:w-60"
         } ${open ? "opacity-100" : "max-lg:invisible max-lg:opacity-0"}`}
         aria-label="เมนูหลัก"
@@ -272,25 +277,25 @@ export function Sidebar({ open, onClose, collapsed, onToggleCollapsed }: Sidebar
         aria-modal={open ? "true" : undefined}
       >
         <div
-          className={`flex items-center justify-between border-b border-[var(--color-on-dark-hairline)] px-5 py-4 ${
+          className={`flex items-center justify-between border-b border-[var(--color-hairline)] px-5 py-4 lg:border-b-0 ${
             collapsed ? "lg:flex-col lg:gap-2 lg:px-0" : ""
           }`}
         >
-          <Logo textClassName={collapsed ? "lg:sr-only" : undefined} />
+          <Logo tone="onLight" textClassName={collapsed ? "lg:sr-only" : undefined} />
           <button
             type="button"
             onClick={onToggleCollapsed}
             aria-expanded={!collapsed}
             aria-controls="app-sidebar"
             aria-label={collapsed ? "ขยายเมนู" : "ย่อเมนู"}
-            className="hidden size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-on-dark-muted)] transition-colors hover:bg-[var(--color-on-dark)]/10 hover:text-[var(--color-on-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-on-dark)] lg:flex"
+            className="hidden size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-body-muted)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] lg:flex"
           >
             {collapsed ? <PanelLeftOpen size={ICON_SIZE.lg} aria-hidden="true" /> : <PanelLeftClose size={ICON_SIZE.lg} aria-hidden="true" />}
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-on-dark-muted)] transition-colors hover:bg-[var(--color-on-dark)]/10 hover:text-[var(--color-on-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-on-dark)] lg:hidden"
+            className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-body-muted)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] lg:hidden"
             aria-label="ปิดเมนู"
           >
             <X size={ICON_SIZE.lg} aria-hidden="true" />
@@ -299,8 +304,8 @@ export function Sidebar({ open, onClose, collapsed, onToggleCollapsed }: Sidebar
 
         <nav className="flex flex-1 flex-col gap-5 px-2 py-4">
           {visibleGroups.map(group => (
-            <div key={group.name} className={collapsed ? "lg:border-t lg:border-[var(--color-on-dark-hairline)] lg:pt-3 lg:first:border-t-0 lg:first:pt-0" : undefined}>
-              <h2 className={`type-fine mb-1 px-3 font-semibold text-[var(--color-on-dark-muted)] ${collapsed ? "lg:sr-only" : ""}`}>
+            <div key={group.name} className={collapsed ? "lg:border-t lg:border-[var(--color-hairline)] lg:pt-3 lg:first:border-t-0 lg:first:pt-0" : undefined}>
+              <h2 className={`type-fine mb-1 px-3 font-semibold text-[var(--color-body-muted)] ${collapsed ? "lg:sr-only" : ""}`}>
                 {group.name}
               </h2>
               <ul className="flex flex-col gap-0.5 max-lg:grid max-lg:grid-cols-2 max-lg:gap-2">
@@ -317,12 +322,12 @@ export function Sidebar({ open, onClose, collapsed, onToggleCollapsed }: Sidebar
                         href={path}
                         onClick={onClose}
                         aria-current={isActive ? "page" : undefined}
-                        className={`type-caption-strong flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary-on-dark)] max-lg:min-h-[4.5rem] max-lg:flex-col max-lg:justify-center max-lg:gap-1.5 max-lg:px-2 max-lg:text-center ${
+                        className={`type-caption-strong flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary)] max-lg:min-h-[4.5rem] max-lg:flex-col max-lg:justify-center max-lg:gap-1.5 max-lg:px-2 max-lg:text-center ${
                           collapsed ? "lg:justify-center lg:px-0" : ""
                         } ${
                           isActive
-                            ? "pk-nav-active bg-[var(--color-primary-on-dark)]/15 text-[var(--color-on-dark)] max-lg:font-semibold max-lg:ring-2 max-lg:ring-inset max-lg:ring-[var(--color-primary-on-dark)]"
-                            : "text-[var(--color-on-dark-muted)] hover:bg-[var(--color-on-dark)]/5 hover:text-[var(--color-on-dark)]"
+                            ? "pk-nav-active bg-[var(--color-accent-soft)] text-[var(--color-primary-ink)] max-lg:font-semibold max-lg:ring-2 max-lg:ring-inset max-lg:ring-[var(--color-primary)]"
+                            : "text-[var(--color-body-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)]"
                         }`}
                       >
                         <Icon
@@ -330,8 +335,8 @@ export function Sidebar({ open, onClose, collapsed, onToggleCollapsed }: Sidebar
                           aria-hidden="true"
                           className={
                             isActive
-                              ? "text-[var(--color-primary-on-dark)]"
-                              : "text-[var(--color-on-dark-muted)]"
+                              ? "text-[var(--color-primary)]"
+                              : "text-[var(--color-body-muted)]"
                           }
                         />
                         <span className={`min-w-0 flex-1 ${collapsed ? "lg:sr-only" : ""}`}>{label}</span>

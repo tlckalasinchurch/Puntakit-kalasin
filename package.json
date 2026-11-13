@@ -20,6 +20,7 @@
     "db:migrate:env": "tsx server/scripts/migrate.ts",
     "db:set-pin": "dotenv -e .env.local -- tsx server/scripts/set-pin.ts",
     "db:set-pin:env": "tsx server/scripts/set-pin.ts",
+    "db:setup-body-pins": "dotenv -e .env.local -- tsx server/scripts/setup-body-pins.ts",
     "db:seed": "dotenv -e .env.local -- tsx server/scripts/seed.ts",
     "db:seed:env": "tsx server/scripts/seed.ts"
   },

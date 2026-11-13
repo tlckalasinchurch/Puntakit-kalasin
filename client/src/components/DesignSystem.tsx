@@ -871,7 +871,7 @@ export function DataBar({
   const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
   return (
     <div
-      className="h-1.5 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--color-canvas-soft)]"
+      className="h-1.5 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--color-accent-track)]"
       role="img"
       aria-label={label}
     >
@@ -879,7 +879,7 @@ export function DataBar({
         className={`h-full rounded-[var(--radius-pill)] ${
           tone === "error"
             ? "bg-[var(--color-error)]"
-            : "bg-[var(--color-ink)]"
+            : "bg-[var(--color-primary)]"
         }`}
         style={{ width: `${pct}%` }}
       />

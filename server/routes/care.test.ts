@@ -84,12 +84,12 @@ describe("care roster (real PGlite Postgres)", () => {
     expect((await fetch(`${baseUrl}/api/care/groups/nope/roster`, { headers: { Cookie: adminCookie } })).status).toBe(400);
   });
 
-  it("lets a group_leader load the care-group picker that /api/org/overview refuses them", async () => {
+  it("lets a group_leader load the care-group picker and scoped /api/org/overview", async () => {
     const picker = await fetch(`${baseUrl}/api/care/groups`, { headers: { Cookie: leaderCookie } });
     expect(picker.status).toBe(200);
     const { data } = (await picker.json()) as { data: { bodies: Array<{ careGroups: unknown[] }> } };
     expect(data.bodies.flatMap((b) => b.careGroups).length).toBeGreaterThan(0);
-    expect((await fetch(`${baseUrl}/api/org/overview`, { headers: { Cookie: leaderCookie } })).status).toBe(403);
+    expect((await fetch(`${baseUrl}/api/org/overview`, { headers: { Cookie: leaderCookie } })).status).toBe(200);
     expect((await fetch(`${baseUrl}/api/care/groups`, { headers: { Cookie: memberCookie } })).status).toBe(403);
   });
 

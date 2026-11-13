@@ -1,4 +1,4 @@
-import { ADMIN_SHELL_ROLES, CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, PRIVILEGED_ROLES, hasRole } from "@shared/roles";
+import { ADMIN_SHELL_ROLES, CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, ORG_VIEW_ROLES, hasRole } from "@shared/roles";
 import type { UserRole } from "@shared/schema";
 
 /**
@@ -25,7 +25,7 @@ export const PAGE_VIEW_GROUPS: readonly PageViewGroup[] = [
     id: "structure",
     tabs: [
       { path: "/groups", label: "พันธกิจ", roles: ADMIN_SHELL_ROLES },
-      { path: "/org", label: "ผังองค์กร", roles: PRIVILEGED_ROLES },
+      { path: "/org", label: "ผังองค์กร", roles: ORG_VIEW_ROLES },
       { path: "/ministries", label: "ฝ่ายงาน", roles: ADMIN_SHELL_ROLES },
       { path: "/map", label: "แผนที่", roles: ADMIN_SHELL_ROLES },
     ],

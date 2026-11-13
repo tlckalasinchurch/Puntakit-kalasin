@@ -49,7 +49,7 @@ white plate).
 | Canvas (`--color-background`) | `#fffbf7` | the page background (warm white) |
 | Canvas soft | `#f6f1eb` | wells, table stripes, `secondary` / `muted` / `accent` |
 | Surface | `#ffffff` | card surfaces |
-| Sunken | `#efe9e1` | recessed areas only: inset wells, hover fills |
+| Sunken | `#ebedee` | recessed areas only: inset wells, hover fills |
 | Divider | `#e8f0ef` | hairlines inside a card |
 | Hairline (`--color-border`) | `#dce8e7` | card borders, inputs (`--border`, `--input`) |
 

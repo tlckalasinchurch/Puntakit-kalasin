@@ -3,7 +3,7 @@ import { Route, Switch, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ADMIN_ROLES, ADMIN_SHELL_ROLES, CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, PRIVILEGED_ROLES, SUPER_ADMIN_ROLES } from "@shared/roles";
+import { ADMIN_ROLES, ADMIN_SHELL_ROLES, CREATE_ROLES, MEMBERSHIP_VIEW_ROLES, ORG_VIEW_ROLES, PRIVILEGED_ROLES, REPORT_ROLES, SUPER_ADMIN_ROLES } from "@shared/roles";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -74,10 +74,23 @@ function RouteSkeleton() {
   );
 }
 
+/** Centered card skeleton for `/login` so it never flashes a dashboard wireframe. */
+function AuthRouteSkeleton() {
+  return (
+    <div className="flex min-h-screen items-center justify-center px-4 py-10" data-testid="auth-route-skeleton">
+      <Skeleton className="h-[460px] w-full max-w-md rounded-3xl" />
+    </div>
+  );
+}
+
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={PinSignInPage} />
+      <Route path="/login">
+        <Suspense fallback={<AuthRouteSkeleton />}>
+          <PinSignInPage />
+        </Suspense>
+      </Route>
 
       {/* Public legal routes (accessible without login) */}
       <Route path="/privacy" component={Privacy} />
@@ -165,7 +178,7 @@ function Router() {
         </ProtectedRoute>
       </Route>
       <Route path="/org">
-        <ProtectedRoute allow={PRIVILEGED_ROLES}>
+        <ProtectedRoute allow={ORG_VIEW_ROLES}>
           <OrgChart />
         </ProtectedRoute>
       </Route>
@@ -250,7 +263,7 @@ function Router() {
         </ProtectedRoute>
       </Route>
       <Route path="/reports">
-        <ProtectedRoute allow={PRIVILEGED_ROLES}>
+        <ProtectedRoute allow={REPORT_ROLES}>
           <Reports />
         </ProtectedRoute>
       </Route>
@@ -272,7 +285,7 @@ function Router() {
 
 function App() {
   const content = (
-    <ThemeProvider defaultTheme="dark" switchable>
+    <ThemeProvider defaultTheme="light" switchable>
       <AuthProvider>
         <Suspense fallback={<RouteSkeleton />}>
           <Router />

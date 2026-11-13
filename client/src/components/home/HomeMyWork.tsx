@@ -40,7 +40,7 @@ function Tile({
   const body = (
     <>
       <span aria-hidden="true" className="pk-home-tile__icon">
-        <Icon size={32} aria-hidden="true" />
+        <Icon size={24} aria-hidden="true" />
       </span>
       <span className="pk-home-tile__text">
         <span className="pk-home-tile__title">{title}</span>
@@ -209,7 +209,7 @@ export function HomeMyWork() {
             ))}
           </div>
         ) : (
-          <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <dl className="grid grid-cols-2 divide-y divide-[var(--color-hairline)] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-hairline)] bg-[var(--color-surface)] sm:divide-y-0 sm:divide-x lg:grid-cols-4">
             {(
               [
                 [data.scopeIsWholeChurch ? "พันธกิจทั้งหมด" : "กลุ่มในความรับผิดชอบ", data.counts.groups, "กลุ่ม"],
@@ -218,7 +218,7 @@ export function HomeMyWork() {
                 canSeeMembership ? ["สมาชิกที่ต้องดำเนินการ", attention, "คน"] : ["การติดตามของฉัน", data.counts.openFollowUps, "รายการ"],
               ] as Array<[string, number, string]>
             ).map(([label, value, unit]) => (
-              <div key={label} className="rounded-[var(--radius-lg)] bg-[var(--color-canvas-soft)] p-4">
+              <div key={label} className="p-4">
                 <dt className="type-caption text-[var(--color-text-secondary)]">{label}</dt>
                 <dd className="mt-1 flex items-baseline gap-1.5">
                   <span className="type-display-md tabular-nums text-[var(--color-ink)]">{value.toLocaleString("th-TH")}</span>

@@ -61,11 +61,11 @@ describe("Member PWA: colours come from tokens", () => {
 });
 
 describe("Member PWA: teal text on the accent tint passes AA", () => {
-  it("light --color-primary (fill teal) on --color-accent-soft fails 4.5:1, --color-primary-ink passes (why the chips use it)", () => {
+  it("light --color-primary and --color-primary-ink pass AA (4.5:1) on --color-accent-soft", () => {
     const css = read("client/src/index.css");
     const light = (name: string) => css.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`))![1]; // first definition = :root (light)
     const tint = light("--color-accent-soft");
-    expect(contrast(light("--color-primary"), tint)).toBeLessThan(4.5);
+    expect(contrast(light("--color-primary"), tint)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(light("--color-primary-ink"), tint)).toBeGreaterThanOrEqual(4.5);
   });
 

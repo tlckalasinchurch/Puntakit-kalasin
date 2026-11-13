@@ -42,19 +42,19 @@ describe("design token source of truth", () => {
     // and every component need to change with it.
     // Premium Teal: teal fill with white text, a darker teal ink for text, soft mint tint,
     // warm white canvas, slate ink.
-    expect(tokens.get("--color-primary")).toBe("#0c7c82");
-    expect(tokens.get("--color-primary-focus")).toBe("#09666b");
-    expect(tokens.get("--color-primary-ink")).toBe("#0a6a70");
+    expect(tokens.get("--color-primary")).toBe("#1b6c80");
+    expect(tokens.get("--color-primary-focus")).toBe("#155666");
+    expect(tokens.get("--color-primary-ink")).toBe("#124d5c");
     expect(tokens.get("--color-on-primary")).toBe("#ffffff");
     expect(tokens.get("--color-primary-on-dark")).toBe("#35b4b0");
-    expect(tokens.get("--color-secondary")).toBe("#35b4b0");
-    expect(tokens.get("--color-accent-orange")).toBe("#ff8a3d");
-    expect(tokens.get("--color-accent-soft")).toBe("#e6f6f5");
-    expect(tokens.get("--color-ink")).toBe("#1f2937");
-    expect(tokens.get("--color-dark-surface")).toBe("#111827");
-    expect(tokens.get("--color-canvas")).toBe("#fffbf7");
+    expect(tokens.get("--color-secondary")).toBe("#2f70bb");
+    expect(tokens.get("--color-accent-orange")).toBe("#a86f0c");
+    expect(tokens.get("--color-accent-soft")).toBe("#e6f2f5");
+    expect(tokens.get("--color-ink")).toBe("#111827");
+    expect(tokens.get("--color-dark-surface")).toBe("#111111");
+    expect(tokens.get("--color-canvas")).toBe("#f7fafb");
     expect(tokens.get("--color-surface")).toBe("#ffffff");
-    expect(tokens.get("--color-hairline")).toBe("#dce8e7");
+    expect(tokens.get("--color-hairline")).toBe("#e5e7eb");
   });
 
   it("defines a real elevation token", () => {
@@ -177,8 +177,8 @@ describe("design token source of truth", () => {
     ]) {
       expect(tokens.get(token), `${token} missing`).toMatch(/^#[0-9a-f]{6}$/i);
     }
-    // A sunken surface is a warm neutral, not blue-white.
-    expect(tokens.get("--color-canvas-sunken")).toBe("#efe9e1");
+    // A sunken surface is a crisp neutral step in framed-sheet.
+    expect(tokens.get("--color-canvas-sunken")).toBe("#ebedee");
   });
 });
 
@@ -248,8 +248,7 @@ describe("primary as text on its own soft tint", () => {
     for (const bg of ["--color-canvas", "--color-surface", "--color-canvas-soft", "--color-accent-soft"]) {
       expect(cr(ink, tokens.get(bg)!), bg).toBeGreaterThanOrEqual(4.5);
     }
-    // The fill teal itself is NOT a text colour on every light surface: on the mint tint it is 4.47:1.
-    expect(cr(tokens.get("--color-primary")!, tokens.get("--color-accent-soft")!)).toBeLessThan(4.5);
+    expect(cr(tokens.get("--color-primary")!, tokens.get("--color-accent-soft")!)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("dark --color-primary-ink is >= 4.5:1 on the dark accent-soft tint over the dark canvas", () => {

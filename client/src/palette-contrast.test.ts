@@ -119,14 +119,14 @@ describe.each([
   });
 });
 
-describe("Premium Teal identity", () => {
-  it("fills are teal (lighter in dark) and the canvases are warm white / deep slate", () => {
-    expect(resolve(light, "--color-primary")).toBe("#0c7c82");
+describe("Accent-ladder Brand Teal identity", () => {
+  it("uses accent-ladder teal accent and light/dark canvases", () => {
+    expect(resolve(light, "--color-primary")).toBe("#1b6c80");
     expect(resolve(dark, "--color-primary")).toBe("#35b4b0");
-    expect(resolve(light, "--color-canvas")).toBe("#fffbf7");
-    expect(resolve(dark, "--color-canvas")).toBe("#111827");
-    expect(resolve(dark, "--color-surface")).toBe("#1f2937");
-    expect(resolve(dark, "--color-surface-elevated")).toBe("#273449");
+    expect(resolve(light, "--color-canvas")).toBe("#f7fafb");
+    expect(resolve(dark, "--color-canvas")).toBe("#0a0a0b");
+    expect(resolve(dark, "--color-surface")).toBe("#111111");
+    expect(resolve(dark, "--color-surface-elevated")).toBe("#1a1a1c");
   });
 
   it("no retired orange or porcelain literal is left in the token layer or the shell chrome", () => {

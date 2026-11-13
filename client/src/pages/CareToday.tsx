@@ -280,7 +280,7 @@ export default function CareToday() {
                   <i style={{ width: `${(picked.size / members.length) * 100}%` }} />
                 </div>
               </section>
-              <ul className="flex flex-col gap-3">
+              <ul className="flex flex-col gap-3 pb-6">
                 {members.map((m) => (
                   <li key={m.id}>
                     <button type="button" className="clay-tile" aria-pressed={picked.has(m.id)} onClick={() => toggle(m.id)}>
@@ -296,7 +296,7 @@ export default function CareToday() {
                   </li>
                 ))}
               </ul>
-              <div className="sticky z-10 -mx-1 flex flex-col gap-2 bg-[var(--clay-ground)] px-1 py-3" style={{ bottom: navHeight ? `calc(${navHeight}px + var(--safe-b) + 18px)` : 0 }}>
+              <div className="mt-4 flex flex-col gap-2 py-2">
                 {saveError && (
                   <p role="alert" className="type-caption rounded-[var(--radius-sm)] bg-[var(--color-error)]/10 p-3 text-[var(--color-error-ink)]">
                     {saveError}
@@ -349,7 +349,7 @@ export default function CareToday() {
                 ) : toCall.length === 0 ? (
                   <p className="clay-card-soft type-caption text-[var(--color-body-muted)]">ไม่มีใครขาดติดกัน {FOLLOW_UP_AFTER} ครั้งขึ้นไป</p>
                 ) : (
-                  <ul className="flex flex-col gap-3">
+                  <ul className="flex flex-col gap-3 pb-6">
                     {toCall.map((m) => (
                       <li key={m.id} className="clay-card-soft flex flex-col gap-3">
                         <div className="flex items-center gap-3">

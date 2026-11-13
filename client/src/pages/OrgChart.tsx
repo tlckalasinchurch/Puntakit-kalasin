@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { Link } from "wouter";
 import { buttonVariants } from "@/components/ui/button";
-import { ADMIN_ROLES, PRIVILEGED_ROLES, hasRole } from "@shared/roles";
+import { ADMIN_ROLES, ORG_VIEW_ROLES, hasRole } from "@shared/roles";
 
 /**
  * ผังองค์กร: ศบ. → บอดี้ → พันธกิจ → สมาชิก.
@@ -78,7 +78,7 @@ function Stat({ value, label }: { value: number; label: string }) {
 export default function OrgChart() {
   usePageTitle("ผังองค์กร");
   const { user } = useAuth();
-  const canRead = hasRole(user?.role, PRIVILEGED_ROLES);
+  const canRead = hasRole(user?.role, ORG_VIEW_ROLES);
   // Adding, editing and deleting live on /groups and /members; admins get shortcuts here.
   const canManage = hasRole(user?.role, ADMIN_ROLES);
   const [data, setData] = useState<Overview | null>(null);

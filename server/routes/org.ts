@@ -2,20 +2,21 @@ import { Router } from "express";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/client.js";
 import { groupMembers, groups, members } from "../../shared/schema.js";
-import { PRIVILEGED_ROLES } from "../../shared/roles.js";
+import { ORG_VIEW_ROLES } from "../../shared/roles.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { NotFoundError, ValidationError } from "../lib/errors.js";
+import { getViewableGroupIds, isScopedRole, viewsGroup } from "../lib/careScope.js";
+import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors.js";
 import { HEAD_ROLE, parseCareGroupDescription, parseMemberNotes } from "../../shared/orgView.js";
 
 /**
  * Read-only org chart: ศบ. -> body -> care group -> member.
- * Same read gate as the rest of the people data (PRIVILEGED_ROLES).
+ * `group_leader` is scoped to their own viewable body and care groups.
  */
 export const orgRouter = Router();
-orgRouter.use(requireAuth, requireRole(...PRIVILEGED_ROLES));
+orgRouter.use(requireAuth, requireRole(...ORG_VIEW_ROLES));
 
 /** The body -> care group tree with totals. No contact data. */
-export async function loadOrgOverview() {
+export async function loadOrgOverview(scopedGroupIds?: Set<string>) {
   const db = getDb();
   const rows = await db
     .select({
@@ -42,7 +43,8 @@ export async function loadOrgOverview() {
     .where(and(eq(members.role, HEAD_ROLE), isNull(members.deletedAt)))
     .limit(1);
 
-  const cares = rows.filter((r) => r.orgLevel === "care");
+  const visibleRows = scopedGroupIds ? rows.filter((r) => scopedGroupIds.has(r.id)) : rows;
+  const cares = visibleRows.filter((r) => r.orgLevel === "care");
   const toCareSummary = (c: (typeof cares)[number]) => ({
     id: c.id,
     name: c.name.trim(),
@@ -54,7 +56,7 @@ export async function loadOrgOverview() {
     ...(c.leaderName ? { careLeaderName: c.leaderName } : {}),
     leaderMemberId: c.leaderMemberId,
   });
-  const bodies = rows
+  const bodies = visibleRows
     .filter((r) => r.orgLevel === "body")
     .map((b) => {
       const children = cares.filter((c) => c.parentGroupId === b.id).map(toCareSummary);
@@ -69,7 +71,9 @@ export async function loadOrgOverview() {
       };
     });
   bodies.sort((a, b) => b.memberCount - a.memberCount || a.name.localeCompare(b.name, "th"));
-  const unassigned = cares.filter((c) => !c.parentGroupId || !bodies.some((b) => b.id === c.parentGroupId));
+  const unassigned = scopedGroupIds
+    ? []
+    : cares.filter((c) => !c.parentGroupId || !bodies.some((b) => b.id === c.parentGroupId));
 
   return {
     head: head ?? null,
@@ -86,9 +90,12 @@ export async function loadOrgOverview() {
   };
 }
 
-orgRouter.get("/overview", async (_req, res, next) => {
+orgRouter.get("/overview", async (req, res, next) => {
   try {
-    res.json({ success: true, data: await loadOrgOverview() });
+    const scopedGroupIds = isScopedRole(req.user!.role)
+      ? new Set(await getViewableGroupIds(req.user!.id))
+      : undefined;
+    res.json({ success: true, data: await loadOrgOverview(scopedGroupIds) });
   } catch (err) {
     next(err);
   }
@@ -98,6 +105,9 @@ orgRouter.get("/care-groups/:id/members", async (req, res, next) => {
   try {
     const id = req.params.id;
     if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ValidationError("รหัสกลุ่มไม่ถูกต้อง", [{ field: "id", message: "uuid" }]);
+    if (isScopedRole(req.user!.role) && !(await viewsGroup(req.user!.id, id))) {
+      throw new ForbiddenError("คุณไม่มีสิทธิ์เข้าถึงพันธกิจนี้");
+    }
     const db = getDb();
     const [care] = await db
       .select()

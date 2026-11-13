@@ -36,7 +36,7 @@ export function MobileBottomNav({ onMenu, menuOpen }: MobileBottomNavProps) {
       ]
     : [
         { label: "หน้าหลัก", path: "/", icon: HomeIcon },
-        ...(canCheckIn ? [{ label: "เช็คชื่อ", path: "/care", icon: ListChecks }] : []),
+        ...(canCheckIn ? [{ label: "เช็คชื่อกลุ่ม", path: "/care", icon: ListChecks }] : []),
         { label: "สมาชิก", path: "/members", icon: Users },
         { label: "พันธกิจ", path: "/groups", icon: UsersRound },
       ];

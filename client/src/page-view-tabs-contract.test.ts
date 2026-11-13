@@ -47,8 +47,12 @@ describe("pageViewTabsFor", () => {
     for (const loc of FULL_STRUCTURE) expect(paths(role, loc)).toEqual(FULL_STRUCTURE);
   });
 
-  it.each(["group_leader", "viewer"] as const)("%s sees the structure tabs without /org (PRIVILEGED_ROLES only)", (role) => {
-    expect(paths(role, "/groups")).toEqual(["/groups", "/ministries", "/map"]);
+  it("group_leader sees all structure tabs including scoped /org", () => {
+    expect(paths("group_leader", "/groups")).toEqual(["/groups", "/org", "/ministries", "/map"]);
+  });
+
+  it("viewer sees the structure tabs without /org (ORG_VIEW_ROLES only)", () => {
+    expect(paths("viewer", "/groups")).toEqual(["/groups", "/ministries", "/map"]);
   });
 
   it("registry tabs need MEMBERSHIP_VIEW_ROLES for the second tab; others get no bar", () => {
