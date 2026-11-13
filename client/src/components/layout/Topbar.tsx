@@ -1,8 +1,17 @@
-import { Bell, Menu, Moon, Sun } from "lucide-react";
-import { Link } from "wouter";
+import { Bell, LogOut, Menu, Moon, Sparkles, Sun, UserRound } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ICON_SIZE } from "@/lib/icon-sizes";
+import { ADMIN_ROLES, CREATE_ROLES, hasRole } from "@shared/roles";
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -57,7 +66,8 @@ function useUnreadCount(path: string | null): number {
 export function Topbar({ onMenu, menuOpen }: TopbarProps) {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
-  // The avatar used to log out on a single tap, right beside the theme and inbox buttons. It now asks first.
+  const [, navigate] = useLocation();
+  // The avatar opens an account menu first, and "ออกจากระบบ" still asks for confirmation.
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   // `loggingOut` only disables the button after a re-render; the ref stops a second activation before that.
@@ -65,8 +75,8 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
 
   // Pending submissions are review work, not general notifications. Only roles
   // that can review them see the shortcut; it opens the matching Inbox screen.
-  const REVIEW_ROLES = ["super_admin", "admin", "staff", "ministry_leader"];
-  const canReviewSubmissions = Boolean(user && REVIEW_ROLES.includes(user.role));
+  const canReviewSubmissions = hasRole(user?.role, CREATE_ROLES);
+  const canOpenMemberApp = hasRole(user?.role, ADMIN_ROLES);
   const unreadCount = useUnreadCount(
     canReviewSubmissions ? "/api/submissions?status=new&limit=50" : null
   );
@@ -135,20 +145,61 @@ export function Topbar({ onMenu, menuOpen }: TopbarProps) {
               )}
             </Link>
           )}
-          <button
-            type="button"
-            onClick={() => setConfirmingLogout(true)}
-            aria-haspopup="dialog"
-            // Deliberately NOT a solid primary fill. This avatar sits in the
-            // chrome on every single admin page; painting it in the interactive
-            // colour would make it the loudest thing on screen and compete with
-            // the page's one primary action (design.md §8.2 action hierarchy).
-            className="type-caption-strong flex size-11 items-center justify-center rounded-[var(--radius-circle)] border border-[var(--color-hairline)] bg-[var(--color-canvas-soft)] text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-primary-focus)] hover:text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-            title="ออกจากระบบ"
-            aria-label="ออกจากระบบ"
-          >
-            {(user?.name ?? "ผู้ใช้").slice(0, 2)}
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-haspopup="menu"
+                // Deliberately NOT a solid primary fill. This avatar sits in the
+                // chrome on every single admin page; painting it in the interactive
+                // colour would make it the loudest thing on screen and compete with
+                // the page's one primary action (design.md §8.2 action hierarchy).
+                className="type-caption-strong flex size-11 items-center justify-center rounded-[var(--radius-circle)] border border-[var(--color-hairline)] bg-[var(--color-canvas-soft)] text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-primary-focus)] hover:text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+                title="บัญชีผู้ใช้"
+                aria-label="บัญชีผู้ใช้"
+              >
+                {(user?.name ?? "ผู้ใช้").slice(0, 2)}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <p className="type-caption-strong truncate text-[var(--color-ink)]">
+                  {user?.name ?? "ผู้ใช้งาน"}
+                </p>
+                {user?.email && (
+                  <p className="type-fine truncate text-[var(--color-body-muted)]">
+                    {user.email}
+                  </p>
+                )}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="min-h-10 cursor-pointer gap-2"
+                onSelect={() => navigate("/profile")}
+              >
+                <UserRound size={ICON_SIZE.sm} aria-hidden="true" />
+                <span>โปรไฟล์และรหัส PIN</span>
+              </DropdownMenuItem>
+              {canOpenMemberApp && (
+                <DropdownMenuItem
+                  className="min-h-10 cursor-pointer gap-2"
+                  onSelect={() => navigate("/app")}
+                >
+                  <Sparkles size={ICON_SIZE.sm} aria-hidden="true" />
+                  <span>สลับไปแอปสมาชิก</span>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                className="min-h-10 cursor-pointer gap-2"
+                onSelect={() => setConfirmingLogout(true)}
+              >
+                <LogOut size={ICON_SIZE.sm} aria-hidden="true" />
+                <span>ออกจากระบบ</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
       {/* A sibling of the header, not a child: the header clips overflow and has a backdrop filter,

@@ -1,4 +1,5 @@
-import { Check } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
+import { Link } from "wouter";
 import { LambMascot } from "./LambMascot";
 
 const CHECKLIST = [
@@ -65,26 +66,14 @@ export function LambHero() {
             </li>
           ))}
         </ul>
-        {/* The report form for members is not built yet (POST /api/submissions is limited to CREATE_ROLES,
-            and /app/reports is a read-only list), so this is shown as unavailable instead of
-            linking to a page that does not do the job.
-
-            It has to read as closed, not as a live primary action: it was a teal wash at full
-            opacity, which looked tappable while doing nothing. Now it is muted with a hairline
-            edge, and the reason is visible text under it (a `title` tooltip never shows on a
-            phone). Muted text on the soft canvas keeps its contrast, so it stays readable. */}
-        <div className="mt-6 flex flex-col items-start gap-2">
-          <button
-            type="button"
-            disabled
-            aria-describedby="lamb-report-soon"
-            className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-full border border-[var(--color-hairline)] bg-[var(--color-canvas-soft)] px-6 py-3 text-center font-semibold text-[var(--color-body-muted)] sm:w-auto"
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <Link
+            href="/app/events"
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--color-primary)] px-6 py-3 text-center font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] focus-visible:ring-offset-2 sm:w-auto"
           >
-            เริ่มบันทึกรายงาน
-          </button>
-          <p id="lamb-report-soon" className="type-caption text-[var(--color-body-muted)]">
-            เร็วๆ นี้ — ฟอร์มบันทึกรายงานสำหรับสมาชิกกำลังจัดเตรียม
-          </p>
+            <span>ดูกิจกรรมที่กำลังจะมาถึง</span>
+            <ArrowRight size={18} aria-hidden="true" />
+          </Link>
         </div>
       </div>
       <LambMascot

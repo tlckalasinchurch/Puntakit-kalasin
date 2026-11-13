@@ -150,26 +150,13 @@ describe("Member reports: statuses", () => {
   });
 });
 
-describe("Member home: the report CTA that is not available yet", () => {
+describe("Member home: primary hero CTA", () => {
   const hero = read("client/src/components/lamb/LambHero.tsx");
 
-  it("is a disabled button that looks closed (muted, hairline edge), not a live-looking teal action", () => {
-    const button = hero.match(/<button[\s\S]*?<\/button>/)![0];
-    expect(button).toContain("disabled");
-    expect(button).toContain("text-[var(--color-body-muted)]");
-    expect(button).toContain("border-[var(--color-hairline)]");
-    expect(button).not.toContain("--color-primary");
-  });
-
-  it("explains itself in visible text, not a title tooltip a phone never shows", () => {
-    const button = hero.match(/<button[\s\S]*?<\/button>/)![0];
-    expect(button).not.toMatch(/\btitle=/);
-    expect(button).toContain('aria-describedby="lamb-report-soon"');
-    expect(hero).toMatch(/<p id="lamb-report-soon"[^>]*>\s*เร็วๆ นี้/);
-  });
-
-  it("only stays disabled while members cannot create reports (POST /api/submissions is CREATE_ROLES-only)", () => {
-    expect(read("server/routes/submissions.ts")).toMatch(/submissionsRouter\.post\("\/", requireRole\(\.\.\.CREATE_ROLES\)/);
-    expect(read("client/src/App.tsx")).not.toMatch(/path="\/app\/reports\/new"/);
+  it("links to a real member destination with primary tokens instead of a disabled placeholder", () => {
+    expect(hero).toContain('href="/app/events"');
+    expect(hero).toContain("bg-[var(--color-primary)]");
+    expect(hero).toContain("text-[var(--color-on-primary)]");
+    expect(hero).not.toContain("disabled");
   });
 });

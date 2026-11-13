@@ -7,7 +7,9 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronRight,
+  Download,
   Heart,
+  LayoutDashboard,
   Megaphone,
   QrCode,
   Sprout,
@@ -23,7 +25,9 @@ import { ListSkeleton } from "@/components/LoadingStates";
 import { EmptyState, ErrorState, Modal } from "@/components/DesignSystem";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { api, ApiError } from "@/lib/api";
-import { subscribeToPushNotifications } from "@/lib/pwa";
+import { isInstallPromptAvailable, promptInstall, subscribeToPushNotifications } from "@/lib/pwa";
+import { useAuth } from "@/contexts/AuthContext";
+import { CREATE_ROLES, hasRole } from "@shared/roles";
 import { MEMBERSHIP_STATUS_LABELS } from "@shared/labels";
 import type { MembershipStatus } from "@shared/schema";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -84,12 +88,14 @@ const PORTAL_REFRESH_INTERVAL_MS = 30_000;
  */
 export default function MemberHome() {
   usePageTitle("หน้าแรก");
+  const { user: authUser } = useAuth();
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [prayerModalOpen, setPrayerModalOpen] = useState(false);
   const [subscribingPush, setSubscribingPush] = useState(false);
+  const [canInstall, setCanInstall] = useState(false);
   /**
    * "สนใจ" (the soft half of the dual CTA) is deliberately client-only: it
    * opens an informational modal telling the member the host will follow up.
@@ -137,6 +143,21 @@ export default function MemberHome() {
   useEffect(() => {
     fetchPortalData();
   }, []);
+
+  useEffect(() => {
+    setCanInstall(isInstallPromptAvailable());
+    const handler = () => setCanInstall(true);
+    window.addEventListener("pwa-install-ready", handler);
+    return () => window.removeEventListener("pwa-install-ready", handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    const installed = await promptInstall();
+    if (installed) {
+      toast.success("ติดตั้งแอปพลิเคชันลงหน้าจอหลักเรียบร้อยแล้ว");
+      setCanInstall(false);
+    }
+  };
 
   // Keep the Dashboard badge current without interrupting the member's view.
   // The portal endpoint already scopes announcements to the signed-in member.
@@ -244,21 +265,44 @@ export default function MemberHome() {
               </p>
             </div>
           </div>
-          <Link
-            href="/app/profile"
-            className="flex min-h-11 items-center gap-2 rounded-full bg-[var(--lamb-surface)] px-4 py-2 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
-            aria-label={`โปรไฟล์ของ${greetingName}`}
-          >
-            <span className="text-right">
-              <span className="block text-sm font-semibold text-[var(--color-ink)]">
-                สวัสดีครับ
+          <div className="flex shrink-0 items-center gap-2">
+            {canInstall && (
+              <button
+                type="button"
+                onClick={handleInstallClick}
+                aria-label="ติดตั้งแอป"
+                className="type-fine inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--color-hairline)] bg-[var(--lamb-surface)] px-3 font-semibold text-[var(--color-primary-ink)] transition-colors hover:bg-[var(--color-accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+              >
+                <Download size={ICON_SIZE.sm} aria-hidden="true" />
+                <span className="hidden sm:inline">ติดตั้ง</span>
+              </button>
+            )}
+            {hasRole(authUser?.role, CREATE_ROLES) && (
+              <Link
+                href="/"
+                title="สลับไปยังแดชบอร์ดเจ้าหน้าที่"
+                aria-label="สลับไปยังแดชบอร์ดเจ้าหน้าที่"
+                className="flex size-11 items-center justify-center rounded-full border border-[var(--color-hairline)] bg-[var(--lamb-surface)] text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+              >
+                <LayoutDashboard size={ICON_SIZE.md} aria-hidden="true" />
+              </Link>
+            )}
+            <Link
+              href="/app/profile"
+              className="flex min-h-11 items-center gap-2 rounded-full bg-[var(--lamb-surface)] px-4 py-2 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)]"
+              aria-label={`โปรไฟล์ของ${greetingName}`}
+            >
+              <span className="text-right">
+                <span className="block text-sm font-semibold text-[var(--color-ink)]">
+                  สวัสดี
+                </span>
+                <span className="block max-w-24 truncate text-xs text-[var(--color-body-muted)]">
+                  {groupName}
+                </span>
               </span>
-              <span className="block max-w-24 truncate text-xs text-[var(--color-body-muted)]">
-                {groupName}
-              </span>
-            </span>
-            <ChevronRight size={16} aria-hidden="true" className="text-[var(--color-text-quaternary)]" />
-          </Link>
+              <ChevronRight size={16} aria-hidden="true" className="text-[var(--color-text-quaternary)]" />
+            </Link>
+          </div>
         </header>
 
         {/* Desktop: reference-style hero + supporting cards. Mobile: stacked, readable flow. */}
@@ -272,8 +316,9 @@ export default function MemberHome() {
 
         {/* Digital member pass */}
         <section
+          id="member-pass"
           aria-labelledby="member-pass-heading"
-          className="rounded-3xl bg-[var(--color-dark-surface)] p-5 text-white shadow-sm"
+          className="rounded-3xl border border-[var(--color-on-dark-hairline)] bg-[var(--color-dark-surface-2)] p-5 text-[var(--color-on-dark)] shadow-sm"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -287,7 +332,7 @@ export default function MemberHome() {
                 {member?.name || user?.name}
               </p>
             </div>
-            <span className="shrink-0 rounded-md bg-white/15 px-2 py-1 text-xs font-semibold">
+            <span className="shrink-0 rounded-md bg-[var(--color-on-dark)]/15 px-2 py-1 text-xs font-semibold">
               {membershipLabel}
             </span>
           </div>
@@ -310,7 +355,7 @@ export default function MemberHome() {
             </div>
 
             <div className="min-w-0">
-              <p className="text-xs text-white/70">
+              <p className="text-xs text-[var(--color-on-dark-muted)]">
                 ยื่นคิวอาร์โค้ดนี้ที่จุดลงทะเบียนหน้าประตูโบสถ์
                 เพื่อเช็คชื่อเข้าร่วมนมัสการ
               </p>
@@ -322,7 +367,7 @@ export default function MemberHome() {
                 type="button"
                 onClick={handleEnablePush}
                 disabled={subscribingPush}
-                className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-xs font-semibold transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-on-dark)] disabled:opacity-50"
+                className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--color-on-dark)]/10 px-4 text-xs font-semibold transition-colors hover:bg-[var(--color-on-dark)]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-on-dark)] disabled:opacity-50"
               >
                 <Bell size={14} aria-hidden="true" />
                 เปิดรับการแจ้งเตือน

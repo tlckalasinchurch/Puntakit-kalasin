@@ -77,9 +77,8 @@ describe("Admin Home: no disabled weekly-report placeholder", () => {
     expect(myWork).toContain("ระบบยังไม่มีรายงานรายสัปดาห์");
   });
 
-  it("the Member PWA is untouched by this change", () => {
-    // Its own report CTA is a separate, deliberate decision (members cannot create reports yet).
-    expect(read("client/src/components/lamb/LambHero.tsx")).toContain("lamb-report-soon");
+  it("the Member PWA hero links to a real destination instead of a disabled placeholder", () => {
+    expect(read("client/src/components/lamb/LambHero.tsx")).toContain('href="/app/events"');
   });
 });
 

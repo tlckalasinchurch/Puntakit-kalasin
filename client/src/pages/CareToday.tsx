@@ -4,6 +4,7 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { Check, ChevronDown, ListChecks, MessageCircle, Phone, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState, ErrorState, PageHeader } from "@/components/DesignSystem";
 import { ListSkeleton } from "@/components/LoadingStates";
 import { api, ApiError } from "@/lib/api";
@@ -86,6 +87,7 @@ export default function CareToday() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const date = useMemo(localDate, []);
 
   // The bottom nav's height follows its content (and is 0 on desktop, where it is hidden), so the
@@ -141,9 +143,23 @@ export default function CareToday() {
     void loadRoster();
   }, [groupId, loadRoster]);
 
+  const initialPicked = useMemo(
+    () => new Set((roster?.members ?? []).filter((m) => isPresent(m.status)).map((m) => m.id)),
+    [roster]
+  );
+  const hasUnsavedChanges = useMemo(() => {
+    if (picked.size !== initialPicked.size) return true;
+    return Array.from(picked).some((id) => !initialPicked.has(id));
+  }, [picked, initialPicked]);
+
   const startCheckIn = () => {
-    setPicked(new Set((roster?.members ?? []).filter((m) => isPresent(m.status)).map((m) => m.id)));
+    setPicked(new Set(initialPicked));
+    setSaveError(null);
     setMode("checkin");
+  };
+  const requestCancel = () => {
+    if (hasUnsavedChanges) setConfirmCancel(true);
+    else setMode("home");
   };
   const toggle = (id: string) =>
     setPicked((cur) => {
@@ -297,7 +313,7 @@ export default function CareToday() {
                   </li>
                 ))}
               </ul>
-              <div className="sticky z-10 -mx-1 flex flex-col gap-2 bg-[var(--clay-ground)] px-1 py-3" style={{ bottom: navHeight ? `calc(${navHeight}px + var(--safe-b) + 18px)` : 0 }}>
+              <div className="sticky z-10 -mx-1 flex flex-col gap-2 rounded-t-[var(--radius-lg)] border-t border-[var(--color-hairline)] bg-[var(--color-canvas)]/95 px-2 py-3 backdrop-blur-sm" style={{ bottom: navHeight ? `calc(${navHeight}px + var(--safe-b) + 18px)` : 0 }}>
                 {saveError && (
                   <p role="alert" className="type-caption rounded-[var(--radius-sm)] bg-[var(--color-error)]/10 p-3 text-[var(--color-error-ink)]">
                     {saveError}
@@ -307,7 +323,12 @@ export default function CareToday() {
                   <Check size={20} aria-hidden="true" />
                   {saving ? "กำลังบันทึก…" : "บันทึกการเช็คชื่อ"}
                 </button>
-                <button type="button" className="clay-chip self-center" onClick={() => setMode("home")} disabled={saving}>
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 self-center items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] px-5 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-canvas-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-focus)] disabled:opacity-50"
+                  onClick={requestCancel}
+                  disabled={saving}
+                >
                   ยกเลิก
                 </button>
               </div>
@@ -391,6 +412,19 @@ export default function CareToday() {
             </>
           )}
         </div>
+      )}
+      {confirmCancel && (
+        <ConfirmDialog
+          title="ยกเลิกการเช็คชื่อ?"
+          description="รายชื่อที่คุณแตะเลือกไว้ยังไม่ได้บันทึก หากยกเลิกตอนนี้การเปลี่ยนแปลงจะหายไป"
+          confirmLabel="ยกเลิกและกลับ"
+          tone="danger"
+          onCancel={() => setConfirmCancel(false)}
+          onConfirm={() => {
+            setConfirmCancel(false);
+            setMode("home");
+          }}
+        />
       )}
     </AppLayout>
   );

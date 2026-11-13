@@ -7,17 +7,17 @@ const topbar = readFileSync(path.join(root, "client/src/components/layout/Topbar
 
 /** The avatar `<button …>…</button>`: from the opening tag that carries aria-haspopup to its closing tag. */
 const avatarButton = () => {
-  const at = topbar.indexOf('aria-haspopup="dialog"');
-  expect(at, "the avatar must declare that it opens a dialog").toBeGreaterThan(-1);
+  const at = topbar.indexOf('aria-haspopup="menu"');
+  expect(at, "the avatar must declare that it opens an account menu").toBeGreaterThan(-1);
   return topbar.slice(topbar.lastIndexOf("<button", at), topbar.indexOf("</button>", at) + "</button>".length);
 };
 
-describe("Topbar avatar: asking before logging out", () => {
+describe("Topbar avatar: account menu & asking before logging out", () => {
   // It was `onClick={() => void logout()}`: one tap, beside the theme and inbox buttons, ended the session.
-  it("tapping the avatar opens a confirmation instead of logging out", () => {
+  it("tapping the avatar opens an account menu instead of logging out", () => {
     const button = avatarButton();
-    expect(button).toContain("onClick={() => setConfirmingLogout(true)}");
     expect(button).not.toContain("logout");
+    expect(topbar).toContain("onSelect={() => setConfirmingLogout(true)}");
   });
 
   it("logout() is called in exactly one place: the dialog's confirm action", () => {
@@ -50,7 +50,7 @@ describe("Topbar avatar: asking before logging out", () => {
   it("keeps the avatar a real, labelled, focus-ringed button", () => {
     const button = avatarButton();
     expect(button).toContain('type="button"');
-    expect(button).toContain('aria-label="ออกจากระบบ"');
+    expect(button).toContain('aria-label="บัญชีผู้ใช้"');
     expect(button).toContain("focus-visible:ring-2");
   });
 
