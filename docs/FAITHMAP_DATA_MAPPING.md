@@ -1,6 +1,6 @@
 # FaithMap — Data Mapping
 
-Date: 2026-11-13 · Status: existing columns are **code verified** in `shared/schema.ts`; proposed columns are a draft (see `FAITHMAP_TARGET_ARCHITECTURE.md`).
+Date: 2026-11-13 · Revision 2: 2026-11-14 · Status: existing columns are **code verified** in `shared/schema.ts`; proposed columns are a draft (see `FAITHMAP_TARGET_ARCHITECTURE.md`). No proposed table or column exists in the database.
 
 Legend: **E** = exists, reuse · **I** = exists, needs improvement · **N** = new (proposed).
 
@@ -33,15 +33,49 @@ Legend: **E** = exists, reuse · **I** = exists, needs improvement · **N** = ne
 
 | Brief item | Source | State |
 |---|---|---|
-| Week id, start, end, deadline | `reporting_periods` | N |
-| Expected groups | Computed: active house mission groups in the period | N (query) |
+| Week id, start, end, deadline | `reporting_periods`. `deadline_at` is on Sunday, Asia/Bangkok (confirmed); time of day pending (O8) | N |
+| Expected groups of a period | `reporting_period_groups` (period, group, body at that time), written when the period opens (proposed, pending O11). Without it: computed from current `groups` rows, which changes past periods | N |
+| Body of a group in a past period | `reporting_period_groups.body_group_id` (pending O11) | N |
 | Report (one per group per period) | `weekly_reports`, unique (period, group) | N |
 | Held or not held | `weekly_reports.held` | N |
-| Review status | `weekly_reports.status` | N |
-| Not submitted | Computed: expected group without a report row | N (query) |
-| Submitter, submitted time | `weekly_reports.submitted_by_id`, `submitted_at` | N |
-| Late mark | Computed: `submitted_at > reporting_periods.deadline_at` | N (query) |
-| Review history, changes, approver, approval time | `weekly_report_events` | N |
+| Review status | `weekly_reports.status` (`draft`, `submitted`, `under_review`, `needs_revision`, `approved`) | N |
+| Submitter | `weekly_reports.submitted_by_id` | N |
+| Review history, field changes | `weekly_report_events` (append-only) | N |
+
+### 2.1 Draft, submission and approval
+
+| Item | Source | State |
+|---|---|---|
+| Draft | `weekly_reports` row with `status = 'draft'`. Created by the first autosave | N |
+| Autosave time | `weekly_reports.updated_at`. Autosave changes no status and no submission time | N |
+| Submitted report | `weekly_reports` row with `status` other than `draft` | N (query) |
+| First submission time | `weekly_reports.first_submitted_at`. Set once at `draft` → `submitted`. Never changed | N |
+| Latest submission time | `weekly_reports.last_submitted_at`. Set at each submit and resubmit | N |
+| Resubmission count and times | `weekly_report_events` rows with action `resubmit` | N (query) |
+| Not submitted (missing report) | Computed: expected group with no row, or with a `draft` row | N (query) |
+| Confirmed not held | Submitted report with `held = false`. Counted as submitted, not as missing | N (query) |
+| Late mark | Computed: `first_submitted_at > reporting_periods.deadline_at` | N (query) |
+| Revision reason (latest) | `weekly_reports.revision_reason` | N |
+| Revision reasons (all) | `weekly_report_events.note` where action = `request_revision` | N |
+| Supervisor review | `weekly_report_events` row with action `supervisor_reviewed`, actor and time | N |
+| Final approver, approval time | `weekly_reports.approved_by_id`, `approved_at`; also an `approve` event | N |
+| Current reviewer | Computed from active `group_assignments` and usable accounts (architecture §5.3) | N (query) |
+| Blocked | Computed: submitted, not approved report whose body has no body leader with a usable account | N (query) |
+| Usable account | `members.user_id` set, `users.status = 'active'`, `users.pin_hash` not null | E (query) |
+
+Difference between the two submission times:
+
+| | `first_submitted_at` | `last_submitted_at` |
+|---|---|---|
+| Set when | The first submit | Every submit and resubmit |
+| Changes after a revision | No | Yes |
+| Used for | Late mark; "submitted on time" counts | "Updated after review" display; order of the review queue |
+| Value while `draft` | Null | Null |
+
+### 2.2 Report content
+
+| Brief item | Source | State |
+|---|---|---|
 | Activity date, location | `weekly_reports.activity_date`, `place_label` (prefilled from the group) | N |
 | Activity type | Existing `MISSION_ACTIVITY_TYPES` values, when the report is published as an activity | E |
 | Teaching topic, passage, prayer, fellowship, other, atmosphere | `weekly_reports` text columns | N |
@@ -113,9 +147,9 @@ Legend: **E** = exists, reuse · **I** = exists, needs improvement · **N** = ne
 
 ## 7. Data that must be checked in production before design is final
 
-1. Count of `groups` rows per `org_level` and the number of `care` rows per body (O1).
+1. Count of `groups` rows per `org_level` and the number of `care` rows per body (O1). A count does not answer O1 alone; the church must confirm that each row is one house mission group.
 2. Duplicate `attendance_records` for the same member, service type, group and Bangkok day.
 3. The existing pre-check `GET /api/import/precheck/group-members` (read-only, admin).
-4. Number of group leaders, care leaders and coordinators that have a `members` row and a linked `users` row.
+4. Number of group leaders, care leaders, coordinators and body leaders that have a `members` row and a usable account. This shows how many groups use the supervisor fallback and how many bodies start as blocked.
 
-All four are read-only. None was run for this document.
+All four are read-only. None was run for this document or for revision 2.

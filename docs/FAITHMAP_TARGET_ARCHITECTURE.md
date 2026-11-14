@@ -1,6 +1,7 @@
 # FaithMap — Target Architecture
 
-Date: 2026-11-13 · Status: **proposed design, not approved, nothing implemented**.
+Date: 2026-11-13 · Revision 2: 2026-11-14 · Status: **proposed design, not approved, nothing implemented**.
+Revision 2 applies the four confirmed decisions (draft autosave, body leader as final approver, supervisor fallback, Sunday deadline in Asia/Bangkok). Pending decisions are marked with their number from `FAITHMAP_PHASE0_SYSTEM_AUDIT.md` §8.
 Column names and types are a draft for review. The `/spec` step sets the final form. No migration is written from this document.
 
 ## 1. Principles
@@ -11,13 +12,16 @@ Column names and types are a draft for review. The `/spec` step sets the final f
 4. Additive schema changes only. No existing table is dropped or repurposed.
 5. One store per fact: one attendance table, one follow-up table, one identity table for people (`members`).
 6. History is appended, not overwritten.
-7. Computed, not stored: "not submitted", "late", attendance totals.
+7. Computed, not stored: "not submitted", "late", "blocked", attendance totals.
+8. A draft is not a submission. Only the explicit submit action changes a draft to a submitted report.
+9. The approval step has one owner, the body leader. No rule in the system skips it or replaces the approver.
 
 ## 2. Domain model
 
 ```
 members (person) ──< group_assignments >── groups (house mission group) >── groups (body)
                                                │
+reporting_periods ──< reporting_period_groups >┤   (proposed snapshot of expected groups, O11)
 reporting_periods ──< weekly_reports >─────────┘
                           │  ├──< weekly_report_events   (append-only)
                           │  └──  attendance_records     (existing, by group + service day)
@@ -56,7 +60,20 @@ Rules:
 
 ### 4.2 `reporting_periods` — Phase 2
 
-`id`, `week_start` (date, unique), `week_end`, `opens_at`, `deadline_at`, `created_at`. Week boundary and deadline time are open (O8). All dates use Asia/Bangkok.
+`id`, `week_start` (date, unique), `week_end`, `opens_at`, `deadline_at`, `created_at`. All dates use Asia/Bangkok.
+
+Deadline: `deadline_at` is on the Sunday of the period, Asia/Bangkok (confirmed). The time of day is **not decided** (pending O8). The value is configuration, not a constant in code. No default time is assumed in this design. The week start day is also pending (O8).
+
+#### 4.2.1 `reporting_period_groups` — Phase 2 (proposed, pending O11)
+
+Problem: "expected groups" computed from the current `groups` rows changes past periods when a group is paused, closed or moved to another body later.
+
+Proposal: when a period opens, the system writes one row per expected group: `period_id`, `group_id`, `body_group_id` (the body at that time), `created_at`; unique (period, group). A group that starts inside an open period gets a row at that time. Rows are not changed after the period deadline.
+
+- These rows are the expected list. They are not report placeholders: a row holds no report content and no status.
+- Past periods read the body of a group from this table, not from `groups.parent_group_id`.
+- Alternative: derive the past state from `audit_logs`. The audit rows hold new values only today (audit finding F11), so this alternative is not reliable for existing data.
+- If O11 is rejected, past-period counts follow the current group state, and that limit must be shown in the overview.
 
 ### 4.3 `weekly_reports` — Phase 2
 
@@ -64,21 +81,41 @@ Rules:
 |---|---|
 | `id`, `period_id`, `group_id` | Unique (period, group) |
 | `held` | Yes or no. No = "confirmed not held" |
-| `status` | `submitted`, `under_review`, `needs_revision`, `approved` |
+| `status` | `draft`, `submitted`, `under_review`, `needs_revision`, `approved`. A new row starts as `draft` |
 | `activity_date`, `place_label` | Prefilled from the group |
 | `teaching_topic`, `bible_passage`, `prayer_note`, `fellowship_note`, `other_activity_note`, `atmosphere_note` | Free text, all optional except one activity description when held |
 | `next_week_plan`, `support_needed`, `other_note` | |
 | `first_time_visitor_count`, `returning_visitor_count` | Derived from visitor attendance when people are recorded; typed only when names are unknown |
 | `not_held_reason` | Optional, when held = no |
-| `submitted_by_id`, `submitted_at`, `updated_at` | |
+| `submitted_by_id` | The user who sent the report |
+| `first_submitted_at` | Time of the first submit. Set once. Never changed by a resubmission. Null while `draft` |
+| `last_submitted_at` | Time of the latest submit or resubmit. Equal to `first_submitted_at` after the first submit |
+| `revision_reason` | Reason of the latest request for revision. Required by that action. Earlier reasons stay in `weekly_report_events` |
+| `approved_by_id`, `approved_at` | The body leader who gave the final approval, and the time. Null until approved |
+| `updated_at` | Time of the latest save, including autosave |
 | `activity_id` → mission_activities | Optional. Set when leadership publishes the report as a Feed story |
 
-Display status: no row → "ยังไม่ส่ง"; held = no → "ยืนยันว่าไม่ได้จัด"; else the review status. Late = `submitted_at > deadline_at`, computed.
+Rules:
+- **Autosave** writes field values and `updated_at` only. It never changes `status`, `first_submitted_at` or `last_submitted_at`. It is allowed only while `status` is `draft` or `needs_revision`, and only for the group leader of the group.
+- **Submit** is a separate action. `draft` → `submitted` sets `first_submitted_at` and `last_submitted_at`. `needs_revision` → `submitted` sets `last_submitted_at` only.
+- **Idempotent submit:** a submit on a row whose status is `submitted`, `under_review` or `approved` returns the current row, changes nothing and writes no event. The status change is one conditional update, so two concurrent submits produce one change.
+- **Submitted report** = a row with status other than `draft`. A report with `held` = no and status other than `draft` is a submitted report ("confirmed not held").
+- **Missing report** = an expected group of the period with no row, or with a `draft` row.
+- **Late** = `first_submitted_at > deadline_at`, computed. `last_submitted_at` is never used for the late mark.
+- **Approve** sets `status = approved`, `approved_by_id` and `approved_at`. Only the body leader of the group's body can do it (§5.2).
+- An approved report is not edited. A correction after approval is out of scope of this revision.
+
+Display state: no row or `draft` → "ยังไม่ส่ง" (the group leader sees "ฉบับร่าง" on the own report); submitted with held = no → "ยืนยันว่าไม่ได้จัด" plus the review status; "ติดขัด" (blocked) by the rule in §5.2; else the review status.
 Attendance: existing `attendance_records` with `service_type = 'care_group'`, the group and the activity date. Photos: existing `media_assets` (`mission_photo`, group).
 
 ### 4.4 `weekly_report_events` — Phase 2
 
-Append-only: `id`, `report_id`, `actor_id`, `action` (`submit`, `resubmit`, `start_review`, `request_revision`, `approve`, `edit`), `from_status`, `to_status`, `note`, `changes` (JSON: field → old, new), `created_at`.
+Append-only: `id`, `report_id`, `actor_id`, `action` (`submit`, `resubmit`, `start_review`, `supervisor_reviewed`, `request_revision`, `approve`, `edit`), `from_status`, `to_status`, `note`, `changes` (JSON: field → old, new), `created_at`.
+
+- No route updates or deletes an event row.
+- Autosave of a `draft` writes no event. Events start at the first submit. A `resubmit` event holds the changed fields with old and new values.
+- A `request_revision` event holds the reason in `note`. The same text is copied to `weekly_reports.revision_reason`.
+- `supervisor_reviewed` records that an assigned supervisor finished the review. It does not approve the report.
 
 ### 4.5 `body_summaries` — Phase 2
 
@@ -109,16 +146,24 @@ New columns on `follow_ups`: `kind` (`missing_report`, `group_inactive`, `absenc
 
 ## 5. Scope resolution (server)
 
+### 5.1 Usable account
+
+An assignment gives access only when its person has a usable account: `members.user_id` is set, `users.status = 'active'`, and `users.pin_hash` is not null. These three columns exist today (code verified in `shared/schema.ts`; a null `pin_hash` cannot sign in). An assignment without a usable account is shown, and it gives nobody access.
+
+### 5.2 Resolver
+
 One resolver, one place (extends `server/lib/groupAccess.ts`):
 
 ```
 resolveMissionScope(user) →
-  all            for mission leadership roles (O5)
   { submit:  groups where user has an active group_leader responsibility (or leads today, F3)
     review:  groups where user has an active care_leader / coordinator / body_leader assignment
-    approve: groups whose body the user leads
-    view:    union of the above plus all groups of a body the user leads }
+    approve: groups whose body the user leads through an active body_leader assignment
+    view:    union of the above plus all groups of a body the user leads;
+             all groups for mission leadership (how a person becomes mission leadership is pending, O5) }
 ```
+
+Mission leadership gets `view` only. It gets no `review` and no `approve` from the leadership status. A leadership person who also holds a body leader assignment approves in that body through the assignment.
 
 Rules:
 - Every list query filters by the resolved group ids in SQL. No filtering in the client.
@@ -126,7 +171,17 @@ Rules:
 - An ended assignment gives no access from the end date.
 - A `group_leader` role without any assignment or led group sees nothing (current behaviour, kept).
 
-Reviewer of a report: active primary supervisor → else other active supervisors → else body leader. A person does not review the own submitted report unless decision O4 allows it.
+### 5.3 Routing of a submitted report
+
+1. Supervisor step: the active primary supervisor with a usable account → else another active supervisor (care leader or coordinator) with a usable account.
+2. Supervisor fallback (confirmed): if step 1 finds nobody, the report goes to the body leader directly. The group is listed under "groups without a usable supervisor".
+3. Final approval: the body leader of the group's body, with an active assignment and a usable account. Nobody else approves.
+4. Blocked (confirmed): if the body has no body leader with a usable account, the report is blocked. The stored `status` does not change. The state is computed at read time and ends when a usable body leader exists. The system notifies the administrators once per report (recipient list pending, O13). No role, including `admin` and `super_admin`, approves in place of the body leader, and no job approves automatically.
+5. Routing is computed at read time from active assignments, so a change of assignment takes effect at once.
+
+Pending rules:
+- O12: can the body leader approve before the supervisor recorded `supervisor_reviewed`? The data model supports both answers.
+- O4: a person does not review or approve the own submitted report unless decision O4 allows it. If a body leader is also the group leader that submitted the report, and O4 stays "no", that report has no approver and is blocked.
 
 ## 6. API surface (proposed)
 
@@ -135,8 +190,10 @@ Reviewer of a report: active primary supervisor → else other active supervisor
 | `GET/POST /api/groups/:id/assignments`, `POST /api/assignments/:id/end` | Responsibility data and history | 1 |
 | `GET /api/supervisors/:memberId` | Supervisor profile | 1 |
 | `GET /api/mission/periods/current` | Current period and the caller's expected groups | 2 |
-| `GET/PUT /api/mission/reports/:periodId/:groupId` | Read or save a draft of the group's report | 2 |
-| `POST /api/mission/reports/:id/{submit,review,request-revision,approve}` | Status changes; each writes an event | 2 |
+| `GET/PUT /api/mission/reports/:periodId/:groupId` | Read the group's report; autosave (creates the `draft` row on first save; never submits) | 2 |
+| `POST /api/mission/reports/:id/submit` | Submit or resubmit; idempotent (§4.3) | 2 |
+| `POST /api/mission/reports/:id/{review,request-revision,approve}` | Review actions; each writes an event; `approve` is for the body leader only | 2 |
+| `GET /api/mission/reports/blocked` | Blocked reports, for administrators and mission leadership | 2 |
 | `GET/PUT /api/mission/bodies/:id/summary/:periodId`, `POST …/send` | Body summary | 2 |
 | `GET /api/mission/overview?periodId=` | Scoped overview | 3 |
 | `POST /api/mission/briefs`, `GET /api/mission/briefs/:id` | Meeting brief snapshot | 3 |
@@ -162,13 +219,13 @@ Group leader (mobile, later also inside LIFF):
 
 | Route | Page | Phase |
 |---|---|---|
-| `/report` | "รายงานสัปดาห์นี้": three steps — เช็กชื่อ → เล่าสิ่งที่ทำ → ส่ง. Shows status after sending | 2 |
+| `/report` | "รายงานสัปดาห์นี้": three steps — เช็กชื่อ → เล่าสิ่งที่ทำ → ส่ง. Saves the draft automatically and shows the last save time. Reopens the draft on return. Shows status after sending | 2 |
 
 The attendance step reuses the `/care` roster and bulk save. Navigation changes need the confirmation already required by `PUNTAKIT_IMPLEMENTATION_PLAN.md` (Phase 8).
 
 ## 8. Scheduler and notifications
 
-Vercel Cron calls `/api/cron/*` with a secret header. Jobs: open the period (Saturday), remind missing groups (Sunday, times from O8), create attention items (after the deadline). Each job is idempotent and finishes inside the 60 s function limit. Channel in Phases 2–4: Web Push and in-app lists. Phase 5 adds LINE.
+Vercel Cron calls `/api/cron/*` with a secret header. Jobs: open the period (Saturday) and write the expected group list (§4.2.1, O11), remind groups without a submitted report (Sunday, Asia/Bangkok; times depend on the deadline time, pending O8), notify administrators of blocked reports, create attention items (after the deadline). A group with a draft only still gets the reminder. Each job is idempotent and finishes inside the 60 s function limit. Channel in Phases 2–4: Web Push and in-app lists. Phase 5 adds LINE.
 
 ## 9. LINE and LIFF (Phase 5)
 
@@ -186,4 +243,4 @@ Vercel Cron calls `/api/cron/*` with a secret header. Jobs: open the period (Sat
 
 ## 11. What this design does not do
 
-No new `USER_ROLES` value. No rename of stored `org_level` values. No change to `mission_submissions`. No removal of existing pages. No change to the design system.
+No new `USER_ROLES` value (unless decision O5 selects one). No rename of stored `org_level` values. No change to `mission_submissions`. No removal of existing pages. No change to the design system. No approval by mission leadership or administrators in place of the body leader. No automatic approval.
