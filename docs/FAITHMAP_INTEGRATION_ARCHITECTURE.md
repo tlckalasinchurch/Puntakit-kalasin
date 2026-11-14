@@ -28,7 +28,7 @@ This document does not define tables, columns or routes again. `FAITHMAP_TARGET_
  ├───────────────────────────────────────────────────────────────────────┤
  │ PostgreSQL: 27 existing tables  +  proposed tables (additive)           │
  └───────────────────────────────────────────────────────────────────────┘
-   Scheduler: Vercel Cron → /api/cron/*      Channels: Web Push, LINE (future)
+   Scheduler: Vercel Cron → /api/cron/*      Channels: in-app lists; Web Push (O14); LINE (future)
 ```
 
 ## 3. Integration by capability
@@ -46,7 +46,7 @@ This document does not define tables, columns or routes again. `FAITHMAP_TARGET_
 | Review and approval | Assignment scope | `weekly_report_events`, routing rules | Supervisor review → body leader final approval; fallback; blocked state | Target architecture §5.3 |
 | Follow-up management | `follow_ups`, `/follow-up` | Added columns, `follow_up_events` | Automatic items use the same table as manual items | Target architecture §4.7 |
 | Dashboard and analytics | `/api/org/overview`, existing dashboard | Scoped overview, `body_summaries`, `meeting_briefs` | Numbers are computed from reports and attendance. A missing report is "unknown" | Product requirements §5 |
-| Notifications | `push_subscriptions`, service worker | Scheduler routes, sent log | One reminder per person, event and period. Finding X1 must be resolved first | Target architecture §8 |
+| Notifications | `push_subscriptions` table and service-worker handler only. No sender exists | Scheduler routes, in-app lists, sent log; a push sender if decision O14 selects Web Push | One reminder per person, event and period. Findings X1 and X2 must be resolved first | Target architecture §8 |
 | LINE and LIFF | PIN session | `line_accounts`, LIFF routes | LIFF opens the same screens and gets the same session cookie | Target architecture §9 |
 
 ## 4. Confirmed report workflow
@@ -111,10 +111,10 @@ No existing path is removed or redirected in this design.
 | PostgreSQL provider | Selected by `DATABASE_DRIVER` (SOURCE). Production value UNVERIFIED | Kept |
 | Vercel Blob | Allowed in the Content-Security-Policy (SOURCE). Use in production UNVERIFIED | Kept |
 | Map tiles (OpenFreeMap, ArcGIS) | Allowed in the Content-Security-Policy | Kept |
-| Web Push | Subscription storage exists. Real delivery UNVERIFIED (finding X2) | Verify before reminders |
+| Web Push | Subscription storage exists. No sender exists (SOURCE, finding X2) | New work if decision O14 selects it |
 | LINE | None | Roadmap Phase 5; needs the church's LINE channel |
 | Email | None | None planned |
 
 ## 9. Pending decisions that this document depends on
 
-O1, O2, O3, O5, O7, O8, O10, O11, O12, O13 (`FAITHMAP_PHASE0_SYSTEM_AUDIT.md` §8.2) and P3, P7 (`FAITHMAP_PRODUCT_TRANSFORMATION.md` §6).
+O1, O2, O3, O5, O7, O8, O10, O11, O12, O13, O14 (`FAITHMAP_PHASE0_SYSTEM_AUDIT.md` §8.2) and P3, P7 (`FAITHMAP_PRODUCT_TRANSFORMATION.md` §6).

@@ -29,7 +29,7 @@ The rules of `FAITHMAP_IMPLEMENTATION_ROADMAP.md` §1 apply to every stage of th
 
 ### S0 — Audit and design · done (documents only; code verified)
 
-Output: eleven documents in `docs/` with the prefix `FAITHMAP_`.
+Output: twelve documents in `docs/` with the prefix `FAITHMAP_` (the list is in `FAITHMAP_EXECUTIVE_REVIEW.md` §2).
 Not done in S0: any test run, any production read, any code change.
 
 ### S1 — Readiness
@@ -40,7 +40,8 @@ No code. Work of the owner, the church and an administrator.
 - Decisions for S3: O1, O2, O5, O10.
 - Read-only production checks 1–4 (`FAITHMAP_DATA_MAPPING.md` §7).
 - Check of the live URL and the Vercel project settings (domains, environment variables, backup function of the database).
-- Check of real Web Push delivery (finding X2).
+- Read-only count of real and simulated rows in `push_subscriptions` (`FAITHMAP_EXISTING_SYSTEM_AUDIT.md` §6.4).
+- Decision O14 (notification channel before LINE).
 
 Exit criteria: each decision above has a recorded answer in `FAITHMAP_PHASE0_SYSTEM_AUDIT.md` §8 or `FAITHMAP_PRODUCT_TRANSFORMATION.md` §6; each check has a recorded result with its date and the person who ran it.
 
@@ -71,7 +72,7 @@ Additions from the transformation analysis:
 | Stage | Addition |
 |---|---|
 | S3 | New screens use the FaithMap name and the org wording of gap B1 from the first release |
-| S4 | Before reminders are built: resolve finding X1 (simulated push subscription) by an approved ticket. The first reporting period is the cutover week; no period for a past week |
+| S4 | Before reminders are built: remove the simulated push subscription path (finding X1) by an approved ticket. Web Push delivery is new work and is built only if decision O14 selects it (finding X2). The first reporting period is the cutover week; no period for a past week |
 | S5 | Navigation changes only after decision P3 |
 | S6 | The default member list hides visitors; a filter shows them; a release note explains it |
 | S7 | Needs the LINE channel of the church (BLOCKED until it exists) |
@@ -102,7 +103,7 @@ Gates G0–G7 of `FAITHMAP_IMPLEMENTATION_ROADMAP.md` §4 stay as they are. Adde
 | GT0 Approval of the transformation architecture and this plan | Any `/grill` | Owner |
 | GT1 Decisions P1, P2, P5, P9 | S2 spec | Owner + church |
 | GT2 Decision P3 | Any navigation change | Owner + church |
-| GT3 Finding X1 resolved, real push delivery verified | Reminder work in S4 | Owner |
+| GT3 Decision O14; finding X1 resolved | Reminder work in S4 | Owner |
 | GT4 Decision P7 and a domain plan | Any domain or repository change | Owner |
 | Every ticket | `Status: approved` in `TICKETS.md` | Owner |
 | Every merge and deploy | — | Owner |
@@ -114,7 +115,7 @@ Gates G0–G7 of `FAITHMAP_IMPLEMENTATION_ROADMAP.md` §4 stay as they are. Adde
 | GT0 not given | Everything after S0 |
 | P1 open | S2 |
 | O1, O2, O5, O10 open; production checks 1 and 4 not run | S3 |
-| O8 (deadline time) and O3, O4, O9, O11, O12, O13 open | S4 |
+| O8 (deadline time) and O3, O4, O9, O11, O12, O13, O14 open | S4 |
 | No LINE channel | S7 |
 
 ## 6. Not planned

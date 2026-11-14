@@ -174,12 +174,12 @@ Impact analysis of each identifier: `FAITHMAP_PRODUCT_TRANSFORMATION.md` §5.
 | # | Finding | Class |
 |---|---|---|
 | X1 | `client/src/lib/pwa.ts` registers a simulated push subscription (endpoint `https://push.puntakit.org/sub-…`, keys `mock-key`, `mock-auth`) when the browser has no real push setup. The row goes to the real `push_subscriptions` table. | SOURCE |
-| X2 | Whether real push delivery works (server keys, sender) | UNVERIFIED: not traced in this work |
+| X2 | The server cannot send a push message. No push library is in `package.json`, no server key is read anywhere, and `push_subscriptions` is used by one route only (subscribe). Detail: §6 | SOURCE |
 | X3 | The domain `puntakit.org` in X1 | UNVERIFIED: ownership not checked |
 | X4 | The product has features outside house mission: events, announcements, ministries, worship, church profile, feed, the member shell. | SOURCE |
 | X5 | The description in the PWA manifest calls the product a church administration system and member application. This differs from the FaithMap definition. | SOURCE |
 
-X1 matters for FaithMap notifications: a reminder sent to a simulated subscription reaches nobody. See `FAITHMAP_MIGRATION_AND_REGRESSION_RISKS.md` risk R14.
+X1 and X2 matter for FaithMap notifications: the existing system has no working push channel. See §6 and `FAITHMAP_MIGRATION_AND_REGRESSION_RISKS.md` risk R14.
 
 ## 5. Summary of what is not verified
 
@@ -188,5 +188,60 @@ X1 matters for FaithMap notifications: a reminder sent to a simulated subscripti
 3. Test results on this branch.
 4. Content of icon and logo image files.
 5. Product names inside stored data.
-6. Real push delivery.
+6. The content of the production table `push_subscriptions` (number of real and simulated rows).
 7. LINE accounts of the church.
+
+## 6. Push subscription analysis (source code)
+
+Class of every statement in this section: SOURCE, unless marked. No code was changed.
+
+### 6.1 What the code does
+
+| Step | Code | Behaviour |
+|---|---|---|
+| Entry | `MemberHome.tsx`, `MemberProfile.tsx` (member shell only) | A button calls `subscribeToPushNotifications()`. The admin and field shell has no such button |
+| Browser subscribe | `client/src/lib/pwa.ts` lines 72–78 | Calls `pushManager.subscribe({ userVisibleOnly: true })` **without** an application server key. A failure is caught and ignored |
+| Real subscription saved | lines 80–91 | Posts the endpoint and keys. If a key is missing it sends the text `test-p256dh` or `test-auth` |
+| Simulated subscription saved | lines 93–100 | If the browser gave no subscription, posts endpoint `https://push.puntakit.org/sub-<time>` with keys `mock-key`, `mock-auth`, and returns success |
+| User message | `MemberHome.tsx` line 178 | Shows "เปิดรับการแจ้งเตือนของคริสตจักรเรียบร้อยแล้ว" in both cases |
+| Server store | `server/routes/portal.ts` `POST /api/me/push/subscribe` | Validates that the endpoint is a URL and the keys are not empty. Inserts a row, or moves an existing endpoint to the calling user |
+| Server test route | `POST /api/me/push/send-test` | Returns a JSON text. It sends nothing |
+| Service worker | `client/public/sw.js` `push` handler | Can show a notification if a push message arrives. Default link `/app` |
+| Sender | — | Does not exist |
+
+### 6.2 Risk points
+
+| # | Risk point | Effect |
+|---|---|---|
+| PS1 | No sender and no server key pair | No notification can be sent today. A design that "reuses Web Push" has nothing to reuse except a table |
+| PS2 | Subscribe without an application server key | Browsers that require the key reject the call, and the code then saves a simulated row. Which browsers reject it is platform behaviour; not tested in this work |
+| PS3 | Simulated rows in the real table | Test data in a production workflow. A future sender posts to a host that the project does not control (X3) |
+| PS4 | A new simulated row at every button press (the endpoint contains the time) | The table grows without limit; one user can have many false rows |
+| PS5 | Success message for a simulated subscription | The user believes that notifications are on. This is false |
+| PS6 | Placeholder keys `test-p256dh`, `test-auth` on a real endpoint | A message to that row cannot be encrypted |
+| PS7 | A subscription made without a server key cannot be used with a key later | When real push is built, every existing browser subscription must be removed and made again |
+| PS8 | The server accepts any URL as endpoint from any signed-in user | When a sender exists, the server would send requests to a URL chosen by a user. This is a server-side request forgery risk |
+| PS9 | An endpoint row moves to the user who posts it last | Correct for a shared device. With PS8 it lets one user take over another user's row if the endpoint is known |
+| PS10 | No removal of dead subscriptions | Rows stay after a browser revokes them |
+| PS11 | Only the member shell offers the button | Group leaders and supervisors, who use the other shell, cannot subscribe. They are the people FaithMap must remind |
+| PS12 | The test route names an icon `/pwa-192.png` that is not in `client/public` | No effect today; the route sends nothing |
+
+### 6.3 Proposed correction (not implemented; needs decision O14 and an approved ticket)
+
+Step A can be done alone and has value without real push.
+
+- **A. Stop false data and false messages.** Remove the simulated path and the placeholder keys. Return "not available" when the browser gives no subscription. Show a true message. (PS3–PS6)
+- **B. Decide the channel (O14).** In-app lists only until LINE, or real Web Push.
+- **C. If real Web Push is selected:**
+  1. A key pair for the server: the public key to the client, the private key in the server environment only.
+  2. Subscribe with the public key. Remove and renew subscriptions that were made without it. (PS2, PS7)
+  3. A sender on the server, with a sent log (one message per person, event and period).
+  4. Accept only endpoints on the known push-service hosts. (PS8, PS9)
+  5. Delete a row when the push service answers that the subscription is gone. (PS10)
+  6. A subscribe control in the field shell. (PS11)
+  7. Tests: no simulated row can be created; endpoint host check; one message per event; dead row removed.
+- **D. Existing rows.** First a read-only count (§6.4). Deletion of simulated rows is a production data change and needs its own approval.
+
+### 6.4 Read-only production check (not run)
+
+Count the rows of `push_subscriptions` in three groups: endpoint on host `push.puntakit.org`; keys equal to `mock-key`, `mock-auth`, `test-p256dh` or `test-auth`; all other rows. Count distinct users in each group. The check reads only.

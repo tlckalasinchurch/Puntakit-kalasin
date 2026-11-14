@@ -225,7 +225,7 @@ The attendance step reuses the `/care` roster and bulk save. Navigation changes 
 
 ## 8. Scheduler and notifications
 
-Vercel Cron calls `/api/cron/*` with a secret header. Jobs: open the period (Saturday) and write the expected group list (§4.2.1, O11), remind groups without a submitted report (Sunday, Asia/Bangkok; times depend on the deadline time, pending O8), notify administrators of blocked reports, create attention items (after the deadline). A group with a draft only still gets the reminder. Each job is idempotent and finishes inside the 60 s function limit. Channel in Phases 2–4: Web Push and in-app lists. Phase 5 adds LINE.
+Vercel Cron calls `/api/cron/*` with a secret header. Jobs: open the period (Saturday) and write the expected group list (§4.2.1, O11), remind groups without a submitted report (Sunday, Asia/Bangkok; times depend on the deadline time, pending O8), notify administrators of blocked reports, create attention items (after the deadline). A group with a draft only still gets the reminder. Each job is idempotent and finishes inside the 60 s function limit. Channel in Phases 2–4: in-app lists. Web Push is added only if decision O14 selects it; the existing system has no push sender (`FAITHMAP_EXISTING_SYSTEM_AUDIT.md` §6), so Web Push delivery is new work. Phase 5 adds LINE.
 
 ## 9. LINE and LIFF (Phase 5)
 

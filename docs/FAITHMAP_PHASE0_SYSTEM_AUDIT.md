@@ -62,7 +62,7 @@ Conclusion: no hierarchy change is needed. The missing part is a **flexible assi
 | F10 | `follow_ups` has title, note, subject member/group, activity, owner, due date, status, completed date. It has no issue type, priority, result or history. |
 | F11 | `audit_logs` exists. `UPDATE_GROUP` stores only the sent values, not the previous values. `group_members` has a full unique index on (`group_id`, `member_id`), so leave → rejoin reuses one row. The fix (partial unique index, decision Q8) is written at `server/db/pending/0010_group_members_history.sql` and is not applied. Its production pre-check has not been run. |
 | F12 | LINE: no adapter, no ID-token verification, no LIFF. `members.line_id` is unverified free text. `vercel.json` Content-Security-Policy does not allow LINE hosts. |
-| F13 | Web Push exists (`push_subscriptions`, `/api/portal/push/*`). `vercel.json` has no `crons`. No scheduler exists. |
+| F13 | Web Push: only the storage of subscriptions exists (`push_subscriptions`, `POST /api/me/push/subscribe`). The server has no push sender: no push library and no server key are in the code (`FAITHMAP_EXISTING_SYSTEM_AUDIT.md` §6). `vercel.json` has no `crons`. No scheduler exists. (Corrected 2026-11-14: the earlier text said "Web Push exists" and gave the path `/api/portal/push/*`; both were wrong.) |
 | F14 | Deployment: Vercel serverless function `api/index.ts` (max 60 s), static client from `dist/public`. CI runs install, `pnpm check`, `pnpm test`, `pnpm build` on every push and pull request. 97 test files exist (47 server, 4 shared, 46 client; counted 2026-11-14. Revision 2 said 55, which was wrong). |
 | F15 | Overview and operations endpoints (`/api/org/*`, `/api/dashboard/operations`) are church-wide and limited to `PRIVILEGED_ROLES`. They have no per-body scope. |
 
@@ -85,7 +85,7 @@ Priority: P1 = Phase 1, P2 = Phase 2, and so on (see the roadmap).
 | A9 | Scope helpers for led and viewable groups | `server/lib/groupAccess.ts`, `careScope.ts` |
 | A10 | Group map | `/map` |
 | A11 | Audit log table and writer | `audit_logs`, `server/lib/audit.ts` |
-| A12 | Web Push subscriptions | `push_subscriptions` |
+| A12 | Storage of Web Push subscriptions (table only; delivery does not exist, see F13) | `push_subscriptions` |
 
 ### B. Improvement required
 
@@ -278,6 +278,7 @@ A recommendation in this table is not a decision. The status of each item is in 
 | O11 | Store the expected groups of each period (`reporting_period_groups`), so that a later change of group status or body does not change past periods? | Proposed in `FAITHMAP_TARGET_ARCHITECTURE.md` §4.2.1. Pending. | Owner |
 | O12 | Can the body leader approve before the assigned supervisor has reviewed? | Pending. The data model supports both answers. | Church |
 | O13 | Who receives the notice of a blocked report: system administrators only, or also mission leadership? | Pending. | Church |
+| O14 | Notification channel before LINE (roadmap Phases 2–4): in-app lists only, or in-app lists plus real Web Push? Real Web Push is new work (F13). | Pending. | Owner |
 
 ## 6. Implementation risks
 
@@ -334,6 +335,7 @@ No answer is assumed for any row.
 | O11 | Period snapshot of expected groups. | Past-period counts follow the current group state. | Phase 2 |
 | O12 | Body leader approval before supervisor review. | The approve guard cannot be specified. | Phase 2 |
 | O13 | Recipients of the blocked notice. | The notice has no recipient list. | Phase 2 |
+| O14 | Notification channel before LINE. | Reminder and notice work cannot be specified. | Phase 2 |
 | O6 | Reduce `admin` and `staff` access to personal data. | Current church-wide access stays. | After Phase 3 |
 | O7 | Visitors in `members` plus `newcomer_tracks`, or a separate table. | Newcomer schema cannot be specified. | Phase 4 |
 
@@ -349,6 +351,7 @@ No answer is assumed for any row.
 | Client behaviour for each role | Partly read (route list and four pages) | Run the app with each role |
 | LINE Official Account, LINE Login channel, LIFF app | No reference in the repo | Confirmation by the church |
 | Test suite passes on this branch | Not run in this work | CI result, or `pnpm check`, `pnpm test`, `pnpm build` |
+| Number of simulated rows in `push_subscriptions` | Not verified | Read-only production query (`FAITHMAP_EXISTING_SYSTEM_AUDIT.md` §6.4) |
 
 No production system was read for any revision of this document.
 
@@ -361,7 +364,8 @@ No production system was read for any revision of this document.
 | Proposed tables and target permissions not approved (§7) | Any migration; any permission change | Owner approval |
 | No ticket has `Status: approved` | Any implementation | The owner sets the marker in `TICKETS.md` |
 | Deadline time not set (O8) | Phase 2 spec | Decision by the church |
-| O3, O4, O9, O11, O12, O13 pending | Phase 2 spec | Decisions |
+| O3, O4, O9, O11, O12, O13, O14 pending | Phase 2 spec | Decisions |
+| No push sender exists (F13) | Any reminder by Web Push | Decision O14; then new work with its own ticket |
 | Attendance duplicate check not run | Unique index migration (Phase 2) | Read-only production query |
 | Body leaders without a usable account (number unknown) | Approval in those bodies after Phase 2 goes live | Accounts and assignments created by an administrator |
 

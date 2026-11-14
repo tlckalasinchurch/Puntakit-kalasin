@@ -141,7 +141,7 @@ Difference between the two submission times:
 | Person ↔ account | `members.user_id` | E |
 | LINE display id | `members.line_id` (free text, unverified) | E, display only |
 | Verified LINE identity | `line_accounts.line_user_id` | N (Phase 5) |
-| Web Push | `push_subscriptions` | E |
+| Web Push subscription storage | `push_subscriptions`. The table can hold simulated rows; no sender exists (`FAITHMAP_EXISTING_SYSTEM_AUDIT.md` §6) | I |
 | Sent-message log | `notification_log` | N (Phase 5) |
 | Audit trail | `audit_logs` | E |
 

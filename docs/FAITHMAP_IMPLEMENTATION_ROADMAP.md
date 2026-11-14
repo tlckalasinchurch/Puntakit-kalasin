@@ -43,7 +43,7 @@ Does not include: reporting periods, weekly reports, drafts, review, approval, b
 
 ### Phase 2 — Weekly reporting
 
-Scope: `reporting_periods`, `reporting_period_groups` (if O11 is approved), `weekly_reports`, `weekly_report_events`, `body_summaries`; mobile report flow (attendance → what happened → send) with draft autosave; review queue; supervisor fallback; body leader final approval; blocked state and administrator notice; late mark; attendance day boundary and uniqueness (after the production check); scheduler for period opening and Web Push reminders.
+Scope: `reporting_periods`, `reporting_period_groups` (if O11 is approved), `weekly_reports`, `weekly_report_events`, `body_summaries`; mobile report flow (attendance → what happened → send) with draft autosave; review queue; supervisor fallback; body leader final approval; blocked state and administrator notice; late mark; attendance day boundary and uniqueness (after the production check); scheduler for period opening and reminders. Reminder channel: in-app lists; Web Push only if decision O14 selects it (no push sender exists today).
 Feature slugs: `weekly-report`, `report-review`, `attendance-integrity`.
 
 Acceptance criteria:
@@ -145,7 +145,7 @@ Phase 3 and Phase 4 both need Phase 2. Phase 5 needs Phase 2 and can start after
 | G0 Decisions O1, O2, O5, O10 (all pending) | Phase 1 grill | Church + owner |
 | G1 Schema of `group_assignments` | First Phase 1 migration | Owner |
 | G2 New scoped permissions (review, approve, manage assignments) | Phase 1 and 2 implementation | Church + owner |
-| G3 Decisions O3, O4, O8 (deadline time and week start), O9, O11, O12, O13 | Phase 2 spec | Church + owner |
+| G3 Decisions O3, O4, O8 (deadline time and week start), O9, O11, O12, O13, O14 | Phase 2 spec | Church + owner |
 | G4 Production duplicate check for attendance | Unique index migration | Owner |
 | G5 Navigation change | Phase 3 UI | Owner |
 | G6 Decision O7; `group_members` pre-check | Phase 4 | Owner |

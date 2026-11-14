@@ -62,7 +62,8 @@ The detail of each row is in the gap named in the last column (`FAITHMAP_PHASE0_
 | Sign-in, sessions, roles | REUSE | PIN auth, `USER_ROLES` | None | A8 |
 | Scope from assignments | EXTEND | `server/lib/groupAccess.ts` | One resolver; no global permission from an assignment | C1 |
 | Scheduler | NEW | — | Vercel Cron routes | C9 |
-| Web Push notifications | MODIFY | `push_subscriptions`, service worker | Remove the simulated subscription path before reminders depend on it (finding X1) | X1 |
+| Subscription storage for Web Push | MODIFY | `push_subscriptions`, subscribe route, service-worker handler | Remove the simulated subscription path and the false success message | X1, audit §6 |
+| Web Push delivery | NEW (if decision O14 selects it) | None: no sender and no server key exist | Key pair, sender, sent log, endpoint host check | X2, audit §6 |
 | LINE and LIFF | NEW | — | `line_accounts`, LIFF routes | C10–C12 |
 | LINE channel of the church | BLOCKED | — | The church must own a LINE Official Account, a LINE Login channel and a LIFF app | — |
 

@@ -38,7 +38,7 @@ All statements about production are UNVERIFIED unless marked. No production syst
 | API paths | Every existing path stays, with the same request and response shape |
 | Sign-in | Same PIN, same cookies (`puntakit_session`, `puntakit_csrf`) |
 | Installed app (PWA) | Same origin, same manifest `id`, `start_url` and `scope`. The installed app stays installed. The name on the home screen can stay the old one until the device refreshes the manifest or the user installs again (platform behaviour; UNVERIFIED on the church's devices) |
-| Push subscriptions | Bound to the origin. They stay valid while the origin stays |
+| Push subscriptions | Bound to the origin and to the service-worker registration. A name change does not touch them. Note: no row can receive a message today, because no sender exists (audit §6) |
 | Browser storage | Same keys; preferences stay |
 | Environment variables | Same names |
 | Stored `org_level` values | Same values (`body`, `care`) |
@@ -66,6 +66,24 @@ All statements about production are UNVERIFIED unless marked. No production syst
 | Repository rename | GitHub redirects the old name. The Vercel–GitHub link, CI and local clones need a check | Not required for the product. Decision P7 |
 
 Rule: the product name change never makes the existing URL or an existing user account unusable.
+
+### 5.1 Effect of the identity change by component (source code analysis)
+
+Class: SOURCE for the code facts. Device behaviour is platform behaviour and is UNVERIFIED on the church's devices.
+
+| Component | Code fact | Effect of the name change | Action in the identity stage |
+|---|---|---|---|
+| Page shell (`index.html`) | The service worker serves HTML network-first; the cache answers only offline | An online user sees the new title at the next load. An offline user sees the old shell until the next online load | None |
+| Manifest | `/manifest.json` is served network-first. `id`, `start_url` and `scope` are `/` | The browser reads the new name at its next manifest check. The app identity (`id`) does not change, so the installed app is the same app | Keep `id`, `start_url`, `scope` unchanged |
+| Installed app name and icon | Set by the device at install time | The device decides when to refresh them. Some platforms refresh after a manifest change; some keep the old label until the user installs again | Tell users that the old label can stay and how to install again. Do not promise an automatic change |
+| Icons | Fixed file paths in the manifest and in the precache list | A new image under the same path can stay hidden behind a device cache | Use new file names for new icons and step the cache version |
+| Service worker | Any byte change in `sw.js` installs a new worker; it calls `skipWaiting`. Old caches are deleted at activation when the cache name changes | The notification title in `sw.js` changes at the next visit. This is the designed update path | Step the cache version only when the precache list changes |
+| Manifest shortcuts | Two shortcuts point to `/app` and `/app/events`, with Thai labels and no product name | No change needed for the name. Their fit with FaithMap is part of decision P3 | None |
+| Authentication | Cookies `puntakit_session` and `puntakit_csrf` have no domain attribute (host-only), `SameSite=Lax`, `Secure` in production. Sessions are rows in `user_sessions` | No effect. No user is signed out. PINs do not change | Keep the cookie names |
+| API access | No cross-origin setting exists in `server/app.ts`; the client calls the API on its own origin | No effect on the same URL. A second domain on the same deployment works as its own origin with its own sign-in | None |
+| Push subscriptions | Stored per endpoint; bound to origin and service worker | No effect from the name change | None in the identity stage |
+| Existing URLs | 37 page paths and 23 API routers; none contains the product name | No path changes | A test or check list that every path still answers |
+| Browser storage | Keys `theme`, `puntakit.sidebar.collapsed`, `puntakit.careGroup` | No effect if the keys stay | Keep the keys |
 
 ## 6. Rollback plan
 
@@ -99,7 +117,7 @@ Each phase must state its rollback step in its `SPEC.md` before a ticket is appr
 | R11 | A technical identifier is renamed without analysis | Sign-outs, broken demo mode, duplicate imported rows | Low if the plan is followed | The keep list in `FAITHMAP_PRODUCT_TRANSFORMATION.md` §5; `puntakit-seed-v1` never changes |
 | R12 | Two input paths confuse group leaders (Inbox and weekly report) | Reports go to the wrong place | Medium | The field menu shows the weekly report only |
 | R13 | A cron job exceeds 60 s | Reminders or period opening fail | Low | Small idempotent jobs |
-| R14 | Simulated push subscriptions exist (finding X1) | A reminder is "sent" and reaches nobody; the sent log is wrong | Unknown | Verify real push delivery; remove the simulated path by an approved ticket before reminders depend on Web Push |
+| R14 | No push sender exists, and the subscribe code saves simulated rows (findings X1, X2; audit §6) | A reminder by Web Push reaches nobody; users were told that notifications are on | Certain in code; number of affected rows unknown | Decision O14; remove the simulated path by an approved ticket; in-app lists as the base channel |
 | R15 | Features outside house mission lose their menu entry without a decision | Users cannot find an existing feature | Medium | No navigation change without decision P3 |
 | R16 | Legal pages name a product that no longer matches | Unclear terms for users | Low | Church review (P5) in the identity phase |
 | R17 | A visible behaviour change in an existing list (visitors hidden, Phase 4) | Staff think data is lost | Medium | A filter that shows visitors; release note |
