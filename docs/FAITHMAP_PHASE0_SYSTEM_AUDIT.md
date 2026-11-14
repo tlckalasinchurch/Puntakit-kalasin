@@ -317,6 +317,7 @@ Source: the owner's statement of 2026-11-14 after the architecture review. D0 co
 | D5 | If the body leader has no usable account, the report is blocked and the administrators are notified. No step is skipped and nobody approves in place of the body leader. | Requirements R7.7; architecture §5.3; permission matrix rule 9 |
 | D6 | Mission leadership sees the overview and tracks the situation. It is not a final approver by default. | Requirements §3, R7.2; permission matrix §2.2 |
 | D7 | Roles in the report flow: group leader writes and submits; supervisor reviews and requests revision; body leader reviews, requests revision and approves. | Permission matrix §2.2 |
+| D8 | FaithMap is the only product name (Thai name: ระบบบริหารพันธกิจบ้านและรายงานพันธกิจ). It is not a module of another product. No separate system is built. Confirmed by the owner on 2026-11-14. | `FAITHMAP_PRODUCT_TRANSFORMATION.md` §1 |
 
 ### 8.2 Pending decisions
 
