@@ -6,7 +6,7 @@ Evidence and gaps: `FAITHMAP_PHASE0_SYSTEM_AUDIT.md`.
 
 ## 1. Purpose
 
-Leadership must know the real state of every house mission group: who is responsible, what happened this week, who needs care, and which task has which owner. The product is the existing Puntakit website plus LINE and LIFF. It is not a new website or a chat system.
+Leadership must know the real state of every house mission group: who is responsible, what happened this week, who needs care, and which task has which owner. The product is **FaithMap** (ระบบบริหารพันธกิจบ้านและรายงานพันธกิจ). FaithMap is the only product name; it is not a module of another product. It is built on the existing repository, database and website as its technical foundation, plus LINE and LIFF later. It is not a second website and not a chat system. See `FAITHMAP_PRODUCT_TRANSFORMATION.md` §1.
 
 ## 2. Terms
 

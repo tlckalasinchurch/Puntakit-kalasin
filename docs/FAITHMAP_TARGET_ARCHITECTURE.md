@@ -6,7 +6,7 @@ Column names and types are a draft for review. The `/spec` step sets the final f
 
 ## 1. Principles
 
-1. Keep the stack: React SPA, Express API, Drizzle, PostgreSQL, first-party PIN sessions, Vercel.
+1. Keep the stack: React SPA, Express API, Drizzle, PostgreSQL, first-party PIN sessions, Vercel. The stack is the technical foundation of one product, FaithMap (`FAITHMAP_INTEGRATION_ARCHITECTURE.md`).
 2. Keep one permission system: `USER_ROLES`, role sets in `shared/roles.ts`, middleware in `server/middleware/auth.ts`.
 3. Role is who a person is in the system. Assignment is which groups the person is responsible for. Scope comes from assignments.
 4. Additive schema changes only. No existing table is dropped or repurposed.

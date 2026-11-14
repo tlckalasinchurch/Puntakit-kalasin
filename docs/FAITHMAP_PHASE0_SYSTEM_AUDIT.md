@@ -14,6 +14,13 @@ Related documents (one topic each, no duplicated tables):
 | `FAITHMAP_DATA_MAPPING.md` | Brief field → existing or proposed column |
 | `FAITHMAP_PERMISSION_MATRIX.md` | Current matrix (verified) and target matrix (proposed) |
 | `FAITHMAP_IMPLEMENTATION_ROADMAP.md` | Phases, acceptance criteria, approval gates |
+| `FAITHMAP_EXISTING_SYSTEM_AUDIT.md` | Whole-system audit by area; product identity inventory (added 2026-11-14) |
+| `FAITHMAP_PRODUCT_TRANSFORMATION.md` | FaithMap as the only product identity; REUSE / EXTEND / MODIFY / REPLACE / NEW / BLOCKED; decisions P1–P9 |
+| `FAITHMAP_INTEGRATION_ARCHITECTURE.md` | How existing and new parts form one product |
+| `FAITHMAP_MIGRATION_AND_REGRESSION_RISKS.md` | Migration, compatibility, rollback, regression tests, cutover |
+| `FAITHMAP_PHASED_IMPLEMENTATION_PLAN.md` | Stages S0–S8 around the roadmap phases |
+
+Product identity: the product is FaithMap. Where this file says "the repo" or names existing code, it means the technical foundation, not a product.
 
 Revision 1 of this file contained a data mapping and a permission matrix. Those sections moved to the documents above. Revision 1 also assumed a Body → Care → Group tree. The brief corrects that (§2).
 
@@ -56,7 +63,7 @@ Conclusion: no hierarchy change is needed. The missing part is a **flexible assi
 | F11 | `audit_logs` exists. `UPDATE_GROUP` stores only the sent values, not the previous values. `group_members` has a full unique index on (`group_id`, `member_id`), so leave → rejoin reuses one row. The fix (partial unique index, decision Q8) is written at `server/db/pending/0010_group_members_history.sql` and is not applied. Its production pre-check has not been run. |
 | F12 | LINE: no adapter, no ID-token verification, no LIFF. `members.line_id` is unverified free text. `vercel.json` Content-Security-Policy does not allow LINE hosts. |
 | F13 | Web Push exists (`push_subscriptions`, `/api/portal/push/*`). `vercel.json` has no `crons`. No scheduler exists. |
-| F14 | Deployment: Vercel serverless function `api/index.ts` (max 60 s), static client from `dist/public`. CI runs install, `pnpm check`, `pnpm test`, `pnpm build` on every push and pull request. 55 test files exist. |
+| F14 | Deployment: Vercel serverless function `api/index.ts` (max 60 s), static client from `dist/public`. CI runs install, `pnpm check`, `pnpm test`, `pnpm build` on every push and pull request. 97 test files exist (47 server, 4 shared, 46 client; counted 2026-11-14. Revision 2 said 55, which was wrong). |
 | F15 | Overview and operations endpoints (`/api/org/*`, `/api/dashboard/operations`) are church-wide and limited to `PRIVILEGED_ROLES`. They have no per-body scope. |
 
 ## 4. Gap analysis

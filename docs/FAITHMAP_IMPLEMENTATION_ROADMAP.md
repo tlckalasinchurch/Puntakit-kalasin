@@ -2,6 +2,7 @@
 
 Date: 2026-11-13 · Revision 2: 2026-11-14 · Status: proposed. No phase after Phase 0 has started.
 The documents of this set describe proposed work. No feature in Phases 1–5 exists in the application.
+The product identity stages (FaithMap name) and the order around these phases are in `FAITHMAP_PHASED_IMPLEMENTATION_PLAN.md`. That plan does not change the phases below.
 
 ## 1. Rules for every phase
 
